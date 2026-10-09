@@ -1181,7 +1181,7 @@ test('the inputs are asked again when TD says it was rewired and when the socket
   await nextFrame();
   assert.equal(asked(), 0, 'never asked before: connecting asks nothing');
   await session.refreshInputs();
-  assert.deepEqual(JSON.parse(JSON.stringify(session.inputsSnapshot())), { tex: { node: 'in1', source: '/project1/moviefilein1' } });
+  assert.deepEqual(JSON.parse(JSON.stringify(session.inputsSnapshot())), { tex: { node: 'in1', source: '/project1/moviefilein1', info: null } });
   const taken = session.inputsTake();
   socket.onmessage({ data: JSON.stringify({ type: 'inputs', frame: 3 }) });
   await nextFrame();
@@ -1191,4 +1191,14 @@ test('the inputs are asked again when TD says it was rewired and when the socket
   await nextFrame();
   assert.equal(asked(), 3, 'connected again: asked once');
   assert.ok(session.inputsTake() > taken, 'open previews take new snapshots');
+  // After an apply (R.61.5): asked again, but new snapshots only when what is wired in changed. 套用後再問，接的東西變了才重拍。
+  const still = session.inputsTake();
+  socket.onmessage({ data: JSON.stringify({ type: 'inputs', frame: 4, retake: false }) });
+  await nextFrame();
+  assert.equal(asked(), 4);
+  assert.equal(session.inputsTake(), still, 'same wiring: no new snapshots');
+  wired.inputs[0].source = '/project1/moviefilein2';
+  socket.onmessage({ data: JSON.stringify({ type: 'inputs', frame: 5, retake: false }) });
+  await nextFrame();
+  assert.ok(session.inputsTake() > still, 'other wiring: new snapshots');
 });

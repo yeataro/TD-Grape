@@ -58,6 +58,11 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.61.5 預設圖也有同樣的提示**（人類 10-10；之後 Samples 可能有 2D、3D 的圖，所以問 TD、不猜）：
+  - TD：`input_sources` 每個輸入多帶 In TOP 現在收到的——來源 TOP（外面接的；沒接就是這個 Grape OP 的 Samples 裡那張預設圖，在 out 後面；選透明就沒有）與 In TOP 的尺寸、格式。
+  - 送圖成功後，TD 除了送 Uniform 狀態，也提醒編輯器再問輸入（`{type:'inputs', retake:false}`，預設圖換了、輸入增減時跟著更新；同一個 Grape OP 開在別的瀏覽器也收到）；TD 重新接線的提醒是 `retake:true`。編輯器只有在要求重拍、或接的東西變了時才重拍快照，不會每次送圖都重拍。
+  - 編輯器：預設圖、純色、透明的預覽都有提示，寫法同快照圖片（路徑一行、尺寸與格式一行）；TD 不在時沒有提示。
+  - 驗證：Python 單元測試（輸入回報帶來源與尺寸、送圖後的提醒）、editor 79（同接線不重拍、換接線才重拍）；重裝 Manager 後 Grape_TOP1 第三張「/project1/Grape_TOP1/Samples/grape ↵ 800 × 600, 8-bit fixed (RGBA)」。未實測：人類在另一個瀏覽器改預設圖時這邊的提示跟著變（單元測試涵蓋）。
 - **Refactor.61.4 圖片提示加上網路位置**（人類 10-10）：滑到快照圖片上，第一行是接進來的 OP 在 TD 網路裡的路徑，第二行是尺寸與格式。驗證：editor 79；Grape_TOP1「/project1/moviefilein3 ↵ 640 × 360, 8-bit fixed (RGBA)」「/project1/moviefilein2 ↵ 1920 × 1920, 8-bit fixed (RGBA)」。
 - **Refactor.61.3 快照的圖顯示尺寸與格式**（人類 10-10：拍的時候取得幾乘幾、幾 bits、通道，放在提示裡；指向圖片是圖的資訊，快照按鈕是快照的事）：
   - TD：拍快照時附上 In TOP 原本的 `width`、`height`、`pixelFormat`（TD 自己的寫法，例如 `8-bit fixed (RGBA)`，不翻譯），隨圖片回覆放在 `X-Sgrape-Image` 標頭，不多一次請求（`host_api.Image.info`、`editor_service.reply`）。

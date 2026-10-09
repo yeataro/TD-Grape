@@ -13,7 +13,8 @@ export type LiveMessage =
   | { type: 'state'; frame: number; uniforms: UniformStates }
   | { type: 'values'; frame: number; values: Record<string, (number | null)[]> }
   // A Grape OP was rewired in TD (Refactor.60): ask what its inputs have now. TD 上重新接線：去問現在接了什麼。
-  | { type: 'inputs'; frame: number };
+  // `retake` false after an apply: ask again, no new snapshots (R.61.5). 套用後為 false：再問、不重拍。
+  | { type: 'inputs'; frame: number; retake?: boolean };
 /** The part of a browser WebSocket used here (tests pass a fake). 這裡用到的 WebSocket 介面。 */
 export type LiveSocket = {
   readonly readyState: number; send(text: string): void; close(): void;

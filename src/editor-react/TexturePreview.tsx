@@ -16,6 +16,9 @@ export const textureNames: Record<string, Message> = {
 
 // `info`: the In TOP's own size and format, as TD shows them (Refactor.61.3). In TOP 原本的尺寸與格式。
 type ImageInfo = { width: number; height: number; format: string };
+/** A picture's hint: where it is in TD's network, then size and format (human 2026-10-10). 圖片提示：在 TD 網路裡的位置、尺寸與格式。 */
+const imageHint = (path: string | null | undefined, info: ImageInfo | null | undefined) => [path, info && say(tr('sources.imageInfo',
+  '{width} × {height}, {format}', { width: info.width, height: info.height, format: info.format }))].filter(Boolean).join('\n') || undefined;
 type Shot = 'loading' | 'failed' | { src: string; time: Date; info: ImageInfo | null };
 /** What a texture input gives the shader, open on its card (Refactor.58, 60; human 2026-10-10): with a TOP wired in from
  * outside, a snapshot of its In TOP — what the shader actually receives — marked with a camera and the source, pressed for
@@ -69,15 +72,15 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
   useEffect(() => setRatio(0), [texture]);
   // Sized in percent of the window, not by the grid, which treats a percent height as auto (Refactor.58 fix: a 4:3
   // image ran past the window). 用窗的百分比定大小，不靠 grid（grid 把百分比高度當自動，4:3 的圖曾超出窗）。
-  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker') => {
+  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker', title?: string) => {
     const [width, height] = r > 16 / 9 ? [100, 16 / 9 / r * 100] : [r / (16 / 9) * 100, 100];
-    return <div className={className} style={{ width: width + '%', height: height + '%', ...style }}>{content}</div>;
+    return <div className={className} title={title} style={{ width: width + '%', height: height + '%', ...style }}>{content}</div>;
   };
-  const image = (src: string, onError?: () => void, title?: string) => <img src={src} alt="" title={title} draggable={false} onError={onError}
+  const image = (src: string, onError?: () => void) => <img src={src} alt="" draggable={false} onError={onError}
     onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
   // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。
   const picture = (src: string, onError?: () => void, title?: string) =>
-    frame(ratio || 16 / 9, image(src, onError, title), ratio ? undefined : { visibility: 'hidden' });
+    frame(ratio || 16 / 9, image(src, onError), ratio ? undefined : { visibility: 'hidden' }, undefined, title);
   const unavailable = <span>{say(tr('sources.noPreview', 'No preview'))}</span>;
   // Labels over the image (human 2026-10-10): bottom right, dark see-through. 圖上的標籤：右下角、深色半透明。
   const label = (content: ReactNode) => <figcaption className="image-label-slot">{content}</figcaption>;
@@ -86,8 +89,7 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
       {/* Two hints (human 2026-10-10): the picture tells what the image is (where it is in TD's network, then size and
           format, as TD's info); the label tells about the snapshot. 兩個提示（人類）：圖片說圖是什麼（在 TD 網路裡的位置，
           再來是尺寸、格式，同 TD 的資訊）；標籤說快照的事。 */}
-      {typeof shot === 'object' && picture(shot.src, undefined, [source, shot.info && say(tr('sources.imageInfo', '{width} × {height}, {format}',
-        { width: shot.info.width, height: shot.info.height, format: shot.info.format }))].filter(Boolean).join('\n'))}
+      {typeof shot === 'object' && picture(shot.src, undefined, imageHint(source, shot.info))}
       {shot === 'failed' && unavailable}
       {typeof shot === 'object' && label(<button type="button" className="image-label nodrag"
         onClick={() => setRetake(n => n + 1)}
@@ -100,10 +102,13 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
         <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
     </figure>;
   }
+  // The default image tells the same (human 2026-10-10): what the In TOP receives, as TD says (R.61.5).
+  // 預設圖也一樣（人類）：In TOP 收到的，照 TD 說的。
+  const defaultHint = inputs?.[id]?.info ? imageHint(inputs[id]!.info!.path, inputs[id]!.info) : undefined;
   const defaultLabel = label(<span className="image-label">{say(tr('sources.defaultLabel', 'Default: {name}',
     { name: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))}</span>);
-  if (texture === 'none') return <figure className="texture-preview">{frame(1, null)}{defaultLabel}</figure>;
-  if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame')}{defaultLabel}</figure>;
+  if (texture === 'none') return <figure className="texture-preview">{frame(1, null, undefined, undefined, defaultHint)}{defaultLabel}</figure>;
+  if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame', defaultHint)}{defaultLabel}</figure>;
   return <figure className="texture-preview">
-    {failed ? unavailable : picture(session.host.textureUrl(texture), () => setFailed(true))}{!failed && defaultLabel}</figure>;
+    {failed ? unavailable : picture(session.host.textureUrl(texture), () => setFailed(true), defaultHint)}{!failed && defaultLabel}</figure>;
 }

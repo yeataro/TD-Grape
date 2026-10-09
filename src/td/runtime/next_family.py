@@ -194,7 +194,12 @@ class NextFamily:
         connector — the nearest one, a Null in between is what is named — or None when nothing is (the In TOP then
         passes its default). Read only when asked. With the In TOP's name (in1…), as TD labels the connector (Refactor.60.6).
         每個貼圖輸入從外面接了什麼：餵進接口的 OP（最近的那個）；沒接是 None（In TOP 就送預設圖）。只在被問時讀。附上 In TOP
-        的名字（in1…），同 TD 標在接口上的。"""
+        的名字（in1…），同 TD 標在接口上的。
+        With what the In TOP receives now (Refactor.61.5): the TOP it comes from — the one wired in, else the default image's
+        TOP inside this Grape OP's Samples (behind its out), none when nothing is — and its size and format as TD writes them.
+        Read from TD, not guessed: Samples may hold other images later (human: 2D and 3D samples).
+        附上 In TOP 現在收到的：來自哪個 TOP（外面接的；沒接就是這個 Grape OP 的 Samples 裡那張預設圖，在 out 後面；什麼都沒接
+        就沒有），以及 TD 寫的尺寸與格式。問 TD、不猜：Samples 之後可能放別的圖（人類：2D、3D 的 Sample）。"""
         result = []
         for connector in self.comp.inputConnectors:
             top = connector.inOP
@@ -202,7 +207,14 @@ class NextFamily:
             if ident is None:
                 continue
             source = connector.connections[0].owner if connector.connections else None
-            result.append({'id': ident, 'node': top.name, 'source': source.path if source is not None else None})
+            feed = source
+            if feed is None and top.inputs:
+                feed = top.inputs[0]
+                if feed.OPType == 'outTOP' and feed.inputs:
+                    feed = feed.inputs[0]
+            info = {'path': feed.path if feed is not None else None, 'width': top.width, 'height': top.height,
+                    'format': str(top.pixelFormat)}
+            result.append({'id': ident, 'node': top.name, 'source': source.path if source is not None else None, 'info': info})
         return result
 
     def input_top(self, ident):

@@ -93,7 +93,7 @@ class LiveWatchTests(unittest.TestCase):
         connection.sent.clear()
         watch.wires_changed(family.comp)
         watch.wires_changed(Owner('/project1/other'))
-        self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120}])
+        self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120, 'retake': True}])
 
     def test_editor_values_are_written_once_per_frame_latest_only(self):
         family, watch, _ = setup([uniform('u1', 'uGain')])
@@ -133,7 +133,10 @@ class LiveWatchTests(unittest.TestCase):
         self.assertEqual(connection.sent[-1], {'type': 'state', 'frame': 120, 'uniforms': {}})
         count = len(connection.sent)
         watch.applied(family)
-        self.assertEqual(len(connection.sent), count + 1)
+        # The new state, then a nudge to ask about the inputs again without new snapshots (Refactor.61.5).
+        # 新狀態，再提醒重新問輸入、不重拍快照。
+        self.assertEqual(len(connection.sent), count + 2)
+        self.assertEqual(connection.sent[-1], {'type': 'inputs', 'frame': 120, 'retake': False})
 
 
 if __name__ == '__main__':

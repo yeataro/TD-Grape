@@ -99,6 +99,9 @@ class LiveWatch:
         if entry is not None:
             entry['dirty'] = True
             self.flush()
+        # Inputs may have changed too (a default image, an input added): asked again, no new snapshots (Refactor.61.5).
+        # 輸入也可能變了（預設圖、增減輸入）：再問一次，不重拍快照。
+        self._inputs(family.comp, retake=False)
 
     def changed(self, par):
         """A mode, expression or export changed: a state message follows. 模式等改變：之後送狀態。"""
@@ -174,10 +177,15 @@ class LiveWatch:
         """A watched Grape OP was rewired in TD (OP Execute onWireChange, one call a frame at most): its editors ask what
         is wired in now (Refactor.60). Only a nudge; the editor reads the inputs over HTTP.
         TD 上重新接線（每格最多一次）：通知它的編輯器去問現在接了什麼。只是提醒；編輯器經 HTTP 讀。"""
+        self._inputs(comp, retake=True)
+
+    def _inputs(self, comp, retake):
+        """Tell a Grape OP's editors to ask about its inputs; `retake` also takes new snapshots.
+        通知 Grape OP 的編輯器再問輸入；retake 時也重拍快照。"""
         entry = self.watched.get(getattr(comp, 'path', None))
         if entry is None:
             return
-        text = json.dumps({'type': 'inputs', 'frame': self.frame()})
+        text = json.dumps({'type': 'inputs', 'frame': self.frame(), 'retake': retake})
         for connection in entry['connections']:
             connection.send(text, replaceable=True)
 

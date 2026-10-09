@@ -20,6 +20,8 @@ export const spareHandle = '__spare__';
 export type NewNode = { nodeType: string; params: ObjectValue } | { preset: string };
 /** The end of a wire being dragged: from an output (a new node's input takes it) or from an input (a new node's
  * output feeds it). 正在拉的線的這一端：從輸出（新節點的輸入接它）或從輸入（新節點的輸出接上它）。 */
+/** What an In TOP receives now, as TD tells it (R.61.5). In TOP 現在收到的，TD 說的。 */
+export type InputInfo = { path: string | null; width: number; height: number; format: string };
 export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
@@ -175,24 +177,28 @@ export class Editor {
   // What each texture input has wired in, in TD (Refactor.60): asked when the Sources panel shows inputs, when TD says a
   // Grape OP was rewired, and when a snapshot is retaken. `inputsTaken` tells previews to take a new snapshot.
   // 每個貼圖輸入在 TD 接了什麼：共用來源面板顯示輸入時、TD 說重新接線時、重拍快照時才問。inputsTaken 讓預覽重拍。
-  // Each input's In TOP name (in1…) and the OP wired into it, null when nothing is. 每個輸入的 In TOP 名字與接進來的 OP（沒接是 null）。
-  private inputs: Readonly<Record<string, Readonly<{ node: string; source: string | null }>>> | null = null;
+  // Each input's In TOP name (in1…), the OP wired into it (null when nothing is), and what the In TOP receives now: from
+  // which TOP, size and format (R.61.5). 每個輸入的 In TOP 名字、接進來的 OP（沒接是 null），以及 In TOP 現在收到的：來源、尺寸、格式。
+  private inputs: Readonly<Record<string, Readonly<{ node: string; source: string | null; info: InputInfo | null }>>> | null = null;
   private inputsTaken = 0;
   private readonly inputListeners = new Set<() => void>();
   inputsSubscribe = (listener: () => void) => { this.inputListeners.add(listener); return () => { this.inputListeners.delete(listener); }; };
   inputsSnapshot = () => this.inputs;
   inputsTake = () => this.inputsTaken;
-  refreshInputs = async () => {
+  // New snapshots when asked to (rewired, connected again) or when what is wired in changed (R.61.5); not after every apply.
+  // 要求時（重新接線、重新連上）或接的東西變了才重拍；不是每次套用都重拍。
+  refreshInputs = async (retake = true) => {
     try {
-      const result = await this.host.call<{ inputs: { id: string; node: string; source: string | null }[] }>('inputs');
+      const result = await this.host.call<{ inputs: { id: string; node: string; source: string | null; info?: InputInfo | null }[] }>('inputs');
       if (this.disposed) return;
-      this.inputs = Object.fromEntries(result.inputs.map(input => [input.id, { node: input.node, source: input.source }]));
-      this.inputsTaken++;
+      const before = this.inputs;
+      this.inputs = Object.fromEntries(result.inputs.map(input => [input.id, { node: input.node, source: input.source, info: input.info ?? null }]));
+      if (retake || !before || Object.entries(this.inputs).some(([id, input]) => before[id]?.source !== input.source)) this.inputsTaken++;
       this.inputListeners.forEach(listener => listener());
     } catch { /* TD away: the previews say so when they ask 連不到 TD：預覽自己會說 */ }
   };
   private liveMessage(message: LiveMessage) {
-    if (message.type === 'inputs') { void this.refreshInputs(); return; }
+    if (message.type === 'inputs') { void this.refreshInputs(message.retake !== false); return; }
     if (message.type === 'state') { this.setTd(message.uniforms); return; }
     const next: Record<string, UniformStates[string]> = { ...this.td };
     for (const [id, values] of Object.entries(message.values)) {

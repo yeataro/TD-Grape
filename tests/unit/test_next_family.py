@@ -345,12 +345,19 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(api.dispatch('GET', '/api/textures/white.png')[0], 404)
         # Refactor.60: what each input has wired in, and one input's In TOP as a snapshot (not kept).
         # 每個輸入接了什麼；某個輸入的 In TOP 快照（不留）。
+        # in1 passes its default from Samples (behind an out TOP); in2 has a TOP wired in. in1 送 Samples 的預設圖；in2 外面接了 TOP。
+        grape = SimpleNamespace(OPType='moviefileinTOP', path='/project1/fam/Samples/grape', inputs=[])
+        sample_out = SimpleNamespace(OPType='outTOP', path='/project1/fam/Samples/out1', inputs=[grape])
         tops = [SimpleNamespace(OPType='inTOP', name='in' + str(n), width=640, height=360, pixelFormat='8-bit fixed (RGBA)',
-                                fetch=lambda key, default=None, i=i: i) for n, i in enumerate(('input1', 'dPhoto'), 1)]
+                                inputs=feeds, fetch=lambda key, default=None, i=i: i)
+                for n, i, feeds in ((1, 'input1', [sample_out]), (2, 'dPhoto', []))]
         wired = SimpleNamespace(owner=SimpleNamespace(path='/project1/moviefilein1'))
         comp.inputConnectors = [SimpleNamespace(inOP=tops[0], connections=[]), SimpleNamespace(inOP=tops[1], connections=[wired])]
         code, result = api.dispatch('GET', '/api/' + TARGET + '/inputs')
-        self.assertEqual((code, result['inputs']), (200, [{'id': 'input1', 'node': 'in1', 'source': None}, {'id': 'dPhoto', 'node': 'in2', 'source': '/project1/moviefilein1'}]))
+        info = {'width': 640, 'height': 360, 'format': '8-bit fixed (RGBA)'}
+        self.assertEqual((code, result['inputs']), (200, [
+            {'id': 'input1', 'node': 'in1', 'source': None, 'info': {'path': '/project1/fam/Samples/grape', **info}},
+            {'id': 'dPhoto', 'node': 'in2', 'source': '/project1/moviefilein1', 'info': {'path': '/project1/moviefilein1', **info}}]))
         def input_top(ident):
             if ident not in ('input1', 'dPhoto'):
                 raise LookupError('This Grape OP has no texture input with this ID.')
