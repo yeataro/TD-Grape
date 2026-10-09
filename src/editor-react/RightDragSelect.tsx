@@ -78,6 +78,10 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
   };
   const move = (event: PointerEvent) => {
     const start = drag.current; if (!start) return;
+    // The button is no longer held but the release never arrived (it can be lost, e.g. outside an embedded
+    // browser): end here, or the box would follow the pointer and cover every node.
+    // 按鍵已放開、卻沒收到放開事件（例如在內嵌瀏覽器外放開時可能遺失）：在這裡結束，否則框會一直跟著游標、蓋住所有節點。
+    if (!(event.buttons & (start.right ? 2 : 1))) { end(event); return; }
     if (!start.moved && Math.hypot(event.clientX - start.x, event.clientY - start.y) <= threshold) return;
     start.moved = true;
     const origin = host.current!.getBoundingClientRect();
@@ -85,7 +89,7 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
       width: Math.abs(event.clientX - start.x), height: Math.abs(event.clientY - start.y) });
     select(start, event);
   };
-  const end = (event: PointerEvent) => {
+  function end(event: PointerEvent) {
     const start = drag.current; drag.current = null; setBox(null);
     if (!start?.moved) return;
     if (start.right) blockNextMenu(); // the release may land anywhere, e.g. over the toolbar
@@ -94,12 +98,13 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     // The one real change, on release (wires are cleared: nodes and wires are never selected together).
     // 放開時才真的改一次（接線清掉：節點與接線不混選）。
     session.boxSelect(start.result, start.touched);
-  };
+  }
+  const cancel = () => { drag.current = null; setBox(null); setPreview(null); };
   // Blank canvas never shows the browser menu (macOS opens it on press, not release).
   // 畫布空白處不跳瀏覽器選單（macOS 在按下時就開）；舊產品此處是自己的選單。
   const menu = (event: MouseEvent) => { if ((event.target as Element).closest('.react-flow__pane')) event.preventDefault(); };
   return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
-    onPointerUp={end} onPointerCancel={() => { drag.current = null; setBox(null); setPreview(null); }} onContextMenuCapture={menu}>
+    onPointerUp={end} onPointerCancel={cancel} onLostPointerCapture={event => { if (drag.current) end(event); }} onContextMenuCapture={menu}>
     <BoxPreviewContext.Provider value={preview}>{children}</BoxPreviewContext.Provider>
     {box && <div className="right-select-box" style={box} />}
   </div>;
