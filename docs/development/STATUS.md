@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.59.2 從列打開的選單離列邊緣一個間距**（人類 10-09：上拉的浮動選單要和底列留空隙，試試和功能列一樣，四周相同）：選單從標題列、網址列、底列打開時，離列的邊緣 `--popup-gap`（＝`--float-gap` 8px，同網路區功能列）；離視窗邊緣 `--popup-margin`（也是 `--float-gap`）；從其他控制項打開維持 `--popup-offset` 4px。三個距離原本寫死在 `DropdownMenu.tsx`、`controls.tsx`，改由主題決定，兩處共用 `popupPlace()`。驗證（瀏覽器實點）：語言與大小面板離底列 8、離右邊 8；功能表離底列 8；節點裡的選擇器仍離 4。
 - **Refactor.59.1 邏輯節點色組、Compare 一個選單**（人類 10-09 截圖舊產品）：
   - Compare、If 改用邏輯色組 `--group-logic`（深 `#282430`、淺 `#b8b4be`，legacy `--node-logic-bg`、`graph_ui.js:142`）；原本落到一般函式的紫色。
   - Compare 的運算選單原本畫兩次（`inlineControls` 與 `controls` 放同一個，Refactor.12 起）；只留本體開頭那個，同舊產品。之後參數面板：同一個控制項只宣告一次、標頭顯不顯示由畫面決定（design-interview Q67 補充）。

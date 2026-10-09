@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { DropdownMenu, type MenuItem } from './DropdownMenu';
+import { DropdownMenu, popupPlace, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
 import { readPreference, writePreference } from './preferences';
@@ -93,9 +93,7 @@ export function Popover({ anchor, label, onClose, className, children }: {
 }) {
   const box = useRef<HTMLDivElement>(null), [place, setPlace] = useState<CSSProperties>({ visibility: 'hidden' });
   useLayoutEffect(() => {
-    const rect = anchor.getBoundingClientRect(), width = box.current?.offsetWidth ?? 0, height = box.current?.offsetHeight ?? 0;
-    const left = Math.max(8, Math.min(rect.left, innerWidth - width - 8));
-    setPlace(rect.bottom + 4 + height <= innerHeight - 8 ? { left, top: rect.bottom + 4 } : { left, bottom: innerHeight - rect.top + 4 });
+    setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0));
   }, [anchor]);
   useEffect(() => {
     const away = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose(); };

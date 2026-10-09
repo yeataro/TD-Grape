@@ -80,6 +80,9 @@
   --handle-line: 1px;
   --handle-grab: 9px;
   --float-gap: 8px;
+  --popup-gap: var(--float-gap); /* a menu opened from a bar keeps this off the bar's edge (human 2026-10-09: like the toolbar's gap) 從列打開的選單離列邊緣的距離（人類：同功能列的間距） */
+  --popup-offset: 4px;           /* a menu opened from a control sits this far from it 從控制項打開的選單離它的距離 */
+  --popup-margin: var(--float-gap); /* how close a menu may come to the window edge; the same gap all round (human 2026-10-09) 選單離視窗邊緣的最小距離；四周同一個間距（人類） */
   --canvas-shadow: 18px;   /* how far the network's inner shadow reaches 網路區內陰影的範圍 */
   --layer-offset: 2px;     /* a layer's small shadow: how far it falls (human 2026-10-09: 2px) 層疊微陰影的偏移（人類：2px） */
   --layer-blur: 6px;       /* and how soft it is 以及模糊程度 */

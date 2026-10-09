@@ -18,6 +18,19 @@ export type MenuItem = { key: string; label: ReactNode; checked?: boolean; disab
 
 // Drawn at the page level, so a menu called up inside a zoomed node still lands under its anchor (a fixed
 // position inside a transformed element would follow the transform). 畫在頁面層，從縮放中的節點叫出也落在正確位置。
+/** Where a popup opens (Refactor.59.2): from a bar (title, location, foot) it keeps --popup-gap off the bar's edge, so it
+ * floats like the network toolbar (human 2026-10-09); from anything else --popup-offset off the control. Below when it fits,
+ * else above; never past the window's --popup-margin. Distances are the theme's.
+ * 選單從哪裡打開：從列（標題、網址、底列）打開時離列邊緣 --popup-gap，像網路區功能列一樣浮著（人類）；其他離控制項 --popup-offset。
+ * 下面放得下就放下面，否則放上面；不超過視窗邊緣 --popup-margin。距離都由主題決定。 */
+export function popupPlace(anchor: HTMLElement, width: number, height: number) {
+  const size = (name: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0;
+  const bar = anchor.closest('.title-bar, .location-bar, .foot-bar'), edge = (bar ?? anchor).getBoundingClientRect();
+  const gap = size(bar ? '--popup-gap' : '--popup-offset'), margin = size('--popup-margin'), box = anchor.getBoundingClientRect();
+  const left = Math.max(margin, Math.min(box.left, innerWidth - width - margin));
+  return edge.bottom + gap + height <= innerHeight - margin ? { left, top: edge.bottom + gap } : { left, top: Math.max(margin, edge.top - gap - height) };
+}
+
 export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
   anchor: HTMLElement; items: readonly MenuItem[]; onClose: () => void; label?: string;
   /** At least as wide as the anchor instead of the menu width (a select's choices). 至少和叫它的元素一樣寬（選擇器）。 */
@@ -27,9 +40,7 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
 }) {
   const menu = useRef<HTMLDivElement>(null), [place, setPlace] = useState({ left: 0, top: 0 });
   useLayoutEffect(() => {
-    const box = anchor.getBoundingClientRect(), width = menu.current?.offsetWidth ?? 0, height = menu.current?.offsetHeight ?? 0;
-    const below = box.bottom + 4 + height <= innerHeight - 8;
-    setPlace({ left: Math.max(8, Math.min(box.left, innerWidth - width - 8)), top: below ? box.bottom + 4 : Math.max(8, box.top - 4 - height) });
+    setPlace(popupPlace(anchor, menu.current?.offsetWidth ?? 0, menu.current?.offsetHeight ?? 0));
   }, [anchor, items]);
   useEffect(() => {
     const away = (event: PointerEvent) => {
