@@ -213,7 +213,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__handle[data-connected="true"]::after { background: color-mix(in srgb, var(--port-color), var(--port-glow) 55%); }
 /* A hit (under the pointer, or where a dragged wire will land; React Flow marks it connectingto, valid) just turns solid
    in its type colour (human 2026-10-09: keep it simple). 命中（滑過、或拖曳中的線要接上的接孔）就只變成型別色的實心（人類：簡單就好）。 */
-.react-flow__handle:is(:hover, .connectingto.valid)::after { background: var(--port-color); }
+.react-flow__handle:is(:hover, .connectingto.valid, [data-merging="true"])::after { background: var(--port-color); }
+/* A wire that dropping here would replace fades, dashed (Refactor.57). 放開後會被換掉的線：變淡、虛線。 */
+.react-flow__edge.replacing .react-flow__edge-path { opacity: .35; stroke-dasharray: 6 4; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
 .react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
 /* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,

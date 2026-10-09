@@ -1092,6 +1092,31 @@ test('a dropped wire lists only what fits, and adding wires it in one step', t =
   assert.deepEqual([...wireOrder('vec3', 'output')].slice(0, 2), ['vector_split', 'split'], 'the legacy order for a vector output');
 });
 
+// Dragging a wire previews what dropping it changes (Refactor.57): rehearsed with the real edit, never written.
+// 拖線預告放開後會改變什麼：用真正的修改預演，不寫入。
+test('a wire preview names the inputs it merges and the wires it replaces, exactly as the drop does', t => {
+  const { session } = open(t);
+  session.addNode({ nodeType: 'sgrape.builtin.combine', params: { type: 'vec4' } }, { x: 400, y: 0 });
+  const join = session.graph().stages.pixel.nodes.at(-1).id;
+  session.addNode({ nodeType: 'sgrape.builtin.vec3', params: {} }, { x: 0, y: 200 });
+  const wide = session.graph().stages.pixel.nodes.at(-1).id;
+  session.connect({ source: 'a', sourceHandle: 'out', target: join, targetHandle: 'y' });
+  session.connect({ source: 'b', sourceHandle: 'out', target: join, targetHandle: 'w' });
+  const before = clone(session.graph()), intoY = before.stages.pixel.edges.find(edge => edge.to[0] === join && edge.to[1] === 'y').id;
+  const drop = { source: wide, sourceHandle: 'out', target: join, targetHandle: 'x' };
+  const preview = session.wirePreview(drop);
+  assert.deepEqual(clone(preview), { node: join, merged: ['y', 'z'], replaced: [intoY] });
+  assert.deepEqual(clone(session.graph()), before, 'a preview never changes the graph');
+  session.connect(drop);
+  const after = session.graph().stages.pixel;
+  const node = after.nodes.find(n => n.id === join);
+  assert.deepEqual(clone(node.params.groups), { x: 'vec3' });
+  assert.ok(!after.edges.some(edge => edge.id === intoY), 'the previewed wire is the one replaced');
+  assert.ok(after.edges.some(edge => edge.to[0] === join && edge.to[1] === 'w'), 'w keeps its wire');
+  // A node whose wiring never changes its ports is not rehearsed. 接線不會改變接孔的節點不預演。
+  assert.equal(session.wirePreview({ source: 'a', sourceHandle: 'out', target: 'sum', targetHandle: 'b' }), null);
+});
+
 test('a picked-up wire moves to another input in one step', t => {
   const { session } = open(t);
   session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));

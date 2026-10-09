@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, getBezierPath,
+import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes, type XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
@@ -21,7 +21,7 @@ import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
 import { NodeCard } from './NodeCard';
-import { SessionContext, TextContext, BodyDragContext } from './contexts';
+import { SessionContext, TextContext, BodyDragContext, MergingContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
 import { DRAG_TYPE } from './AddNodePanel';
 import { CreateNode, type CreateRequest } from './CreateNode';
@@ -75,12 +75,27 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
   // 2026-10-09). Only the input end moves. 從輸入端拿起線用 React Flow 自己的重接線（像 Blender）；只有輸入端能動。
-  const edges = useMemo(() => options.wirePickUp ? projection.edges.map(edge => ({ ...edge, reconnectable: 'target' as const })) : projection.edges,
-    [projection.edges, options.wirePickUp]);
+  // While a wire is dragged over an input, preview what dropping it would change (Refactor.57, as the legacy editor):
+  // the inputs it merges away light up, the wires it replaces fade. Asked only when the hovered port changes.
+  // 拖線停在輸入上時預告放開會改變什麼（照舊產品）：會被併掉的輸入亮起、會被換掉的線變淡。只在停的接孔換了時問。
+  const over = useConnection(state => {
+    if (!state.inProgress || !state.toHandle || !state.fromHandle) return '';
+    const [out, input] = state.fromHandle.type === 'source' ? [state.fromHandle, state.toHandle] : [state.toHandle, state.fromHandle];
+    return out.type === 'source' && input.type === 'target' ? [out.nodeId, out.id, input.nodeId, input.id].join('\n') : '';
+  });
+  const preview = useMemo(() => {
+    if (!over) return null;
+    const [source, sourceHandle, target, targetHandle] = over.split('\n');
+    return session.wirePreview({ source: source!, sourceHandle: sourceHandle!, target: target!, targetHandle: targetHandle! });
+  }, [over, session, projection]);
+  const replaced = useMemo(() => new Set(preview?.replaced), [preview]);
+  const edges = useMemo(() => projection.edges.map(edge => ({ ...edge,
+    ...(options.wirePickUp ? { reconnectable: 'target' as const } : {}),
+    ...(replaced.has(edge.id) ? { className: 'replacing' } : {}) })), [projection.edges, options.wirePickUp, replaced]);
   // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
-  return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session} boxSelect={boxSelect}>
+  return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><RightDragSelect session={session} boxSelect={boxSelect}>
     <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
@@ -133,7 +148,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
       <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>
-  </RightDragSelect></BodyDragContext.Provider>;
+  </RightDragSelect></MergingContext.Provider></BodyDragContext.Provider>;
 });
 // Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
 // Panels and zones are the layout's (layout.tsx, Refactor.53).

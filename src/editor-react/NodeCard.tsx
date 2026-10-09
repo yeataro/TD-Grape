@@ -8,7 +8,7 @@ import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { ValueFields } from './ValueFields';
-import { useSession, TextContext, BodyDragContext } from './contexts';
+import { useSession, TextContext, BodyDragContext, MergingContext } from './contexts';
 import { modesOf } from './declaration_modes';
 import type { Declaration } from './core';
 
@@ -72,6 +72,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   // stays as it is until release (50.2, human: no fading; the legacy editor kept it, with a frame around it).
   // 框選拖曳中：虛線＝放開會被選。目前的選取維持原樣到放開（50.2，人類：不淡化；舊產品保留它，外面還有多選框）。
   const preview = useContext(BoxPreviewContext);
+  // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
+  const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
   const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
@@ -140,7 +142,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-        <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={wired} />
+        <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={wired}
+          data-merging={merging.includes(port.key) || undefined} />
         {/* An input with a value: its name and type lead the value widget (middle button there changes the whole value).
             有值的輸入：名字與型別是數值 widget 的開頭文字（在上面按中鍵整組調值）。 */}
         {port.fallback === undefined && core.values.types.includes(port.type) ? null

@@ -7,4 +7,7 @@ import type { Editor as EditorSession } from './editor';
 export const SessionContext = createContext<EditorSession | null>(null);
 export const TextContext = createContext<(key: string) => string>(key => key);
 export const BodyDragContext = createContext(false);
+/** While a wire is dragged over an input: the inputs of that node it would merge away (Refactor.57).
+ * 拖線停在某個輸入上時：那個節點會被併掉的輸入。 */
+export const MergingContext = createContext<{ node: string; merged: readonly string[] } | null>(null);
 export const useSession = () => useContext(SessionContext)!;

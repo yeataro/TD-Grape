@@ -382,6 +382,28 @@ export class Editor {
     } catch { return false; }
   };
   connect = (c: Connection) => this.transact(tr('edit.wired', 'Wire updated'), net => wire(net, c));
+  /** What a wire would change if dropped here (Refactor.57; CURRENT 2026-10-07, human: only nodes whose wiring changes
+   * their ports pay for it): the target's inputs it would merge away (a component group) and the wires it would
+   * replace. Rehearsed with the real edit on a discarded candidate, so the preview is what happens. null: no change
+   * to show, or it does not fit. 線放在這裡會改變什麼：目標節點會被併掉的輸入、會被換掉的線。用真正的修改在丟棄的候選上
+   * 預演，預告就是實際結果。只有接線會改變接孔的節點（模組有 wire）才預演；null＝沒有要預告的或接不上。 */
+  wirePreview = (c: Connection): { node: string; merged: string[]; replaced: string[] } | null => {
+    if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle) return null;
+    const net = this.document.networks.get('pixel')!;
+    if (!net.node(c.target).definition?.wire) return null;
+    const inputs = Object.keys(net.node(c.target).interface.inputs), edges = net.data.edges.map(edge => edge.id);
+    let found: { node: string; merged: string[]; replaced: string[] } | null = null;
+    try {
+      this.document.change(candidate => {
+        const after = candidate.networks.get('pixel')!;
+        wire(after, c);
+        const kept = new Set(Object.keys(after.node(c.target).interface.inputs)), still = new Set(after.data.edges.map(edge => edge.id));
+        found = { node: c.target, merged: inputs.filter(key => !kept.has(key)), replaced: edges.filter(id => !still.has(id)) };
+        throw new Rehearsed();
+      });
+    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
+    return found && ((found as { merged: string[] }).merged.length || (found as { replaced: string[] }).replaced.length) ? found : null;
+  };
   /** A wire picked up from an input and dropped on another input moves there (Refactor.54; human 2026-10-09:
    * yes, move it, as Blender). One step, one Undo. 從輸入拿起的線放到另一個輸入：搬過去（人類：要，像 Blender）。 */
   moveWire = (edgeId: string, to: { node: string; port: string }) => this.transact(tr('edit.wireMoved', 'Wire moved'), net => {
