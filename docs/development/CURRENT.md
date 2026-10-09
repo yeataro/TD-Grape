@@ -91,6 +91,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-09 | **更新機制：範圍已整理、之後實測時再做（人類 10-09：內容正確）**：workspace `work/in-place-refactor-design/update-mechanism.md`。已定：殼上的 Grape 頁跟著更新對齊範本、值保留（甲）。待定：「更新所有 Grape OP」放哪、打開專案時要不要提示。另查到主組件 `TD_Grape` 的「TD-Grape」頁還留著舊產品的參數（`Updateshaders`、`Updatestatus`、`Edittaget`、`Registertdfam`、About 的 `Update`／`Version` 等），新程式沒有接；做更新機制時一起處理（刪除要先問）。 |
 | 2026-10-09 | **選取相關的樣式要再調（人類測完 R.49～50.3：功能沒問題，樣式現在不 OK）**：主要選取綠框／其他黃框、接線選取與 hover 的顏色粗細、框選預覽的虛線、多選框的虛線，目前都是示意色票（`theme/dark.css` 的 `--select-*`、`--wire-*`）。跟外觀一起調。 |
 | 2026-10-09 | **多選框的其餘部分（之後單獨一輪，人類：麻煩的一輪）**：外框本身已在 R.50.3 做好（多選時顯示）。還沒做的：選取工具列、拉框調大小、自動排列（legacy `src/editor/selection_ui.js` 85–413 行）。可直接搬的只有純計算：`selectionSpreadPositions`（拉框時每個節點的新位置）、`autoArrangePositions`（自動排列）；畫框、把手、工具列、事件綁著舊產品的畫布與全域變數，要用 React Flow 座標重寫，也不照抄它的整個畫面全部重刷。 |
 | 2026-10-09 | **TD 上新增／刪除 Uniform 列，編輯器要不要跟著（人類提出，最後回頭看）**：人類的想法是連線時以 TD 為主、TD 上新增刪除都有效。助手評估照字面做（自動改圖）複雜易錯，建議改成使用者按一下才同步（TD 有、圖沒有的列列成灰色＋「加到圖上」；TD 上被刪的列標「找不到」讓人選重新加回或刪除——舊產品的 `sourceMissing` 行為，人類：有點惱人但是保護）。詳見 workspace `work/in-place-refactor-design/uniform-d.md` 第三節。 |
