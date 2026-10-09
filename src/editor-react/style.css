@@ -378,7 +378,7 @@ span.image-label:hover { background: var(--image-label); }
 /* The name shortens with an ellipsis; the icon and the count stay (human 2026-10-10). 名稱用省略號縮短；圖示與數量不動（人類）。 */
 .input-source-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.input-source-tag { color: var(--text-strong); background: var(--td-top); display: inline-flex; flex: none; align-items: center; gap: 1px; padding: 0 4px 0 2px; border-radius: 3px;
+.input-source-tag { display: inline-flex; flex: none; align-items: center; gap: 1px; padding: 0 4px 0 2px; border-radius: 3px;
   font-size: calc(var(--font-xs) * .9); line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; } /* the count badge's size 同數量標籤的大小 */
 .input-source-tag .icon { width: 1.1em; height: 1.1em; }
 .unwired-default { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); color: var(--text-muted); font-size: var(--font-xs); white-space: nowrap; }
