@@ -73,21 +73,21 @@ a { color: var(--accent); }
 /* Trial (human 2026-10-09): what lies on what, told by a small shadow each layer casts on the ones below. From the top:
    things floating on the canvas, the foot bar (up onto the panels and canvas), the side panels (sideways onto the location
    bar and canvas), the location bar (up onto the title bar; it belongs to the network, human 2026-10-09), the title bar,
-   the canvas. Switched in Appearance; the colour is the theme's.
+   the canvas. Switched in Appearance; the colour is the theme's --layer-shadow.
    試驗（人類）：用每一層投到下層的小陰影表示誰疊在誰上面。由上到下：畫布上的浮動物、底列（往上蓋到面板與畫布）、
    左右面板（往側邊蓋到網址列與畫布）、網址列（往上蓋到標題列；屬於網路區，人類）、標題列、畫布。在外觀面板切換；顏色用主題的。 */
 :root[data-shadow-layers="on"] :is(.foot-bar, .location-bar, .panel-zone) { position: relative; }
-:root[data-shadow-layers="on"] .foot-bar { z-index: 5; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
-:root[data-shadow-layers="on"] .location-bar { z-index: 3; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
+:root[data-shadow-layers="on"] .foot-bar { z-index: 5; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+:root[data-shadow-layers="on"] .location-bar { z-index: 3; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
 /* Panels cast sideways and up, so they read as lying on the title bar too (human 2026-10-09: make it visible).
    面板往側邊和往上都投陰影，看得出它也疊在標題列上（人類：讓它看得出來）。 */
 :root[data-shadow-layers="on"] .panel-zone-left { z-index: 4;
-  box-shadow: var(--layer-offset) 0 var(--layer-blur) var(--overlay-down), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
+  box-shadow: var(--layer-offset) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
 :root[data-shadow-layers="on"] .panel-zone-right { z-index: 4;
-  box-shadow: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--overlay-down), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
-:root[data-shadow-layers="on"] :is(.network-bar-group, .react-flow__panel) { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--overlay-down); }
+  box-shadow: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+:root[data-shadow-layers="on"] :is(.network-bar-group, .react-flow__panel) { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
 /* Trial: source cards lift a little off the panel. 試驗：來源卡片從面板上浮起一點。 */
-:root[data-shadow-cards="on"] .source-card { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--overlay-down); }
+:root[data-shadow-cards="on"] .source-card { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
 /* React Flow's own variables, pointed at our purposes (COLOR_SYSTEM.md). RF 自己的變數接到我們的用途名。 */
 .react-flow { --xy-background-color: var(--surface-canvas); --xy-edge-label-color: var(--text-secondary);
   --xy-edge-label-background-color: var(--surface-raised); --xy-controls-button-background-color: var(--surface-control);
