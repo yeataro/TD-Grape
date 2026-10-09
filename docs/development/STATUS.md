@@ -58,6 +58,8 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.61 子圖形狀對齊（進行中；清理第 7 條，照 design-interview Q46，人類 10-10 同意在休息時做技術部分）**：只改形狀、不加新能力；現在沒有存檔含子圖，不需要轉換。
+  - 第 1 步 改名：子圖節點 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／subgraph_input／subgraph_output`（模組 key 改名後由核心預設規則產生，不再寫死 `definitionUuid`；檔案 `nodes/function_*.ts` → `nodes/subgraph_*.ts`）；參數 `functionId` → `subgraphId`（產碼 sourceMap 與錯誤位置欄位一起改）；核心內部網路代號前綴 `function:` → `subgraph:`（不存檔）。沒改：舊產品格式的內建子圖庫 `builtin_subgraphs.json`（冷資料，子圖那一輪轉換）、介面文字代號 `help.function`、`function.*` 與錯誤碼 `function.limit`（文字代號，不是存檔名稱）。驗證：test:core 142、test:editor 78、check:core、check:editor。
 - **Refactor.60.6 In TOP 叫 in1、in2…；標頭只寫「in1: 名稱」**（人類 10-10：標籤有點雜，簡單化；同 TD 新增 In TOP 的命名，較短，使用者自己加的也是同一套）：
   - TD：Grape OP 裡 Grape 建的 In TOP 照位置命名 `in1`、`in2`…（原 `input1`…；`next_family._place_inputs`、驗證用的替身、範本 `install_grape_templates.py`）；`GET inputs` 每筆多帶 In TOP 名字 `node`。
   - 編輯器：接了東西時標頭是純文字「in1: moviefilein1」（`sources.wiredSource`，名字是 TD 回報的、太長用省略號、提示完整路徑）；拿掉 🔌 圖示、圓角標籤與 R.60.4 加的 TOP 家族色（沒有其他用處）。

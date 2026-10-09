@@ -65,8 +65,8 @@ test('remove owns incident edges while unknown nodes and payloads survive unrela
 
 test('network identities and declaration invalidation cannot be mistaken for a local card edit',()=>{
   const g=seeded();g.subgraphs=[{id:'nested',graph:plain(g.stages.pixel)}];
-  const local=new GraphDocument(g,registry).change(c=>c.networks.get('function:nested').node('m').update({name:'inside'}));
-  assert.deepEqual(plain(local.changes.networks.map(n=>n.id)),['function:nested']);
+  const local=new GraphDocument(g,registry).change(c=>c.networks.get('subgraph:nested').node('m').update({name:'inside'}));
+  assert.deepEqual(plain(local.changes.networks.map(n=>n.id)),['subgraph:nested']);
   const after=plain(g);after.declarations.push({id:'u',kind:'uniform',name:'value',type:'float',value:1});
   const changed=changesBetween(g,after,registry);assert.deepEqual(plain(changed.global),['declarations']);
   assert.equal(changed.networks.every(n=>!n.complete),true);

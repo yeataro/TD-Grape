@@ -402,7 +402,7 @@ export class GraphDocument {
   }
 }
 function networkEntries(document:Graph):[string,NetworkData][] {
-  return [...Object.entries(document.stages),...(document.subgraphs||[]).map(raw=>{const f=raw as {id:string;graph:NetworkData};return ['function:'+f.id,f.graph] as [string,NetworkData];})];
+  return [...Object.entries(document.stages),...(document.subgraphs||[]).map(raw=>{const f=raw as {id:string;graph:NetworkData};return ['subgraph:'+f.id,f.graph] as [string,NetworkData];})];
 }
 function complete(document:Graph):void {
   const snapshots=new Set((document.subgraphs||[]).filter(f=>f.scope!=='local').map(f=>f.graph));

@@ -3,7 +3,7 @@ const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src
 const {sharedGraph,node}=require('../fixtures/shared_subgraphs.cjs');
 const copy=structuredClone;
 const empty=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[],edges:[]}}});
-const call=(id,child)=>({id,nodeType:'sgrape.function.call',params:{functionId:child}});
+const call=(id,child)=>({id,nodeType:'sgrape.builtin.subgraph_call',params:{subgraphId:child}});
 const next=(...ids)=>()=>{assert.ok(ids.length,'Unexpected ID allocation');return ids.shift();};
 const source=(id='source')=>({...copy(sharedGraph().subgraphs[0]),id,scope:'library',origin:{id,version:'v1'}});
 
@@ -15,11 +15,11 @@ test('batch insertion copies complete authored data and remaps both nested calls
  const step=new GraphDocument(g,registry).change(m=>{
   const handles=m.appendSubgraphs([outer,child],new Map([['child','renamed']]));
   assert.equal(handles[1].id,'renamed');
-  assert.ok(m.networks.has('function:renamed'));
+  assert.ok(m.networks.has('subgraph:renamed'));
  });
  assert.deepEqual([outer,child],original);assert.deepEqual(g.subgraphs,[]);
  const [parent,owned]=step.after.subgraphs;
- assert.equal(parent.graph.nodes[0].params.functionId,'renamed');
+ assert.equal(parent.graph.nodes[0].params.subgraphId,'renamed');
  assert.equal(owned.outputs[0].type,'float['+ScopeReferences.token('fn_renamed',['mul','out'])+']');
  assert.deepEqual(owned.origin,child.origin);
  child.graph.nodes[0].params.changed=true;assert.equal(owned.graph.nodes[0].params.changed,undefined);
@@ -42,16 +42,16 @@ test('source localization redirects shared and nested callers while preserving e
  g.subgraphs=[child,parent];g.stages.pixel.nodes=[call('a','parent'),call('b','parent')];
  const before=copy(g);let retired;
  const step=new GraphDocument(g,registry).change(m=>{
-  retired=m.networks.get('function:child');const raw=retired.node('mul').data;
+  retired=m.networks.get('subgraph:child');const raw=retired.node('mul').data;
   const mapping=m.localizeSubgraph('child',next('local_child','local_parent'));
   assert.deepEqual([...mapping],[['child','local_child'],['parent','local_parent']]);
-  assert.equal(m.networks.get('function:local_child').node('mul').data,raw);
+  assert.equal(m.networks.get('subgraph:local_child').node('mul').data,raw);
   assert.throws(()=>retired.node('mul').update({name:'Bad'}),/no longer belongs/);
   m.subgraph('local_child').rename('Editable gain');
  });
  for(const f of before.subgraphs)assert.deepEqual(step.after.subgraphs.find(d=>d.id===f.id),f);
- assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.functionId),['local_parent','local_parent']);
- assert.equal(step.after.subgraphs.find(f=>f.id==='local_parent').graph.nodes[0].params.functionId,'local_child');
+ assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.subgraphId),['local_parent','local_parent']);
+ assert.equal(step.after.subgraphs.find(f=>f.id==='local_parent').graph.nodes[0].params.subgraphId,'local_child');
  assert.equal(step.after.subgraphs.find(f=>f.id==='local_child').name,'Editable gain');
  assert.ok(step.changes.definitions.includes('local_child'));
 });
@@ -76,8 +76,8 @@ test('independence copies only one instance; nested definitions, source and othe
   assert.equal(f.id,'solo');assert.equal(f.data.name.length,80);
  });
  assert.deepEqual(step.after.subgraphs.slice(0,2),g.subgraphs);
- assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.functionId),['solo','parent']);
- assert.equal(step.after.subgraphs[2].graph.nodes[0].params.functionId,'child');
+ assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.subgraphId),['solo','parent']);
+ assert.equal(step.after.subgraphs[2].graph.nodes[0].params.subgraphId,'child');
  assert.deepEqual(step.after.subgraphs[2].origin,parent.origin);
 });
 

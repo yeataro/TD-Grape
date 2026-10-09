@@ -41,9 +41,6 @@ const equal_1 = require("./nodes/equal");
 const float_1 = require("./nodes/float");
 const floor_1 = require("./nodes/floor");
 const fract_1 = require("./nodes/fract");
-const function_call_1 = require("./nodes/function_call");
-const function_input_1 = require("./nodes/function_input");
-const function_output_1 = require("./nodes/function_output");
 const greaterThan_1 = require("./nodes/greaterThan");
 const greaterThanEqual_1 = require("./nodes/greaterThanEqual");
 const if_1 = require("./nodes/if");
@@ -71,6 +68,9 @@ const sin_1 = require("./nodes/sin");
 const smoothstep_1 = require("./nodes/smoothstep");
 const split_1 = require("./nodes/split");
 const sqrt_1 = require("./nodes/sqrt");
+const subgraph_call_1 = require("./nodes/subgraph_call");
+const subgraph_input_1 = require("./nodes/subgraph_input");
+const subgraph_output_1 = require("./nodes/subgraph_output");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
 const td_value_1 = require("./nodes/td_value");
@@ -81,7 +81,7 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
 
@@ -96,7 +96,7 @@ exports.requireCapacity = requireCapacity;
 const config_1 = require("./config");
 function networks(g) {
     return [...Object.entries(g.stages || {}).map(([id, data]) => [id, data]),
-        ...(g.subgraphs || []).map(f => ['function:' + f.id, f.graph])];
+        ...(g.subgraphs || []).map(f => ['subgraph:' + f.id, f.graph])];
 }
 /** Every measure of the graph, with its limit. Expanded size counts a subgraph instance as the
  * expanded size of its definition (an estimate of what the subgraph compiler builds). */
@@ -113,7 +113,7 @@ function measure(g, registry, config = config_1.CORE_CONFIG) {
         let total = 0;
         for (const n of data.nodes) {
             const ref = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n), inner = ref ? definitions.get(ref) : undefined;
-            total += inner ? size(inner, 'function:' + ref) : 1;
+            total += inner ? size(inner, 'subgraph:' + ref) : 1;
         }
         visiting.delete(key);
         expanded.set(key, total);
@@ -169,7 +169,7 @@ function equal(a, b) {
 }
 const keys = (a, b) => [...new Set([...Object.keys(record(a)), ...Object.keys(record(b))])].filter(k => !equal(record(a)[k], record(b)[k]));
 function networks(g) {
-    return new Map([...Object.entries(g.stages), ...(g.subgraphs || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })]);
+    return new Map([...Object.entries(g.stages), ...(g.subgraphs || []).map(raw => { const f = raw; return ['subgraph:' + f.id, f.graph]; })]);
 }
 function metadata(g) {
     const { stages, subgraphs, catalogSnapshot, ...rest } = g;
@@ -180,7 +180,7 @@ function portTypes(g, node, registry, networkId) {
     var _a;
     if (!node)
         return { inputs: {}, outputs: {} };
-    const module = registry.get(node.nodeType), context = (0, node_module_1.contextFor)(g, (_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => 'function:' + f.id === networkId));
+    const module = registry.get(node.nodeType), context = (0, node_module_1.contextFor)(g, (_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => 'subgraph:' + f.id === networkId));
     if (!(module === null || module === void 0 ? void 0 : module.supports(node, context)))
         return undefined;
     try {
@@ -199,7 +199,7 @@ function changesBetween(before, after, registry) {
     const defs = (g) => new Map((g.subgraphs || []).map(({ graph, ...f }) => [f.id, f]));
     const oldDefs = defs(before), newDefs = defs(after), definitions = [...new Set([...oldDefs.keys(), ...newDefs.keys()])].filter(id => !equal(oldDefs.get(id), newDefs.get(id)));
     const affected = (n, network) => { var _a; if (!n)
-        return false; const m = registry.get(n.nodeType); return definitions.includes(((_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n)) || '') || !!(m === null || m === void 0 ? void 0 : m.structural) && definitions.some(id => network === 'function:' + id); };
+        return false; const m = registry.get(n.nodeType); return definitions.includes(((_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n)) || '') || !!(m === null || m === void 0 ? void 0 : m.structural) && definitions.some(id => network === 'subgraph:' + id); };
     for (const id of new Set([...old.keys(), ...next.keys()])) {
         const a = old.get(id), b = next.get(id);
         if (equal(a, b) && !global.length && ![...((a === null || a === void 0 ? void 0 : a.nodes) || []), ...((b === null || b === void 0 ? void 0 : b.nodes) || [])].some(n => affected(n, id)))
@@ -211,7 +211,7 @@ function changesBetween(before, after, registry) {
             // Legacy modules may depend on other nodes/definitions; until migrated,
             // an affected mixed network keeps its conservative projection path.
             for (const [g, n] of [[before, x], [after, y]])
-                if (n && !((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.supports(n, (0, node_module_1.contextFor)(g, (_b = g.subgraphs) === null || _b === void 0 ? void 0 : _b.find(f => 'function:' + f.id === id)))))
+                if (n && !((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.supports(n, (0, node_module_1.contextFor)(g, (_b = g.subgraphs) === null || _b === void 0 ? void 0 : _b.find(f => 'subgraph:' + f.id === id)))))
                     change.complete = false;
             if (!x)
                 change.added.push(nodeId);
@@ -670,7 +670,7 @@ function ghostsOf(network, policy) {
     var _a;
     const nodes = new Map();
     // Subgraph networks have no stage of their own; their nodes follow the calling stage.
-    const stage = network.id.startsWith('function:') ? undefined : network.id;
+    const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
     for (const node of network.nodes) {
         const data = node.data, module = node.definition;
         const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
@@ -1307,7 +1307,7 @@ class GraphDocument {
 }
 exports.GraphDocument = GraphDocument;
 function networkEntries(document) {
-    return [...Object.entries(document.stages), ...(document.subgraphs || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })];
+    return [...Object.entries(document.stages), ...(document.subgraphs || []).map(raw => { const f = raw; return ['subgraph:' + f.id, f.graph]; })];
 }
 function complete(document) {
     const snapshots = new Set((document.subgraphs || []).filter(f => f.scope !== 'local').map(f => f.graph));
@@ -2824,116 +2824,6 @@ exports.default = (0, node_sdk_1.unaryNode)({
         ]
     }
 });
-
-},
-"nodes/function_call":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-// The common compiler expands this structural module using its declared role
-// and graph reference. Only ordinary value modules need an emit callback.
-const definition = {
-    catalog: {
-        definition: {
-            key: 'function_call',
-            label: 'Subgraph',
-            definitionUuid: 'sgrape.function.call',
-            inputs: {},
-            outputs: {},
-            stages: ['vertex', 'pixel'],
-            defaults: {},
-            descriptionKey: 'help.function'
-        },
-        emitter: {
-            id: 'function_call',
-            version: 1
-        },
-        browser: {}
-    },
-    structural: true,
-    role: 'value',
-    referencedGraph: node => String(node.params.functionId),
-    reference: graphId => ({ functionId: graphId }),
-    supports: (node, context) => { var _a; return (0, node_sdk_1.numericInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.functionId))); },
-    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.functionId)), 'call'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.functionId)), 'call'),
-    validate: (node, context) => {
-        (0, node_sdk_1.requireSubgraph)(context, String(node.params.functionId));
-    }
-};
-exports.default = definition;
-
-},
-"nodes/function_input":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-// The common compiler expands this structural module using its declared role
-// and graph reference. Only ordinary value modules need an emit callback.
-const definition = {
-    catalog: {
-        definition: {
-            key: 'function_input',
-            label: 'Subgraph Input',
-            definitionUuid: 'sgrape.function.input',
-            inputs: {},
-            outputs: {},
-            stages: ['vertex', 'pixel'],
-            defaults: {},
-            descriptionKey: 'help.functionPorts'
-        },
-        emitter: {
-            id: 'function_input',
-            version: 1
-        },
-        browser: {}
-    },
-    structural: true,
-    role: 'subgraph-input',
-    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
-    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'input'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'input'),
-    validate: (node, context) => {
-        (0, node_sdk_1.requireSubgraph)(context);
-    }
-};
-exports.default = definition;
-
-},
-"nodes/function_output":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-// The common compiler expands this structural module using its declared role
-// and graph reference. Only ordinary value modules need an emit callback.
-const definition = {
-    catalog: {
-        definition: {
-            key: 'function_output',
-            label: 'Subgraph Output',
-            definitionUuid: 'sgrape.function.output',
-            inputs: {},
-            outputs: {},
-            stages: ['vertex', 'pixel'],
-            defaults: {},
-            descriptionKey: 'help.functionPorts'
-        },
-        emitter: {
-            id: 'function_output',
-            version: 1
-        },
-        browser: {}
-    },
-    structural: true,
-    role: 'subgraph-output',
-    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
-    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'output'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'output'),
-    validate: (node, context) => {
-        (0, node_sdk_1.requireSubgraph)(context);
-    }
-};
-exports.default = definition;
 
 },
 "nodes/greaterThan":function(require,module,exports){
@@ -4463,6 +4353,113 @@ exports.default = (0, node_sdk_1.unaryNode)({
 });
 
 },
+"nodes/subgraph_call":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// The common compiler expands this structural module using its declared role
+// and graph reference. Only ordinary value modules need an emit callback.
+const definition = {
+    catalog: {
+        definition: {
+            key: 'subgraph_call',
+            label: 'Subgraph',
+            inputs: {},
+            outputs: {},
+            stages: ['vertex', 'pixel'],
+            defaults: {},
+            descriptionKey: 'help.function'
+        },
+        emitter: {
+            id: 'subgraph_call',
+            version: 1
+        },
+        browser: {}
+    },
+    structural: true,
+    role: 'value',
+    referencedGraph: node => String(node.params.subgraphId),
+    reference: graphId => ({ subgraphId: graphId }),
+    supports: (node, context) => { var _a; return (0, node_sdk_1.numericInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.subgraphId))); },
+    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
+    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
+    validate: (node, context) => {
+        (0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId));
+    }
+};
+exports.default = definition;
+
+},
+"nodes/subgraph_input":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// The common compiler expands this structural module using its declared role
+// and graph reference. Only ordinary value modules need an emit callback.
+const definition = {
+    catalog: {
+        definition: {
+            key: 'subgraph_input',
+            label: 'Subgraph Input',
+            inputs: {},
+            outputs: {},
+            stages: ['vertex', 'pixel'],
+            defaults: {},
+            descriptionKey: 'help.functionPorts'
+        },
+        emitter: {
+            id: 'subgraph_input',
+            version: 1
+        },
+        browser: {}
+    },
+    structural: true,
+    role: 'subgraph-input',
+    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
+    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'input'),
+    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'input'),
+    validate: (node, context) => {
+        (0, node_sdk_1.requireSubgraph)(context);
+    }
+};
+exports.default = definition;
+
+},
+"nodes/subgraph_output":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// The common compiler expands this structural module using its declared role
+// and graph reference. Only ordinary value modules need an emit callback.
+const definition = {
+    catalog: {
+        definition: {
+            key: 'subgraph_output',
+            label: 'Subgraph Output',
+            inputs: {},
+            outputs: {},
+            stages: ['vertex', 'pixel'],
+            defaults: {},
+            descriptionKey: 'help.functionPorts'
+        },
+        emitter: {
+            id: 'subgraph_output',
+            version: 1
+        },
+        browser: {}
+    },
+    structural: true,
+    role: 'subgraph-output',
+    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
+    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'output'),
+    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'output'),
+    validate: (node, context) => {
+        (0, node_sdk_1.requireSubgraph)(context);
+    }
+};
+exports.default = definition;
+
+},
 "nodes/subtract":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -5218,7 +5215,7 @@ function counts(g, registry) {
     const count = (data) => data.nodes.filter(n => stageOutput(registry.get(n.nodeType))).length;
     return [
         ...Object.entries(g.stages || {}).map(([id, data]) => ({ key: 'stageOutputs', network: id, value: count(data), expected: 1 })),
-        ...(g.subgraphs || []).map(f => ({ key: 'stageOutputs', network: 'function:' + f.id, value: count(f.graph), expected: 0 })),
+        ...(g.subgraphs || []).map(f => ({ key: 'stageOutputs', network: 'subgraph:' + f.id, value: count(f.graph), expected: 0 })),
     ];
 }
 const distance = (p) => Math.abs(p.value - p.expected);
@@ -5336,7 +5333,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
             const allocate = () => { let id; do {
                 id = 'sgf' + ++sequence;
             } while (used.has(id)); used.add(id); return id; };
-            const location = (n, path) => ({ node: n.id, stage: 'pixel', trail: [...path], ...(path.length ? { functionId: path[path.length - 1] } : {}) });
+            const location = (n, path) => ({ node: n.id, stage: 'pixel', trail: [...path], ...(path.length ? { subgraphId: path[path.length - 1] } : {}) });
             const add = (n, origin) => {
                 if (flat.nodes.length >= config.expandedNodes)
                     throw Error('Expanded Subgraph graph exceeds ' + config.expandedNodes + ' nodes');
@@ -5427,11 +5424,11 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                     }
                 }
                 if (owner && (inputCount !== 1 || outputCount !== 1))
-                    throw Object.assign(Error('Exactly one Subgraph Input and Output are required'), { stage: 'pixel', trail: path, functionId: owner.id });
+                    throw Object.assign(Error('Exactly one Subgraph Input and Output are required'), { stage: 'pixel', trail: path, subgraphId: owner.id });
                 for (const edge of data.edges) {
                     const from = (_d = maps.get(edge.from[0])) === null || _d === void 0 ? void 0 : _d.outputs[edge.from[1]], to = (_e = maps.get(edge.to[0])) === null || _e === void 0 ? void 0 : _e.inputs[edge.to[1]];
                     if (!from || !to)
-                        throw Object.assign(Error('Connection endpoint no longer exists'), { node: edge.to[0], stage: 'pixel', trail: path, ...(owner ? { functionId: owner.id } : {}) });
+                        throw Object.assign(Error('Connection endpoint no longer exists'), { node: edge.to[0], stage: 'pixel', trail: path, ...(owner ? { subgraphId: owner.id } : {}) });
                     flat.edges.push({ id: 'x' + flat.edges.length, from, to });
                 }
             }
@@ -5440,7 +5437,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 for (const direction of ['inputs', 'outputs'])
                     for (const p of probe[direction]) {
                         const id = allocate();
-                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, inputValues: { value: (0, model_1.copy)(p.default) } }, { node: '', stage: 'pixel', trail: [probe.id], functionId: probe.id });
+                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, inputValues: { value: (0, model_1.copy)(p.default) } }, { node: '', stage: 'pixel', trail: [probe.id], subgraphId: probe.id });
                         inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
                     }
                 expand(probe.graph, [probe.id], probe, inside);

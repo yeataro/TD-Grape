@@ -15,7 +15,7 @@ test('node/port handles are stable, scoped and read-only; caller state stays ind
   d.stages.pixel.nodes[0].params.value=9;assert.equal(n.data.params.value,.5);
   assert.throws(()=>g.networks.get('pixel').connect(p,g.networks.get('pixel').node('out').inputs[0],policy),/transaction/);
   const d2=document();d2.subgraphs=[{id:'nested',graph:plain(d2.stages.pixel)}];const nested=open(d2);
-  assert.notEqual(nested.networks.get('pixel').node('source'),nested.networks.get('function:nested').node('source'));
+  assert.notEqual(nested.networks.get('pixel').node('source'),nested.networks.get('subgraph:nested').node('source'));
 });
 test('connect/replacement is one graph edit; snapshot Undo/Redo and reopen preserve edge IDs and values',()=>{
   const base=open(),edit=base.change(g=>{

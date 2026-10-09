@@ -7,7 +7,7 @@ import { numericInterface, requireSubgraph } from './subgraph_interface';
 import { types, type } from './values';
 import { types as bindingTypes } from './numeric';
 
-interface Location {node:string;stage:string;trail:string[];functionId?:string}
+interface Location {node:string;stage:string;trail:string[];subgraphId?:string}
 interface Compiled {
   vertex:string;pixel:string;bindings:unknown[];
   sourceMap:{pixel:{node:string;stage:string;trail:string[];line:number}[]};
@@ -75,7 +75,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       const flat:NetworkData={nodes:[],edges:[]},origins=new Map<string,Location>();
       const used=new Set(g.stages.pixel!.nodes.flatMap(n=>[n.id,n.name||n.id]));let sequence=0;
       const allocate=()=>{let id;do{id='sgf'+ ++sequence;}while(used.has(id));used.add(id);return id;};
-      const location=(n:Node,path:string[]):Location=>({node:n.id,stage:'pixel',trail:[...path],...(path.length?{functionId:path[path.length-1]}:{})});
+      const location=(n:Node,path:string[]):Location=>({node:n.id,stage:'pixel',trail:[...path],...(path.length?{subgraphId:path[path.length-1]}:{})});
       const add=(n:Node,origin:Location)=>{
         if(flat.nodes.length>=config.expandedNodes)throw Error('Expanded Subgraph graph exceeds '+config.expandedNodes+' nodes');
         flat.nodes.push(n);origins.set(n.id,origin);
@@ -141,17 +141,17 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
             }
           } catch(error) {throw Object.assign(error instanceof Error?error:Error(String(error)),origin);}
         }
-        if(owner&&(inputCount!==1||outputCount!==1))throw Object.assign(Error('Exactly one Subgraph Input and Output are required'),{stage:'pixel',trail:path,functionId:owner.id});
+        if(owner&&(inputCount!==1||outputCount!==1))throw Object.assign(Error('Exactly one Subgraph Input and Output are required'),{stage:'pixel',trail:path,subgraphId:owner.id});
         for(const edge of data.edges){
           const from=maps.get(edge.from[0])?.outputs[edge.from[1]],to=maps.get(edge.to[0])?.inputs[edge.to[1]];
-          if(!from||!to)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{functionId:owner.id}:{})});
+          if(!from||!to)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{subgraphId:owner.id}:{})});
           flat.edges.push({id:'x'+flat.edges.length,from,to});
         }
       }
       if(probe){
         const inside:Endpoints={inputs:{},outputs:{}};
         for(const direction of ['inputs','outputs'] as const)for(const p of probe[direction]){
-          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},inputValues:{value:copy(p.default)}},{node:'',stage:'pixel',trail:[probe.id],functionId:probe.id});
+          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},inputValues:{value:copy(p.default)}},{node:'',stage:'pixel',trail:[probe.id],subgraphId:probe.id});
           inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
         }
         expand(probe.graph,[probe.id],probe,inside);

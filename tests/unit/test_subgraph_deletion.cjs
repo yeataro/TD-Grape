@@ -1,9 +1,9 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 // The subgraph-call definition id (formerly read from the retired old entry). 子圖呼叫的定義 id。
-const m={CALL:'sgrape.function.call'};
+const m={CALL:'sgrape.builtin.subgraph_call'};
 const {GraphDocument,registry,ScopeReferences}=require('../../src/generated/grape_core.js');
 function removeNodes(g,data,ids){const model=new GraphDocument(g,registry,undefined,true);try{const network=[...model.networks.values()].find(n=>n.data===data);network.removeAll(data.nodes.filter(n=>ids.has(n.id)).map(n=>network.node(n.id)));}finally{model.close();}}
-const call=(id,fn)=>({id,nodeType:m.CALL,params:{functionId:fn}});
+const call=(id,fn)=>({id,nodeType:m.CALL,params:{subgraphId:fn}});
 const scope=nodes=>({nodes,edges:[]});
 const definition=(id,nodes=[])=>({id,name:id,scope:'local',graph:scope(nodes),inputs:[],outputs:[]});
 const document=(nodes,subgraphs,vertex=[])=>({stages:{pixel:scope(nodes),vertex:scope(vertex)},subgraphs});

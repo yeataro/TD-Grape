@@ -42,7 +42,7 @@ test('a Color Output inside a subgraph is refused', () => {
   const graph = clone(bootstrap.defaultDocument.graph);
   graph.subgraphs = [{ id: 'g', name: 'g', graph: { nodes: [], edges: [] } }];
   const doc = open(graph);
-  refused(doc, c => c.networks.get('function:g').insert(outputNode('inner')), /function:g\) 1, expected 0/);
+  refused(doc, c => c.networks.get('subgraph:g').insert(outputNode('inner')), /subgraph:g\) 1, expected 0/);
 });
 
 test('a graph already off the rule still opens and can be repaired, but not made worse', () => {

@@ -16,7 +16,7 @@ export type Measure = { key:CapacityKey; network?:string; value:number; limit:nu
 
 function networks(g:Graph):[string,NetworkData][] {
   return [...Object.entries(g.stages||{}).map(([id,data])=>[id,data] as [string,NetworkData]),
-    ...(g.subgraphs||[]).map(f=>['function:'+f.id,f.graph] as [string,NetworkData])];
+    ...(g.subgraphs||[]).map(f=>['subgraph:'+f.id,f.graph] as [string,NetworkData])];
 }
 
 /** Every measure of the graph, with its limit. Expanded size counts a subgraph instance as the
@@ -31,7 +31,7 @@ export function measure(g:Graph,registry:Registry,config:CoreConfig=CORE_CONFIG)
     let total=0;
     for(const n of data.nodes){
       const ref=registry.get(n.nodeType)?.referencedGraph?.(n),inner=ref?definitions.get(ref):undefined;
-      total+=inner?size(inner,'function:'+ref):1;
+      total+=inner?size(inner,'subgraph:'+ref):1;
     }
     visiting.delete(key);expanded.set(key,total);return total;
   };

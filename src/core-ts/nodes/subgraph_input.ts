@@ -11,9 +11,8 @@ import {
 const definition: NodeModule = {
   catalog: {
     definition: {
-      key: 'function_input',
+      key: 'subgraph_input',
       label: 'Subgraph Input',
-      definitionUuid: 'sgrape.function.input',
       inputs: {},
       outputs: {},
       stages: ['vertex', 'pixel'],
@@ -21,7 +20,7 @@ const definition: NodeModule = {
       descriptionKey: 'help.functionPorts'
     },
     emitter: {
-      id: 'function_input',
+      id: 'subgraph_input',
       version: 1
     },
     browser: {}

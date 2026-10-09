@@ -22,7 +22,7 @@ export interface Ghosts {
 export function ghostsOf(network: Network, policy: ConnectionPolicy): Ghosts {
   const nodes = new Map<string, GhostKind>();
   // Subgraph networks have no stage of their own; their nodes follow the calling stage.
-  const stage = network.id.startsWith('function:') ? undefined : network.id;
+  const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
   for (const node of network.nodes) {
     const data = node.data!, module = node.definition;
     const referred = module?.referencedDeclaration?.(data);

@@ -242,7 +242,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.function.input', params: {} }));
+  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.builtin.subgraph_input', params: {} }));
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -328,9 +328,9 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*子圖 1 個/.test(zh(errorText(error))));
   // A known node this entry has not taken over: the message names it. 本入口還沒接管的節點：訊息指出是哪一個。
   const known = loaded(); withDoc(known.state, graph => {
-    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.function.input', params: {} }];
+    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.subgraph_input', params: {} }];
   });
-  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /function\.input 節點（nu）/.test(zh(errorText(error))));
+  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /subgraph_input 節點（nu）/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
   assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));

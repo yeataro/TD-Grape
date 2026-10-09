@@ -11,39 +11,35 @@ import {
 const definition: NodeModule = {
   catalog: {
     definition: {
-      key: 'function_call',
-      label: 'Subgraph',
-      definitionUuid: 'sgrape.function.call',
+      key: 'subgraph_output',
+      label: 'Subgraph Output',
       inputs: {},
       outputs: {},
       stages: ['vertex', 'pixel'],
       defaults: {},
-      descriptionKey: 'help.function'
+      descriptionKey: 'help.functionPorts'
     },
     emitter: {
-      id: 'function_call',
+      id: 'subgraph_output',
       version: 1
     },
     browser: {}
   },
 
   structural: true,
-  role: 'value',
-
-  referencedGraph: node => String(node.params.functionId),
-  reference: graphId => ({functionId: graphId}),
+  role: 'subgraph-output',
 
   supports: (node, context) =>
-    numericInterface(context.subgraph?.(String(node.params.functionId))),
+    numericInterface(context.owner),
 
   ports: (node, context) =>
-    subgraphPorts(requireSubgraph(context, String(node.params.functionId)), 'call'),
+    subgraphPorts(requireSubgraph(context), 'output'),
 
   presentation: (node, context) =>
-    subgraphPresentation(requireSubgraph(context, String(node.params.functionId)), 'call'),
+    subgraphPresentation(requireSubgraph(context), 'output'),
 
   validate: (node, context) => {
-    requireSubgraph(context, String(node.params.functionId));
+    requireSubgraph(context);
   }
 };
 

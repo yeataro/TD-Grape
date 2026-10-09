@@ -23,7 +23,7 @@ function counts(g:Graph,registry:Registry):StructureProblem[] {
   const count = (data:NetworkData) => data.nodes.filter(n => stageOutput(registry.get(n.nodeType))).length;
   return [
     ...Object.entries(g.stages||{}).map(([id,data]) => ({key:'stageOutputs' as const,network:id,value:count(data as NetworkData),expected:1})),
-    ...(g.subgraphs||[]).map(f => ({key:'stageOutputs' as const,network:'function:'+f.id,value:count(f.graph),expected:0})),
+    ...(g.subgraphs||[]).map(f => ({key:'stageOutputs' as const,network:'subgraph:'+f.id,value:count(f.graph),expected:0})),
   ];
 }
 const distance = (p:StructureProblem) => Math.abs(p.value-p.expected);

@@ -9,13 +9,13 @@ test('create, instantiate and edit a new definition share one graph transaction 
  const step=new GraphDocument(g,registry).change(m=>{
   const f=m.createSubgraph({id:'new_graph',name:'Subgraph 1',stage:'pixel'});
   const network=m.networks.get('pixel');network.instantiateSubgraph(f.id,'call');
-  stale=m.networks.get('function:new_graph');assert.equal(m.networks.get(stale.id),stale);
+  stale=m.networks.get('subgraph:new_graph');assert.equal(m.networks.get(stale.id),stale);
   assert.equal(stale.node('input').outputs[0].type,'vec4');
   f.editInterface('inputs',{kind:'update',id:'value',patch:{name:'Color'}});
   assert.equal(network.node('call').inputs[0].key,'value');
  });
  assert.equal(g.subgraphs.length,0);assert.equal(step.after.subgraphs.length,1);
- assert.ok(step.changes.definitions.includes('new_graph'));assert.ok(step.changes.networks.some(n=>n.id==='function:new_graph'));
+ assert.ok(step.changes.definitions.includes('new_graph'));assert.ok(step.changes.networks.some(n=>n.id==='subgraph:new_graph'));
  assert.throws(()=>stale.create('illegal','sgrape.builtin.float'),/active transaction/);
  assert.deepEqual(new GraphDocument(JSON.parse(JSON.stringify(step.after)),registry).snapshot(),step.after);
 });
@@ -50,12 +50,12 @@ test('last-call removal invalidates the removed scope before another mutation ca
  const g=sharedGraph();g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='second');g.stages.pixel.edges=[];
  g.subgraphs=g.subgraphs.filter(f=>f.id==='gain');
  const step=new GraphDocument(g,registry).change(m=>{
-  const child=m.networks.get('function:gain'),network=m.networks.get('pixel');
+  const child=m.networks.get('subgraph:gain'),network=m.networks.get('pixel');
   network.remove(network.node('first'));
-  assert.equal(m.networks.has('function:gain'),false);
+  assert.equal(m.networks.has('subgraph:gain'),false);
   assert.throws(()=>child.create('bad','sgrape.builtin.float'),/no longer belongs/);
  });
- assert.equal(step.after.subgraphs.length,0);assert.ok(step.changes.networks.some(n=>n.id==='function:gain'&&n.removed.includes('mul')));
+ assert.equal(step.after.subgraphs.length,0);assert.ok(step.changes.networks.some(n=>n.id==='subgraph:gain'&&n.removed.includes('mul')));
 });
 
 test('moving nodes into a child cannot revive their old parent handles or reuse a retired call identity',()=>{
@@ -68,7 +68,7 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
   parent.groupSubgraph(new Set(['value']),{...options,callId:'call'});
   assert.equal(old.data,undefined);
   assert.throws(()=>parent.create('value','sgrape.builtin.float'),/retired node ID/);
-  assert.equal(m.networks.get('function:child').node('value').data.params.value,1);
+  assert.equal(m.networks.get('subgraph:child').node('value').data.params.value,1);
  });
 });
 
@@ -87,7 +87,7 @@ test('structural creation follows module capabilities rather than built-in ident
  const custom=createRegistry(modules),g=empty();
  const step=new GraphDocument(g,custom).change(m=>{
   m.createSubgraph({id:'custom',name:'Custom',stage:'pixel'});const n=m.networks.get('pixel').instantiateSubgraph('custom','call');
-  assert.equal(n.data.nodeType,'test.function_call');assert.deepEqual(n.data.params,{child:'custom'});
+  assert.equal(n.data.nodeType,'test.subgraph_call');assert.deepEqual(n.data.params,{child:'custom'});
   m.networks.get('pixel').remove(n);
  });
  assert.deepEqual(step.after.subgraphs,[]);
