@@ -15,6 +15,8 @@
   --brand-mark: 26px;
   --brand-font: 18px;
   --tab-pad: 7px 12px;
+  --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
+  --row-font: 12px;
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */
   --radius-control: 7px;
   --radius-field: 5px;
@@ -33,4 +35,6 @@
   --brand-mark: 26px;
   --brand-font: 17px;
   --tab-pad: 9px 12px;
+  --row-height: 42px;
+  --row-font: 13px;
 }
