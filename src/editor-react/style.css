@@ -61,7 +61,9 @@ a { color: var(--accent); }
 .icon .icon-fill { fill: currentColor; stroke: none; opacity: 0; }
 .icon .icon-dot { fill: currentColor; stroke: none; }
 .icon-button { display: grid; place-items: center; width: var(--icon-button); height: var(--icon-button); padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
-.icon-button:hover { background: var(--surface-control); color: var(--text); }
+/* An icon button highlights without a border, on hover or with its menu open (human 2026-10-09); a pressed toggle keeps
+   its own border (rules below). 圖示按鈕的高亮沒有框線（滑過或選單打開時，人類）；按下的開關保留自己的框（在下面）。 */
+.icon-button:hover { background: var(--surface-control); color: var(--text); border-color: transparent; }
 .icon-button.narrow { width: var(--icon-button-narrow); }
 .icon-button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
 .icon-button.mode-toggle[aria-pressed="true"] { color: var(--pressed-mode); background: var(--surface-pressed-mode); border-color: var(--pressed-mode); }
