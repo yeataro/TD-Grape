@@ -22,6 +22,7 @@
   - 驗證：第一次只有 Uniforms 展開；開關會存起來、重新整理後照存的狀態顯示。
   - 測試時人類也在同一分頁操作，助手多點了一次 TD built-in values，已告知人類。
   - 之後會併進偏好儲存系統。
+- 節點接孔旁的型別文字改用該接孔的顏色（人類；照舊產品 legacy `style.css:134`）：一行樣式，用每列本來就有的接孔顏色，輸入輸出都一樣；沒有接孔顏色的列（Ghost）維持灰字。之後分量染色換掉接孔顏色時文字會跟著換。驗證：float、int、sampler2D、vec2、vec3、vec4 的型別文字與接孔圓框同色。
 - 「1 nodes」英文錯誤（人類）：不依語言格式化單複數（人類：有多語言），英文改寫成 `node(s)`；人類否決了「Nodes: 1」寫法。共 6 句：畫布數量、來源卡片數量提示、刪除確認、開圖說明（subgraph(s)、Frame(s)）、Ghost 提示。規則寫進 EDITOR_UI_RULES 三。驗證：畫布左下顯示「21 node(s)」。
 - 偏好儲存系統（人類：偏好全部一處，排版也是）：`preferences.ts`（`readPreference`、`readChoice`、`writePreference`）。
   - 語言、外觀四項、版面、Body 拖曳、區段開關都改用它，前綴統一為 `grape.`。

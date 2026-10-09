@@ -285,7 +285,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .port-row > .react-flow__handle { top: calc(var(--io-row) / 2); }
 /* Name and type sit together on the row's centre line, inputs and outputs alike (human 2026-10-09: centre lines, not
    baselines). 名稱與型別在同一個框裡、對齊這一行的中線，輸入輸出都一樣（人類：中線對齊，不是基線）。 */
-.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); }
+/* A port's type is written in its port's colour, inputs and outputs alike (legacy style.css:134: the type text takes the socket colour;
+   human 2026-10-09); a row without a port colour (a ghost's) keeps the muted text. 接孔的型別文字用該接孔的顏色，輸入輸出都一樣（照舊產品；
+   人類）；沒有接孔顏色的列（Ghost）維持灰字。 */
+.port-row small { color: var(--port-color, var(--text-muted)); font-size: var(--font-xs); line-height: var(--line-xs); }
 .port-row > span, .value-caption { font-size: var(--font-md); line-height: var(--line-md); } .output-row { justify-content: flex-end; }
 .value-row { flex: 1; display: flex; flex-wrap: wrap; column-gap: 8px; align-items: flex-start; min-width: 0; } .value-row > .value-group { flex: 1; }
 .value-swatch { flex-basis: 100%; padding-block: calc((var(--io-row) - var(--io-field)) / 2); } .value-fields > .value-swatch { padding-block: 0; } /* a whole row of its own, the same spacing as the fields 自己完整的一行，間距和數值格一樣 */ .value-swatch.wired { visibility: hidden; }
