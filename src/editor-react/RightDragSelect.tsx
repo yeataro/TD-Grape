@@ -30,8 +30,11 @@ export function RightDragSelect({ session, children }: { session: EditorSession;
   const flow = useReactFlow<FlowNode, FlowEdge>(), host = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  // Only on blank canvas: wires and nodes sit inside the pane too, and a Shift press on a wire is a click
+  // that adds it (Refactor.49.1, human 2026-10-09). 只在空白處：接線與節點也在 pane 裡，在接線上 Shift＋按下是加選它。
   const starts = (event: { button: number; shiftKey: boolean; target: EventTarget }) =>
-    (event.button === 2 || (event.button === 0 && event.shiftKey)) && !!(event.target as Element).closest('.react-flow__pane');
+    (event.button === 2 || (event.button === 0 && event.shiftKey)) && !!(event.target as Element).closest('.react-flow__pane')
+    && !(event.target as Element).closest('.react-flow__edge, .react-flow__node');
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
     // A press on a node (not on a port: that starts a wire) selects it before any drag starts.

@@ -961,3 +961,26 @@ test('selection follows TD: Ctrl toggles, Shift adds, nodes and wires apart, a p
   assert.equal(JSON.stringify(session.graph()), graph);
   assert.ok(!calls.some(c => c.action === 'apply'), 'never sent to TD');
 });
+
+// Refactor.49.1 (human 2026-10-09): wire multi-selection behaves exactly like node multi-selection.
+// 接線的多選行為和節點完全一樣。
+test('wires follow the node rules: Shift adds, Ctrl toggles, a plain click on a selected one keeps the group', t => {
+  const { session } = open(t);
+  session.transact('wire', net => {
+    net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy);
+    net.connect(net.node('b').outputs[0], net.node('sum').port('input', 'b'), GrapeGraph.values.policy);
+  });
+  const [x, y, z] = session.snapshot().projection.edges.map(e => e.id);
+  const wires = () => session.snapshot().projection.edges.filter(e => e.selected).map(e => e.id).sort();
+  session.clickEdge(x, 'only');
+  session.clickEdge(y, 'add');
+  assert.deepEqual(wires(), [x, y].sort(), 'Shift adds');
+  session.clickEdge(y, 'add');
+  assert.deepEqual(wires(), [x, y].sort(), 'Shift never takes away');
+  session.clickEdge(x, 'only');
+  assert.deepEqual(wires(), [x, y].sort(), 'a plain click on a selected wire keeps the group');
+  session.clickEdge(x, 'toggle');
+  assert.deepEqual(wires(), [y], 'Ctrl takes it away');
+  session.clickEdge(z, 'only');
+  assert.deepEqual(wires(), [z], 'a plain click on another wire replaces');
+});

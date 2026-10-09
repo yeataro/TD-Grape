@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.49.1 — 接線的多選和節點一致 — 2026-10-09
+
+人類 10-09：「線的多選跟節點的多選行為要一致，這不是框線的問題，是 Shift 跟 Ctrl 的問題。」
+
+- **Shift＋點接線不會加選**（R.49 的錯）：接線在 React Flow 的 pane 裡面，Shift＋左鍵按在接線上時，框選先把它當成「Shift＋左鍵框選」的起點接走，接線收不到點擊。[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)：只在空白處開始框選（按在接線或節點上不算）。
+- **一般點擊已選的接線變成只選它**（和節點不同）：[editor.ts](../../src/editor-react/editor.ts) `clickEdge` 改成和節點同規則——保留整組。
+- **為什麼 R.49 沒抓到**：瀏覽器實測時接線只試了 Ctrl＋點，沒試 Shift＋點；自動測試直接呼叫 `clickEdge`，繞過了框選攔截。之後選取類的實測，每個修飾鍵都要對節點和接線各試一次。
+- **驗證**：editor 54（新：接線規則一則）。內建瀏覽器真實點擊：Shift＋點第二條 → 兩條；再 Shift＋點 → 仍兩條；一般點已選的 → 仍兩條；Ctrl＋點 → 剩一條；一般點另一條 → 只剩它。
+
 ## Refactor.49 — 選取：對齊 TD 的點擊鍵、主要選取、節點與接線分開、接線高亮 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/selection-and-fixed-entries.md`（人類 10-09 同意；規則 design-interview Q33、Q39 早已定案）。

@@ -397,10 +397,13 @@ export class Editor {
     // 取消主要選取時，交給最後一個仍被選的（舊產品）。
     this.setPrimary(selected.has(id) ? id : primary === id || primary === null ? [...selected].at(-1) ?? null : primary);
   };
-  /** A wire clicked: same keys; wires and nodes are not selected together. 點接線：同樣的鍵；接線與節點不混選。 */
+  /** A wire clicked: the same rules as nodes (human 2026-10-09: wire and node multi-selection behave
+   * alike), so a plain click on a selected wire keeps the group too; wires and nodes are not selected
+   * together. 點接線：規則和節點一樣（人類：多選行為要一致），一般點擊已選的接線也保留整組；接線與節點不混選。 */
   clickEdge = (id: string, how: 'only' | 'toggle' | 'add') => {
-    const selected = new Set(how === 'only' ? [] : this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id));
-    if (how === 'toggle' && selected.has(id)) selected.delete(id); else selected.add(id);
+    const selected = new Set(this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id)), was = selected.has(id);
+    if (how === 'only' && !was) selected.clear();
+    if (how === 'toggle' && was) selected.delete(id); else selected.add(id);
     this.reselect(new Set(), selected);
     this.setPrimary(null);
   };
