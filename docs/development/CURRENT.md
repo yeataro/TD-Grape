@@ -18,25 +18,11 @@
 
 **更早：** Refactor.1–14 建立 TS 接線規劃、前端 compiler、節點模組、Editor Service、新 Manager 與原生 Grape TOP；R.15–32 第一條正式 React 路徑、TD 不在時照常編輯（Q28）、圖格式 grape-graph 1（Q44）、清掉舊入口與舊 Python 核心；R.33–52 Grape OP 新結構、在地化、來源（常數、Uniform、TD 內建值、貼圖輸入）、選取、固定入口、連線身分。權威規則摘要在 AGENTS.md。
 
-## 進行中（2026-10-08 交接；換 session 從這裡接）
-
-**主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
-- 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留、第 8 條已做（Refactor.31）。**清理清單全部完成。** Refactor.32 做了「建立 Grape OP＋身分」，Refactor.33 做了「Grape OP 新結構」（更新機制 Clone＋TDUpdater 方向已談、未實作）。「排查舊的笨行為」案子**已結案**（2026-10-09，Refactor.35–36；`../work/refactor/dumb-behavior-audit.md`；人類在空白專案把主組件放非根目錄跑完檢查清單，沒有問題）。之後：完整 Grape 頁（Q45：Open Editor 用 App 視窗、服務沒開時問、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP）。**
-
-**盤查最重要的發現：**
-1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
-2. ~~沒有方法建立新格式的 Grape OP~~（Refactor.32 已做：從 TD 選單建立）。
-3. **自訂參數頁（GrapeManager `parameters`）**：LEGACY-PYTHON 標「關閉舊入口前要先搬」，Refactor.24／25 關閉時漏看——目前無處可編輯 Grape OP 自訂參數。人類傾向：屬舊架構，之後照 Q41 重做，不搬舊的。重做時要守（Q44）：Grape 自動產生的參數（所有公開來源，含 MAT 貼圖）在這個頁面不能編輯或不能刪除。
-4. ~~TD Manager 啟動仍強制載入舊 Python 模組…~~（Refactor.27–29 已處理）原記錄：TD Manager 啟動仍強制載入舊 Python 模組（history、parameters）與 `editor-library.json`；`test:core` 以舊 Python 編譯器當對照組；`build:core` 仍替舊 Python 寫 `node_catalog.json`／`frontend_capabilities.json`，且擋住刪 `float`／`vec2`…。
-5. 新測試 OP 內仍有舊 `GrapeControls/parameter_links` 在跑、存著 `grapeV1DocumentBackup`。
-6. 17 個長期失敗的 Python 測試全屬舊架構。約 20 份現行文件有已不正確的敘述（清單見盤查檔）。
-
-**清殘留的判斷規則（人類 2026-10-08 定，design-interview Q48；取代原「甲乙丙丁四類」）**：每段殘留程式問兩題——形狀符合新架構嗎？產品現在需要嗎（從產品入口走得到才算）？符合＋需要→留不標；符合＋不需要→有決議或下一輪會用才留，否則刪；不符合＋需要→暫留，必須寫明「換成什麼、哪一輪換」；不符合＋不需要→刪。判斷不了放「待問」；以函式為單位；刪除前列清單等人類同意。另提議在暫留程式的註解加固定字樣（如 `LEGACY(暫留: 換成…, …輪)`）並把 LEGACY-PYTHON.md 擴成殘留地圖——人類未確認。人類的問題是問題、不是指示（記憶 questions-are-questions）。
-
-**已排的清理清單**（第 1 條已做 `e50e656`；第 2 TD 舊協定、3 新舊區分機制已做 Refactor.27；4 舊產品 TD 執行程式已做 Refactor.28；5 舊 Python 核心與其測試已做 Refactor.29；6 GraphDocument 直接改原物件已做 Refactor.30；7 子圖操作照 Q48 重判為「留」（2026-10-08，不改程式；與 Q46 不一致的形狀列在下方「待處理」，出口：子圖那一輪）；其餘照 Q48 逐條判斷，一張表、只問一題，刪除前列清單）：4 舊產品 TD 執行程式、5 舊 Python 核心與其測試、6 GraphDocument 直接改原物件模式、7 子圖操作（原判乙類，留；照 Q48 重判）、8 舊名 `wire_planning`／`GrapeWirePlanning`（已做 Refactor.31）。
-
 ## 待處理
+
+> **自訂參數頁（10-08 盤查第 3 條，仍未處理）**：舊 GrapeManager `parameters` 在關閉舊入口時沒搬，現在沒有地方編輯 Grape OP 的自訂參數。人類傾向：屬舊架構，之後照 Q41 重做、不搬舊的；重做時 Grape 自動產生的參數（所有公開來源）在這頁不能編輯或刪除（Q44）。
+
+> **清殘留的判斷規則**（design-interview Q48）：每段殘留問「形狀符合新架構嗎？產品現在需要嗎？」再決定留、刪或暫留；10-08 清理清單第 1–8 條已全部完成（Refactor.27–31），盤查紀錄 workspace `../work/refactor/legacy-audit-2026-10-08.md`。
 
 > **Samples（Refactor.58.9 已做 Clone、label、OP 改名同 label）：**In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未實機看。決定見 design-interview Q66。
 
