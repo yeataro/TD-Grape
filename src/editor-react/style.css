@@ -203,6 +203,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: var(--port-ring) solid var(--port-color); pointer-events: none; }
 :root:not([data-ports="b"]) .react-flow__handle.source::after,
 :root[data-ports="b"] .react-flow__handle[data-connected="true"]::after { background: var(--port-color); }
+/* Under the pointer: a light lavender centre and a soft lavender halo, as the legacy port hover (legacy style.css:88;
+   human 2026-10-09 screenshots). The port a dragged wire will land on also grows (React Flow marks it connectingto, valid).
+   滑過接孔：淡紫的中心加一圈半透明淡紫光暈，照舊產品；拖曳中的線要接上的接孔還會放大（React Flow 會標出它）。 */
+/* As specific as the port style rules above (A/B fill), and later, so it wins over them. 和上面 A／B 的規則一樣具體、寫在後面，所以蓋過它們。 */
+:root .react-flow__handle:is(:hover, .connectingto.valid)::after {
+  background: var(--wire-hover); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+:root .react-flow__handle.connectingto.valid::after { transform: translate(-50%, -50%) scale(1.4); }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
 .react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
 /* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,
