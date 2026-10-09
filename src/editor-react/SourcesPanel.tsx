@@ -54,11 +54,12 @@ function useDragToCanvas(choice: string) {
 // top, and in the bottom corner how many nodes use it, a tag as the section counts (human). No "+": the menu and dragging
 // onto the canvas both add it (human). 一張來源卡片（人類，參考舊產品）：有東西可展開才有三角形，名稱與型別；打開時本體顯示數值。
 // 右邊一欄：上面「⋯」（加到圖上、選取引用、刪除），右下角是幾個節點在用，和區段數量一樣的標籤（人類）。不放「＋」：選單和拖到畫布都能加。
+// Closed, the count sits left of "⋯" so the card stays one line (human: stacked, it looked bad). 收起時數量在「⋯」左邊，卡片維持一行（人類：疊起來難看）。
 function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove }: {
   declaration: Declaration; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className="source-row source-card" style={kindColor(declaration)} {...drag}>
+  return <div className={open ? 'source-row source-card open' : 'source-row source-card'} style={kindColor(declaration)} {...drag}>
     <div className="source-main"><div className="source-head">
       {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
         aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>

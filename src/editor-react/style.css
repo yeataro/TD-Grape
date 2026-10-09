@@ -201,9 +201,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; }
 /* A card: the head and the value at the left, "⋯" over the use count at the right, one icon button wide (human 2026-10-09).
    卡片：左邊名稱列與數值，右邊一欄「⋯」在上、使用數在右下角，一個圖示按鈕寬（人類）。 */
-.source-card { grid-template-columns: minmax(0, 1fr) var(--icon-button); }
+.source-card { grid-template-columns: minmax(0, 1fr) auto; }
 .source-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
-.source-side { display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 4px; }
+/* Closed: one line, the count left of "⋯"; open: the count under it, in the corner. 收起：一行，數量在「⋯」左邊；打開：數量在它下面的角落。 */
+.source-side { display: flex; flex-direction: row-reverse; align-items: center; gap: 4px; }
+.source-card.open .source-side { width: var(--icon-button); flex-direction: column; justify-content: space-between; align-items: stretch; }
 .source-side .badge { margin: 0; }
 /* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
    變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
