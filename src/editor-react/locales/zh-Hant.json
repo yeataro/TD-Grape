@@ -219,7 +219,6 @@
   "sources.inputConnector": "TD 裡 Grape OP 的第 {number} 個輸入",
   "sources.inputSnapshot": "輸入：{name}",
   "sources.inputSnapshotHint": "{path}\n{time} 拍的快照，不是即時畫面。按一下重拍。",
-  "sources.inputSource": "輸入：{name}",
   "sources.more": "更多",
   "sources.name": "名稱",
   "sources.nameFormat": "{name} 不是有效的名稱：以英文字母開頭，之後用英文字母、數字或 _（不能有 __）。",
