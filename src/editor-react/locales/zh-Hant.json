@@ -211,6 +211,7 @@
   "shader.revertedToLastGood": "回到 TD 正在執行的那一版圖（第 {revision} 版）；按 Undo 可以拿回你的修改",
   "shader.showGlsl": "在 GLSL 中顯示",
   "shader.stuckCompile": "TD 沒能編譯這個 Shader；TD 繼續執行第 {revision} 版。",
+  "shader.stuckHint": "可以直接編輯修正，或回到上一個可執行的版本。修好前每次修改，TD 都會重試編譯，可能短暫卡頓。",
   "shader.stuckInternal": "TD-Grape 套用 Shader 時發生內部錯誤；TD 繼續執行第 {revision} 版。",
   "shader.stuckLabel": "Shader 沒有套用",
   "sourceKind.constant": "全域",

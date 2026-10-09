@@ -51,6 +51,10 @@ function StuckNotice({ state, session, onShowGlsl }: { state: EditorState; sessi
       : tr('shader.stuckCompile', 'TD could not compile the Shader; TD keeps running revision {revision}.', { revision }))}</span>
     <span className="notice-detail">{first ? say(tr('glsl.lineError', 'Line {line}: {message}', { line: first.line, message: first.text }))
       : failure.log.split('\n').find(line => line.trim()) ?? ''}</span>
+    {/* How to get out, and what editing costs meanwhile (Refactor.63.6.4, human 2026-10-10): each edit of the program is tried
+        in TD, a compile that can pause TD briefly. 怎麼脫困，以及這段期間編輯的代價（人類）：每次改到程式 TD 都會試編，可能短暫卡頓。 */}
+    {failure.kind === 'compile' && <span className="notice-detail">{say(tr('shader.stuckHint',
+      'Fix it by editing, or revert. Until it compiles, TD tries again on each edit and may pause briefly.'))}</span>}
     <div className="notice-actions">
       <button onClick={() => onShowGlsl(first?.line)}>{say(tr('shader.showGlsl', 'Show in GLSL'))}</button>
       {lastKnownGood && <button onClick={session.revertToLastGood}>{say(tr('shader.revert', 'Revert to last good'))}</button>}</div>

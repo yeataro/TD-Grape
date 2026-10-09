@@ -211,6 +211,7 @@
   "shader.revertedToLastGood": "Back to the graph TD runs (revision {revision}); Undo brings back your changes",
   "shader.showGlsl": "Show in GLSL",
   "shader.stuckCompile": "TD could not compile the Shader; TD keeps running revision {revision}.",
+  "shader.stuckHint": "Fix it by editing, or revert. Until it compiles, TD tries again on each edit and may pause briefly.",
   "shader.stuckInternal": "TD-Grape ran into an internal error while applying the Shader; TD keeps running revision {revision}.",
   "shader.stuckLabel": "Shader not applied",
   "sourceKind.constant": "Global",
