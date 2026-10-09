@@ -151,7 +151,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .fold-toggle[aria-expanded="true"] .icon { transform: none; }
 .fold-actions { display: flex; gap: 4px; }
 .fold-body { padding-top: 4px; }
-.source-row { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+/* A source card (human 2026-10-09 trial): a strip at its left in its kind's colour (a node title turned on its side, at the
+   title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */
+.source-row { position: relative; overflow: hidden; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
+  padding: 8px 8px 8px calc(8px + var(--source-strip)); margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
+  background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
@@ -26,6 +26,11 @@ function NameField({ declaration }: { declaration: Declaration }) {
     onChange={event => setDraft(event.target.value)} onBlur={commit}
     onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(declaration.name); event.currentTarget.blur(); } }} />;
 }
+
+// A source card shows its kind's colour on a strip at its left, as a node title turned on its side (human 2026-10-09
+// trial; a handle for reordering may come later). 來源卡片左邊一條是它種類的顏色，像轉了方向的節點標題（人類試驗；之後可能當排序把手）。
+const kindColor = (declaration: Declaration) =>
+  ({ '--group-color': `var(--group-${core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'function'})` }) as CSSProperties;
 
 export function SourcesPanel({ declarations, references }: {
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>>;
@@ -63,7 +68,7 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
     <p className="hint">{say(tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.'))}</p>
-    {inputs.map(declaration => <div className="source-row" key={declaration.id}>
+    {inputs.map(declaration => <div className="source-row" key={declaration.id} style={kindColor(declaration)}>
       <div className="source-head">
         <NameField declaration={declaration} />
         <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
@@ -78,7 +83,7 @@ export function SourcesPanel({ declarations, references }: {
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
-    {uniforms.map(declaration => <div className="source-row" key={declaration.id}>
+    {uniforms.map(declaration => <div className="source-row" key={declaration.id} style={kindColor(declaration)}>
       <div className="source-head">
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
@@ -96,7 +101,7 @@ export function SourcesPanel({ declarations, references }: {
     <p className="hint">{say(tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.'))}</p>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
-      return <div className={declared ? 'source-row' : 'builtin-row unused'} key={preset.entry} title={hint}>
+      return <div className={declared ? 'source-row' : 'builtin-row unused'} key={preset.entry} title={hint} style={declared ? kindColor(declared) : undefined}>
         <div className="builtin-row"><code>{preset.name}</code>
           <small>{declared ? say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declared.id] ?? 0 })) : preset.expression}</small>
           <button onClick={() => session.placePreset(preset.entry, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
@@ -107,7 +112,7 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
-    {constants.map(declaration => <div className="source-row" key={declaration.id}>
+    {constants.map(declaration => <div className="source-row" key={declaration.id} style={kindColor(declaration)}>
       <div className="source-head">
         <NameField declaration={declaration} />
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
