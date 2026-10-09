@@ -59,11 +59,13 @@
   --tint-active: 20%;   /* the accent behind what is active (stage, chosen row) */
   --tint-border: 55%;   /* the accent on a hovered border */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
-  --text-alpha-strong: 88%;
-  --text-alpha-title: 85%;
-  --text-alpha-secondary: 72%;
-  --text-alpha-muted: 54%;
-  --text-alpha-faint: 32%;
+  /* Toned down from the legacy .88/.85/.72/.54/.32 (human 2026-10-09: all white text was frighteningly bright).
+     比舊產品調暗（人類：白字亮到可怕）。 */
+  --text-alpha-strong: 78%;
+  --text-alpha-title: 74%;
+  --text-alpha-secondary: 60%;
+  --text-alpha-muted: 45%;
+  --text-alpha-faint: 28%;
 
   /* ── 2. purposes ── */
   --surface-node: var(--palette-node);
