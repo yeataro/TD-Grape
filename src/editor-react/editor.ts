@@ -101,10 +101,12 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 // (Refactor.63). glslMap：GLSL 每一行由哪個節點產生（核心的 sourceMap，行號從 1），讓一行能找回它的節點。
 // glslVariables: which node each variable belongs to, so its name in the GLSL is a link to the node (human 2026-10-10).
 // glslVariables：每個變數屬於哪個節點，GLSL 裡的名字就是連到節點的超連結（人類）。
+// glslDeclarations: which declaration each name written at the top of the GLSL is (Refactor.63.4), so its name selects every
+// node using it. glslDeclarations：GLSL 檔頭寫出的名字是哪個宣告，點名字就選取所有引用它的節點。
 export type GlslLine = { line: number; node: string };
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
-  glslVariables: Readonly<Record<string, string>>; targetPath: string;
+  glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
@@ -143,7 +145,8 @@ export class Editor {
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
-      glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {}, targetPath: loaded.target,
+      glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
+      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target,
       ...this.sources() };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
@@ -303,6 +306,7 @@ export class Editor {
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl, glslMap: this.glslMap() ?? this.state.glslMap,
       glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,
+      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? this.state.glslDeclarations,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
     if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal);
     this.sync.changed();
@@ -555,6 +559,7 @@ export class Editor {
     const nodes = this.state.projection.nodes.filter(node => entry === undefined ? node.data.declaration?.id === id
       : node.data.authored.nodeType === TD_VALUE && node.data.authored.params.entry === entry).map(node => node.id);
     this.boxSelect(new Set(nodes), nodes);
+    return nodes;
   };
   clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
   /** A box selection, applied once on release (Refactor.50.1): these nodes, no wires. The primary stays

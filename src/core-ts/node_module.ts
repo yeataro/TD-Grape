@@ -31,7 +31,9 @@ export interface EmitContext extends NodeContext {
    * 標記使用並依 kind 回傳引用時每個輸出的 GLSL。 */
   referenceDeclaration(id:string):Record<string,string>;
 }
-export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[]}
+/** names: variables the statements declare (Refactor.63.4), so a name in the GLSL leads back to this node.
+ * names：statements 宣告的變數，讓 GLSL 裡的名字找回這個節點。 */
+export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[];names?:readonly string[]}
 export interface Signature {type:string;inputs:Readonly<Record<string,string>>;outputs:Readonly<Record<string,string>>;operands?:Readonly<Record<string,string>>}
 export type Configuration={type:string}|{signature:Signature};
 export interface NodeControl {

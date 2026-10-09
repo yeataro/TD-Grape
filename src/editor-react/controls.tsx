@@ -183,3 +183,31 @@ export function FoldSection({ title, actions, hint, children, remember, open: in
     {open && <div className="fold-body">{children}</div>}
   </section>;
 }
+
+type Sides = { top: boolean; bottom: boolean; left: boolean; right: boolean };
+const SIDES = ['top', 'bottom', 'left', 'right'] as const;
+/** A scrolling area whose edges fade on each side where content is hidden, so it shows there is more (Refactor.63.4,
+ * human 2026-10-10). Measured on scroll and whenever the area or its content changes size; the fades never catch the pointer.
+ * 捲動區：哪一邊還有被蓋住的內容，那一邊的邊緣就淡出，看得出還有東西（人類）。捲動、區域或內容改變大小時重新量；漸層不擋滑鼠。 */
+export function ScrollFade({ className, children }: { className?: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null);
+  const [sides, setSides] = useState<Sides>({ top: false, bottom: false, left: false, right: false });
+  useLayoutEffect(() => {
+    const area = box.current, inner = content.current;
+    if (!area || !inner) return;
+    const measure = () => {
+      const next = { top: area.scrollTop > 0, left: area.scrollLeft > 0,
+        bottom: area.scrollTop + area.clientHeight < area.scrollHeight - 1, right: area.scrollLeft + area.clientWidth < area.scrollWidth - 1 };
+      setSides(old => SIDES.every(side => old[side] === next[side]) ? old : next);
+    };
+    measure();
+    area.addEventListener('scroll', measure, { passive: true });
+    const sizes = new ResizeObserver(measure);
+    sizes.observe(area); sizes.observe(inner);
+    return () => { area.removeEventListener('scroll', measure); sizes.disconnect(); };
+  }, []);
+  return <div className={'scroll-fade' + (className ? ' ' + className : '')}>
+    <div ref={box} className="scroll-fade-area"><div ref={content} className="scroll-fade-content">{children}</div></div>
+    {SIDES.map(side => <span key={side} className={'scroll-fade-edge ' + side + (sides[side] ? ' shown' : '')} aria-hidden="true" />)}
+  </div>;
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "9d0d45d78f318e1d097e9b3c4c8a43afb8b243eaa5d8e3383ecb1eb058a629c0",
+  "catalogHash": "55e80464b1bb09a55e701b170fbc32ae000f130b4dd372cc46a280b64831442e",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -97,8 +97,11 @@
           }
         ],
         "variables": {
-          "sg_n_color": "color"
-        }
+          "sg_n_color": "color",
+          "sg_color": "pixel_out",
+          "fragColor": "pixel_out"
+        },
+        "declarations": {}
       },
       "stages": {
         "pixel": {

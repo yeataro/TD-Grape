@@ -3904,7 +3904,8 @@ exports.default = (0, node_sdk_1.outputNode)(catalog, {
         statements: [
             '    vec4 sg_color = ' + fillToColor(inputType(n), c.input('color')) + ';',
             '    fragColor = TDOutputSwizzle(sg_color);'
-        ]
+        ],
+        names: ['sg_color'] // declared above, so the name leads back here (Refactor.63.4) 上面宣告的，名字帶回這裡
     })
 });
 
@@ -5483,7 +5484,8 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 return { ...result,
                     sourceMap: { pixel: result.sourceMap.pixel.map(row => ({ ...row, ...origins.get(row.node) })),
                         // A variable inside an expanded subgraph leads to the node the person sees. 展開的子圖裡的變數找回人看得到的節點。
-                        variables: Object.fromEntries(Object.entries(result.sourceMap.variables).map(([name, id]) => { var _a, _b; return [name, (_b = (_a = origins.get(id)) === null || _a === void 0 ? void 0 : _a.node) !== null && _b !== void 0 ? _b : id]; })) },
+                        variables: Object.fromEntries(Object.entries(result.sourceMap.variables).map(([name, id]) => { var _a, _b; return [name, (_b = (_a = origins.get(id)) === null || _a === void 0 ? void 0 : _a.node) !== null && _b !== void 0 ? _b : id]; })),
+                        declarations: result.sourceMap.declarations },
                     diagnostics: result.diagnostics.map(row => ({ ...row, ...origins.get(row.node) })) };
             }
             catch (error) {
@@ -6244,7 +6246,7 @@ function createFlatCompiler(registry, limits) {
         return live.every(n => !n.params.requireConstant);
     }
     function compile(g, identifiers) {
-        var _a;
+        var _a, _b;
         let errorNode;
         try {
             if (!supports(g))
@@ -6389,6 +6391,8 @@ function createFlatCompiler(registry, limits) {
                     throw Error('Module emitted a different output interface');
                 if (emission.statements)
                     lines.push(...emission.statements);
+                for (const name of (_b = emission.names) !== null && _b !== void 0 ? _b : [])
+                    variables[name] = id;
                 let passed = false;
                 for (const [port, expression] of Object.entries(emission.outputs)) {
                     // An opaque value cannot live in a local variable: its expression is written where it is used.
@@ -6421,13 +6425,18 @@ function createFlatCompiler(registry, limits) {
             const bindings = [...ordered, ...declared, ...usedDeclarations.filter(d => kindOf(d).role === 'source' && !kindOf(d).ordered && !kindOf(d).declared)]
                 .map(d => JSON.parse(JSON.stringify(d)));
             const headers = usedDeclarations.flatMap(d => { const kind = declarations_1.declarationKinds.get(d.kind); return kind.header ? [kind.header(d)] : []; });
+            // Names in the GLSL that lead somewhere (Refactor.63.4): a declaration written at file scope leads to its declaration;
+            // the stage's output (written by this template) leads to the stage output node. GLSL 裡能帶到別處的名字：檔頭寫出的
+            // 宣告帶回宣告；Stage 的輸出（這個樣板寫的）帶回 Stage 輸出節點。
+            const declarationNames = Object.fromEntries(usedDeclarations.filter(d => declarations_1.declarationKinds.get(d.kind).header).map(d => [d.name, d.id]));
+            variables.fragColor = outputs[0].id;
             const pixel = [...headers, 'layout(location=0) out vec4 fragColor;', 'void main() {', '    vec2 sg_uv = vUV.st;', ...lines, '}', ''].join('\n');
             const diagnostics = [
                 ...data.nodes.filter(n => !visited.has(n.id) && !ghosts.nodes.has(n.id)).sort((a, b) => a.id < b.id ? -1 : 1).map(n => ({ node: n.id, stage: 'pixel', message: 'Disconnected node is not emitted' })),
                 ...[...ghosts.nodes].sort(([a], [b]) => a < b ? -1 : 1).map(([node, kind]) => ({ node, stage: 'pixel', message: 'Ghost node (' + kind + ') is kept but not emitted' })),
                 ...data.edges.filter(e => ghosts.edgeData.has(e)).map(e => ({ node: e.to[0], stage: 'pixel', message: 'Ghost wire to ' + e.to[1] + ' is treated as not connected' }))
             ];
-            const sourceMap = { pixel: lineNodes.map((node, i) => ({ node, stage: 'pixel', trail: [], line: headers.length + 4 + i })), variables };
+            const sourceMap = { pixel: lineNodes.map((node, i) => ({ node, stage: 'pixel', trail: [], line: headers.length + 4 + i })), variables, declarations: declarationNames };
             return { vertex: '', pixel, bindings, sourceMap, stages: { pixel: { lines, ports, live: [...visited].sort() } }, diagnostics };
         }
         catch (error) {

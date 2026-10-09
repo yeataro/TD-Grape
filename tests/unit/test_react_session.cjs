@@ -886,6 +886,16 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   const second = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
   assert.equal(second.pixel, first.pixel, 'the GLSL is the same');
   assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
+  // Names in the GLSL panel (Refactor.63.4): the Uniform's name leads to its declaration and selects its reference nodes;
+  // the output names lead to Color Output. GLSL 面板的名字：Uniform 名字帶回宣告、選取引用節點；輸出名字帶回 Color Output。
+  const state = session.snapshot();
+  assert.deepEqual({ ...state.glslDeclarations }, { uColor: uniform().id });
+  assert.deepEqual([state.glslVariables.fragColor, state.glslVariables.sg_color], ['pixel_out', 'pixel_out']);
+  session.placeDeclaration(uniform().id, { x: 0, y: 200 });
+  const refs = [...session.snapshot().projection.nodes.filter(n => n.data.declaration?.id === uniform().id).map(n => n.id)].sort();
+  assert.equal(refs.length, 2);
+  assert.deepEqual([...session.selectReferences(uniform().id)].sort(), refs);
+  assert.deepEqual([...session.snapshot().projection.nodes.filter(n => n.selected).map(n => n.id)].sort(), refs);
 });
 
 // Time (Refactor.45, D1; Q61): a preset Uniform, created once when placed and reused after.

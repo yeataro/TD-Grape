@@ -98,6 +98,7 @@ export default outputNode(catalog, {
     statements: [
       '    vec4 sg_color = ' + fillToColor(inputType(n), c.input('color')) + ';',
       '    fragColor = TDOutputSwizzle(sg_color);'
-    ]
+    ],
+    names: ['sg_color'] // declared above, so the name leads back here (Refactor.63.4) 上面宣告的，名字帶回這裡
   })
 });

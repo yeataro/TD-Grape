@@ -8,6 +8,7 @@ import { tr, say } from './text';
 import { useSession } from './contexts';
 import { frameNodes } from './viewport';
 import { glslErrors } from './glsl_errors';
+import { ScrollFade } from './controls';
 import type { EditorState } from './editor';
 
 // Prism's token kinds, shown in the legacy GLSL colours (legacy style.css:480; Refactor.63, human 2026-10-10: a light
@@ -45,7 +46,7 @@ function highlight(source: string): Piece[][] {
  * 行會標出來，但只在目前就是失敗的那份 GLSL 時（改過之後行號會指錯）。節點本身不標錯：TD 停下的那一行不一定是錯的源頭（人類）。 */
 export function GlslPanel({ state }: { state: EditorState }) {
   const session = useSession(), flow = useReactFlow();
-  const { glsl, glslMap, glslVariables, stuck } = state;
+  const { glsl, glslMap, glslVariables, glslDeclarations, stuck } = state;
   const lines = useMemo(() => highlight(glsl), [glsl]);
   const nodeOf = useMemo(() => new Map(glslMap.map(row => [row.line, row.node])), [glslMap]);
   const failure = stuck?.failure;
@@ -56,17 +57,26 @@ export function GlslPanel({ state }: { state: EditorState }) {
   const scrollTo = (line: number) => box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`)?.scrollIntoView({ block: 'center' });
   useEffect(() => { if (focus.line) scrollTo(focus.line); }, [focus]);
   const goToNode = (id: string) => { session.selectNode(id); frameNodes(flow, [id]); };
-  // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10).
-  // 節點的變數是連到那個節點的超連結，照核心的表找，不從文字猜（人類）。
-  const names = useMemo(() => Object.keys(glslVariables).sort((a, b) => b.length - a.length), [glslVariables]);
+  // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10);
+  // so is the Shader's output (Refactor.63.4). A Uniform's or constant's name selects every node using it, like Shared
+  // Sources' "Select references" (63.4). 節點的變數是連到那個節點的超連結，照核心的表找，不從文字猜（人類）；Shader 的輸出也是。
+  // Uniform 或常數的名字選取所有引用它的節點，同 Shared Sources 的「選取引用」。
+  const goToReferences = (id: string) => { const nodes = session.selectReferences(id); if (nodes.length) frameNodes(flow, nodes); };
+  const names = useMemo(() => [...Object.keys(glslVariables), ...Object.keys(glslDeclarations)].sort((a, b) => b.length - a.length),
+    [glslVariables, glslDeclarations]);
   const pattern = useMemo(() => names.length ? new RegExp('\\b(' + names.join('|') + ')\\b', 'g') : null, [names]);
+  const link = (name: string, key: number) => {
+    const node = glslVariables[name], declaration = glslDeclarations[name];
+    return node !== undefined
+      ? <button key={key} type="button" className="glsl-link" onClick={() => goToNode(node)}
+        title={say(tr('glsl.goToVariable', 'Select the node {node}', { node }))}>{name}</button>
+      : <button key={key} type="button" className="glsl-link" onClick={() => goToReferences(declaration!)}
+        title={say(tr('glsl.selectReferences', 'Select every node using {name}', { name }))}>{name}</button>;
+  };
   const linked = (text: string, key: number) => {
     if (!pattern) return text;
     const parts = text.split(pattern);
-    return parts.length === 1 ? text : <span key={key}>{parts.map((part, i) => i % 2
-      ? <button key={i} type="button" className="glsl-variable" onClick={() => goToNode(glslVariables[part]!)}
-        title={say(tr('glsl.goToVariable', 'Select the node {node}', { node: glslVariables[part]! }))}>{part}</button>
-      : part)}</span>;
+    return parts.length === 1 ? text : <span key={key}>{parts.map((part, i) => i % 2 ? link(part, i) : part)}</span>;
   };
   if (!glsl) return <pre className="code-view">{say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>;
   return <div className="glsl-view" ref={box} aria-label={say(tr('glsl.label', 'Generated GLSL'))}>
@@ -80,7 +90,7 @@ export function GlslPanel({ state }: { state: EditorState }) {
           {say(tr('glsl.lineError', 'Line {line}: {message}', { line: error.line, message: error.text }))}</button></li>)}</ul>
         : <pre className="glsl-log">{failure.log}</pre>}
     </div>}
-    <pre className="code-view glsl-code">{lines.map((pieces, index) => {
+    <ScrollFade className="glsl-scroll"><pre className="code-view glsl-code">{lines.map((pieces, index) => {
       const line = index + 1, node = nodeOf.get(line), error = marked.get(line);
       return <div key={line} data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focus.line === line ? ' focused' : '')}
         title={error}>
@@ -90,6 +100,6 @@ export function GlslPanel({ state }: { state: EditorState }) {
         <span className="glsl-text">{pieces.map((piece, i) => piece.kind
           ? <span key={i} className={'glsl-' + piece.kind}>{piece.text}</span> : linked(piece.text, i))}{pieces.length ? null : ' '}</span>
       </div>;
-    })}</pre>
+    })}</pre></ScrollFade>
   </div>;
 }

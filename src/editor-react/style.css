@@ -227,10 +227,23 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    showed whole). Alone, it takes all. 顯示中的分頁佔一半，名字放得下；其他平分剩下的（人類：「共用來源」永遠顯示不完整）。只有一個就佔滿。 */
 .panel-tab[aria-selected="true"]:not(:only-child) { flex: 0 0 50%; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
+/* A scrolling area with edge fades (controls ScrollFade, Refactor.63.4): a fade shows on a side with hidden content. The fades
+   start from the surface behind (--scroll-fade-from, the zone unless a user says otherwise).
+   有邊緣漸層的捲動區：哪一邊有被蓋住的內容就顯示那一邊的漸層；從後面的底色（預設是區域底色）淡到透明。 */
+.scroll-fade { position: relative; display: flex; min-height: 0; min-width: 0; --scroll-fade-from: var(--surface-zone); }
+.scroll-fade-area { flex: 1; min-width: 0; overflow: auto; }
+.scroll-fade-content { width: max-content; min-width: 100%; }
+.scroll-fade-edge { position: absolute; pointer-events: none; opacity: 0; transition: opacity .12s;
+  --scroll-fade-size: 16px; }
+.scroll-fade-edge.shown { opacity: 1; }
+.scroll-fade-edge.top { top: 0; left: 0; right: 0; height: var(--scroll-fade-size); background: linear-gradient(to bottom, var(--scroll-fade-from), transparent); }
+.scroll-fade-edge.bottom { bottom: 0; left: 0; right: 0; height: var(--scroll-fade-size); background: linear-gradient(to top, var(--scroll-fade-from), transparent); }
+.scroll-fade-edge.left { top: 0; bottom: 0; left: 0; width: var(--scroll-fade-size); background: linear-gradient(to right, var(--scroll-fade-from), transparent); }
+.scroll-fade-edge.right { top: 0; bottom: 0; right: 0; width: var(--scroll-fade-size); background: linear-gradient(to left, var(--scroll-fade-from), transparent); }
 .code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
 /* The GLSL panel (Refactor.63): a line-number column, Prism's colours, the line under the pointer or keyboard a little
    lighter, lines TD reported marked. GLSL 面板：行號欄、Prism 上色、滑鼠或鍵盤所在的行亮一點點、TD 回報的行標出來。 */
-.glsl-view { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.glsl-view { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .glsl-code .glsl-line { display: flex; }
 .glsl-code .glsl-line:is(:hover, :focus-within, .focused) { background: var(--code-line-hover); }
 .glsl-code .glsl-line.error { background: var(--code-line-error); }
@@ -238,8 +251,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   font: inherit; text-align: right; user-select: none; }
 button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .glsl-text { flex: 1; min-width: 0; }
-.glsl-variable { padding: 0; border: 0; background: none; color: inherit; font: inherit; }
-.glsl-variable:hover { text-decoration: underline; }
+.glsl-view .glsl-scroll { flex: 1 1 0; min-height: 0; }
+/* A name that leads somewhere (Refactor.63.4, human 2026-10-10: in a link colour): to its node, or to every node using its
+   declaration. 能帶到別處的名字（人類：用連結的顏色）：帶到它的節點，或選取所有引用該宣告的節點。 */
+.glsl-link { padding: 0; border: 0; background: none; color: var(--code-link); font: inherit; cursor: pointer;
+  text-decoration: underline dotted; text-underline-offset: 2px; }
+.glsl-link:hover { text-decoration-style: solid; }
 .glsl-comment { color: var(--glsl-comment); } .glsl-keyword { color: var(--glsl-keyword); } .glsl-type { color: var(--glsl-type); }
 .glsl-number { color: var(--glsl-number); }
 .glsl-function { color: var(--glsl-function); } .glsl-directive { color: var(--glsl-directive); }

@@ -19,12 +19,19 @@ const nowGhost=new Set(['missing port']);
 // too (Uniform D1); compared here as legacy listed them. 舊產碼結果只列用到的 Uniform，TD 端則替每個宣告留列；
 // 現在 TD 讀產碼結果，所以沒用到的也在裡面。這裡照舊產品的列法比較。
 // The variable map (Refactor.63: a name in the GLSL leads to its node) is new; every name in it is in the GLSL and
-// belongs to a node of the source map. 變數表是新的（GLSL 裡的名字找回節點）；表裡每個名字都在 GLSL 裡、屬於 sourceMap 的節點。
-const asLegacy=r=>{
+// belongs to a node of the source map, or is the output written by the template. So is the declaration map (Refactor.63.4):
+// each name is in the GLSL and is a declaration of the graph.
+// 變數表是新的（GLSL 裡的名字找回節點）；表裡每個名字都在 GLSL 裡、屬於 sourceMap 的節點，或是樣板寫的輸出。宣告表（63.4）也是新的：
+// 名字都在 GLSL 裡、是圖裡的宣告。
+const asLegacy=(r,graph)=>{
   for(const [name,node] of Object.entries(r.sourceMap.variables)){
-    assert.ok(new RegExp('\\b'+name+'\\b').test(r.pixel),name);assert.ok(r.sourceMap.pixel.some(row=>row.node===node),node);
+    assert.ok(new RegExp('\\b'+name+'\\b').test(r.pixel),name);
+    assert.ok(name==='fragColor'||r.sourceMap.pixel.some(row=>row.node===node),node);
   }
-  const {variables,...sourceMap}=r.sourceMap;
+  for(const [name,id] of Object.entries(r.sourceMap.declarations)){
+    assert.ok(new RegExp('\\b'+name+'\\b').test(r.pixel),name);assert.ok(graph.declarations.some(d=>d.id===id&&d.name===name),id);
+  }
+  const {variables,declarations,...sourceMap}=r.sourceMap;
   return {...r,sourceMap,bindings:r.bindings.filter(b=>b.kind!=='uniform'||new RegExp('^uniform \\S+ '+b.name+';$','m').test(r.pixel))};
 };
 test('frontend compilation matches legacy GLSL, bindings, ports, source map and diagnostics',()=>{
@@ -33,7 +40,7 @@ test('frontend compilation matches legacy GLSL, bindings, ports, source map and 
     if(nowGhost.has(row.name)){const result=compiler.compile(freeze(row.graph),identifiers);
       assert.ok(result.diagnostics.some(d=>/Ghost wire/.test(d.message)),row.name);}
     else if(row.error)assert.throws(()=>compiler.compile(freeze(row.graph),identifiers),undefined,row.name);
-    else assert.deepEqual(asLegacy(plain(compiler.compile(freeze(row.graph),identifiers))),row.compiled,row.name);
+    else assert.deepEqual(asLegacy(plain(compiler.compile(freeze(row.graph),identifiers)),row.graph),row.compiled,row.name);
   }
 });
 test('capability selection excludes whole graphs before execution',()=>{

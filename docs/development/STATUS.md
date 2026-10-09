@@ -58,6 +58,14 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.63.4 GLSL 面板：邊緣漸層與更多可點的名字**（人類 10-10 排定）：
+  - 邊緣漸層：新的共用元件 `ScrollFade`（controls.tsx）——哪一邊還有被蓋住的內容，那一邊的邊緣就從後面的底色淡到透明（四邊各自判斷，捲動、區域或內容改變大小時重量，漸層不擋滑鼠）。GLSL 面板的程式碼區改用它捲動，失敗說明留在上方不跟著捲。
+  - 連結顏色：可點的名字用選取綠＋虛線底線（用途色 `--code-link`，取自調色盤的選取綠），滑過變實線。
+  - Uniform／常數名字（GLSL 檔頭宣告的）：點了選取所有引用它的節點並對準，同 Shared Sources 的「選取引用」。名字→宣告的表由核心產碼時記下（`sourceMap.declarations`，子圖照樣帶出）。
+  - 輸出名字：`fragColor`、`sg_color` 點了選取 Color Output。節點模組可在產碼結果多報 `names`（它的 statements 宣告的變數），Color Output 報 `sg_color`；`fragColor` 由 TOP 樣板寫，核心直接記到輸出節點。
+  - `selectReferences` 回傳選到的節點（GLSL 面板拿來對準）。
+  - 驗證：core 144（舊產品對照另外檢查：宣告表的名字都在 GLSL 裡、都是圖裡的宣告）、editor 81（Uniform 測試加：宣告表、輸出名字、兩個引用節點一次選到）。TD 實測（Grape_TOP_test，實驗圖）：加 Uniform、放兩個引用、接進圖 → GLSL 出現 `uniform float uValue;`，點 `uValue` 兩個引用節點都被選取並對準，點 `sg_color` 選到 Color Output；水平捲動後左右漸層都出現；之後 Undo 四步，TD 端回到 17 節點、11 線、沒有宣告、沒有失敗紀錄；分頁設定還原。
+  - 限制：水平捲動時行號跟著捲走（R.63 起就是如此，未改）。
 - **Refactor.63.3 停在 GLSL 分頁時編輯器打不開**（人類 10-10 回報：編輯服務打不開、整個視窗空白，主控台 `Cannot read properties of undefined (reading 'map')`）：R.63 在編輯狀態加了 `glslMap`、`glslVariables`，但「還沒開圖／載入中」用的空狀態（main.tsx `idle`）用 `as unknown as EditorState` 強制轉型，少了欄位型別檢查也不報；分頁停在 GLSL 時，每次打開編輯器、載入那一刻 GLSL 面板就對 undefined 做 `.map`，整頁當掉。補上欄位後實測又露出第二個：沒有圖時沒有 session，GLSL 面板（R.63 起要用 session 連到節點）直接讀它。修正：空狀態完整寫出型別、拿掉強制轉型（之後 EditorState 加欄位，這裡沒補就編譯不過）；GLSL 面板和 Shared Sources、Add Node 一樣，沒有圖時顯示「打開一個 Grape OP 後才能看它的 GLSL。」。R.63 驗證時分頁停在 Add Node，沒踩到。服務本身（HTTP、四個 Grape OP 的讀圖）當時都正常。驗證：editor 81、core 144；內建瀏覽器把分頁設在 GLSL 重現當掉（修正前），修正後同設定開 Grape_TOP_test 正常顯示 GLSL、開首頁顯示提示，無錯誤；測完分頁設定還原。原排 63.3／63.4 的工作順延為 63.4／63.5。
 - **Refactor.63.2 回到正在跑的程式時，卡住會解除**（人類 10-10 回報：已經回到上一張圖，提示與失敗訊息還在）：原因是同步器在「程式和 TD 正在跑的相同」時只送圖、不送程式（省 TD 的工），而 TD 只在程式換上時清掉失敗紀錄。同一個分頁裡失敗後再回到原本的程式，就永遠卡著；「回到上一個能跑的版本」在同一個分頁裡也會踩到。R.63 實測時是重新打開編輯器才按回退（那時同步器不知道 TD 在跑哪一版、照送程式），所以沒踩到——驗證情境不夠完整。修正：Shader 卡住時，正在跑的程式也照送；TD 判斷程式相同、不重新編譯，只記成正在跑並清掉失敗。不卡住時照舊只送圖。驗證：editor 81（新增重現測試：同一個分頁先跑、再失敗、回到原程式→照送程式、卡住解除、之後只動版面照舊只送圖；修正前此測試失敗）。現場：人類的 Grape_TOP1 仍卡著（圖 261、程式 248），重新整理後任一編輯即解除，未代為操作。
 - **Refactor.63.1 Force Compile Error 成為正式節點**（人類 10-10：這個週期的正式節點，名字用助手建議的）：R.63 的測試用節點改名 `force_compile_error`（標題 Force Compile Error），放在新增選單的 Editor 分類（和 Router 一起），不再需要 `?grape-test-nodes` 旗標（旗標程式拿掉）；產生的 GLSL 呼叫 `sg_force_compile_error(...)`，TD 的錯誤訊息一看就知道是它造成的。原理：用一般單一輸入運算的範本，核心不檢查函式存不存在（真正編譯的是 TD），所以核心放行、TD 一定編不過。CURRENT 的「發布前拿掉」刪除。驗證：test:core 144、test:editor 80；Grape_TOP1 的新增節點搜尋 Force 出現在 Editor 分類。

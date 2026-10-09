@@ -133,6 +133,7 @@
   "glsl.label": "產生的 GLSL",
   "glsl.lineError": "第 {line} 行：{message}",
   "glsl.noGraph": "打開一個 Grape OP 後才能看它的 GLSL。",
+  "glsl.selectReferences": "選取所有使用 {name} 的節點",
   "glsl.title": "GLSL",
   "identity.build": "TD {build}",
   "identity.detail": "TouchDesigner {build}：{path}\n位址 {host}\nTD 裡的 TD-Grape：{served}\n這個頁面：{page}",

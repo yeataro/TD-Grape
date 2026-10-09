@@ -148,6 +148,8 @@
   --glsl-directive: var(--palette-glsl-directive);
   --glsl-string: var(--palette-glsl-string);
   --glsl-builtin: var(--palette-glsl-builtin);
+  /* A name in code that leads somewhere, in the selection green (Refactor.63.4). 程式碼裡可點的名字，用選取綠。 */
+  --code-link: var(--palette-select-green);
   /* A line of code under the pointer or the keyboard (a little lighter), and a line TD reported (human 2026-10-10).
      滑鼠或鍵盤所在的那一行（亮一點點），以及 TD 回報的錯誤行（人類）。 */
   --code-line-hover: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
