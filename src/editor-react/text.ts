@@ -43,6 +43,9 @@ function storedLanguage(): Language {
 // R.53 menu reloaded the page and lost the Undo history). Text is worded when shown, so a re-render is enough.
 // 語言可以在編輯中當場切換（照舊產品；R.53 的選單重新整理頁面，Undo 歷史因此不見）。文字在顯示時才翻，重畫即可。
 let current: Language = typeof window === 'undefined' ? 'en' : storedLanguage();
+// The page says its language from the start, so the font that follows it (theme/sizes.css) is right at once.
+// 頁面一開始就標出語言，讓跟著語言的字型（sizes.css）一開始就對。
+if (typeof document !== 'undefined') document.documentElement.lang = current;
 const languageListeners = new Set<() => void>();
 export const language = () => current;
 export const languageSubscribe = (listener: () => void) => { languageListeners.add(listener); return () => { languageListeners.delete(listener); }; };

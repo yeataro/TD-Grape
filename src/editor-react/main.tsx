@@ -117,6 +117,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       // Double-click on blank canvas opens Create node (legacy), so React Flow's double-click zoom is off
       // (reported to the human as an exception, Refactor.54). 雙擊空白處打開新增節點（照舊），所以關掉 RF 的雙擊放大（已報告的例外）。
       zoomOnDoubleClick={false}
+      // A wire snaps to a port within 28px (React Flow's own setting; 20 by default). 拉線放開時 28px 內吸附到接孔。
+      connectionRadius={28}
       snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
       minZoom={.15} maxZoom={2.5} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
@@ -134,9 +136,14 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
 // Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
 // Panels and zones are the layout's (layout.tsx, Refactor.53).
 // 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與面板區歸版面管（layout.tsx）。
+// Body drag is a setting kept in this browser (Q64); Snap and box select last for the page. Body 拖曳記在這個瀏覽器（Q64）。
 function usePrefs(): CanvasPrefs {
-  const [prefs, setPrefs] = useState({ bodyDrag: true, snap: false, boxSelect: false });
-  return useMemo(() => ({ ...prefs, set: patch => setPrefs(old => ({ ...old, ...patch })) }), [prefs]);
+  const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
+    bodyDrag: (() => { try { return localStorage.getItem('grape-react-body-drag') !== 'off'; } catch { return true; } })() }));
+  return useMemo(() => ({ ...prefs, set: patch => {
+    setPrefs(old => ({ ...old, ...patch }));
+    if (patch.bodyDrag !== undefined) try { localStorage.setItem('grape-react-body-drag', patch.bodyDrag ? 'on' : 'off'); } catch { /* storage may be blocked */ }
+  } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). 沒有圖時：同一個外框，沒有內容、按鈕停用。
 const idle = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
@@ -244,6 +251,10 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
             }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
+          {/* What floats over the network's top edge, stacked with one gap: the toolbar, then notices such as a
+              conflict (human 2026-10-09: a rounded floating panel below the toolbar, the same gap as to the canvas edge).
+              浮在網路區上緣的東西，用同一個間距往下排：功能列，然後是衝突這類提示（人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
+          <div className="network-overlay">
           <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} />
           {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
           {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
@@ -254,13 +265,14 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
             <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
             <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
           </div>}
+          </div>
           {draft && <div className="draft-blocker" />}</div>
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
       </section>
       <PanelZone side="right" layout={layout} panels={panels} />
     </div>
-    <FootBar session={session} waiting={waiting.message} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
+    <FootBar session={session} waiting={waiting.message} prefs={prefs} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }
 

@@ -151,11 +151,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         ? tr('ghost.missing', 'The shared source it points to no longer exists. Kept as it is, left out of the shader.')
         : tr('ghost.unknown', 'This version does not understand {type}. Kept as it is, left out of the shader.', { type: authored.nodeType }))}</div>
       {inputs.map(port => <div className="port-row input-row" key={port.key}>
-        <Handle type="target" position={Position.Left} id={port.key} isConnectable={false} aria-label={`${id} input ${port.key}`} />
+        <Handle type="target" position={Position.Left} id={port.key} isConnectable={false} aria-label={`${id} input ${port.key}`} data-connected="true" />
         <span>{port.key}</span></div>)}
       {outputs.map(port => <div className="port-row output-row" key={port.key}>
         <span>{port.key}</span>
-        <Handle type="source" position={Position.Right} id={port.key} isConnectable={false} aria-label={`${id} output ${port.key}`} />
+        <Handle type="source" position={Position.Right} id={port.key} isConnectable={false} aria-label={`${id} output ${port.key}`} data-connected="true" />
       </div>)}
     </div>
   </article>;
@@ -173,7 +173,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-        <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} />
+        <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={data.connected.includes(port.key)} />
         <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
         {/* Unconnected: a fixed expression (e.g. vUV.st) is shown, not edited; a texture has no value.
             沒接線：固定式子只顯示不編輯；貼圖沒有值。 */}
@@ -186,7 +186,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.note && <div className="hint">{view.note.text}</div>}
       {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
         <span>{view.portLabels?.outputs?.[port.key] ?? port.key}</span><small>{port.type}</small>
-        <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} />
+        {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
+            接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
+        <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
       </div>)}
     </div>
   </article>;

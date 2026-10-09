@@ -4,7 +4,8 @@ import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node
 
 export type FlowNode = RFNode<{
   authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
-  inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; ghost?: GhostKind;
+  /** connected: inputs with a wire; wired: outputs with at least one (port styles, Refactor.54.2). 接了線的輸入／輸出。 */
+  inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; wired: string[]; ghost?: GhostKind;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
 export type Projection = { nodes: FlowNode[]; edges: FlowEdge[] };
@@ -32,8 +33,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
   const all = !changes || !!changes.global.length || !!changes.definitions.length || delta?.complete === false;
   const dirty = new Set(delta?.nodes.filter(item => item.fields.some(key => key !== 'ui')).map(item => item.id));
   for (const edge of delta?.edges ?? []) {
-    if (edge.before) dirty.add(edge.before.to[0]);
-    if (edge.after) dirty.add(edge.after.to[0]);
+    if (edge.before) { dirty.add(edge.before.to[0]); dirty.add(edge.before.from[0]); }
+    if (edge.after) { dirty.add(edge.after.to[0]); dirty.add(edge.after.from[0]); }
   }
   const connected = new Map<string, string[]>(), outgoing = new Map<string, string[]>();
   for (const edge of network.data.edges) {
@@ -57,7 +58,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
       // Recomputed every time: a node can turn ghost without being edited (e.g. its declaration is gone).
       const next = { authored, label: node.definition?.catalog.definition.label ?? authored.nodeType, colorGroup: 'ghost',
         view: {}, types: [], inputs: ghostPorts(connected.get(node.id), 'input'), outputs: ghostPorts(outgoing.get(node.id), 'output'),
-        connected: connected.get(node.id) ?? [], ghost };
+        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [], ghost };
       data = data && same(data, next) ? data : next;
     } else if (!data || all || dirty.has(node.id) || data.ghost) {
       const module = node.definition!;
@@ -68,7 +69,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
       const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module, authored, document),
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
-        connected: connected.get(node.id) ?? [] };
+        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [] };
       data = data && same(data, next) ? data : next;
     }
     if (old && old.data === data && same(old.position, position)) return old;
@@ -88,7 +89,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
     return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1],
       target: saved.to[0], targetHandle: saved.to[1], style, label,
-      labelStyle: { fill: 'var(--text-secondary)', fontSize: 10 }, labelBgStyle: { fill: 'var(--surface-raised)' } };
+      labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
   const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges) };
   return next.nodes === previous.nodes && next.edges === previous.edges ? previous : next;

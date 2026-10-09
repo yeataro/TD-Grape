@@ -1,13 +1,15 @@
-:root { font-family: Inter, "Segoe UI", "Microsoft JhengHei", sans-serif; color: var(--text); background: var(--surface-app); font-size: 13px; color-scheme: dark; }
+:root { font-family: var(--font-family); color: var(--text); background: var(--surface-app); font-size: var(--font-base); line-height: var(--line-base); color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 #root { height: 100vh; display: flex; flex-direction: column; }
-button, select, input { font: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
+/* Form controls take the page's line height too (browsers give them `normal`, the usual cause of uneven CJK/Latin rows).
+   表單控制項也用頁面的行高（瀏覽器預設給它們 normal，是中英文不齊最常見的原因）。 */
+button, select, input { font: inherit; line-height: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
 input, select { border-radius: var(--radius-field); background: var(--surface-field); }
 input:focus-visible, select:focus-visible { outline: 1px solid var(--accent); }
 button, select { padding: 6px 9px; }
-button { cursor: pointer; color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
-button:disabled, button[aria-disabled="true"] { opacity: .45; cursor: default; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
+button { color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
+button:disabled, button[aria-disabled="true"] { opacity: .45; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
 button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
 button.primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
 button.primary[aria-disabled="true"]:hover { background: var(--accent-fill); }
@@ -20,11 +22,11 @@ a { color: var(--accent); }
 .title-bar, .location-bar, .foot-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 12px; background: var(--surface-bar); }
 .title-bar { height: var(--title-bar-height); border-bottom: 1px solid var(--border); }
 .brand-mark { width: var(--brand-mark); height: var(--brand-mark); flex: none; }
-.brand-name { color: var(--text-strong); font-size: var(--brand-font); }
+.brand-name { color: var(--text-strong); font-size: var(--brand-font); line-height: var(--title-bar-height); }
 .title-bar button { height: var(--control-height); padding-block: 0; font-size: var(--control-font); }
-.brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 12px; }
+.brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); }
-.foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+.foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--font-md); line-height: var(--line-md); color: var(--text-muted); }
 .foot-bar.error, .foot-bar.conflict, .foot-bar.uncertain { --message: var(--status-error); }
 .foot-bar.warning, .foot-bar.offline { --message: var(--status-warning); }
 .foot-sync { white-space: nowrap; }
@@ -66,13 +68,15 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 
 /* The network's toolbar floats over its top edge and never blocks the canvas between its groups.
    網路區功能列浮在上緣，兩組之間不擋畫布。 */
-.network-bar { position: absolute; z-index: 6; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+.network-overlay { position: absolute; z-index: 6; top: var(--float-gap); left: var(--float-gap); right: var(--float-gap);
+  display: flex; flex-direction: column; gap: var(--float-gap); pointer-events: none; }
+.network-bar { display: flex; justify-content: space-between; gap: var(--float-gap); }
 .network-bar-group { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 8px; pointer-events: auto;
   background: var(--surface-floating); border: 1px solid var(--border); }
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
-.canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: 11px; pointer-events: none; }
-.canvas-caption strong { letter-spacing: .12em; text-transform: uppercase; font-size: 10px; }
-.zoom-readout { display: grid; place-items: center; min-width: 44px; font-size: 11px; color: var(--text-muted); background: var(--surface-control); }
+.canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); pointer-events: none; }
+.canvas-caption strong { letter-spacing: .12em; text-transform: uppercase; font-size: var(--font-xs); line-height: var(--line-xs); }
+.zoom-readout { display: grid; place-items: center; min-width: 44px; font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); }
 
 /* Panel zones and handles (layout.tsx). 面板區與把手。 */
 .panel-zone { position: relative; display: flex; flex-shrink: 0; min-height: 0; background: var(--surface-zone); }
@@ -82,10 +86,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 .panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .panel-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
-.panel-tab { flex: 1; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left; font-weight: 600; }
+.panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
-.code-view { margin: 0; font-size: 12px; white-space: pre; }
+.code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
 /* A handle is drawn thin and grabbed wide (human 2026-10-09). 把手畫得細、抓的範圍寬。 */
 .resize-handle { position: absolute; z-index: 4; touch-action: none; }
 .resize-handle::after { content: ""; position: absolute; background: transparent; transition: background .12s; }
@@ -119,54 +124,59 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: var(--text-muted); }
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .builtin-row small { color: var(--text-muted); }
-.port-fallback { color: var(--text-muted); font-size: 11px; padding-left: 4px; }
-.source-flag { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
+.source-flag { display: flex; align-items: center; gap: 6px; font-size: var(--font-md); line-height: var(--line-md); }
 .builtin-row.unused code { color: var(--text-muted); }
 .section-buttons { display: flex; gap: 4px; }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
-.td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: 11px; border-radius: 4px; background: var(--overlay-down); }
+.td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: var(--font-sm); line-height: var(--line-sm); border-radius: 4px; background: var(--overlay-down); }
 .td-expression { color: var(--td-expression); } .td-export { color: var(--td-export); } .td-other { color: var(--text-muted); }
 .td-bind input, code.td-bind { color: var(--td-bind); }
-.grape-node.ghost .ghost-note { font-size: 11px; color: var(--text-secondary); padding: 4px 0; }
+.grape-node.ghost .ghost-note { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-secondary); padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
-.node-title strong { flex: 1; } .node-title small, .node-title select { color: var(--text-secondary); font-size: 11px; }
-.node-title select { max-width: 78px; padding: 3px; } .node-drag-surface { cursor: grab; }
+.node-title strong { flex: 1; } .node-title small, .node-title select { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
+.node-title select { max-width: 78px; padding: 3px; }
 .node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }
 .node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
 .port-row { position: relative; padding: 5px 14px; display: flex; gap: 8px; align-items: center; min-height: 30px; }
-.port-row small { color: var(--text-muted); font-size: 10px; } .input-row > span { flex-shrink: 0; font-size: 12px; }
+.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); } .input-row > span { flex-shrink: 0; font-size: var(--font-md); line-height: var(--line-md); }
 .input-row > .value-group { flex: 1; min-width: 0; } .output-row { justify-content: flex-end; }
-.react-flow__handle { width: 10px; height: 10px; min-width: 10px; min-height: 10px; background: var(--port-color); border: 0; }
-.react-flow__handle.target { background: var(--surface-port); border: 2px solid var(--port-color); }
+/* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
+   under test (human 2026-10-09). A = outputs filled, inputs hollow; B = hollow until wired.
+   接孔：放大、可抓範圍比畫出來的大；依方向與有沒有接線上樣式；A／B 測試中。A＝輸出實心輸入空心；B＝沒接空心、接了實心。 */
+.react-flow__handle { width: var(--port-size); height: var(--port-size); min-width: var(--port-size); min-height: var(--port-size);
+  background: var(--surface-port); border: 2px solid var(--port-color); }
+.react-flow__handle::before { content: ""; position: absolute; inset: calc(var(--port-grab) * -1); border-radius: 50%; }
+:root:not([data-ports="b"]) .react-flow__handle.source,
+:root[data-ports="b"] .react-flow__handle[data-connected="true"] { background: var(--port-color); }
 .value-group { min-width: 0; } .value-fields { display: grid; grid-template-columns: 1fr; gap: 5px; }
 .vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
-.value-fields label span { width: 10px; font-size: 11px; } .value-fields input, .value-fields select { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
-input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; cursor: pointer; }
+.value-fields label span { width: 10px; font-size: var(--font-sm); line-height: var(--line-sm); } .value-fields input, .value-fields select { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
+input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; }
 .control-field { display: flex; gap: 8px; align-items: center; } .control-field select { flex: 1; min-width: 0; }
-.control-row { display: flex; gap: 5px; } .hint { font-size: 11px; color: var(--text-muted); }
+.control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
 .react-flow__controls button:hover { background: var(--surface-control-hover); }
 .startup-error { margin: auto; max-width: 620px; padding: 35px; }
 
-.value-ladder { position: fixed; z-index: 100; border: 1px solid var(--border-hover); border-radius: 6px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); pointer-events: none; user-select: none; font-size: 13px; font-variant-numeric: tabular-nums; }
+.value-ladder { position: fixed; z-index: 100; border: 1px solid var(--border-hover); border-radius: 6px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); pointer-events: none; user-select: none; font-size: var(--font-base); line-height: var(--line-base); font-variant-numeric: tabular-nums; }
 .ladder-steps > div { padding: 0 4px; border-radius: 3px; text-align: right; }
 .ladder-steps .active { background: var(--surface-active); color: var(--text-active); }
 /* Readouts keep stable columns; their content cannot resize the selection list.
    調值讀數使用固定欄位；長數字不撐寬，也不影響初始級距列表的尺寸。 */
 .ladder-readout { display: flex; align-items: center; gap: 12px; height: 32px; padding: 8px; }
-.ladder-readout span { flex: 0 0 8ch; color: var(--text-muted); font-size: 11px; white-space: nowrap; text-align: right; }
+.ladder-readout span { flex: 0 0 8ch; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); white-space: nowrap; text-align: right; }
 .ladder-readout output { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .draft-blocker { position: absolute; inset: 0; z-index: 20; background: var(--surface-dim); }
 /* Module-declared spare input: dashed handle, muted label; greyed at the limit. */
-.spare-row > span { color: var(--text-muted); font-size: 11px; }
+.spare-row > span { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); }
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
-.recovery-help summary { cursor: pointer; }
-.conflict-float { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 10;
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px;
+.conflict-float { align-self: center; pointer-events: auto; max-width: 100%;
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-popup);
   background: var(--surface-raised); border: 1px solid var(--border-hover); box-shadow: 0 6px 24px var(--shadow); }
 /* Right-drag box selection (legacy parity); the overlay never takes pointer events. */
 .right-select-host { position: relative; width: 100%; height: 100%; }
@@ -193,18 +203,18 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .settings-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .settings-row > span { text-align: center; }
 .settings-row .select-button { width: 100%; justify-content: space-between; }
-.slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 16px; cursor: default; padding: 0 4px; }
+.slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: var(--font-lg); line-height: var(--line-lg); padding: 0 4px; }
 .slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
-.log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; }
+.log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; }
 .log-entry time { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .log-entry.warning span { color: var(--status-warning); } .log-entry.error span { color: var(--status-error); }
-.grape-op-kind { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--overlay-up); } .grape-op-path { overflow-wrap: anywhere; }
+.grape-op-kind { font-size: var(--font-xs); line-height: var(--line-xs); padding: 1px 5px; border-radius: 3px; background: var(--overlay-up); } .grape-op-path { overflow-wrap: anywhere; }
 /* The location bar's middle: project file, then the Grape OP (Refactor.52). 網址列中間：專案檔名，接著 Grape OP。 */
 .location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: 1.4; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .location-bar .target:hover { border-color: var(--border-control); }
 .location-bar .project-file { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
-.identity-compare { display: flex; flex-direction: column; font-size: 12px; opacity: .85; }
-.renew-id { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+.identity-compare { display: flex; flex-direction: column; font-size: var(--font-md); line-height: var(--line-md); opacity: .85; }
+.renew-id { display: flex; align-items: center; gap: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: nowrap; }
 .empty-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: repeating-linear-gradient(45deg, var(--overlay-faint) 0 12px, transparent 12px 24px); color: var(--text-secondary); text-align: center; padding: 24px; }
 .switch-dialog { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 40; max-width: 460px; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;
@@ -212,7 +222,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .switch-dialog p { flex-basis: 100%; margin: 0 0 6px; }
 
 /* Count badges (controls.tsx Badge, Refactor.54): plain, or in a colour group. 數量標籤：不上色，或用 colorGroup。 */
-.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: 600;
+.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 1px 5px; border-radius: 4px; font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600;
   color: var(--text-muted); background: var(--surface-control); }
 .badge-group { color: var(--text-strong); background: color-mix(in srgb, var(--badge-color) 85%, transparent); }
 
@@ -225,9 +235,16 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .create-list { flex: 3; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 .create-entry { display: flex; align-items: center; gap: 8px; min-height: var(--row-height); text-align: left; border: 0; background: none; padding: 0 8px; font-size: var(--row-font); }
 .create-entry.create-active { background: var(--surface-active); color: var(--text); }
-.create-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.create-port, .create-source, .choice-source { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+/* When a row is short of room, the source tag gives way long before the name does (human 2026-10-09).
+   一列放不下時，來源標籤先縮、名稱最後才省略（人類）。 */
+.create-name, .choice-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.create-port, .create-source, .choice-source { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.create-port, .create-source, .choice-source { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); white-space: nowrap; }
 .create-details { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-left: 1px solid var(--border); }
+/* Title, source and text as fixed rows, so English and Chinese line up (human 2026-10-09). 標題、來源、說明各一固定列。 */
+.create-details > strong { font-size: var(--font-lg); line-height: var(--line-lg); }
+.create-details > small { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
+.create-details > p { margin: 6px 0 0; }
 .add-node { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .add-node-list { flex: 1 1 0; min-height: 0; overflow: auto; }
 .add-node-details { position: relative; flex: 1 1 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
@@ -238,10 +255,20 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .choice-heading .icon { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .1s; }
 .choice-heading[aria-expanded="true"] .icon { transform: none; }
 .choice-children { margin-left: 11px; padding-left: 10px; border-left: 1px solid var(--border); }
-.choice-row { display: flex; align-items: center; gap: 8px; min-height: var(--row-height); padding: 0 5px; border-radius: 3px; cursor: grab; font-size: var(--row-font); }
+.choice-row { display: flex; align-items: center; gap: 8px; min-height: var(--row-height); padding: 0 5px; border-radius: 3px; font-size: var(--row-font); }
 .choice-row:hover { background: var(--surface-control-hover); }
 .choice-row.chosen { outline: 1px solid var(--accent); }
-.choice-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .choice-add { width: 24px; height: 24px; padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
 /* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
-.wire-plus { fill: var(--text-strong); font-size: 16px; font-weight: 700; pointer-events: none; }
+.wire-plus { fill: var(--text-strong); font-size: var(--font-lg); line-height: var(--line-lg); font-weight: 700; pointer-events: none; }
+
+/* The cursor table (Refactor.54.2; human 2026-10-09: as TouchDesigner): the arrow everywhere, whatever is under the
+   pointer; it changes only while a button is held — holding on the canvas pans with the four-way arrow. Resize handles
+   keep their two-way arrows. One table, overriding React Flow's own hands and pointers; components write no cursor.
+   游標對照表（照 TouchDesigner）：滑過什麼都是箭頭；只有按住時才變——在畫布上按住平移是十字方向箭頭。調大小的把手保留雙向箭頭。
+   只有這一張表，蓋過 React Flow 自己的手形與指標；元件不寫游標。 */
+button, summary, .choice-row, .node-drag-surface, .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__edge.selectable,
+.react-flow__node.selectable, .react-flow__node.draggable, .react-flow__node.draggable.dragging, .react-flow__nodesselection-rect,
+.react-flow__handle.connectionindicator, .react-flow__edgeupdater, .react-flow__controls-button { cursor: default; }
+.react-flow__pane.dragging { cursor: move; }
+

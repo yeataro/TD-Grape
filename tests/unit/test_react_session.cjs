@@ -1107,3 +1107,16 @@ test('the add list carries categories, sources and search', t => {
   assert.ok(searchChoices(choices, 'sub').some(choice => choice.key === 'subtract'));
   assert.equal(searchChoices(choices, '').length, choices.length);
 });
+
+// Refactor.54.2: ports know whether they are wired, both ends, and follow Undo (the source node is refreshed too).
+// 接孔知道自己有沒有接線（兩端都知道），Undo 也跟著變（來源節點也會更新）。
+test('the projection marks wired inputs and outputs, and follows Undo', t => {
+  const { session } = open(t);
+  const node = id => session.snapshot().projection.nodes.find(item => item.id === id).data;
+  assert.deepEqual(clone(node('a').wired), []);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  assert.deepEqual(clone(node('a').wired), ['out']);
+  assert.deepEqual(clone(node('sum').connected), ['a']);
+  session.history(false);
+  assert.deepEqual(clone(node('a').wired), [], 'the source forgets the wire after Undo');
+});

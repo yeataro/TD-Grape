@@ -9,12 +9,18 @@ import { tr, type Message } from './text';
 export type Style = 'grape' | 'td';
 export type Mode = 'dark' | 'light';
 export type Size = 'standard' | 'comfortable';
+/** Port styles under A/B test (Refactor.54.2, human 2026-10-09): A = outputs filled, inputs hollow; B = hollow until
+ * wired, filled once wired. An appearance option (Q64), decided in the tuning phase.
+ * 接孔樣式 A／B 測試：A＝輸出實心、輸入空心；B＝沒接空心、接了實心。外觀選項（Q64），調整期決定。 */
+export type Ports = 'a' | 'b';
 export const styles: readonly { value: Style; label: Message }[] = [
   { value: 'grape', label: tr('appearance.grape', 'Grape') }, { value: 'td', label: tr('appearance.td', 'TD') }];
 export const modes: readonly { value: Mode; label: Message }[] = [
   { value: 'dark', label: tr('appearance.dark', 'Dark') }, { value: 'light', label: tr('appearance.light', 'Light') }];
 export const sizes: readonly { value: Size; label: Message }[] = [
   { value: 'standard', label: tr('appearance.standard', 'Standard') }, { value: 'comfortable', label: tr('appearance.comfortable', 'Comfortable') }];
+export const portStyles: readonly { value: Ports; label: Message }[] = [
+  { value: 'a', label: tr('appearance.portsA', 'Ports A') }, { value: 'b', label: tr('appearance.portsB', 'Ports B') }];
 /** Whether a style has this mode yet (TD is dark only for now). 這個風格有沒有這種明暗（TD 目前只有深色）。 */
 export const hasMode = (style: Style, mode: Mode) => style !== 'td' || mode === 'dark';
 
@@ -25,17 +31,20 @@ const browser = typeof window !== 'undefined';
 let style: Style = browser ? read('grape-react-style', ['grape', 'td'], 'grape') : 'grape';
 let mode: Mode = browser ? read('grape-react-mode', ['dark', 'light'], 'dark') : 'dark';
 let size: Size = browser ? read('grape-react-size', ['standard', 'comfortable'], 'standard') : 'standard';
+let ports: Ports = browser ? read('grape-react-ports', ['a', 'b'], 'a') : 'a';
 const listeners = new Set<() => void>();
 function apply() {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = style === 'td' ? 'td' : mode;
   document.documentElement.dataset.size = size;
+  document.documentElement.dataset.ports = ports;
 }
 apply();
 const store = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* storage may be blocked */ } };
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}`;
+export const currentPorts = () => ports;
 export const currentStyle = () => style;
 export const currentMode = () => hasMode(style, mode) ? mode : 'dark';
 export const currentSize = () => size;
@@ -44,3 +53,4 @@ export const currentTheme = () => document.documentElement.dataset.theme ?? 'dar
 export function setStyle(next: Style) { if (next !== style) { style = next; store('grape-react-style', next); changed(); } }
 export function setMode(next: Mode) { if (next !== mode) { mode = next; store('grape-react-mode', next); changed(); } }
 export function setSize(next: Size) { if (next !== size) { size = next; store('grape-react-size', next); changed(); } }
+export function setPorts(next: Ports) { if (next !== ports) { ports = next; store('grape-react-ports', next); changed(); } }

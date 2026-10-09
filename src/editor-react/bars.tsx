@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, currentMode, currentSize, currentStyle, hasMode, modes, setMode, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -98,11 +98,10 @@ export function NetworkBar({ session, prefs, onGlsl }: {
         <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')}
           pressed={prefs.boxSelect} onClick={() => prefs.set({ boxSelect: !prefs.boxSelect })} />
       </ToolGroup>
-      {/* Canvas preferences; icons later (human 2026-10-09). Body drag is a real user setting (Q64): it moves to the settings
-          screen. 畫布偏好，之後換成圖示（人類）。Body 拖曳是正式的使用者設定（Q64），之後搬到設定畫面。 */}
+      {/* Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
+          Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。 */}
       <ToolGroup>
-        <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
-        <label className="check"><input type="checkbox" checked={prefs.snap} onChange={event => prefs.set({ snap: event.target.checked })} />{say(tr('toolbar.snap', 'Snap'))}</label>
+        <IconButton icon="snap" label={tr('toolbar.snap', 'Snap')} pressed={prefs.snap} onClick={() => prefs.set({ snap: !prefs.snap })} />
       </ToolGroup>
       <ToolGroup><button type="button" onClick={onGlsl}>{say(tr('toolbar.glsl', 'GLSL'))}</button></ToolGroup>
     </div>
@@ -115,7 +114,7 @@ const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, chec
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync state, the latest message
  * (its history above it), what to do when TD is away, full screen. 底列：編輯器所有的提示（人類）。功能表、同步狀態、
  * 最新訊息（點開往上看歷史）、TD 不在時能做的事、全螢幕。 */
-export function FootBar({ session, waiting, onDownload }: { session: EditorSession | null; waiting: Message | string; onDownload(): void }) {
+export function FootBar({ session, waiting, onDownload, prefs }: { session: EditorSession | null; waiting: Message | string; onDownload(): void; prefs: CanvasPrefs }) {
   const state = useEditorState(session), fullscreen = useFullscreen();
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [history, setHistory] = useState<HTMLElement | null>(null);
@@ -142,6 +141,10 @@ export function FootBar({ session, waiting, onDownload }: { session: EditorSessi
     {session && state?.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>
       <p>{say(recoveryHelp)}</p></details>}
     <span className="spacer" />
+    {/* Settings of how editing behaves (legacy gear). Body drag is a real setting here (Q64). 編輯行為的設定（舊產品齒輪）。 */}
+    <PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
+      <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
+    </PopoverButton>
     <AppearancePanels />
     <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} />
@@ -194,6 +197,8 @@ function AppearancePanels() {
       <Segmented label={tr('appearance.mode', 'Dark or light')} value={currentMode()} onChange={setMode}
         options={modes.map(item => ({ ...item, disabled: !hasMode(style, item.value), title: hasMode(style, item.value) ? undefined : notYet }))} />
       <SliderPlaceholder label={tr('appearance.brightness', 'Brightness')} />
+      {/* Under A/B test until the tuning phase (Q64). A／B 測試，調整期決定。 */}
+      <Segmented label={tr('appearance.ports', 'Port style')} value={currentPorts()} options={portStyles} onChange={setPorts} />
     </PopoverButton>
     <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
       <SettingsRow label={tr('action.language', 'Language')}>

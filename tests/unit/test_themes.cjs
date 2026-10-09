@@ -47,3 +47,10 @@ test('every purpose a component uses is defined by the default theme', () => {
   const dynamic = name => /^--group-/.test(name) || /^--component-/.test(name) || /^--type-/.test(name);
   assert.deepEqual([...used].filter(name => !defined.has(name) && !local.has(name) && !dynamic(name)), []);
 });
+
+// The type scale (Refactor.54.2): components name a level (--font-*, --line-*), never a pixel font size, so every row
+// keeps a fixed height in Chinese and English. 元件只寫字級，不寫像素字級，中英文每列等高。
+test('components use the type scale, not pixel font sizes', () => {
+  const code = withoutComments(read('style.css'));
+  assert.deepEqual([...code.matchAll(/font-size:\s*[\d.]+px/g)].map(match => match[0]), []);
+});
