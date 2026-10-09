@@ -159,7 +159,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           React Flow 自己的縮放控制，加上目前縮放百分比（人類：用它的預設即可）。 */}
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false}><ZoomReadout /></Controls>
       <Panel position="bottom-left" className="canvas-caption"><strong>{stage}</strong>
-        <span>{say(tr('canvas.nodeCount', '{count} nodes', { count: projection.nodes.length }))}</span>
+        <span>{say(tr('canvas.nodeCount', '{count} node(s)', { count: projection.nodes.length }))}</span>
         <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
       <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>

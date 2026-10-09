@@ -22,6 +22,7 @@
   - 驗證：第一次只有 Uniforms 展開；開關會存起來、重新整理後照存的狀態顯示。
   - 測試時人類也在同一分頁操作，助手多點了一次 TD built-in values，已告知人類。
   - 之後會併進偏好儲存系統。
+- 「1 nodes」英文錯誤（人類）：不依語言格式化單複數（人類：有多語言），英文改寫成 `node(s)`；人類否決了「Nodes: 1」寫法。共 6 句：畫布數量、來源卡片數量提示、刪除確認、開圖說明（subgraph(s)、Frame(s)）、Ghost 提示。規則寫進 EDITOR_UI_RULES 三。驗證：畫布左下顯示「21 node(s)」。
 - 偏好儲存系統（人類：偏好全部一處，排版也是）：`preferences.ts`（`readPreference`、`readChoice`、`writePreference`）。
   - 語言、外觀四項、版面、Body 拖曳、區段開關都改用它，前綴統一為 `grape.`。
   - 舊名字讀到一次就搬過去（`sgrapeLanguage`、`grape-react-*`、`grape-fold-*`）。

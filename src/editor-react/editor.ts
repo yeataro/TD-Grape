@@ -157,7 +157,7 @@ export class Editor {
     const ghosts = core.ghostsOf(this.document.networks.get('pixel')!, core.values.policy);
     const total = ghosts.nodes.size + ghosts.edges.size;
     if (total > previous) this.tell('warning', tr('ghost.found',
-      'This graph has {nodes} ghost nodes and {wires} ghost wires: kept as they are and left out of the shader; a ghost wire counts as not connected.',
+      'This graph has {nodes} ghost node(s) and {wires} ghost wire(s): kept as they are and left out of the shader; a ghost wire counts as not connected.',
       { nodes: ghosts.nodes.size, wires: ghosts.edges.size }));
     return total;
   }

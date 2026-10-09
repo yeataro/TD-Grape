@@ -58,7 +58,7 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
       {/* Unused: a plain grey tag; in use: the kind's colour, and a click selects those nodes, as the menu's Select
           references (human 2026-10-09). 沒在用：灰色標籤；有在用：種類色，點了選取那些節點，同選單的選取引用（人類）。 */}
       <Badge count={uses} group={uses ? group : undefined}
-        title={tr('sources.usedBySelect', 'Used by {count} nodes · click to select them', { count: uses })}
+        title={tr('sources.usedBySelect', 'Used by {count} node(s) · click to select them', { count: uses })}
         onClick={() => session.selectReferences(refKey)} />
       <MenuButton icon="menu" narrow label={tr('sources.more', 'More')} items={[
         { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },

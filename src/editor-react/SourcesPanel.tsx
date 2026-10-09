@@ -65,7 +65,7 @@ export function SourcesPanel({ declarations, references }: {
     title={tr('sources.available', '{count} available', { count: n })} />;
   return <section className="sources">
     {confirming && <ConfirmDialog title={tr('sources.removeTitle', 'Delete {name}?', { name: core.declarationLabel(declarations, confirming) })}
-      message={tr('sources.removeConfirm', '{name} is used by {count} nodes on the canvas. Deleting it also deletes those nodes.',
+      message={tr('sources.removeConfirm', '{name} is used by {count} node(s) on the canvas. Deleting it also deletes them.',
         { name: core.declarationLabel(declarations, confirming), count: references[confirming.id] ?? 0 })}
       confirmLabel={tr('sources.remove', 'Delete')} onCancel={() => setConfirming(null)}
       onConfirm={() => { session.removeDeclaration(confirming.id); setConfirming(null); }} />}

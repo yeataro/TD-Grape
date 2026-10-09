@@ -116,12 +116,12 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
   else for (const declaration of graph.declarations) if (core.declarationKinds.has(declaration.kind) && !supportedKinds.includes(declaration.kind))
     reasons.push(tr('open.reasonDeclaration', '{kind} declaration “{name}”',
       { kind: declaration.kind === 'uniform' ? 'Uniform' : String(declaration.kind), name: String(declaration.name) }));
-  if (graph.subgraphs?.length) reasons.push(tr('open.reasonSubgraphs', '{count} subgraphs', { count: graph.subgraphs.length }));
+  if (graph.subgraphs?.length) reasons.push(tr('open.reasonSubgraphs', '{count} subgraph(s)', { count: graph.subgraphs.length }));
   for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(tr('open.reasonStage', '{stage} stage', { stage }));
   const pixel = graph.stages.pixel;
   if (!pixel) return [...reasons, tr('open.reasonNoPixel', 'no pixel stage')];
   const frames = pixel.ui?.frames;
-  if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frames', { count: frames.length }));
+  if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frame(s)', { count: frames.length }));
   // A node type this build does not know at all is a ghost, not a reason to refuse (Q37 1-1). Known
   // types outside this entry's slice still refuse: as ghosts they would silently leave TD's program.
   // 完全不認得的節點是 Ghost，不拒絕；認得但本入口還沒接管的仍拒絕——當成 Ghost 會悄悄從 TD 的程式消失。
