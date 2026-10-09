@@ -51,6 +51,7 @@
 ### 二、已決定、待做
 
 - **外觀試驗定案**：人類等所有東西出來，最後整理 CSS 給助手寫進主題（workspace `floating-panels.md` 44、45）；同時：畫布左下說明不能有陰影、選取相關樣式、連線身分的版面（R.52 頁首檔名、草稿與衝突浮窗偏擠）、Swizzle 分量列與 Math 卡片的樣式。
+- **預覽圖上的標籤不夠醒目**（人類 10-10 截圖，還要想）：Samples 自選 TOP 的快照預覽（R.58）擷取正常、效能不差（人類還要再看效能），但左下角「Snapshot · not live」標籤底色不夠，在亮的圖上看不清。要做一個黑底、白底都清楚的標籤，位置可能改右下角或中間。舊產品參考：預覽圖上的標籤是置中靠下、深色半透明底（legacy `style.css:88` `.preview span{background:#17121dcc}`）。程式：`TexturePreview.tsx` 的 `note`、`style.css` `.texture-preview figcaption`。
 - **切換 Grape OP 時的閃動**（R.51.1）：載入中畫面已做（R.59.7，Logo 等待動畫 `<BrandMark loading />`，九種候選與調用名稱見 workspace `work/refactor/loading-animations.html`，元件改了要同步）。剩：載入中時網址列仍寫「選擇 Grape OP」、共用來源面板仍是「打開一個 Grape OP 後…」；排查時先錄下那幾幀。待談：作業系統要求「減少動態」時（舊產品三處都停住動畫；人類的 Windows 可能關了動畫效果）停住或只淡入淡出。
 
 ### 三、等某一輪一起做
