@@ -51,8 +51,12 @@ function TexturePreview({ texture }: { texture: string }) {
   // 預覽窗 16:9；圖照自己的比例 fit 進去，同 TD 的 TOP viewer（人類）：比窗寬就撐滿寬，否則撐滿高。純色與「沒選」是正方形。
   const [ratio, setRatio] = useState(0);
   useEffect(() => setRatio(0), [texture, shot]);
-  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker') =>
-    <div className={className} style={{ aspectRatio: String(r), ...(r > 16 / 9 ? { width: '100%' } : { height: '100%' }), ...style }}>{content}</div>;
+  // Sized in percent of the window, not by the grid, which treats a percent height as auto (Refactor.58 fix: a 4:3
+  // image ran past the window). 用窗的百分比定大小，不靠 grid（grid 把百分比高度當自動，4:3 的圖曾超出窗）。
+  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker') => {
+    const [width, height] = r > 16 / 9 ? [100, 16 / 9 / r * 100] : [r / (16 / 9) * 100, 100];
+    return <div className={className} style={{ width: width + '%', height: height + '%', ...style }}>{content}</div>;
+  };
   const image = (src: string, onError?: () => void) => <img src={src} alt="" draggable={false} onError={onError}
     onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
   // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。

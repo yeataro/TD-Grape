@@ -42,6 +42,9 @@
     - Python 84+14、editor 75。
     - 真實 TD：三張公用圖 PNG 200，瀏覽器解碼後透明度保留（Banana 有透明背景、Grape 外圍全透明、Jellybeans 不透明）；`texture_preview` 讀完放開。
     - 內建瀏覽器：16:9 窗 235×132；Jellybeans 填滿；沒選 TOP 的棋盤格 132×132；點 input1 的「1」選到 input1 節點。
+  - 修正（人類：Grape 還是歪）：圖框原本用 `height: 100%` 加 aspect-ratio，但外框的高度由 16:9 比例算出，grid 把百分比高度當自動。結果 4:3 的 Grape 改用圖片寬度撐開、超出窗被切。現在圖框在窗裡絕對置中，寬高直接用比例算成百分比。
+    - 驗證：Grape 176×132 置中、Jellybeans 235×132、沒選 132×132。
+    - 上一輪只量了本來就是 16:9 的 Jellybeans，所以沒發現。
 - 未 Deliver（TOE 未存）；未 push。
 
 ## Refactor.57.24 — 新增來源的預設名稱照舊產品、顏色 Uniform 顯示 RGB／RGBA、打開的卡片加淡分隔線 — 2026-10-09

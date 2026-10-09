@@ -228,7 +228,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    棋盤格，透明度看得出來（人類：同 TD 的 TOP viewer）。 */
 .texture-preview { position: relative; aspect-ratio: 16 / 9; margin: var(--io-inset) 0;
   display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
-.texture-frame { max-width: 100%; max-height: 100%; }
+.texture-frame { position: absolute; inset: 0; margin: auto; }
 .texture-frame img { display: block; width: 100%; height: 100%; }
 .texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
 .checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker); }
