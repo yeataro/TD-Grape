@@ -309,7 +309,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .td-bind input, code.td-bind { color: var(--td-bind); }
 .grape-node.ghost .ghost-note { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-secondary); padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
-.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
+.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--node-divider); /* as the legacy title (human 2026-10-09) 同舊產品標題 */ background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
 .node-title strong { flex: 1; } .node-title small, .node-title .select-button { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 /* A select in a node title: just the value and a chevron on the title colour, as the legacy type menu.
    節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */

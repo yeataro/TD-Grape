@@ -150,6 +150,9 @@
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */
   --layer-shadow: color-mix(in srgb, var(--palette-shadow) var(--tint-layer-shadow), transparent);
   --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);
+  /* The line under a node's title, see-through so it suits every title colour (legacy --ui-tone-node-divider,
+     #8995a333 on coloured titles; human 2026-10-09). 節點標題下的線，半透明、配得上每種標題色（舊產品）。 */
+  --node-divider: color-mix(in srgb, var(--palette-contrast) 15%, transparent);
   --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
   --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
   --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));
