@@ -183,7 +183,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); }
 .port-row > span, .value-caption { font-size: var(--font-md); line-height: var(--line-md); } .output-row { justify-content: flex-end; }
 .value-row { flex: 1; display: flex; flex-wrap: wrap; column-gap: 8px; align-items: flex-start; min-width: 0; } .value-row > .value-group { flex: 1; }
-.value-swatch { flex-basis: 100%; padding-bottom: calc((var(--io-row) - var(--io-field)) / 2); } .value-swatch.wired { visibility: hidden; }
+.value-swatch { flex-basis: 100%; padding-block: calc((var(--io-row) - var(--io-field)) / 2); } /* a whole row of its own, the same spacing as the fields 自己完整的一行，間距和數值格一樣 */ .value-swatch.wired { visibility: hidden; }
 .value-caption { color: var(--text-secondary); }
 .port-fallback.wired { visibility: hidden; }
 /* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
