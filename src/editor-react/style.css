@@ -24,6 +24,10 @@ button { color: var(--text-strong); } button:hover { background: var(--surface-c
 button:disabled, button[aria-disabled="true"] { opacity: .45; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
 button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
 button.primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+/* A button that deletes highlights in the error red (human 2026-10-09; legacy .danger). 刪除類按鈕的高亮用錯誤紅（人類；舊產品 .danger）。 */
+button.danger:not([aria-disabled="true"]):hover { color: var(--status-error); border-color: var(--status-error);
+  background: color-mix(in srgb, var(--status-error) 12%, transparent); }
+.icon-button.danger:not([aria-disabled="true"]):hover { border-color: transparent; }
 button.primary[aria-disabled="true"]:hover { background: var(--accent-fill); }
 a { color: var(--accent); }
 .spacer { flex: 1; }

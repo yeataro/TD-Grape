@@ -19,11 +19,13 @@ export const notYet = tr('placeholder.notYet', 'Not available yet');
  * A disabled one stays hoverable so its tooltip can say why.
  * 一個圖示按鈕；label 是提示與無障礙名稱。pressed＝工具開關（淡紫）；mode＝會改變拖曳、選取等互動的模式開關（按下為綠）；
  * expanded＝它打開的區域正顯示著（低調，舊產品側欄開關）。停用時仍可滑過，好讓提示說明原因。 */
-export function IconButton({ icon, label, onClick, pressed, expanded, disabled, title, mode }: {
+export function IconButton({ icon, label, onClick, pressed, expanded, disabled, title, mode, danger }: {
   icon: IconName; label: Message | string; onClick?: () => void; pressed?: boolean; expanded?: boolean; disabled?: boolean; title?: Message | string;
   mode?: boolean;
+  /** Destroys something (delete): highlighted in the error red. 會刪掉東西：高亮用錯誤紅。 */
+  danger?: boolean;
 }) {
-  return <button type="button" className={'icon-button' + (mode ? ' mode-toggle' : '')} aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
+  return <button type="button" className={'icon-button' + (mode ? ' mode-toggle' : '') + (danger ? ' danger' : '')} aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
     aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}><Icon name={icon} /></button>;
 }
 

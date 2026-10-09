@@ -19,6 +19,7 @@ const paths = {
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,
   chevronDown: <path d="m7 10 5 5 5-5" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  plus: <path d="M12 5v14M5 12h14" />,
   // Snap as Blender's magnet (human 2026-10-09); the settings gear from the legacy foot bar. 磁鐵（Blender）、齒輪（舊產品）。
   snap: <path d="M5 4v7a7 7 0 0 0 14 0V4h-4v7a3 3 0 0 1-6 0V4Z M5 8h4m6 0h4" />,
   settings: <><path d="m9.5 3-.5 2-2 .9-1.8-.6-2 3.4 1.5 1.4v2.8l-1.5 1.4 2 3.4 1.8-.6 2 .9.5 2h4l.5-2 2-.9 1.8.6 2-3.4-1.5-1.4v-2.8l1.5-1.4-2-3.4-1.8.6-2-.9-.5-2Z" /><circle cx="11.5" cy="11.5" r="3" /></>,

@@ -89,7 +89,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
       </ToolGroup>
       <ToolGroup>
         {/* React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。 */}
-        <IconButton icon="delete" label={tr('selection.delete', 'Delete selected')} disabled={!nodes.length && !edges.length}
+        <IconButton icon="delete" danger label={tr('selection.delete', 'Delete selected')} disabled={!nodes.length && !edges.length}
           onClick={() => void flow.deleteElements({ nodes, edges })} />
         <IconButton icon="fitSelection" label={tr('selection.fit', 'Frame selected')} disabled={!nodes.length}
           onClick={() => void flow.fitView({ nodes: nodes.map(node => ({ id: node.id })), duration: 333, padding: .2, maxZoom: 1 })} />
