@@ -353,6 +353,9 @@ exports.CORE_CONFIG = Object.freeze({
     // 圖文字的 UTF-8 位元組數。是宿主（我們在 TD 裡的程式）的上限，不是 TD 的；同樣沒有實測依據。
     documentBytes: 512000,
     subgraphDefinitions: 64, // legacy-era choice
+    // Legacy-era choice (legacy sgrape_core.py:2104), no measured basis; checked when a subgraph is created, its
+    // interface edited and a call resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析呼叫時檢查。
+    subgraphPortsPerSide: 16,
 });
 
 },
@@ -5636,6 +5639,7 @@ exports.numericInterface = numericInterface;
 exports.requireSubgraph = requireSubgraph;
 exports.subgraphPorts = subgraphPorts;
 exports.subgraphPresentation = subgraphPresentation;
+const config_1 = require("./config");
 const values_1 = require("./values");
 function numericInterface(f) {
     return !!f && ['inputs', 'outputs'].every(key => Array.isArray(f[key]) &&
@@ -5647,8 +5651,8 @@ function requireSubgraph(context, id) {
     if (!f)
         throw Error('Missing Subgraph definition');
     for (const ports of [f.inputs, f.outputs]) {
-        if (ports.length > 16)
-            throw Error('Subgraph supports at most 16 ports per direction');
+        if (ports.length > config_1.CORE_CONFIG.subgraphPortsPerSide)
+            throw Error('Subgraph supports at most ' + config_1.CORE_CONFIG.subgraphPortsPerSide + ' ports per direction');
         const seen = new Set();
         for (const p of ports) {
             if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
@@ -5723,7 +5727,7 @@ function validateSubgraphData(f) {
     if (!['local', 'library', 'personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex', 'pixel'].includes(s)))
         throw Error('Invalid Subgraph scope or stage');
     for (const ports of [f.inputs, f.outputs]) {
-        if (ports.length > 16 || new Set(ports.map(p => p.id)).size !== ports.length ||
+        if (ports.length > config_1.CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
             ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
             throw Error('Invalid Subgraph interface');
     }
@@ -5931,6 +5935,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subgraph = void 0;
 const model_1 = require("./model");
 const values_1 = require("./values");
+const config_1 = require("./config");
 /** One graph-owned definition and all its instances. Source edits first use
  * the graph's localization operation to preserve their stored snapshot. */
 class Subgraph {
@@ -5981,8 +5986,8 @@ class Subgraph {
             if (p.type !== previous && edit.patch.default === undefined)
                 p.default = (0, values_1.reshape)(p.default, p.type);
         }
-        if (next.length > 16)
-            throw Error('Subgraph supports at most 16 ports per direction');
+        if (next.length > config_1.CORE_CONFIG.subgraphPortsPerSide)
+            throw Error('Subgraph supports at most ' + config_1.CORE_CONFIG.subgraphPortsPerSide + ' ports per direction');
         const seen = new Set();
         for (const p of next) {
             if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))

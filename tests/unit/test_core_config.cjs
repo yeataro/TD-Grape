@@ -14,7 +14,7 @@ test('a compiler created with its own configuration enforces it; the default one
   const graph = clone(bootstrap.defaultDocument.graph);
   for (let i = 0; i < 4; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, nodeType: 'sgrape.builtin.float',
     params: clone(G.registry.get('sgrape.builtin.float').catalog.definition.defaults), ui: { x: 0, y: 0 } });
-  const config = { nodesPerNetwork: 4, edgesPerNetwork: 16, expandedNodes: 32, expandedEdges: 128, documentBytes: 512000, subgraphDefinitions: 64 };
+  const config = { nodesPerNetwork: 4, edgesPerNetwork: 16, expandedNodes: 32, expandedEdges: 128, documentBytes: 512000, subgraphDefinitions: 64, subgraphPortsPerSide: 16 };
   const small = G.createCompiler(G.registry, config);
   assert.equal(small.supports(graph), false, 'over the injected node limit');
   assert.throws(() => small.compile(graph, bootstrap.typeContract.glslCode), /outside the selected frontend compiler capability/);
@@ -22,9 +22,9 @@ test('a compiler created with its own configuration enforces it; the default one
 });
 
 test('no core module repeats a limit number outside config.ts', () => {
-  for (const file of ['top_compiler.ts', 'subgraph_compiler.ts', 'subgraph_operations.ts']) {
+  for (const file of ['top_compiler.ts', 'subgraph_compiler.ts', 'subgraph_operations.ts', 'subgraph_interface.ts', 'subgraphs.ts']) {
     const source = fs.readFileSync(path.join(root, 'src/core-ts', file), 'utf8');
-    assert.doesNotMatch(source, /\b(256|1024|2048|8192|512000)\b|(?:>|>=)\s*64\b/, file);
+    assert.doesNotMatch(source, /\b(256|1024|2048|8192|512000)\b|(?:>|>=)\s*(64|16)\b/, file);
   }
 });
 

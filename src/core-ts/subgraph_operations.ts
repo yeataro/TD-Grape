@@ -39,7 +39,7 @@ export function validateSubgraphData(f:SubgraphData):void {
   if (!['local','library','personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex','pixel'].includes(s)))
     throw Error('Invalid Subgraph scope or stage');
   for (const ports of [f.inputs,f.outputs]) {
-    if (ports.length > 16 || new Set(ports.map(p => p.id)).size !== ports.length ||
+    if (ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
         ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
       throw Error('Invalid Subgraph interface');
   }

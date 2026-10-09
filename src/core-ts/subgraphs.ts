@@ -1,6 +1,7 @@
 import { copy, type InterfacePort, type Value, type Node, type SubgraphData } from './model';
 import { type, literal, reshape } from './values';
 import type { GraphDocument } from './graph';
+import { CORE_CONFIG } from './config';
 
 type Direction = 'inputs'|'outputs';
 export type InterfaceEdit =
@@ -48,7 +49,7 @@ export class Subgraph {
       Object.assign(p,copy(edit.patch));
       if (p.type !== previous && edit.patch.default === undefined) p.default = reshape(p.default,p.type);
     }
-    if (next.length > 16) throw Error('Subgraph supports at most 16 ports per direction');
+    if (next.length > CORE_CONFIG.subgraphPortsPerSide) throw Error('Subgraph supports at most '+CORE_CONFIG.subgraphPortsPerSide+' ports per direction');
     const seen = new Set<string>();
     for (const p of next) {
       if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))

@@ -1,4 +1,5 @@
 import type { SubgraphData } from './model';
+import { CORE_CONFIG } from './config';
 import type { NodeContext, NodePresentation } from './node_module';
 import type { PortSpec } from './ports';
 import { literal, type, types } from './values';
@@ -13,7 +14,7 @@ export function requireSubgraph(context:NodeContext,id?:string):SubgraphData {
   const f = id === undefined ? context.owner : context.subgraph?.(id);
   if (!f) throw Error('Missing Subgraph definition');
   for (const ports of [f.inputs,f.outputs]) {
-    if (ports.length > 16) throw Error('Subgraph supports at most 16 ports per direction');
+    if (ports.length > CORE_CONFIG.subgraphPortsPerSide) throw Error('Subgraph supports at most '+CORE_CONFIG.subgraphPortsPerSide+' ports per direction');
     const seen = new Set<string>();
     for (const p of ports) {
       if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
