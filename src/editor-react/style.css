@@ -201,6 +201,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .value-field input, .value-field .select-button, .value-field .td-driven { width: 100%; min-width: 0; height: var(--io-field); padding: 0 6px; border: 0;
   font-variant-numeric: tabular-nums; color: var(--field-text); background-color: var(--field-bg); }
 .value-field > .component ~ * { padding-left: 18px; }
+/* The slider fill (legacy numeric slider): how far the value is through its decade. 填色：值在它那一段走到哪裡。 */
+input.number { background-image: linear-gradient(to right, var(--field-fill) 0 var(--fill), transparent var(--fill) 100%); }
 .control-field .select-button { background: var(--field-bg); }
 input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { flex-basis: 100%; height: var(--io-field); padding: 0; border: 0; background: none; overflow: hidden; }
 /* The whole rounded box is the colour: no browser frame or inset around the swatch. 整個圓角框就是顏色，沒有瀏覽器的框與內縮。 */
@@ -338,4 +340,7 @@ button, summary, .choice-row, .node-drag-surface, .react-flow__pane.draggable, .
 .react-flow__node.selectable, .react-flow__node.draggable, .react-flow__node.draggable.dragging, .react-flow__nodesselection-rect,
 .react-flow__handle.connectionindicator, .react-flow__edgeupdater, .react-flow__controls-button { cursor: default; }
 .react-flow__pane.dragging { cursor: move; }
+/* A value box shows the arrow until it is typed in; while dragging its value, the two-way arrow.
+   數值框在打字前是箭頭；拖曳改值時是左右箭頭。 */
+input.number:not(:focus) { cursor: default; } input.number.scrubbing { cursor: ew-resize; }
 

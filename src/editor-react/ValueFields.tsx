@@ -54,7 +54,7 @@ function DrivenField({ state }: { state: ComponentState }) {
   return <code className={`td-driven td-${state.mode}`} title={title}>{text}</code>;
 }
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false }: {
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
@@ -62,6 +62,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   modes?: readonly (ComponentState | undefined)[];
   /** A wire gives this value: it keeps its place but is not shown (wiring never changes the height). 接線提供這個值：位置留著、不顯示。 */
   wired?: boolean;
+  /** The value's default, per component (offered on the right-click list). 預設值（逐分量，列在右鍵選單）。 */
+  defaults?: Value;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
   // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
@@ -89,6 +91,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
             : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
             onChange={next => change(next === 'true')} /> :
             <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change}
+              defaultValue={defaults === undefined ? undefined : Number(Array.isArray(defaults) ? defaults[i] : defaults)}
               preview={preview && (next => preview(withComponent(next)))} />}
         </label>;
       })}

@@ -43,7 +43,7 @@ test('every purpose a component uses is defined by the default theme', () => {
   for (const file of ['style.css', ...fs.readdirSync(web).filter(file => /\.tsx?$/.test(file))])
     for (const match of read(file).matchAll(/var\((--[\w-]+)/g)) used.add(match[1]);
   // Set inline by a component for its own children. 元件給自己子元素設的行內變數。
-  const local = new Set(['--port-color', '--group-color', '--badge-color', '--message', '--components']);
+  const local = new Set(['--port-color', '--group-color', '--badge-color', '--message', '--components', '--fill']);
   const dynamic = name => /^--group-/.test(name) || /^--component-/.test(name) || /^--type-/.test(name);
   assert.deepEqual([...used].filter(name => !defined.has(name) && !local.has(name) && !dynamic(name)), []);
 });
