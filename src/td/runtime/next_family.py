@@ -42,10 +42,10 @@ MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
 
 # TOP texture inputs (Refactor.43; texture-inputs.md). Each input of the graph is an In TOP in the
 # Grape OP: listed in the GLSL TOP's TOPs list in the graph's order (that order is sTD2DInputs[i]),
-# lined up under input1, top to bottom (that order is the Grape OP's input connectors). When nothing is
+# named in1, in2… as TD names a new In TOP (Refactor.60.6, human 2026-10-10), lined up under in1, top to bottom (that order is the Grape OP's input connectors). When nothing is
 # connected from outside, the In TOP passes what is wired into it: its default image from Samples.
 # TOP 貼圖輸入：圖裡每個輸入是 Grape OP 裡的一個 In TOP；照圖的順序列在 GLSL TOP 的 TOPs 清單
-# （＝sTD2DInputs[i]），在 input1 下面由上往下排（＝Grape OP 的輸入接口順序）。外面沒接時，
+# （＝sTD2DInputs[i]），照 TD 新增 In TOP 的命名叫 in1、in2…（人類），在 in1 下面由上往下排（＝Grape OP 的輸入接口順序）。外面沒接時，
 # In TOP 輸出接在它自己身上的東西：Samples 的預設圖。
 # Which Samples output is which image is told by its out TOP's label, the same names as the graph's defaultTexture
 # (Refactor.58.9, human 2026-10-09, Q66): the OPs inside Samples can change freely. Samples in a Grape OP is a Clone of
@@ -192,8 +192,9 @@ class NextFamily:
     def input_sources(self):
         """What is wired into each texture input from outside (Refactor.60): the OP feeding the Grape OP's input
         connector — the nearest one, a Null in between is what is named — or None when nothing is (the In TOP then
-        passes its default). Read only when asked. 每個貼圖輸入從外面接了什麼：餵進接口的 OP（最近的那個）；沒接是 None
-        （In TOP 就送預設圖）。只在被問時讀。"""
+        passes its default). Read only when asked. With the In TOP's name (in1…), as TD labels the connector (Refactor.60.6).
+        每個貼圖輸入從外面接了什麼：餵進接口的 OP（最近的那個）；沒接是 None（In TOP 就送預設圖）。只在被問時讀。附上 In TOP
+        的名字（in1…），同 TD 標在接口上的。"""
         result = []
         for connector in self.comp.inputConnectors:
             top = connector.inOP
@@ -201,7 +202,7 @@ class NextFamily:
             if ident is None:
                 continue
             source = connector.connections[0].owner if connector.connections else None
-            result.append({'id': ident, 'source': source.path if source is not None else None})
+            result.append({'id': ident, 'node': top.name, 'source': source.path if source is not None else None})
         return result
 
     def input_top(self, ident):
@@ -369,7 +370,7 @@ class NextFamily:
         for entry in inputs:
             target = owned.pop(entry['id'], None)
             if target is None:
-                target = comp.create(inTOP, 'input_new_' + uuid.uuid4().hex[:8])
+                target = comp.create(inTOP, 'in_new_' + uuid.uuid4().hex[:8])
                 target.store(INPUT_STORE, entry['id'])
                 created.append(target)
             chosen.append(target)
@@ -385,15 +386,15 @@ class NextFamily:
         def commit():
             for target in leftovers:
                 target.destroy()
-            # Names follow the order: input1, input2… (rename through free names first).
-            # 名稱照順序 input1、input2…（先改成不會撞名的暫名）。
+            # Names follow the order as TD names In TOPs: in1, in2… (rename through free names first; Refactor.60.6).
+            # 名稱照順序，同 TD 的 In TOP 命名 in1、in2…（先改成不會撞名的暫名）。
             for target in chosen:
-                if target.name != 'input' + str(chosen.index(target) + 1):
-                    target.name = 'input_move_' + uuid.uuid4().hex[:8]
+                if target.name != 'in' + str(chosen.index(target) + 1):
+                    target.name = 'in_move_' + uuid.uuid4().hex[:8]
             samples = comp.op('Samples')
             for i, (target, entry) in enumerate(zip(chosen, inputs)):
-                if target.name != 'input' + str(i + 1) and comp.op('input' + str(i + 1)) is None:
-                    target.name = 'input' + str(i + 1)
+                if target.name != 'in' + str(i + 1) and comp.op('in' + str(i + 1)) is None:
+                    target.name = 'in' + str(i + 1)
                 target.nodeX, target.nodeY = INPUT_X, INPUT_Y - i * INPUT_STEP
                 target.nodeWidth, target.nodeHeight = 130, 72
                 # Its position in TD's own array, as the editor shows it (Refactor.58.1). 它在 TD 陣列裡的位置，同編輯器顯示的。
@@ -434,7 +435,7 @@ class NextFamily:
         comp = self.validation_area.create(baseCOMP, 'candidate_' + uuid.uuid4().hex[:12])
         try:
             comp.create(textDAT, 'pixel_shader').text = pixel
-            stand_ins = [comp.create(constantTOP, 'input' + str(i + 1)).name for i in range(inputs)]
+            stand_ins = [comp.create(constantTOP, 'in' + str(i + 1)).name for i in range(inputs)]
             shader = comp.create(glslTOP, 'shader')
             shader.par.tops = ' '.join(stand_ins)
             shader.par.pixeldat = 'pixel_shader'

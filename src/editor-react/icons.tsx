@@ -11,7 +11,6 @@ const paths = {
   rightPanel: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M15 4v16" /><path className="icon-fill" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3Z" /></>,
   titleBar: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M3 10h18" /><path className="icon-fill" d="M6 4h12a3 3 0 0 1 3 3v3H3V7a3 3 0 0 1 3-3Z" /></>,
   undo: <path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 6 6v3" />,
-  plug: <path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0Zm6 9v4" />,
   camera: <><path d="M4 8h3l2-2.5h6L17 8h3v11H4Z" /><circle cx="12" cy="13" r="3.5" /></>,
   redo: <path d="m15 5 5 5-5 5m5-5h-9a6 6 0 0 0-6 6v3" />,
   delete: <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,

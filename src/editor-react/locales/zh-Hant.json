@@ -252,6 +252,7 @@
   "sources.unwiredDefault": "預設",
   "sources.usedBySelect": "{count} 個節點在用・點一下選取它們",
   "sources.valueChanged": "共用來源的值已更新，等待套用",
+  "sources.wiredSource": "",
   "stage.label": "Stage",
   "stage.pixel": "PIXEL STAGE",
   "status.checking": "檢查連線中…",

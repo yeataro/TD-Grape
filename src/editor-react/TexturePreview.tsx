@@ -25,7 +25,7 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
   const session = useSession(), plain = plainTextures[texture];
   const inputs = useSyncExternalStore(session.inputsSubscribe, session.inputsSnapshot);
   const taken = useSyncExternalStore(session.inputsSubscribe, session.inputsTake);
-  const source = inputs?.[id] ?? null;
+  const source = inputs?.[id]?.source ?? null;
   const [failed, setFailed] = useState(false), [shot, setShot] = useState<Shot>('loading'), retaking = useRef(false);
   useEffect(() => setFailed(false), [texture]);
   // A wired input's snapshot, again whenever the inputs are asked anew; the old image stays until the new one arrives.

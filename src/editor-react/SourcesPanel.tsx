@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
@@ -6,7 +6,6 @@ import { NameField, SourceCard, UnusedCard, kindGroup } from './SourceCard';
 import { TexturePreview, textureNames } from './TexturePreview';
 import { ValueFields, componentColor } from './ValueFields';
 import { useSession } from './contexts';
-import { Icon } from './icons';
 import { Badge, ConfirmDialog, FoldSection, Select } from './controls';
 import { modesOf } from './declaration_modes';
 
@@ -81,15 +80,12 @@ export function SourcesPanel({ declarations, references }: {
           {core.declarationLabel(declarations, declaration)}</code>
         {/* Wired from outside: what is wired, read only; the default waits below as "when unwired" (Refactor.60; human 2026-10-10).
             外面接了東西：顯示接了什麼、唯讀；預設圖退到下面「沒接時」（人類）。 */}
-        {sources?.[declaration.id] ? <span className="input-source" title={sources[declaration.id]!}>
-          {/* The Grape OP's input number (as TD's input1, input2…) on a rounded tag in TD's TOP family colour, see-through
-              and sized as the count (TD shows its family colours toned down too); then the OP wired in (human 2026-10-10). Grape OP 的第幾個輸入（同 TD 的 input1、input2…），放在
-              TD TOP 家族色的圓角標籤上，透明度與大小同數量標籤（TD 顯示的家族色也調過）；再來是接進來的 OP（人類）。 */}
-          <span className="input-source-tag badge-group" style={{ '--badge-color': 'var(--td-top)' } as CSSProperties}>
-            <Icon name="plug" />{inputs.indexOf(declaration) + 1}</span>
-          <span className="input-source-name">{sources[declaration.id]!.split('/').pop()}</span></span>
+        {/* Plain text, "in1: moviefilein1": the In TOP as TD names it, then the OP wired in (Refactor.60.6, human 2026-10-10).
+            純文字「in1: moviefilein1」：TD 裡的 In TOP 名字，再來是接進來的 OP（人類）。 */}
+        {sources?.[declaration.id]?.source ? <span className="input-source" title={sources[declaration.id]!.source!}>
+          {say(tr('sources.wiredSource', '{node}: {name}', { node: sources[declaration.id]!.node, name: sources[declaration.id]!.source!.split('/').pop() ?? '' }))}</span>
           : defaultSelect(declaration)}</>}>
-      {sources?.[declaration.id] && <div className="unwired-default"><span>{say(tr('sources.unwiredDefault', 'Default'))}</span>{defaultSelect(declaration)}</div>}
+      {sources?.[declaration.id]?.source && <div className="unwired-default"><span>{say(tr('sources.unwiredDefault', 'Default'))}</span>{defaultSelect(declaration)}</div>}
       <TexturePreview id={declaration.id} texture={String(declaration.defaultTexture)} />
     </SourceCard>)}
     </FoldSection>

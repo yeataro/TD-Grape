@@ -58,6 +58,11 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.60.6 In TOP 叫 in1、in2…；標頭只寫「in1: 名稱」**（人類 10-10：標籤有點雜，簡單化；同 TD 新增 In TOP 的命名，較短，使用者自己加的也是同一套）：
+  - TD：Grape OP 裡 Grape 建的 In TOP 照位置命名 `in1`、`in2`…（原 `input1`…；`next_family._place_inputs`、驗證用的替身、範本 `install_grape_templates.py`）；`GET inputs` 每筆多帶 In TOP 名字 `node`。
+  - 編輯器：接了東西時標頭是純文字「in1: moviefilein1」（`sources.wiredSource`，名字是 TD 回報的、太長用省略號、提示完整路徑）；拿掉 🔌 圖示、圓角標籤與 R.60.4 加的 TOP 家族色（沒有其他用處）。
+  - 現場：重裝 Manager 與範本（範本裡是 `in1`）；Grape_TOP1、r54_probe 的 In TOP 直接改名（圖內容沒變、不升版）。Grape_TOP_REF（人類的樣板）的 `input1` 不是 Grape 建的、不在管理範圍，保持原樣——改名時我的腳本曾把它的 TOPs 清單一起改成 `in1`、當場發現並改回 `input1`。
+  - 驗證：Python 31、editor 78。Grape_TOP1 顯示「in1: moviefilein1」「in3: moviefilein2」、快照正常；在編輯器改 in2 的預設圖送出（rev 225）再改回透明（rev 226），名稱維持 in1–in3、TOPs 清單 `in1 in2 in3`、沒有錯誤。
 - **Refactor.60.5 輸入編號標籤的透明度同其他標籤**（人類 10-10）：TOP 家族色仍是自己的變數 `--td-top`，但標籤改回和數量徽章同樣的 85% 半透明（`badge-group`）——人類：TD 裡看到的家族色本來就調過，透明度跟其他標籤一樣就好。驗證：Grape_TOP1 標籤底色 (0.412, 0.361, 0.576) / 0.85，數量徽章同為 0.85；高度都是 11.3px。
 - **Refactor.60.4 輸入編號標籤、「預設」**（人類 10-10）：「🔌1」包成圓角標籤，底色是 TD 的 TOP 家族色（`ui.colors['TOP']` (0.41, 0.36, 0.575) 實測＝`#695c93`，新增 `--palette-td-top`／`--td-top`；原色、不像數量徽章那樣半透明），大小同數量徽章；接線時下面那列「沒接時」改成「預設」（英文 Default），不換行。中途誤用了編輯器「貼圖輸入」組的棕色，人類指正後改為 TD 的 TOP 色。驗證：Grape_TOP1 標籤底色 rgb(105, 92, 147)、高 11.3px＝徽章；「預設｜Grape」同一行。
 - **Refactor.60.3 用字精簡**（人類 10-10）：預設圖選項「透明（同 TD 沒接時）」改成「透明」（太囉嗦）；快照標籤改回「📷 快照」（接了哪個 OP 已在卡片上方寫了，路徑與時間在提示裡）；「🔌1」圖示與數字緊貼、同色，看起來像一個圖示。驗證：Grape_TOP1 三個輸入（人類新增第三個接 moviefilein2，顯示「🔌3 moviefilein2」）、標籤與提示正確。

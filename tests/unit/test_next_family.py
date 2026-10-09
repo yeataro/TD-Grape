@@ -345,11 +345,11 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(api.dispatch('GET', '/api/textures/white.png')[0], 404)
         # Refactor.60: what each input has wired in, and one input's In TOP as a snapshot (not kept).
         # 每個輸入接了什麼；某個輸入的 In TOP 快照（不留）。
-        tops = [SimpleNamespace(OPType='inTOP', fetch=lambda key, default=None, i=i: i) for i in ('input1', 'dPhoto')]
+        tops = [SimpleNamespace(OPType='inTOP', name='in' + str(n), fetch=lambda key, default=None, i=i: i) for n, i in enumerate(('input1', 'dPhoto'), 1)]
         wired = SimpleNamespace(owner=SimpleNamespace(path='/project1/moviefilein1'))
         comp.inputConnectors = [SimpleNamespace(inOP=tops[0], connections=[]), SimpleNamespace(inOP=tops[1], connections=[wired])]
         code, result = api.dispatch('GET', '/api/' + TARGET + '/inputs')
-        self.assertEqual((code, result['inputs']), (200, [{'id': 'input1', 'source': None}, {'id': 'dPhoto', 'source': '/project1/moviefilein1'}]))
+        self.assertEqual((code, result['inputs']), (200, [{'id': 'input1', 'node': 'in1', 'source': None}, {'id': 'dPhoto', 'node': 'in2', 'source': '/project1/moviefilein1'}]))
         def input_top(ident):
             if ident not in ('input1', 'dPhoto'):
                 raise LookupError('This Grape OP has no texture input with this ID.')

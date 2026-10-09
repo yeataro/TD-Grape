@@ -252,6 +252,7 @@
   "sources.unwiredDefault": "Default",
   "sources.usedBySelect": "Used by {count} node(s) · click to select them",
   "sources.valueChanged": "Shared source value updated; waiting to apply",
+  "sources.wiredSource": "{node}: {name}",
   "stage.label": "Stage",
   "stage.pixel": "Pixel stage",
   "status.checking": "Checking the connection…",

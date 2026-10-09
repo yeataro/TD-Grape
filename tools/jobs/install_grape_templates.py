@@ -6,7 +6,7 @@ Run inside TD through MCP with __file__ set. Builds `masters/grape_top` inside t
   top left     GrapeControls (program), FamManifest (TDFam metadata)
   top right    content made by the editor, docked on `shader`: pixel_shader, graph (the graph,
                the one copy), graph_meta (proof and execution part), status
-  bottom left  input1 (In TOP, listed in the GLSL TOP's TOPs list, not wired) and Samples (defaults)
+  bottom left  in1 (In TOP, listed in the GLSL TOP's TOPs list, not wired) and Samples (defaults)
   bottom right shader (GLSL TOP), output
 The default graph and its GLSL go into the template now, so creating a Grape OP needs neither the
 editor service nor the Manager (Q32 Q6). The template has no ID; each copy takes one when created.
@@ -113,7 +113,7 @@ annotation(top, 'annotate_content', 'Made by the Editor: graph, shader, status',
     'Uniform rows on the GLSL OP are written by the Editor too; whatever drives them in TD stays.',
     50, 50, 630, 190)
 
-# Bottom left: inputs. input1 is listed in the TOPs list (never wired); Samples gives its default.
+# Bottom left: inputs. in1 is listed in the TOPs list (never wired); Samples gives its default.
 samples = node(top, baseCOMP, 'Samples', -500, -150, 160, 130)
 # Named as their labels (Refactor.58.9, human 2026-10-09); the outs keep out1-out7, whose digits set the connector order.
 # 名字同 label（人類）；出口維持 out1～out7，TD 照名字裡的數字排出口順序。
@@ -144,22 +144,22 @@ annotation(samples, 'annotate_samples', 'Default inputs',
     'An input set to none gets nothing here: transparent, as TD with nothing connected. To use your own image, wire it '
     'into the Grape OP input.',
     -205, -770, 410, 755)
-# The default graph's texture input (human 2026-10-09): input1, default image Grape. The editor
+# The default graph's texture input (human 2026-10-09): in1 (TD's own name for a new In TOP, Refactor.60.6), default image Grape. The editor
 # manages the In TOPs from then on (next_family.py _place_inputs). 預設圖的貼圖輸入；之後由編輯器管理。
 default_input = bootstrap['defaultDocument']['graph']['declarations'][0]
 assert default_input['kind'] == 'topInput' and default_input['defaultTexture'] == 'grape'
-input1 = node(top, inTOP, 'input1', -200, -125, 130, 72)
-input1.store('grapeInput', default_input['id'])
-input1.par.label = 'sTD2DInputs[0]'  # its place in TD's array, as next_family.py writes on every apply (Refactor.58.1) 它在 TD 陣列裡的位置，同每次送圖時寫的
-input1.inputConnectors[0].connect(samples.outputConnectors[0])
+in1 = node(top, inTOP, 'in1', -200, -125, 130, 72)
+in1.store('grapeInput', default_input['id'])
+in1.par.label = 'sTD2DInputs[0]'  # its place in TD's array, as next_family.py writes on every apply (Refactor.58.1) 它在 TD 陣列裡的位置，同每次送圖時寫的
+in1.inputConnectors[0].connect(samples.outputConnectors[0])
 # Samples follows the main component's copy (Refactor.58.9; Q66): a Clone, found by the global shortcut, none when the
 # main component is missing (the content stays). Samples 跟著主組件那份：Clone，用全域捷徑找，主組件不在時為空（內容留著）。
 samples.par.clone.expr = "op.TDGrape.op('Samples') if hasattr(op, 'TDGrape') else ''"
 samples.par.enablecloning = True
-shader.par.tops = 'input1'
+shader.par.tops = 'in1'
 annotation(top, 'annotate_inputs', 'Inputs: managed by the TOPs list',
     'Inputs are made and removed by the editor (TOP texture inputs in Sources) and listed in the TOPs list on the GLSL TOP; '
-    'the list order is the input order. They line up under input1, top to bottom.\n'
+    'the list order is the input order. They are named in1, in2… and line up under in1, top to bottom.\n'
     'Do not also wire a TOP into the GLSL TOP: it would be counted as two inputs.\n'
     'When nothing is connected from outside, the default image comes from Samples.',
     -275, -170, 255, 410)

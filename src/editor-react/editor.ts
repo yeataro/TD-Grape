@@ -175,7 +175,8 @@ export class Editor {
   // What each texture input has wired in, in TD (Refactor.60): asked when the Sources panel shows inputs, when TD says a
   // Grape OP was rewired, and when a snapshot is retaken. `inputsTaken` tells previews to take a new snapshot.
   // 每個貼圖輸入在 TD 接了什麼：共用來源面板顯示輸入時、TD 說重新接線時、重拍快照時才問。inputsTaken 讓預覽重拍。
-  private inputs: Readonly<Record<string, string | null>> | null = null;
+  // Each input's In TOP name (in1…) and the OP wired into it, null when nothing is. 每個輸入的 In TOP 名字與接進來的 OP（沒接是 null）。
+  private inputs: Readonly<Record<string, Readonly<{ node: string; source: string | null }>>> | null = null;
   private inputsTaken = 0;
   private readonly inputListeners = new Set<() => void>();
   inputsSubscribe = (listener: () => void) => { this.inputListeners.add(listener); return () => { this.inputListeners.delete(listener); }; };
@@ -183,9 +184,9 @@ export class Editor {
   inputsTake = () => this.inputsTaken;
   refreshInputs = async () => {
     try {
-      const result = await this.host.call<{ inputs: { id: string; source: string | null }[] }>('inputs');
+      const result = await this.host.call<{ inputs: { id: string; node: string; source: string | null }[] }>('inputs');
       if (this.disposed) return;
-      this.inputs = Object.fromEntries(result.inputs.map(input => [input.id, input.source]));
+      this.inputs = Object.fromEntries(result.inputs.map(input => [input.id, { node: input.node, source: input.source }]));
       this.inputsTaken++;
       this.inputListeners.forEach(listener => listener());
     } catch { /* TD away: the previews say so when they ask 連不到 TD：預覽自己會說 */ }
