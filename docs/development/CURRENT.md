@@ -66,6 +66,13 @@
 
 ## 待處理
 
+> **Refactor.58.1 TD 端三步（重要，人類 10-09：記著、先不做，外觀還有事要先做）：**
+> 1. 子 OP 的 Samples 改成 Clone 主組件那份 `/TD_Grape/Samples`：Clone 正本用全域捷徑、找不到回空。實測確認過：正本改了同一格就同步；子 OP 自選的 TOP 保留；正本不在時內容仍在、沒有錯誤。
+> 2. 主組件那份的 out 加 label：`grape`、`banana`、`jellybeans`、`white`、`black`、`normal`、`custom`。
+> 3. TD 的接線（`next_family.py`）和預覽（`GrapeManagerExt.Texture`）改成照 label 找，拿掉順序表；找不到或重複要明確提醒。
+>
+> 另外：Samples 裡 OP 改名（拿掉 `sample_` 前綴）要先列新舊名字給人類看。In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未實機看。決定見 design-interview Q66。
+
 > **子圖那一輪開工時先改形狀（清理第 7 條，照 Q48 判「留」但形狀未對齊 Q46，2026-10-08）：** (1) 節點類型 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／input／output`，參數 `functionId` → `subgraphId`（Q46 7.7；目前沒有任何存檔含子圖，改名不需轉換）；(2) `SubgraphData.stages` 目前必填、`targets` 可存——Q46 定為由內容推算，只在存成定義時寫入；(3) 核心內部網路代號前綴 `function:`（不存檔）改名；(4) 每邊 16 個介面的上限寫在 `subgraph_interface.ts`、`subgraph_operations.ts`、`subgraphs.ts` 三處，搬進 `config.ts`（Q47 補充 8）。子圖程式本身（建立、群組、實例化、在地化、複製、刪除、產碼）都有呼叫者與測試，保留。
 
 > **新舊框架的圖不共通（design-interview Q40）：** 不做轉換功能，舊圖之後由匯入器處理。tag 區分已於 Refactor.27 拿掉（TD 讀到舊格式即拒絕）；遷移期便利行為（下段）仍待移除。
