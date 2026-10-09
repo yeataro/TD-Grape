@@ -4,7 +4,7 @@ import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields } from './ValueFields';
 import { useSession } from './contexts';
-import { Badge, ConfirmDialog, FoldSection, IconButton, Select } from './controls';
+import { Badge, ConfirmDialog, FoldSection, IconButton, MenuButton, Select } from './controls';
 import { Icon } from './icons';
 import { DRAG_TYPE } from './AddNodePanel';
 import { modesOf } from './declaration_modes';
@@ -49,16 +49,27 @@ function useDragToCanvas(choice: string) {
 
 // One source card: a triangle, then the head (name and type); the rest only when open. Closed by default, on this page
 // only (human 2026-10-09). 一張來源卡片：三角形、名稱與型別；其他的打開才顯示。預設收起，只在這一頁記得（人類）。
-// Closed, a "+" at its right adds it to the graph (human 2026-10-09); open, the body has Add to graph.
-// 收起時右邊一個「＋」加到圖上（人類）；打開時本體裡有 Add to graph。
-function SourceCard({ declaration, choice, head, children, onAdd }: { declaration: Declaration; choice: string; head: ReactNode; children: ReactNode; onAdd?(): void }) {
-  const [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
+// One source card (human 2026-10-09, as the legacy card): a triangle when there is something to open, the head (name and
+// type), then "+" (add to the graph) and "⋯" (add, select references, delete); open, the body shows the value.
+// 一張來源卡片（人類，照舊產品）：有東西可展開才有三角形，名稱與型別，接著「＋」（加到圖上）與「⋯」（加到圖上、選取引用、刪除）；
+// 打開時本體顯示數值。
+function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove }: {
+  declaration: Declaration; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove(): void;
+}) {
+  const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
   return <div className="source-row" style={kindColor(declaration)} {...drag}>
     <div className="source-head">
-      <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
+      {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
         aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
+        : <span className="expand-toggle" aria-hidden="true" />}
       {head}
-      {!open && onAdd && <IconButton icon="plus" label={tr('sources.place', 'Add to graph')} onClick={onAdd} />}
+      <IconButton icon="plus" label={tr('sources.place', 'Add to graph')} onClick={onAdd} />
+      <MenuButton icon="menu" label={tr('sources.more', 'More')} items={[
+        { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
+        { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,
+          select: () => session.selectReferences(declaration.id) },
+        { key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove },
+      ]} />
     </div>
     {open && children}
   </div>;
@@ -96,14 +107,6 @@ export function SourcesPanel({ declarations, references }: {
   // every source, here only when it is used). 刪掉畫布上有節點在用的來源先問：那些節點會一起刪掉（人類；舊產品每次都問，這裡只在有人用時問）。
   const [confirming, setConfirming] = useState<Declaration | null>(null);
   const remove = (declaration: Declaration) => (references[declaration.id] ?? 0) > 0 ? setConfirming(declaration) : session.removeDeclaration(declaration.id);
-  const actions = (declaration: Declaration) => <div className="source-actions">
-    {/* Delete (a trash icon, red on hover; human 2026-10-09) at the left, the use count between, shortened when narrow; Add to graph last, where the "+" of a closed
-        card is (human 2026-10-09). 刪除圖示在最左、使用數在中間（窄時省略）；加到圖上放最後，和收起時的「＋」同位置（人類）。 */}
-    <IconButton icon="delete" danger label={tr('sources.remove', 'Delete')} onClick={() => remove(declaration)} />
-    {/* Just the count; the words on hover (human 2026-10-09). 只寫數字，滑過看完整說明（人類）。 */}
-    <small title={say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}>{references[declaration.id] ?? 0}</small>
-    <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
-  </div>;
   // Each section's count, in its colour group (legacy source counts; Refactor.54: the Sources area is coloured).
   // 每一區的數量，用該區的 colorGroup 上色（照舊產品；來源區上色）。
   const count = (n: number, kind: string) => <Badge count={n} group={core.declarationKinds.get(kind)?.colorGroup ?? 'runtime'}
@@ -117,42 +120,39 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       hint={tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.')}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
-    {inputs.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} onAdd={() => session.placeDeclaration(declaration.id, center())} head={<>
+    {inputs.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+      onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
           value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
-          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} /></>}>
-      {actions(declaration)}
-    </SourceCard>)}
+          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} /></>} />)}
     </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
     <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
-    {uniforms.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} onAdd={() => session.placeDeclaration(declaration.id, center())} head={<>
+    {uniforms.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+      onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
           options={(declaration.color === true ? ['vec3', 'vec4'] : types).map(type => ({ value: type, label: type }))} /></>}>
       {uniformValue(declaration)}
-      {actions(declaration)}
     </SourceCard>)}
     </FoldSection>
-    {/* Time (preset Uniforms, Q61): all six listed, unused ones grey; placing one creates it the first time.
+    {/* Time (preset Uniforms, Q61): all six listed, unused ones as grey cards (created by Create or by dragging one onto the canvas).
         Name and type are locked here; in TD it is an ordinary Uniform row with an expression.
-        時間（預設 Uniform）：6 筆都列出，沒用到的灰色；第一次放到圖上時建立。名字型別在這裡鎖住；在 TD 是一般的 Uniform 列。 */}
+        時間（預設 Uniform）：6 筆都列出，沒用到的是灰色卡片（Create 或拖到畫布時建立）。名字型別在這裡鎖住；在 TD 是一般的 Uniform 列。 */}
     <FoldSection title={<>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</>}
       hint={tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.')}>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
-      const row = <div className="builtin-row" title={hint}><code>{preset.name}</code>
-          <small title={declared ? say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declared.id] ?? 0 })) : undefined}>{declared ? references[declared.id] ?? 0 : preset.expression}</small>
-          {declared && <IconButton icon="delete" danger label={tr('sources.remove', 'Delete')} onClick={() => remove(declared)} />}
-          <button onClick={() => session.placePreset(preset.entry, center())}>{say(tr('sources.place', 'Add to graph'))}</button></div>;
-      // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
-      // 還沒建立：灰色卡片、只有 Create；拖到畫布上就建立並放上去。
-      return declared ? <SourceCard key={preset.entry} declaration={declared} choice={'preset:' + preset.entry} head={row}>{uniformValue(declared)}</SourceCard>
+      return declared ? <SourceCard key={preset.entry} declaration={declared} choice={'preset:' + preset.entry} uses={references[declared.id] ?? 0}
+          onAdd={() => session.placePreset(preset.entry, center())} onRemove={() => remove(declared)}
+          head={<div className="builtin-row" title={hint}><code>{preset.name}</code><small>{preset.expression}</small></div>}>{uniformValue(declared)}</SourceCard>
+        // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
+        // 還沒建立：灰色卡片、只有 Create；拖到畫布上就建立並放上去。
         : <DragRow key={preset.entry} className="source-row unused" choice={'preset:' + preset.entry} title={hint}>
           <div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
             <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></DragRow>; })}
@@ -160,13 +160,13 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
-    {constants.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} onAdd={() => session.placeDeclaration(declaration.id, center())} head={<>
+    {constants.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+      onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
           options={types.map(type => ({ value: type, label: type }))} /></>}>
       <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
         commit={value => session.setDeclarationValue(declaration.id, value)} />
-      {actions(declaration)}
     </SourceCard>)}
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</>}

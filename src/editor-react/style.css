@@ -361,6 +361,8 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    勾勾放在固定寬度的一欄，像表格一樣，文字一定對齊。 */
 .dropdown-menu button[role="menuitemradio"]::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
 .dropdown-menu .hint { margin: 4px 8px; }
+.dropdown-menu button.danger { color: var(--status-error); }
+.dropdown-menu button.danger:hover, .dropdown-menu button.danger:focus-visible { background: color-mix(in srgb, var(--status-error) 14%, transparent); }
 .dropdown-menu.fit { min-width: 0; }
 .dropdown-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
 /* Message history, opening upward from the foot bar (Refactor.53). 訊息歷史，從底列往上開。 */

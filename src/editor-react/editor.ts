@@ -498,6 +498,11 @@ export class Editor {
     this.reselect(new Set(), selected);
     this.setPrimary(null);
   };
+  /** Select every node that uses a source (legacy Select references; human 2026-10-09). 選取所有用到這個來源的節點（照舊產品）。 */
+  selectReferences = (id: string) => {
+    const nodes = this.state.projection.nodes.filter(node => node.data.declaration?.id === id).map(node => node.id);
+    this.boxSelect(new Set(nodes), nodes);
+  };
   clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
   /** A box selection, applied once on release (Refactor.50.1): these nodes, no wires. The primary stays
    * if still selected, else the first node the box touched (Q33). 框選，放開時套用一次：這些節點、沒有接線；

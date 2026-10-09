@@ -12,7 +12,9 @@ import { say, type Message } from './text';
 // 停用的項目保留滑鼠提示（佔位要說明原因），所以用標記而不是真的 disabled。
 export type MenuItem = { key: string; label: ReactNode; checked?: boolean; disabled?: boolean; title?: string;
   /** A line before this item, starting a new section. 在這一項前面畫一條線，開始新的一段。 */
-  divider?: boolean; select(): void };
+  divider?: boolean;
+  /** Destroys something: in the error red, as a danger button. 會刪掉東西：用錯誤紅，同危險按鈕。 */
+  danger?: boolean; select(): void };
 
 // Drawn at the page level, so a menu called up inside a zoomed node still lands under its anchor (a fixed
 // position inside a transformed element would follow the transform). 畫在頁面層，從縮放中的節點叫出也落在正確位置。
@@ -54,7 +56,7 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
     {note && <p className="hint">{say(note)}</p>}
     {items.map(item => <Fragment key={item.key}>{item.divider && <hr />}
       <button role={item.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.checked === undefined ? undefined : item.checked}
-        aria-disabled={item.disabled || undefined} title={item.title}
+        aria-disabled={item.disabled || undefined} title={item.title} className={item.danger ? 'danger' : undefined}
         onClick={() => { if (item.disabled) return; onClose(); item.select(); }}>{item.label}</button></Fragment>)}
   </div>, document.body);
 }
