@@ -1,4 +1,4 @@
-import { createContext, memo, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { createContext, memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { core, typeColor, type Value, type NodeControl, type NodePresentation } from './core';
 import { NumberField } from './NumberField';
@@ -113,6 +113,9 @@ function SpareInput({ id, spare }: { id: string; spare: NonNullable<NodePresenta
 
 export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
+  // The primary selection is told from above, never known by the node module (Q33). 主要選取由上往下得知，節點模組不知道。
+  const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot) === id;
+  const selection = selected ? (primary ? 'selected primary' : 'selected') : '';
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
   const { authored, view, inputs, outputs } = data;
@@ -133,7 +136,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   }, [id, updateInternals]);
   // Ghost (Q37 1-1): kept as stored, shown with the ports its wires use, no controls, not compiled.
   // Ghost：原樣保留，只畫它的線用到的接孔，沒有控制項，不參與產碼。
-  if (data.ghost) return <article ref={card} className={`grape-node ghost ${selected ? 'selected' : ''}`}
+  if (data.ghost) return <article ref={card} className={`grape-node ghost ${selection}`}
     style={{ '--group-color': 'var(--group-ghost)' } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{authored.name || text(data.label)}</strong><small>Ghost</small></div>
     <div className="node-body node-drag-surface">
@@ -151,7 +154,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       </div>)}
     </div>
   </article>;
-  return <article ref={card} className={`grape-node ${selected ? 'selected' : ''}`}
+  return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{text(view.label ?? data.label)}</strong>
       {view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}

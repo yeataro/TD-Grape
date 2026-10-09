@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.49 — 選取：對齊 TD 的點擊鍵、主要選取、節點與接線分開、接線高亮 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/selection-and-fixed-entries.md`（人類 10-09 同意；規則 design-interview Q33、Q39 早已定案）。
+
+- **選取由編輯協調者決定**（[editor.ts](../../src/editor-react/editor.ts) `pressNode`／`clickEdge`／`clearSelection`／`boxSelected`）：一般點擊＝只選它（按在已選的節點上保留整組，舊產品）；Ctrl＝切換；Shift＝只加選（TD 實測，Q39）。節點與接線不混選（舊產品）。
+- **主要選取**：最後按下的節點，綠框；其他選取黃框（新行為，Q33）。不存圖、不進 Undo、不送 TD。取消主要時交給最後一個仍被選的；框選後原主要仍被選就不換，否則換成第一個碰到的（Q33）。
+- **節點在按下時選取**（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)，照舊產品 `graph_ui.js:100`）：所以拖一個沒選的節點只移動它，拖已選的移動整組。
+- **接線高亮**（[style.css](../../src/editor-react/style.css)、[theme/dark.css](../../src/editor-react/theme/dark.css)）：選取淡暖白、滑鼠移上去淡紫，都加粗到 5（照舊產品；柔光是舊產品的外觀選項，不做）。顏色是示意，外觀最後統一調。
+- **對 React Flow 既有功能的例外（已向人類報告）**：`elementsSelectable={false}`、`multiSelectionKeyCode={null}`，選取不由 React Flow 決定；仍借用它的點擊事件、`selected` 旗標、Delete 鍵、整組拖動。接線樣式用 CSS 蓋過預設外觀。
+- **人類問**：能不能用「注入」React Flow 內部狀態的方式？答：做得到但髒——內部狀態不是公開介面、升級可能壞；它的多選模式本身是切換，也做不出 Shift 只加選。
+- **驗證**：editor 53（新：選取規則一則）、core 140。內建瀏覽器（`Grape_TOP_test`，真實滑鼠點擊）：點 Convert → Shift＋點 Router、Combine（主要＝Combine 綠框，其餘黃框）→ Ctrl＋點 Convert 取消、再 Ctrl＋點加回；點接線 → 節點全取消、接線淡暖白 5px；Ctrl＋點第二條接線 → 兩條；Ctrl＋點節點 → 接線清掉；滑鼠移到接線 → 淡紫 5px；點空白 → 全清；選兩個拖其中一個 → 兩個一起動、Undo 還原；拖沒選的 Combine → 只動它；選接線按 Delete → 刪掉、Undo 還原。框選：自動化工具的拖曳不帶 Shift（變成平移），改在頁面內派發指標事件：Shift 框選加入兩個 Vector 2、主要仍是 Convert；右鍵框選取代、主要＝第一個碰到的。TOE 這輪沒存（和 50 一起 Deliver）。
+
 ## Refactor.48.2 — TD 上已有同名的 Uniform 列：接手 — 2026-10-09
 
 人類定（workspace design-interview **Q62**）；**新行為**：舊產品撞名就拒絕（legacy `src/core/sgrape_sources.py:997`）。

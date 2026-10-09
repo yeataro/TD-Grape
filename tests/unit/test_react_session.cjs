@@ -924,3 +924,40 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
   await nextFrame();
   assert.equal(socket.sent.length, sent);
 });
+
+// Selection (Refactor.49; design-interview Q33, Q39): Ctrl toggles, Shift only adds, plain replaces
+// (a selected node keeps its group); nodes and wires never together; the primary is the last pressed.
+// 選取：Ctrl 切換、Shift 只加選、一般取代（已選的保留整組）；節點與接線不混選；主要＝最後按下的。
+test('selection follows TD: Ctrl toggles, Shift adds, nodes and wires apart, a primary that is never saved', async t => {
+  const { session, calls } = open(t);
+  const selected = () => session.snapshot().projection.nodes.filter(n => n.selected).map(n => n.id).sort();
+  const wires = () => session.snapshot().projection.edges.filter(e => e.selected).map(e => e.id);
+  const version = session.snapshot().version, graph = JSON.stringify(session.graph());
+  session.pressNode('a', 'only');
+  assert.deepEqual([selected(), session.primarySnapshot()], [['a'], 'a']);
+  session.pressNode('b', 'add');
+  assert.deepEqual([selected(), session.primarySnapshot()], [['a', 'b'], 'b']);
+  session.pressNode('a', 'only');
+  assert.deepEqual([selected(), session.primarySnapshot()], [['a', 'b'], 'a'], 'pressing a selected node keeps the group');
+  session.pressNode('a', 'toggle');
+  assert.deepEqual([selected(), session.primarySnapshot()], [['b'], 'b'], 'Ctrl takes it away; the primary moves on');
+  session.pressNode('b', 'add');
+  assert.deepEqual(selected(), ['b'], 'Shift never takes away');
+  const edge = session.snapshot().projection.edges[0].id;
+  session.clickEdge(edge, 'only');
+  assert.deepEqual([selected(), wires(), session.primarySnapshot()], [[], [edge], null], 'a wire clears the nodes');
+  session.pressNode('sum', 'toggle');
+  assert.deepEqual([selected(), wires()], [['sum'], []], 'a node clears the wires, even with Ctrl');
+  session.nodeChanges([{ type: 'select', id: 'idle', selected: true }]);
+  session.boxSelected(['idle']);
+  assert.equal(session.primarySnapshot(), 'sum', 'a box keeps the primary when it is still selected');
+  session.nodeChanges([{ type: 'select', id: 'sum', selected: false }]);
+  session.boxSelected(['a', 'idle']);
+  assert.equal(session.primarySnapshot(), 'idle', 'otherwise the first node touched that is selected');
+  session.clearSelection();
+  assert.deepEqual([selected(), wires(), session.primarySnapshot()], [[], [], null]);
+  await session.flush();
+  assert.equal(session.snapshot().version, version, 'selection is not an edit');
+  assert.equal(JSON.stringify(session.graph()), graph);
+  assert.ok(!calls.some(c => c.action === 'apply'), 'never sent to TD');
+});

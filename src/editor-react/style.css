@@ -16,7 +16,13 @@ main { display: flex; min-height: 0; flex: 1; } .canvas { position: relative; fl
 pre { width: 35%; margin: 0; overflow: auto; padding: 18px; font-size: 12px; border-left: 1px solid #43394e; }
 footer { color: #958b9f; font-size: 11px; }
 .grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px #0004; }
-.grape-node.selected { outline: 2px solid #b3dc80; }
+/* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
+.grape-node.selected { outline: 2px solid var(--select-other); } .grape-node.selected.primary { outline-color: var(--select-primary); }
+/* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
+   left for the appearance round). The type colour is inline, hence !important.
+   接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
+.react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: 5 !important; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
 /* Panels (Refactor.40): fixed to the right for now; the floating frame replaces PanelShell only.

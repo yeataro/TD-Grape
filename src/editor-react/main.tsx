@@ -9,7 +9,7 @@ import { core, creatableDefinitions, typeColor, UnsupportedGraphError, type Boot
 import { HostClient, type StateResponse } from './host';
 import { Editor as EditorSession } from './editor';
 import { resetToDefault } from './host_sync';
-import { RightDragSelect } from './RightDragSelect';
+import { RightDragSelect, pressKind } from './RightDragSelect';
 import { tr, say, TextError, errorText, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { PanelShell } from './PanelShell';
@@ -54,6 +54,12 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
           session.disconnectInput(state.fromNode.id, state.fromHandle.id);
       }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+      // Selection is decided by the session, not React Flow (Refactor.49; reported to the human as an
+      // exception): nodes on press (RightDragSelect), wires on click, blank canvas clears.
+      // 選取由 session 決定、不是 RF（R.49，已向人類報告的例外）：節點在按下時、接線在點擊時、點空白清掉。
+      elementsSelectable={false} multiSelectionKeyCode={null}
+      onEdgeClick={(event, edge) => session.clickEdge(edge.id, pressKind(event))}
+      onPaneClick={() => session.clearSelection()}
       edgesReconnectable={false} snapToGrid={snap} snapGrid={[22, 22]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
       minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}

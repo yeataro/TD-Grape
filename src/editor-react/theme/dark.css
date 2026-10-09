@@ -13,6 +13,12 @@
   --palette-blue: #3a5581;
   --palette-olive: #605a43;
   --palette-rose: #6f4654;
+  /* selection (Refactor.49): TD's green current / yellow selected; wires as the legacy editor (style.css:108).
+     選取：TD 的綠框（主要）／黃框（其他）；接線照舊產品。外觀最後再統一調。 */
+  --palette-select-green: #b3dc80;
+  --palette-select-yellow: #e8c85a;
+  --palette-wire-cream: #fff2d2;
+  --palette-wire-lilac: #ede5ff;
 
   /* strengths */
   --title-alpha: 80%;
@@ -28,4 +34,8 @@
   --group-runtime: var(--palette-rose);
   /* Ghost (Q37): no colour of its own; the card is shown faded and dashed. Ghost 沒有自己的顏色，卡片淡化加虛線。 */
   --group-ghost: var(--palette-node);
+  --select-primary: var(--palette-select-green);
+  --select-other: var(--palette-select-yellow);
+  --wire-selected: var(--palette-wire-cream);
+  --wire-hover: var(--palette-wire-lilac);
 }

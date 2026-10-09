@@ -171,7 +171,7 @@ export class Editor {
   }
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
-  private publish() { if (!this.disposed) this.listeners.forEach(listener => listener()); }
+  private publish() { this.keepPrimary(); if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>, source = 'editor') {
     if (patch.message) this.log.add(patch.level ?? 'info', patch.message, source);
     this.state = { ...this.state, ...patch }; this.publish();
@@ -355,6 +355,63 @@ export class Editor {
     net.disconnectAll(net.edges.filter(edge => ids.has(edge.id)));
     net.removeAll(nodes.map(node => net.node(node.id)));
   });
+  // Selection (design-interview Q33, Q39; Refactor.49). Who is selected lives on the projection (React
+  // Flow's `selected`); this decides it, React Flow does not (elementsSelectable is off). Nodes and wires
+  // are never selected together (legacy). The primary node is the last one pressed: never stored, never
+  // undone, never sent to TD. 選取：誰被選存在投影上，由這裡決定（RF 不自己選）。節點與接線不混選（舊產品）。
+  // 主要選取＝最後按下的節點；不存圖、不進 Undo、不送 TD。
+  private primary: string | null = null;
+  private selectionListeners = new Set<() => void>();
+  selectionSubscribe = (listener: () => void) => { this.selectionListeners.add(listener); return () => { this.selectionListeners.delete(listener); }; };
+  primarySnapshot = () => this.primary;
+  private setPrimary(id: string | null) {
+    if (this.primary === id) return;
+    this.primary = id;
+    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
+  }
+  // The primary must stay a selected node (it may be deleted, unselected or undone away).
+  // 主要選取必須是被選的節點（可能被刪、取消或 Undo 掉）。
+  private keepPrimary() {
+    if (this.primary !== null && !this.state.projection.nodes.some(node => node.id === this.primary && node.selected)) this.setPrimary(null);
+  }
+  private reselect(nodes: ReadonlySet<string>, edges: ReadonlySet<string>) {
+    const { projection } = this.state;
+    const nodeChanges = projection.nodes.flatMap(node => nodes.has(node.id) === !!node.selected ? []
+      : [{ type: 'select' as const, id: node.id, selected: nodes.has(node.id) }]);
+    const edgeChanges = projection.edges.flatMap(edge => edges.has(edge.id) === !!edge.selected ? []
+      : [{ type: 'select' as const, id: edge.id, selected: edges.has(edge.id) }]);
+    if (!nodeChanges.length && !edgeChanges.length) return;
+    this.state = { ...this.state, projection: { nodes: nodeChanges.length ? applyNodeChanges(nodeChanges, projection.nodes) : projection.nodes,
+      edges: edgeChanges.length ? applyEdgeChanges(edgeChanges, projection.edges) : projection.edges } };
+    this.publish();
+  }
+  private selectedNodes = () => new Set(this.state.projection.nodes.filter(node => node.selected).map(node => node.id));
+  /** A node pressed: plain = only it (a node already selected keeps the group, legacy), toggle = Ctrl,
+   * add = Shift (TD as measured, Q39). 按下節點：一般＝只選它（已選的保留整組）；Ctrl＝切換；Shift＝只加選。 */
+  pressNode = (id: string, how: 'only' | 'toggle' | 'add') => {
+    const selected = this.selectedNodes(), was = selected.has(id), primary = this.primary;
+    if (how === 'only' && !was) selected.clear();
+    if (how === 'toggle' && was) selected.delete(id); else selected.add(id);
+    this.reselect(selected, new Set());
+    // Taking the primary away hands it to the last selected one (legacy graph_ui.js:1467).
+    // 取消主要選取時，交給最後一個仍被選的（舊產品）。
+    this.setPrimary(selected.has(id) ? id : primary === id || primary === null ? [...selected].at(-1) ?? null : primary);
+  };
+  /** A wire clicked: same keys; wires and nodes are not selected together. 點接線：同樣的鍵；接線與節點不混選。 */
+  clickEdge = (id: string, how: 'only' | 'toggle' | 'add') => {
+    const selected = new Set(how === 'only' ? [] : this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id));
+    if (how === 'toggle' && selected.has(id)) selected.delete(id); else selected.add(id);
+    this.reselect(new Set(), selected);
+    this.setPrimary(null);
+  };
+  clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
+  /** After a box selection (Q33): the primary stays if still selected, else the first node the box
+   * touched. 框選後：原主要仍被選就不換，否則換成第一個碰到的。 */
+  boxSelected = (touched: readonly string[]) => {
+    const selected = this.selectedNodes();
+    if (this.primary !== null && selected.has(this.primary)) return;
+    this.setPrimary(touched.find(id => selected.has(id)) ?? null);
+  };
   nodeChanges = (changes: NodeChange<FlowNode>[]) => {
     const runtime = changes.filter(change => change.type !== 'remove' && change.type !== 'add' && change.type !== 'replace');
     if (!runtime.length) return;
@@ -423,5 +480,5 @@ export class Editor {
   save = async () => {
     try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); }
   };
-  dispose() { this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); }
+  dispose() { this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); this.selectionListeners.clear(); }
 }
