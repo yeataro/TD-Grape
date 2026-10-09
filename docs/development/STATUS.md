@@ -4,7 +4,7 @@
 
 ## Refactor.50.3 — 多選框（只有外框） — 2026-10-09
 
-人類 10-09：先有多選框，調大小之後再做。什麼時候顯示？人類一句話：「多選的時候顯示」。舊產品在其他時候出現，是它自己規則的設計選擇（助手讀到預設是滑鼠移到選取工具列或框附近才出現，`persistentSelectionBounds` 開發設定才一直顯示；legacy `src/editor/selection_ui.js:150–157`）。
+人類 10-09：先有多選框，調大小之後再做。什麼時候顯示？人類一句話：「多選的時候顯示」。舊產品因為疊了好幾條規則，會出現未預期的表現（人類的說法；助手讀到預設是滑鼠移到選取工具列或框附近才出現，`persistentSelectionBounds` 開發設定才一直顯示；legacy `src/editor/selection_ui.js:150–157`）。
 
 - 新 [SelectionFrame.tsx](../../src/editor-react/SelectionFrame.tsx)：選兩個以上節點就畫一個框，樣子照舊產品（1px 虛線、四周 6px，legacy `#selectionbounds`）。
   - 用 React Flow 的公開工具 `getNodesBounds`＋`ViewportPortal` 畫在畫布座標上，所以跟著拖動與縮放。不碰它的內部狀態，不算例外。
