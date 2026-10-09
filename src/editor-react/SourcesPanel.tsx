@@ -174,6 +174,8 @@ export function SourcesPanel({ declarations, references }: {
   // Every Uniform type select as wide as the widest choice any of them has (RGBA, or a longer type name), so the
   // column lines up (human 2026-10-09). 每個 Uniform 型別選單和所有選項裡最寬的一樣寬（RGBA 或更長的型別名），整欄對齊（人類）。
   const uniformTypeSizes = [...colorTypes.map(channelLabel), ...types];
+  // The default-image selects line up the same way (human 2026-10-09). 預設圖選單一樣對齊（人類）。
+  const textureOptions = core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }));
   // The panel is an index of the table beside the td_value node (Q45); TOP for now.
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
@@ -199,7 +201,7 @@ export function SourcesPanel({ declarations, references }: {
         <NameField declaration={declaration} />
         <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
           value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
-          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} /></>}>
+          options={textureOptions} sizeTo={textureOptions.map(option => option.label)} /></>}>
       <TexturePreview texture={String(declaration.defaultTexture)} />
     </SourceCard>)}
     </FoldSection>
