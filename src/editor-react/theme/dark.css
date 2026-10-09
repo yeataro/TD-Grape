@@ -65,7 +65,9 @@
   /* outer glows (trials; legacy cool styles 33%) 外光暈的濃度（試驗；舊產品 cool 風格 33%） */
   --tint-glow-select: 33%;
   --tint-glow-title: 33%;
+  --tint-glow-titlebar: 33%;
   --tint-glow-highlight: 33%;
+  --tint-glow-wirehover: 50%;
   --tint-glow-wires: 33%;
   --tint-glow-ports: 33%;
   --tint-glow-logo: 33%;

@@ -13,6 +13,7 @@ const trials = [
   ['cards', tr('appearance.shadowCards', 'Card shadows')], ['glow', tr('appearance.shadowGlow', 'Inner glow')],
   ['selectGlow', tr('appearance.selectGlow', 'Glow: selection')],
   ['titleGlow', tr('appearance.titleGlow', 'Glow: node titles')],
+  ['titleBarGlow', tr('appearance.titleBarGlow', 'Glow: node title bars')],
   ['highlightGlow', tr('appearance.highlightGlow', 'Glow: highlights')],
   ['wireGlow', tr('appearance.wireGlow', 'Glow: wires')],
   ['portGlow', tr('appearance.portGlow', 'Glow: wired ports')],

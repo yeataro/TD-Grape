@@ -36,9 +36,9 @@ let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : '
 // 決定後留下選中的、拿掉開關。
 // Outer glows (human 2026-10-09; legacy's cool styles, without their moving glow): each in the thing's own colour.
 // 外光暈（人類；舊產品 cool 風格，不含光暈動畫）：各用自己的顏色。
-export type ShadowTrial = 'layers' | 'canvas' | 'cards' | 'glow' | 'selectGlow' | 'titleGlow' | 'highlightGlow' | 'wireGlow' | 'portGlow' | 'logoGlow';
+export type ShadowTrial = 'layers' | 'canvas' | 'cards' | 'glow' | 'selectGlow' | 'titleGlow' | 'titleBarGlow' | 'highlightGlow' | 'wireGlow' | 'portGlow' | 'logoGlow';
 const shadowDefaults: Record<ShadowTrial, boolean> = { layers: false, canvas: true, cards: false, glow: false,
-  selectGlow: false, titleGlow: false, highlightGlow: false, wireGlow: false, portGlow: false, logoGlow: false };
+  selectGlow: false, titleGlow: false, titleBarGlow: false, highlightGlow: false, wireGlow: false, portGlow: false, logoGlow: false };
 const shadows = Object.fromEntries((Object.keys(shadowDefaults) as ShadowTrial[]).map(key => [key,
   browser ? readChoice('appearance.shadow.' + key, ['on', 'off'], shadowDefaults[key] ? 'on' : 'off') === 'on' : shadowDefaults[key]])) as Record<ShadowTrial, boolean>;
 const listeners = new Set<() => void>();

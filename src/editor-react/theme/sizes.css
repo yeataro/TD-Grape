@@ -61,7 +61,9 @@
   /* how far each outer glow reaches (trials; legacy cool styles) 各外光暈的範圍（試驗；舊產品 cool 風格） */
   --glow-select: 20px;
   --glow-title: 12px;
+  --glow-titlebar: 12px;
   --glow-highlight: 8px;
+  --glow-wirehover: 8px;
   --glow-wires: 6px;
   --glow-ports: 8px;
   --glow-logo: 8px;

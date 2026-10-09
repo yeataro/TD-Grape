@@ -205,9 +205,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    外光暈試驗（人類；舊產品 cool 風格，不含光暈動畫），在外觀面板切換；各用自己的顏色，濃度 --tint-glow-*、範圍 --glow-*。 */
 :root[data-shadow-select-glow="on"] .grape-node.selected { --node-glow: 0 0 var(--glow-select) color-mix(in srgb, var(--node-select) var(--tint-glow-select), transparent); }
 :root[data-shadow-select-glow="on"] .react-flow__edge.selected .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-select) color-mix(in srgb, var(--wire-selected) var(--tint-glow-select), transparent)); }
+/* The title bar glows in its group colour (human 2026-10-09: the bar, besides the title text). 標題列發分類色的光（人類：標題字之外，標題列也要）。 */
+:root[data-shadow-title-bar-glow="on"] .node-title { box-shadow: 0 0 var(--glow-titlebar) color-mix(in srgb, var(--group-color, var(--group-function)) var(--tint-glow-titlebar), transparent); }
 :root[data-shadow-title-glow="on"] .node-title strong { text-shadow: 0 0 var(--glow-title) color-mix(in srgb, currentColor var(--tint-glow-title), transparent); }
 :root[data-shadow-wire-glow="on"] .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-wires) color-mix(in srgb, currentColor var(--tint-glow-wires), transparent)); }
-:root[data-shadow-highlight-glow="on"] .react-flow__edge:hover .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-hover) var(--tint-glow-highlight), transparent)); }
+/* A hovered wire has its own glow values (human 2026-10-09: tuned apart). 滑過的線有自己的光暈數值（人類：分開調）。 */
+:root[data-shadow-highlight-glow="on"] .react-flow__edge:hover .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-wirehover) color-mix(in srgb, var(--wire-hover) var(--tint-glow-wirehover), transparent)); }
 :root[data-shadow-highlight-glow="on"] .icon-button[aria-pressed="true"] { box-shadow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--pressed) var(--tint-glow-highlight), transparent); }
 :root[data-shadow-highlight-glow="on"] .icon-button.mode-toggle[aria-pressed="true"] { box-shadow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--pressed-mode) var(--tint-glow-highlight), transparent); }
 :root[data-shadow-logo-glow="on"] .brand-mark { filter: drop-shadow(0 0 var(--glow-logo) color-mix(in srgb, var(--accent) var(--tint-glow-logo), transparent)); }
