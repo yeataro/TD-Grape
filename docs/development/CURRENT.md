@@ -91,6 +91,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-09 | **選 Grape OP 的畫布：假節點＋縮圖（人類的初步想法，未決定）**：選要編輯的 Grape OP 時，所有 Grape OP 像 TD 網路裡的節點排排站、各有預覽圖。助手已實測縮圖成本（512 的 JPEG 約 2.4 ms），建議在平靜的時機拍一張存在每個 Grape OP 自己的殼層、選擇畫面只讀存好的，避免「打開那一瞬間逼所有 Shader 重算」。詳見 workspace `work/in-place-refactor-design/grape-op-chooser-canvas.md`。 |
 | 2026-10-09 | **切換 Grape OP 時還有一點閃動（人類試用 R.51.1：可以先忽略，之後排查；人類猜可能跟面板有關）**：版面位置已量過不動（R.51.1）。閃的可能是內容：載入中那一刻畫布換成空的說明、共用來源面板換成提示文字，載入完再換回來。排查時先錄下切換那幾幀看閃的是哪一塊。**人類 10-09 補充**：「載入中」不應該套用「沒有圖」的預設狀態（空白說明＋「選擇 Grape OP」按鈕＋面板提示）；載入中是它自己的一種狀態，不是預設狀態。那時一起調。 |
 | 2026-10-09 | **編輯器的原生下拉選單要換成自己的元件（人類：不能用內建的）**：R.51 做了通用的 `DropdownMenu`（`src/editor-react/DropdownMenu.tsx`，當 widget 用），目前只有 Grape OP 選單用它。其他還是瀏覽器原生 `<select>` 的：新增節點、節點的型別選單、宣告節點選哪一筆、TD 內建值選哪一筆、共用來源面板的型別與預設圖等。之後逐一改用它（同一個元件，不各做一份）。 |
 | 2026-10-09 | **更新機制：範圍已整理、之後實測時再做（人類 10-09：內容正確，但實測後做法可能還會改；Clone＋TDUpdater 是方向不是定案）**：workspace `work/in-place-refactor-design/update-mechanism.md`。已定：殼上的 Grape 頁跟著更新對齊範本、值保留（甲）。待定：「更新所有 Grape OP」放哪、打開專案時要不要提示。另查到主組件 `TD_Grape` 的「TD-Grape」頁還留著舊產品的參數（`Updateshaders`、`Updatestatus`、`Edittaget`、`Registertdfam`、About 的 `Update`／`Version` 等），新程式沒有接；做更新機制時一起處理（刪除要先問）。 |
