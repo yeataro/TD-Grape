@@ -27,7 +27,9 @@ const defaultZone = (side: Side, open: boolean): Zone => {
   return { open, width: 380, groups: active ? [{ panels, active, size: 1 }] : [] };
 };
 const defaults = (): LayoutData => ({ version: 1, titleBar: true, left: defaultZone('left', true), right: defaultZone('right', false) });
-export const ZONE_MIN = 220, ZONE_MAX = 900;
+// A side is at least 300px wide (human 2026-10-09: 220 was too small; legacy: left 180, right 300).
+// 一側至少 300px（人類：220 太小；舊產品左 180、右 300）。
+export const ZONE_MIN = 300, ZONE_MAX = 900;
 const KEY = 'grape-react-layout';
 
 // A stored layout is used only if it reads cleanly; unknown panels are dropped and new ones go to their default

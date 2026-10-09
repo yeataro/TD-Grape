@@ -183,7 +183,7 @@
   "sourceKind.constant": "全域",
   "sourceKind.topInput": "TOP 輸入",
   "sourceKind.uniform": "Uniform",
-  "sources.addColorUniform": "＋ 顏色 Uniform",
+  "sources.addColorUniform": "＋ 顏色",
   "sources.addConstant": "＋ 新增常數",
   "sources.added": "已新增常數 {name}",
   "sources.addInput": "＋ 新增輸入",

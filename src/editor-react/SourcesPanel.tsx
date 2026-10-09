@@ -49,34 +49,33 @@ function useDragToCanvas(choice: string) {
 
 // One source card: a triangle, then the head (name and type); the rest only when open. Closed by default, on this page
 // only (human 2026-10-09). 一張來源卡片：三角形、名稱與型別；其他的打開才顯示。預設收起，只在這一頁記得（人類）。
-// One source card (human 2026-10-09, after the legacy card): a triangle when there is something to open, the head (name
-// and type); open, the body shows the value. A column at the right: "⋯" (add to the graph, select references, delete) on
-// top, and in the bottom corner how many nodes use it, a tag as the section counts (human). No "+": the menu and dragging
-// onto the canvas both add it (human). 一張來源卡片（人類，參考舊產品）：有東西可展開才有三角形，名稱與型別；打開時本體顯示數值。
-// 右邊一欄：上面「⋯」（加到圖上、選取引用、刪除），右下角是幾個節點在用，和區段數量一樣的標籤（人類）。不放「＋」：選單和拖到畫布都能加。
-// Closed, the count sits left of "⋯" so the card stays one line (human: stacked, it looked bad). 收起時數量在「⋯」左邊，卡片維持一行（人類：疊起來難看）。
+// One source card (human 2026-10-09, after the legacy card). Two columns: the triangle alone at the left; the head (name,
+// type, use count, "⋯") and, open, the value in the right one, so they share one left edge and one right edge. The count
+// is a tag as the section counts and never moves; "⋯" adds to the graph, selects references, deletes. No "+": the menu
+// and dragging onto the canvas both add it (human).
+// 一張來源卡片（人類，參考舊產品）。兩欄：左欄只有三角形；右欄是名稱列（名稱、型別、使用數、「⋯」）和打開後的數值，左右緣都對齊。
+// 使用數是和區段數量一樣的標籤，位置不動；「⋯」加到圖上、選取引用、刪除。不放「＋」：選單和拖到畫布都能加（人類）。
 function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove }: {
   declaration: Declaration; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className={open ? 'source-row source-card open' : 'source-row source-card'} style={kindColor(declaration)} {...drag}>
-    <div className="source-main"><div className="source-head">
-      {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
-        aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
-        : <span className="expand-toggle" aria-hidden="true" />}
+  return <div className="source-row source-card" style={kindColor(declaration)} {...drag}>
+    {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
+      aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
+      : <span className="expand-toggle" aria-hidden="true" />}
+    <div className="source-head">
       {head}
-    </div>
-    {open && children}</div>
-    <div className="source-side">
-      <MenuButton icon="menu" label={tr('sources.more', 'More')} items={[
+      {/* Unused: a plain grey tag; in use: the kind's colour. 沒在用：灰色標籤；有在用：種類色。 */}
+      <Badge count={uses} group={uses ? core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'runtime' : undefined}
+        title={tr('sources.usedBy', 'Used by {count} nodes', { count: uses })} />
+      <MenuButton icon="menu" narrow label={tr('sources.more', 'More')} items={[
         { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
         { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,
           select: () => session.selectReferences(declaration.id) },
         { key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove },
       ]} />
-      <Badge count={uses} group={core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'runtime'}
-        title={tr('sources.usedBy', 'Used by {count} nodes', { count: uses })} />
     </div>
+    {open && <div className="source-body">{children}</div>}
   </div>;
 }
 
@@ -135,7 +134,7 @@ export function SourcesPanel({ declarations, references }: {
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
     <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
-      <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></>}>
+      <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Color'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
     {uniforms.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
@@ -158,8 +157,8 @@ export function SourcesPanel({ declarations, references }: {
           head={<div className="builtin-row" title={hint}><code>{preset.name}</code><small>{preset.expression}</small></div>}>{uniformValue(declared)}</SourceCard>
         // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
         // 還沒建立：灰色卡片、只有 Create；拖到畫布上就建立並放上去。
-        : <DragRow key={preset.entry} className="source-row unused" choice={'preset:' + preset.entry} title={hint}>
-          <div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
+        : <DragRow key={preset.entry} className="source-row source-card unused" choice={'preset:' + preset.entry} title={hint}>
+          <span className="expand-toggle" aria-hidden="true" /><div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
             <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></DragRow>; })}
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}

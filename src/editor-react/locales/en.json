@@ -183,7 +183,7 @@
   "sourceKind.constant": "Global",
   "sourceKind.topInput": "TOP Input",
   "sourceKind.uniform": "Uniform",
-  "sources.addColorUniform": "+ Colour Uniform",
+  "sources.addColorUniform": "+ Color",
   "sources.addConstant": "+ Add constant",
   "sources.added": "Constant {name} added",
   "sources.addInput": "+ Add input",

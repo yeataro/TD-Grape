@@ -175,6 +175,15 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */
 .source-row { position: relative; overflow: hidden; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
   padding: 8px var(--source-fade) 8px calc(8px + var(--source-strip)); margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+/* One vertical rhythm for cards and node bodies (human 2026-10-09: the gaps top to bottom were uneven): every row is an
+   IO row with its box centred, rows sit with no gap, so every visible gap is two insets; the padding takes one inset off,
+   so the top and bottom look as wide as the side. 卡片與節點本體同一個垂直節奏（人類：上到下間隙不平衡）：每一列都是一個 IO 列、
+   框置中，列之間不留空，看得見的間隙都是兩個內縮；內距扣掉一個內縮，上下看起來和側邊一樣寬。 */
+:is(.node-body, .source-card) { --io-inset: calc((var(--io-row) - var(--io-field)) / 2); }
+.source-card { row-gap: 0; padding-block: calc(var(--source-fade) - var(--io-inset)); }
+.source-card > :is(.expand-toggle, .builtin-row) { height: var(--io-row); }
+.source-head { min-height: var(--io-row); } .source-head :is(.source-name, .select-button) { height: var(--io-field); }
+.source-body { gap: 0; }
 /* Whatever runs past the content edge fades out in the card's right gap (human 2026-10-09: a gradient in the gap, as
    some sites do); right-aligned controls end at the content edge and are untouched.
    超出內容區的東西在卡片右邊的空隙裡漸層淡出（人類：在 gap 放漸層）；靠右的控制項停在內容區邊緣，不受影響。 */
@@ -195,25 +204,19 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The Sources panel has its own, smaller set of content sizes, about 75% of a node's (human 2026-10-09); the value widget,
    fields and buttons inside follow, as they follow colours set from outside. Text keeps a 10px floor.
    共用來源面板有自己一組較小的內容尺寸，約節點的 75%（人類）；裡面的數值 widget、輸入框、按鈕都跟著，和顏色由外部定義同理。字最小 10px。 */
-.sources { --io-row: 28px; --io-field: 22px; --io-field-min: 48px; --field-pad: 4px 8px; --button-pad: 3px 8px;
+/* Value boxes go down to 36px so four fit in a card at the narrowest panel (300px). 數值框最窄 36px，最窄的面板（300px）卡片裡也放得下四格。 */
+.sources { --io-row: 28px; --io-field: 22px; --io-field-min: 36px; --field-pad: 4px 8px; --button-pad: 3px 8px;
   --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 10px; --line-md: 14px; --font-base: 11px; --line-base: 15px;
   font-size: var(--font-sm); line-height: var(--line-sm); }
 .source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; }
-/* A card: the head and the value at the left, "⋯" over the use count at the right, one icon button wide (human 2026-10-09).
-   卡片：左邊名稱列與數值，右邊一欄「⋯」在上、使用數在右下角，一個圖示按鈕寬（人類）。 */
-.source-card { grid-template-columns: minmax(0, 1fr) auto; }
-.source-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
-/* The fade gap belongs to the left part only; the right column sits near the card edge (human 2026-10-09: "⋯" was far
-   from the right). Clipped a little outside, so focus rings still show. 淡出空隙只屬於左邊；右欄靠近卡片邊緣（人類：「⋯」離右邊太遠）。
-   裁切留一點外圍，聚焦框還看得到。 */
-.source-card { padding-right: 4px; } .source-card::after { content: none; }
-.source-main { position: relative; padding-right: var(--source-fade); overflow: clip; overflow-clip-margin: 3px; }
-.source-main::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--surface-node)); }
-/* Closed: one line, the count left of "⋯"; open: the count under it, in the corner. 收起：一行，數量在「⋯」左邊；打開：數量在它下面的角落。 */
-.source-side { display: flex; flex-direction: row-reverse; align-items: center; gap: 4px; }
-.source-card.open .source-side { width: var(--icon-button); flex-direction: column; justify-content: space-between; align-items: stretch; }
-.source-side .badge { margin: 0; }
+/* A card: the triangle alone in a narrow left column; the head and the value share the right one, so their edges line up
+   (human 2026-10-09: nothing lined up). Overflow fades in the card's right padding, from the fade's start to the border.
+   卡片：左邊窄欄只有三角形；名稱列和數值共用右欄，左右緣對齊（人類：到處沒對齊）。溢出在卡片右內距裡淡出，一直淡到邊框。 */
+.source-card { grid-template-columns: var(--expand-width) minmax(0, 1fr); column-gap: 6px; align-items: start; }
+.source-card > .expand-toggle { grid-column: 1; }
+.source-card > :is(.source-head, .source-body, .builtin-row) { grid-column: 2; min-width: 0; }
+.source-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.source-head > .badge { margin: 0; flex: none; }
 /* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
    變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
 .source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
@@ -240,11 +243,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */
 .node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
 .node-title .select-button:hover { color: var(--text-strong); }
-.node-body { padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
+.node-body { padding: calc(10px - var(--io-inset)) 0; display: flex; flex-direction: column; }
 /* Everything in a node body keeps the same side inset (human 2026-10-09: Math's rows and button ran past it).
    節點本體裡的每一種東西左右都留同樣的內距（人類：Math 的控制列與按鈕超出去了）。 */
 .node-body > :is(.value-row, .control-field, .control-row, .hint, button) { margin: 0 14px; }
-.node-body > button { height: var(--io-field); padding: 0 8px; }
+.node-body > button { height: var(--io-field); padding: 0 8px; margin-block: var(--io-inset); }
+.node-body > .hint { padding-block: var(--io-inset); }
 /* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
    value grows, one row per component. The port stays on the first row. 每個輸入輸出一行、有沒有接線都一樣高，像表格；
    只有展開的值會變高（一個分量一行）。接孔永遠在第一行。 */
@@ -297,10 +301,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    不該撐寬節點（人類）。 */
 .value-group.wired { visibility: hidden; contain: inline-size; }
 /* One triangle for everything that opens in place: a value, a source card. 原地展開的共用三角形：數值、來源卡片。 */
-:is(.value-expand, .expand-toggle) { flex: 0 0 auto; display: grid; place-items: center; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
+:is(.value-expand, .expand-toggle) { flex: 0 0 auto; display: grid; place-items: center; width: var(--expand-width); height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 :is(.value-expand, .expand-toggle) .icon { width: 12px; height: 12px; transform: rotate(-90deg); }
 :is(.value-expand, .expand-toggle)[aria-expanded="true"] .icon { transform: none; }
-.source-head > .expand-toggle { height: auto; align-self: stretch; }
 .value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr));
   gap: calc(var(--io-row) - var(--io-field)) var(--io-field-gap); }
 /* Expanded keeps the collapsed width, so the node does not narrow (human 2026-10-09): the same numbers as the row of
@@ -416,8 +419,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 
 /* Count badges (controls.tsx Badge, Refactor.54): plain, or in a colour group. 數量標籤：不上色，或用 colorGroup。 */
 /* As tall as the text beside it (human 2026-10-09): one size down, no padding above or below. 和旁邊的字一樣高（人類）：小一級字、上下不留空。 */
-.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 0 4px; border-radius: 3px; font-size: var(--font-xs); line-height: 1.2; font-weight: 600;
-  color: var(--text-muted); background: var(--surface-control); }
+/* Narrower and a touch smaller than the text (human 2026-10-09). 比字窄、小一點點（人類）。 */
+.badge { display: inline-grid; place-items: center; min-width: 1.3em; margin-left: 6px; padding: 0 3px; border-radius: 3px; font-size: calc(var(--font-xs) * .9); line-height: 1.25; font-weight: 600;
+  color: var(--text-muted); background: var(--overlay-up); } /* a touch above whatever it sits on (human 2026-10-09) 比底下亮一點點（人類） */
 .badge-group { color: var(--text-strong); background: color-mix(in srgb, var(--badge-color) 85%, transparent); }
 
 /* Create node (CreateNode.tsx) and the Add Node panel (AddNodePanel.tsx), Refactor.54. 新增節點的兩個入口。 */

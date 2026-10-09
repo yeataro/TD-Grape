@@ -51,7 +51,8 @@
   --field-pad: 6px 10px; /* inside a text input 文字輸入框的內距 */
   --button-pad: 6px 9px; /* inside a text button 文字按鈕的內距 */
   --source-strip: 10px; /* the colour strip at a source card's left 來源卡片左邊的色條 */
-  --source-fade: 12px;  /* a source card's right gap, where overflow fades out 來源卡片右邊的空隙，溢出的東西在這裡淡出 */
+  --source-fade: 8px;   /* a source card's right padding, where overflow fades out (as its top and bottom) 來源卡片右內距，溢出在這裡淡出（同上下） */
+  --expand-width: 16px; /* an open/close triangle 展開三角形的寬 */
   --source-name-min: 8em; /* the narrowest a source's name gets; its type shrinks first 來源名稱最窄寬度；型別先縮 */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
   --row-font: var(--font-md);
