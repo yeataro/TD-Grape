@@ -228,6 +228,28 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-tab[aria-selected="true"]:not(:only-child) { flex: 0 0 50%; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
 .code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
+/* The GLSL panel (Refactor.63): a line-number column, Prism's colours, the line under the pointer or keyboard a little
+   lighter, lines TD reported marked. GLSL 面板：行號欄、Prism 上色、滑鼠或鍵盤所在的行亮一點點、TD 回報的行標出來。 */
+.glsl-view { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.glsl-code .glsl-line { display: flex; }
+.glsl-code .glsl-line:is(:hover, :focus-within, .focused) { background: var(--code-line-hover); }
+.glsl-code .glsl-line.error { background: var(--code-line-error); }
+.glsl-gutter { flex: none; min-width: 3.5ch; padding: 0 1ch 0 0; border: 0; background: none; color: var(--text-faint);
+  font: inherit; text-align: right; user-select: none; }
+button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
+.glsl-text { flex: 1; min-width: 0; }
+.glsl-variable { padding: 0; border: 0; background: none; color: inherit; font: inherit; }
+.glsl-variable:hover { text-decoration: underline; }
+.glsl-comment { color: var(--glsl-comment); } .glsl-keyword { color: var(--glsl-keyword); } .glsl-type { color: var(--glsl-type); }
+.glsl-number { color: var(--glsl-number); }
+.glsl-function { color: var(--glsl-function); } .glsl-directive { color: var(--glsl-directive); }
+.glsl-string { color: var(--glsl-string); } .glsl-builtin { color: var(--glsl-builtin); }
+.glsl-failure { padding: 8px 10px; border-radius: var(--radius-field); border: 1px solid var(--status-error); font-size: var(--font-sm); line-height: var(--line-sm); }
+.glsl-failure p { margin: 0 0 4px; }
+.glsl-failure ul { margin: 0; padding-left: 1.2em; }
+.glsl-error-link { padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; }
+.glsl-error-link:hover { text-decoration: underline; }
+.glsl-log { margin: 0; white-space: pre-wrap; color: var(--text-muted); }
 /* A handle is drawn thin and grabbed wide (human 2026-10-09). 把手畫得細、抓的範圍寬。 */
 .resize-handle { position: absolute; z-index: 4; touch-action: none; }
 .resize-handle::after { content: ""; position: absolute; background: transparent; transition: background .12s; }
@@ -567,6 +589,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
   display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--radius-popup);
   background: var(--surface-raised); border: 1px solid var(--border-hover); box-shadow: 0 6px 24px var(--shadow); }
 .floating-notice.warning { background: var(--surface-notice); border-color: var(--status-warning); }
+/* The Shader stuck after a failed apply (Refactor.63). 套用失敗、Shader 卡住。 */
+.floating-notice.error { border-color: var(--status-error); }
+.notice-detail { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); }
 /* Message on top, the comparison table in the middle, actions at the bottom (human 2026-10-09: the long table needs a design).
    上面說明、中間比對表、下面動作（人類：表格較長，要設計）。 */
 .notice-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }

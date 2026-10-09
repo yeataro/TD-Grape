@@ -69,3 +69,5 @@ TD-Grape は静的な GLSL コードを生成します。生成・適用済み�
 本プロジェクトは、**Lyell Hintz（[dotsimulate](https://dotsimulate.com)）**、**Dan Molnar（[Function Store](https://www.functionstore.xyz/link-in-bio)）** およびその他の貢献者が開発した [TDFam](https://github.com/dotsimulate/TDFam) を使用しています。オープンソースの基盤を提供してくださった皆さまに感謝します。
 
 TDFam は TouchDesigner のカスタム operator family を実現するための基盤機能を提供しており、**Apache-2.0** ライセンスで公開されています。詳細は同梱の [LICENSE](src/third_party/TDFam/LICENSE) と [NOTICE](src/third_party/TDFam/NOTICE) を参照してください。
+
+エディタには [React](https://react.dev) と React DOM、[React Flow](https://reactflow.dev)（`@xyflow/react`）、GLSL のハイライトに使う [Prism](https://prismjs.com) も同梱しています。いずれも **MIT** ライセンスです。ライセンス全文はビルド時に実際に同梱したパッケージから集められ、エディタと一緒に `react-third-party-notices.txt` として配布されます。

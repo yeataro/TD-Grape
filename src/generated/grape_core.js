@@ -75,6 +75,7 @@ const subgraph_output_1 = require("./nodes/subgraph_output");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
 const td_value_1 = require("./nodes/td_value");
+const test_compile_error_1 = require("./nodes/test_compile_error");
 const texture_sample_1 = require("./nodes/texture_sample");
 const trunc_1 = require("./nodes/trunc");
 const vec2_1 = require("./nodes/vec2");
@@ -82,7 +83,7 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, test_compile_error_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
 
@@ -4669,6 +4670,23 @@ const catalog = {
 exports.default = { ...(0, node_sdk_1.tdValueNode)(catalog), entries: () => [] };
 
 },
+"nodes/test_compile_error":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// A node whose GLSL never compiles in TD, for testing how a compile failure is shown (Refactor.63, human 2026-10-10:
+// "make a node that is sure to fail"). It calls a function nobody defines. Offered in the add menu only with the
+// grape-test-nodes flag (editor-react/core.ts); remove before release.
+// 測試用：產生的 GLSL 在 TD 一定編譯失敗（呼叫一個沒有人定義的函式），用來測編譯失敗怎麼呈現（人類：做一個必定出錯的節點）。
+// 只有帶 grape-test-nodes 旗標時才出現在新增選單；發布前拿掉。
+exports.default = (0, node_sdk_1.unaryNode)({
+    key: 'test_compile_error', label: 'Compile Error (test)', descriptionKey: 'help.test_compile_error',
+    operator: 'sg_test_undefined_function', port: 'value',
+    browser: { category: 'debug', source: 'editor', aliases: ['test', 'error', 'fail'], glslName: 'sg_test_undefined_function',
+        secondaryCategories: [], categoryPath: ['debug'], testOnly: true },
+});
+
+},
 "nodes/texture_sample":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -5463,7 +5481,9 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
             try {
                 const result = engine.compile(document, identifiers);
                 return { ...result,
-                    sourceMap: { pixel: result.sourceMap.pixel.map(row => ({ ...row, ...origins.get(row.node) })) },
+                    sourceMap: { pixel: result.sourceMap.pixel.map(row => ({ ...row, ...origins.get(row.node) })),
+                        // A variable inside an expanded subgraph leads to the node the person sees. 展開的子圖裡的變數找回人看得到的節點。
+                        variables: Object.fromEntries(Object.entries(result.sourceMap.variables).map(([name, id]) => { var _a, _b; return [name, (_b = (_a = origins.get(id)) === null || _a === void 0 ? void 0 : _a.node) !== null && _b !== void 0 ? _b : id]; })) },
                     diagnostics: result.diagnostics.map(row => ({ ...row, ...origins.get(row.node) })) };
             }
             catch (error) {
@@ -6323,6 +6343,9 @@ function createFlatCompiler(registry, limits) {
             }
             const order = network.order(outputs[0].id, e => !ghosts.edgeData.has(e) && (!inputsUsed.has(e.to[0]) || inputsUsed.get(e.to[0]).has(e.to[1]))), visited = new Set(order.map(n => n.id));
             const used = new Set(), lines = [], lineNodes = [], expressions = new Map();
+            // Which node each variable belongs to (Refactor.63): a name in the GLSL leads back to its node without guessing from
+            // the text. 每個變數屬於哪個節點：GLSL 裡的名字不必從文字猜就能找回節點。
+            const variables = {};
             for (const node of order) {
                 const n = node.data, id = node.id, d = node.definition, p = node.interface;
                 const start = lines.length;
@@ -6378,6 +6401,7 @@ function createFlatCompiler(registry, limits) {
                     const symbol = 'sg_n_' + (n.name || id) + (port === 'out' ? '' : '_' + port);
                     lines.push('    ' + (emission.constant ? 'const ' : '') + p.outputs[port].type + ' ' + symbol + ' = ' + expression + ';');
                     expressions.set(node.port('output', port), symbol);
+                    variables[symbol] = id;
                 }
                 if (lines.length === start && !passed)
                     throw Error('Node emitted no expression');
@@ -6403,7 +6427,7 @@ function createFlatCompiler(registry, limits) {
                 ...[...ghosts.nodes].sort(([a], [b]) => a < b ? -1 : 1).map(([node, kind]) => ({ node, stage: 'pixel', message: 'Ghost node (' + kind + ') is kept but not emitted' })),
                 ...data.edges.filter(e => ghosts.edgeData.has(e)).map(e => ({ node: e.to[0], stage: 'pixel', message: 'Ghost wire to ' + e.to[1] + ' is treated as not connected' }))
             ];
-            const sourceMap = { pixel: lineNodes.map((node, i) => ({ node, stage: 'pixel', trail: [], line: headers.length + 4 + i })) };
+            const sourceMap = { pixel: lineNodes.map((node, i) => ({ node, stage: 'pixel', trail: [], line: headers.length + 4 + i })), variables };
             return { vertex: '', pixel, bindings, sourceMap, stages: { pixel: { lines, ports, live: [...visited].sort() } }, diagnostics };
         }
         catch (error) {

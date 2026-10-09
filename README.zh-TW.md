@@ -69,3 +69,5 @@ TD-Grape 產出的是靜態 GLSL 程式碼。已產生並套用的 Shader，只�
 本專案使用 [TDFam](https://github.com/dotsimulate/TDFam)，由 **Lyell Hintz（[dotsimulate](https://dotsimulate.com)）**、**Dan Molnar（[Function Store](https://www.functionstore.xyz/link-in-bio)）** 及其他貢獻者共同開發。感謝他們提供的開源基礎。
 
 TDFam 提供 TouchDesigner 自訂 operator family 的相關基礎能力，採用 **Apache-2.0** 授權。相關資訊見隨附的 [LICENSE](src/third_party/TDFam/LICENSE) 與 [NOTICE](src/third_party/TDFam/NOTICE)。
+
+編輯器另外打包了 [React](https://react.dev) 與 React DOM、[React Flow](https://reactflow.dev)（`@xyflow/react`），以及用於 GLSL 上色的 [Prism](https://prismjs.com)，皆採用 **MIT** 授權。它們的授權全文隨編輯器附在 `react-third-party-notices.txt`，由建置程式從實際打包的套件收集。

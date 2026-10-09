@@ -97,8 +97,14 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 // declarations: the document's own frozen list (no copy); references: how many nodes use each one.
 // TD's Uniform states are kept apart (tdSnapshot): they change every frame while TD moves a value, and
 // only the fields showing them need to follow. TD 的 Uniform 現況另外存（tdSnapshot）：TD 動值時每格都變，只有顯示它的欄位要跟。
+// glslMap: which node wrote each line of the GLSL (the core's source map, lines from 1), so a line leads to its node
+// (Refactor.63). glslMap：GLSL 每一行由哪個節點產生（核心的 sourceMap，行號從 1），讓一行能找回它的節點。
+// glslVariables: which node each variable belongs to, so its name in the GLSL is a link to the node (human 2026-10-10).
+// glslVariables：每個變數屬於哪個節點，GLSL 裡的名字就是連到節點的超連結（人類）。
+export type GlslLine = { line: number; node: string };
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
-  message: Message | string; level: Level; glsl: string; targetPath: string;
+  message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
+  glslVariables: Readonly<Record<string, string>>; targetPath: string;
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
@@ -136,7 +142,8 @@ export class Editor {
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
-      version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target,
+      version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
+      glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {}, targetPath: loaded.target,
       ...this.sources() };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
@@ -294,7 +301,8 @@ export class Editor {
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
     this.state = { ...this.state, projection, version: this.state.version + 1, ...this.sources(),
       undo: !!this.past.length, redo: !!this.future.length,
-      glsl: this.codegen.compiled?.pixel ?? this.state.glsl,
+      glsl: this.codegen.compiled?.pixel ?? this.state.glsl, glslMap: this.glslMap() ?? this.state.glslMap,
+      glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
     if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal);
     this.sync.changed();
@@ -604,6 +612,35 @@ export class Editor {
   // Conflict choice "TD 端" (Q28, 2026-10-07 human chose A): adopt TD's document as an
   // ordinary history step, so one Undo recalls the editor's version without blocking anything.
   // 衝突時選「TD 端」：把 TD 版本當成一般編輯步驟採用；按一次 Undo 即叫回編輯端的修改（重新整理後失效）。
+  private glslMap(): GlslLine[] | undefined {
+    return this.codegen.compiled?.sourceMap.pixel.map(row => ({ line: row.line, node: row.node }));
+  }
+  // A line of the GLSL to show (Refactor.63): asked by the compile-failure notice, followed by the GLSL panel; `n` makes
+  // asking for the same line again count. 要顯示的 GLSL 行：編譯失敗提示要求、GLSL 面板跟著捲過去；n 讓同一行再要一次也算。
+  private glslFocus = { line: 0, n: 0 };
+  private readonly glslListeners = new Set<() => void>();
+  glslFocusSubscribe = (listener: () => void) => { this.glslListeners.add(listener); return () => { this.glslListeners.delete(listener); }; };
+  glslFocusSnapshot = () => this.glslFocus;
+  focusGlslLine = (line: number) => { this.glslFocus = { line, n: this.glslFocus.n + 1 }; this.glslListeners.forEach(listener => listener()); };
+  /** Select one node, as clicking it would (a GLSL line leads to its node, Refactor.63). 選取一個節點（GLSL 的行找回它的節點）。 */
+  selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
+  /** Back to the graph of the program TD still runs (Last Known Good, design-interview Q38 2-5; Refactor.63): loaded the
+   * way TD's version is when a conflict is resolved, as one Undo step, then delivered as any edit; Uniforms take no part
+   * of their own (human 2026-10-10). 回到 TD 仍在跑的那一版的圖：照衝突時採用 TD 版本的方式載入、一步 Undo，再照一般編輯送出；
+   * Uniform 不另外處理（人類）。 */
+  revertToLastGood = () => {
+    const good = this.state.stuck?.lastKnownGood;
+    if (!good) return;
+    try {
+      const graph = parseDocument(good.document);
+      requireSupported(graph);
+      const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
+      const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, graph, core.registry));
+      this.past.push(before); this.future = []; this.document = next;
+      this.commit(projection, tr('shader.revertedToLastGood', 'Back to the graph TD runs (revision {revision}); Undo brings back your changes',
+        { revision: good.revision }));
+    } catch (error) { this.notice(error); }
+  };
   useRemote = async () => {
     if (this.sync.busy || this.state.phase !== 'conflict') return;
     try {

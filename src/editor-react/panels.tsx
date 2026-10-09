@@ -26,7 +26,7 @@ export const PANELS = {
   addNode: { title: tr('addNode.title', 'Add Node'), side: 'left', first: true, content: ({ session, choices, add }) => session
     ? <AddNodePanel choices={choices} onAdd={add} />
     : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
-  glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ state }) => <GlslPanel glsl={state.glsl} /> },
+  glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ state }) => <GlslPanel state={state} /> },
   // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.
   // 外觀：從外觀選單打開；浮動面板做好之前放右邊。
   appearance: { title: tr('appearance.panel', 'Appearance'), side: 'right', content: () => <AppearancePanel /> },

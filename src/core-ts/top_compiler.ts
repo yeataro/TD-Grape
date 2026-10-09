@@ -99,6 +99,9 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     }
     const order=network.order(outputs[0]!.id,e=>!ghosts.edgeData.has(e)&&(!inputsUsed.has(e.to[0])||inputsUsed.get(e.to[0])!.has(e.to[1]))),visited=new Set(order.map(n=>n.id));
     const used=new Set<string>(),lines:string[]=[],lineNodes:string[]=[],expressions=new Map<Port,string>();
+    // Which node each variable belongs to (Refactor.63): a name in the GLSL leads back to its node without guessing from
+    // the text. 每個變數屬於哪個節點：GLSL 裡的名字不必從文字猜就能找回節點。
+    const variables:Record<string,string>={};
     for(const node of order){const n=node.data!,id=node.id,d=node.definition!,p=node.interface;const start=lines.length;
       errorNode=id;
       const input=(key:string)=>{const port=p.inputs[key];if(!port)throw Error('Unknown input port: '+key);
@@ -128,7 +131,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
         // 不透明的值不能放進區域變數：直接代入使用的地方。
         if(opaque.includes(p.outputs[port]!.type)){expressions.set(node.port('output',port),expression);passed=true;continue;}
         const symbol='sg_n_'+(n.name||id)+(port==='out'?'':'_'+port);
-        lines.push('    '+(emission.constant?'const ':'')+p.outputs[port]!.type+' '+symbol+' = '+expression+';');expressions.set(node.port('output',port),symbol);
+        lines.push('    '+(emission.constant?'const ':'')+p.outputs[port]!.type+' '+symbol+' = '+expression+';');expressions.set(node.port('output',port),symbol);variables[symbol]=id;
       }
       if(lines.length===start&&!passed)throw Error('Node emitted no expression');
       appendNodeComments(lines,start,n.comment);
@@ -151,7 +154,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       ...data.nodes.filter(n=>!visited.has(n.id)&&!ghosts.nodes.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'})),
       ...[...ghosts.nodes].sort(([a],[b])=>a<b?-1:1).map(([node,kind])=>({node,stage:'pixel',message:'Ghost node ('+kind+') is kept but not emitted'})),
       ...data.edges.filter(e=>ghosts.edgeData.has(e)).map(e=>({node:e.to[0],stage:'pixel',message:'Ghost wire to '+e.to[1]+' is treated as not connected'}))];
-    const sourceMap={pixel:lineNodes.map((node,i)=>({node,stage:'pixel',trail:[],line:headers.length+4+i}))};
+    const sourceMap={pixel:lineNodes.map((node,i)=>({node,stage:'pixel',trail:[],line:headers.length+4+i})),variables};
     return {vertex:'',pixel,bindings,sourceMap,stages:{pixel:{lines,ports,live:[...visited].sort()}},diagnostics};
     } catch(error) {throw new CompilationError(error instanceof Error?error.message:String(error),error instanceof GraphError?error.node:errorNode);}
   }

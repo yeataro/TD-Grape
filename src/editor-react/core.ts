@@ -72,7 +72,12 @@ export const supportedDefinitions = [
   'declaration', 'td_value',
   // textures (Refactor.43)
   'texture_sample',
+  // for testing a compile failure; offered only with the grape-test-nodes flag (Refactor.63) 測試編譯失敗用，只在旗標開著時提供
+  'test_compile_error',
 ].map(key => 'sgrape.builtin.' + key);
+// Test-only nodes are offered when the page address carries grape-test-nodes (Refactor.63); a graph holding one opens
+// either way. Remove with them before release. 測試用節點只在網址帶 grape-test-nodes 時提供；含它的圖照常能開。發布前一起拿掉。
+const testNodes = typeof location !== 'undefined' && new URLSearchParams(location.search).has('grape-test-nodes');
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
 // 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
@@ -83,7 +88,7 @@ export const supportedKinds = ['constant', 'topInput', 'uniform'];
 export type MenuEntry = { uuid: string; key: string; label: string; literal?: boolean; params: modelTypes.ObjectValue };
 export const creatableEntries: readonly MenuEntry[] = supportedDefinitions.flatMap(uuid => {
   const module = core.registry.get(uuid)!;
-  if (!core.offered(module)) return [];
+  if (!core.offered(module) || (module.catalog.browser.testOnly === true && !testNodes)) return [];
   return (module.entries?.() ?? [{ key: '', label: module.catalog.definition.label, params: {} }])
     .map(entry => ({ uuid, ...entry }));
 });

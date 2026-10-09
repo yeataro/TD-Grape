@@ -162,10 +162,17 @@ class NextFamilyTests(unittest.TestCase):
         self.assertEqual((result['state']['revision'], result['shaderUpdated'], result['shaderError']), (4, False, 'GPU says no'))
         status = json.loads(comp.op('status').text)
         self.assertEqual((status['phase'], status['error']), ('glsl-compile-failed', 'GPU says no'))
+        # Refactor.63: reading the graph later still tells why and where to go back. 之後讀圖仍說得出原因、能回到哪一版。
+        self.assertEqual(result['shaderFailure'], 'compile')
+        state = fam.state()
+        self.assertEqual(state['failure'], {'kind': 'compile', 'revision': 4, 'log': 'GPU says no', 'pixel': 'bad glsl'})
+        self.assertEqual(state['lastKnownGood'], {'revision': 3, 'document': '{"a":1}'})
         # A later success clears the kept graph: one copy again.
         fam._verify_gpu.side_effect = None
         fam.apply(request(revision=4, run=runtime('good glsl')), catalog_hash=CATALOG)
         self.assertEqual((meta(comp)['runtime']['revision'], meta(comp)['runtime']['document']), (5, None))
+        self.assertNotIn('failure', fam.state())
+        self.assertNotIn('lastKnownGood', fam.state())
 
     def test_our_own_error_while_applying_is_said_as_such_and_the_graph_is_saved(self):
         # D1 (Q38 2-5, Refactor.62.1): the work is never lost; an error of ours is not called a compile failure, and its
@@ -179,6 +186,7 @@ class NextFamilyTests(unittest.TestCase):
         status = json.loads(comp.op('status').text)
         self.assertEqual(status['phase'], 'apply-internal-error')
         self.assertIn('AttributeError', status['traceback'])
+        self.assertEqual((result['shaderFailure'], fam.state()['failure']['kind']), ('internal', 'internal'))
 
     def test_envelope_checks(self):
         fam, _ = family()

@@ -39,6 +39,14 @@
   --palette-td-expression: #2f6fd0;
   --palette-td-export: #2e8f50;
   --palette-td-bind: #7a4fd0;
+  --palette-glsl-comment: #606375;
+  --palette-glsl-keyword: #7349a2;
+  --palette-glsl-type: #1e7767;
+  --palette-glsl-number: #955510;
+  --palette-glsl-function: #276ca7;
+  --palette-glsl-directive: #9b427d;
+  --palette-glsl-string: #756422;
+  --palette-glsl-builtin: #5364ac;
 
   --title-alpha: 80%;
   --lift-canvas: 0%;

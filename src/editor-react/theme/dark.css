@@ -46,6 +46,15 @@
   --palette-td-expression: #7fb2ff;
   --palette-td-export: #7fd88a;
   --palette-td-bind: #c59cff;
+  /* GLSL colours (legacy style.css:480; Refactor.63). GLSL 上色（舊產品）。 */
+  --palette-glsl-comment: #9d99ad;
+  --palette-glsl-keyword: #c5a5f3;
+  --palette-glsl-type: #8dd9c5;
+  --palette-glsl-number: #efc58e;
+  --palette-glsl-function: #9dcbf5;
+  --palette-glsl-directive: #e5aad0;
+  --palette-glsl-string: #d6cb97;
+  --palette-glsl-builtin: #b5c5fc;
 
   /* ── strengths: the steps of the ladder, shared by every purpose ── */
   --title-alpha: 80%;
@@ -131,6 +140,18 @@
   --td-expression: var(--palette-td-expression);
   --td-export: var(--palette-td-export);
   --td-bind: var(--palette-td-bind);
+  --glsl-comment: var(--palette-glsl-comment);
+  --glsl-keyword: var(--palette-glsl-keyword);
+  --glsl-type: var(--palette-glsl-type);
+  --glsl-number: var(--palette-glsl-number);
+  --glsl-function: var(--palette-glsl-function);
+  --glsl-directive: var(--palette-glsl-directive);
+  --glsl-string: var(--palette-glsl-string);
+  --glsl-builtin: var(--palette-glsl-builtin);
+  /* A line of code under the pointer or the keyboard (a little lighter), and a line TD reported (human 2026-10-10).
+     滑鼠或鍵盤所在的那一行（亮一點點），以及 TD 回報的錯誤行（人類）。 */
+  --code-line-hover: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
+  --code-line-error: color-mix(in srgb, var(--palette-error) 22%, transparent);
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
   --surface-app: var(--palette-ink);

@@ -4,7 +4,13 @@ import type { TdIdentity } from './td_identity';
 
 // New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
-export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string };
+// failure / lastKnownGood: while the Shader is stuck after a failed apply (Refactor.63): why (TD's log, the GLSL that
+// failed) and the graph of the program TD still runs (design-interview Q38 2-5).
+// failure／lastKnownGood：套用失敗、Shader 卡住時：原因（TD 的紀錄、失敗的 GLSL）與 TD 仍在跑的那一版的圖。
+export type ShaderFailure = { kind: 'compile' | 'internal'; revision: number; log: string; pixel: string };
+export type LastKnownGood = { revision: number; document: string };
+export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string;
+  failure?: ShaderFailure; lastKnownGood?: LastKnownGood };
 // One Uniform component as TD has it (Uniform D1; design-interview Q56, Q60): a value only for constant
 // and bound ones (Grape deals with constant values); Expression, Export and the rest are only a state.
 // 一個 Uniform 分量在 TD 的現況：只有固定值與 Bind 帶數值；Expression、Export 等只是狀態。

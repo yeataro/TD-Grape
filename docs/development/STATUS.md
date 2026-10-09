@@ -58,6 +58,15 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.63 編譯失敗看得到、回得去**（人類 10-10；決議補進 design-interview Q38 2-5）：
+  - TD：套用失敗時在 graph_meta 記一筆失敗（種類 compile／internal、TD 的完整紀錄、版本、失敗的那段 GLSL），程式再次換上就清掉；讀圖時附上這筆失敗與 Last Known Good 的圖（TD 正在跑的那一版）；送圖回覆帶 `shaderFailure`。
+  - 編輯器：同步狀態多了 `stuck`（Shader 卡住），開圖就知道；R.62.1 的落差修正——內部錯誤不再被說成「GLSL 編譯失敗」。
+  - 畫布上方浮動提示（不擋編輯）：卡在第幾版、第一個錯誤的行與訊息、「在 GLSL 中顯示」、「回到上一個能跑的版本」。回退走衝突時採用 TD 版本的同一條載入路徑，一步 Undo，再照一般編輯送出；Uniform 不另外處理（人類）。判斷「卡住」只看有沒有失敗紀錄，不看版本落後（只動版面也會落後）。
+  - GLSL 面板：Prism 上色（人類：用輕量的外部程式庫、不自己維護；核心＋C＋GLSL 壓縮後約 11 KB，MIT），顏色沿用舊產品（legacy style.css:480、779），Prism 把型別算進關鍵字，所以型別與關鍵字同色（和舊產品唯一的差別）；行號；滑鼠或鍵盤所在的行亮一點點（人類）；TD 回報的錯誤可點、跳到那一行並標紅——只在目前就是失敗的那份 GLSL 時，改過就註明行號可能對不上；行號與變數名稱都能帶回產生它的節點（名稱→節點的表由核心產碼時記下，`sourceMap.variables`，不從文字猜）；節點本身不標錯（人類：TD 停下的那一行不一定是錯的源頭）。
+  - TD 的錯誤格式實測為「ERROR: <pixel shader DAT>:<行>: <訊息>」，行號從 1 算、就是我們送去的 GLSL，與核心 sourceMap 同一個基準。
+  - 測試用節點 `test_compile_error`（呼叫不存在的函式，TD 一定編譯失敗）：含它的圖照常能開，新增選單只在網址帶 `?grape-test-nodes` 時提供；**發布前拿掉**。
+  - 依賴：新增 `prismjs` 1.30.0（MIT）與 `@types/prismjs`；建置自動把它的授權收進 `react-third-party-notices.txt`。README 三種語言的第三方致謝補上 React、React DOM、React Flow、Prism（原本只列 TDFam）。
+  - 驗證：Python 94、test:core 144、test:editor 80（新增：TD 紀錄讀出行號；開圖就知道卡住；回退是一步 Undo、照常送出、送出後不再卡住；選單在沒旗標時不出現測試節點）。TD 實測（丟棄式 COMP 複製 Grape OP，測完刪掉）：接上必錯節點送出，TD 報第 5 行，與產生的 GLSL 一致；編輯器打開即出現提示；「在 GLSL 中顯示」跳到第 5 行並標紅；點 `sg_n_broken` 選到 broken 節點；回退後圖回到第 664 版內容、送出為第 666 版，TD 程式跟上、失敗紀錄清掉、提示消失；帶旗標時選單出現「Compile Error (test)」。
 - **Refactor.62.1 在 Grape OP 自己的 GLSL TOP 上編譯；內部錯誤照實說**（人類 10-10）：
   - 拿掉 Manager 裡每次建、刪的暫時 COMP（`validation`／`candidate_…`）：它是真 GLSL TOP 的仿製品，只同步了 GLSL 版本與輸入數量，輸入維度、passes、輸出數量都沒同步（人類指出 sampler 維度對不上這類錯誤；以後 3D 輸入會誤擋、誤放），而且成功時編譯兩次。改成直接在 Grape OP 的 GLSL TOP 上編譯，失敗立刻還原；人類：失敗那一下可能出現藍紅棋盤圖可以接受，之後搭配錯誤指回節點。
   - D1 照 design-interview Q38 2-5「圖照送（工作不能丟）」：一律存圖。真的編譯失敗（`CompileFailed`，讀 Info DAT）照原本的說法；我們自己的程式錯誤改說「TD-Grape 套用 Shader 時發生內部錯誤；圖已存，上一個能跑的 Shader 繼續跑」，status 為 `apply-internal-error` 並附 traceback（原本被說成 GLSL 編譯失敗）。

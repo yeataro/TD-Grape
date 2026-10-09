@@ -1,5 +1,5 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
-import { HostClient, HostError, type StateResponse, type UniformStates } from './host';
+import { HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood } from './host';
 import { tr, TextError, errorText, type Message } from './text';
 import type { Level } from './reports';
 
@@ -12,8 +12,13 @@ export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?:
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
 // retryAt / retryMs: when the next automatic check runs and how long the wait is (Refactor.59.3: the countdown pie);
 // checking: a check is on its way. retryAt／retryMs：下一次自動檢查的時間與等待長度（倒數圓餅）；checking：檢查中。
+// stuck: the Shader in TD stopped at an earlier program after a failed apply, as TD last said (Refactor.63); gone once a
+// program runs again. stuck：套用失敗後 TD 的 Shader 停在較早的程式（TD 最後說的）；程式再次換上就消失。
+export type ShaderStuck = { failure: ShaderFailure; lastKnownGood?: LastKnownGood };
 export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable';
-  retryAt?: number; retryMs?: number; checking?: boolean };
+  retryAt?: number; retryMs?: number; checking?: boolean; stuck?: ShaderStuck };
+const stuckOf = (state: StateResponse['state']): ShaderStuck | undefined =>
+  state.failure ? { failure: state.failure, ...(state.lastKnownGood ? { lastKnownGood: state.lastKnownGood } : {}) } : undefined;
 // What to tell the person and how serious it is (design-interview Q35); sent once, with the
 // status change it belongs to. 要告訴人的話與嚴重程度；只在發生的那一次隨狀態一起送出。
 export type Said = { message: Message | string; level?: Level };
@@ -23,7 +28,9 @@ type Sent = { document: string; revision: number };
 // last good Shader (Refactor.34). 圖照樣存了，只是 GLSL 在 TD 編譯失敗、Shader 停在上次成功版。
 // uniforms: each Uniform's components as TD has them now; notices: TD-Grape's messages for people,
 // in the tr() shape (Uniform D1, Q58, Q60). uniforms：各分量的現況；notices：TD-Grape 給人看的訊息。
-type Applied = { state: StateResponse['state']; shaderError?: string | null; uniforms?: UniformStates; notices?: Message[] };
+// shaderFailure: 'compile' or 'internal' (TD-Grape's own error), so the message says which (Refactor.63).
+type Applied = { state: StateResponse['state']; shaderError?: string | null; shaderFailure?: 'compile' | 'internal' | null;
+  uniforms?: UniformStates; notices?: Message[] };
 export const FORMAT = 'grape-next-1';
 
 // Two parts (design-interview Q38 2-2): the execution part (GLSL + bindings) is applied by TD as a
@@ -102,7 +109,7 @@ export class HostSync {
     private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
     this.confirmed = loaded.state.document;
     this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
-    this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready' };
+    this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready', stuck: stuckOf(loaded.state) };
   }
   get busy() { return !!this.pending; }
   private set({ message, level, ...patch }: Patch) {
@@ -146,8 +153,11 @@ export class HostSync {
           this.failedKey = key; level = 'error';
           // The summary first: the status line shows one line, the whole TD log on hover (Refactor.38).
           // 摘要放第一行：狀態列只顯示一行，滑鼠移上去看完整的 TD 紀錄。
-          message = tr('sync.glslFailedInTd', 'GLSL failed to compile in TD. The graph is saved; TD keeps running the last good Shader.\n{log}',
-            { log: result.shaderError });
+          message = result.shaderFailure === 'internal'
+            ? tr('sync.internalErrorInTd', 'TD-Grape ran into an internal error while applying the Shader. The graph is saved; TD keeps running the last good Shader.\n{log}',
+              { log: result.shaderError })
+            : tr('sync.glslFailedInTd', 'GLSL failed to compile in TD. The graph is saved; TD keeps running the last good Shader.\n{log}',
+              { log: result.shaderError });
         } else if (runtime) {
           this.runtimeKey = key; this.failedKey = null;
         } else if (!compiled) {
@@ -157,7 +167,7 @@ export class HostSync {
           level = 'warning';
           message = tr('sync.savedKnownFailure', 'Graph saved to TD; this program failed to compile in TD before, so TD still runs the last good Shader.');
         }
-        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level });
+        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level, stuck: stuckOf(result.state) });
         this.onTd?.(result.uniforms, result.notices ?? []);
       } catch (error) {
         if (this.disposed) return;
@@ -236,7 +246,7 @@ export class HostSync {
     }
     this.blocked = false; this.uncertain = undefined;
     const dirty = this.dirtyNow();
-    this.set({ revision: state.revision, dirty, phase: 'ready', link: undefined,
+    this.set({ revision: state.revision, dirty, phase: 'ready', link: undefined, stuck: stuckOf(state),
       level: 'info', message: dirty ? tr('sync.reconnectedSending', 'Reconnected; sending your changes.') : tr('sync.reconnected', 'Reconnected.') });
     if (dirty) await this.flush();
   };
@@ -246,7 +256,7 @@ export class HostSync {
     clearTimeout(this.timer);
     this.confirmed = state.document; this.blocked = false; this.uncertain = undefined; this.failedKey = null;
     this.runtimeKey = state.runtimeRevision === state.revision ? this.source().key : null;
-    this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined });
+    this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined, stuck: stuckOf(state) });
   }
   // Conflict choice "編輯端" (Q7/Q28): rebase the draft on TD's latest revision and send it
   // through the normal path; a further change before delivery still returns a conflict.
@@ -256,7 +266,7 @@ export class HostSync {
     this.confirmed = result.state.document; this.blocked = false; this.uncertain = undefined;
     this.runtimeKey = null; this.failedKey = null; // TD's program was written elsewhere; send ours
     const dirty = this.dirtyNow();
-    this.set({ revision: result.state.revision, dirty, phase: 'ready',
+    this.set({ revision: result.state.revision, dirty, phase: 'ready', stuck: stuckOf(result.state),
       level: 'info', message: dirty ? tr('sync.overwriting', "Overwriting TD with the editor's draft…")
         : tr('sync.draftMatchesTd', "The draft matches TD's graph; in sync.") });
     await this.flush();

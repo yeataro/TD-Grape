@@ -539,7 +539,9 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   // Stage outputs are never offered (Q42); the reference nodes are made from the Sources panel (Q45).
   // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
   const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
-  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
+  // Test-only nodes are offered only with the grape-test-nodes flag (Refactor.63). 測試用節點只在旗標開著時提供。
+  const testOnly = ['sgrape.builtin.test_compile_error'];
+  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid) && !testOnly.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
   // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
   const of = uuid => creatableEntries.filter(e => e.uuid === uuid).map(e => e.label);
@@ -1201,4 +1203,39 @@ test('the inputs are asked again when TD says it was rewired and when the socket
   socket.onmessage({ data: JSON.stringify({ type: 'inputs', frame: 5, retake: false }) });
   await nextFrame();
   assert.ok(session.inputsTake() > still, 'other wiring: new snapshots');
+});
+
+
+// A compile failure in TD (Refactor.63): TD's log read for its lines; a stuck Shader known when opening; back to the
+// graph TD runs as one Undo step, then delivered as any edit. TD 編譯失敗：讀出行號；開圖時就知道 Shader 卡住；回到 TD 正在跑的圖。
+test('TD compile errors are read for their lines; a stuck Shader can go back to the last known good graph', async t => {
+  const { glslErrors } = load(path.join(root, 'src/editor-react/glsl_errors.ts'));
+  // TD's own log, as measured 2026-10-10. TD 自己的紀錄（實測）。
+  const log = ['Vertex Shader Compile Results:', '', 'Compiled Successfully', '', '=============', 'Pixel Shader Compile Results:',
+    "ERROR: /project1/grape/pixel_shader:4: 'undefined_thing' : undeclared identifier ", 'ERROR: 1 compilation errors.  No code generated.', ''].join('\n');
+  assert.deepEqual(JSON.parse(JSON.stringify(glslErrors(log))), [{ line: 4, text: "'undefined_thing' : undeclared identifier" }]);
+  // TD runs revision 3 (the fixture); the graph moved to 4 with a program that failed. TD 跑第 3 版；圖到第 4 版、程式失敗。
+  const good = JSON.stringify(fixture()), edited = fixture();
+  edited.stages.pixel.nodes[0].ui = { x: 999, y: 0 };
+  const failure = { kind: 'compile', revision: 4, log: 'ERROR: /p/pixel_shader:3: oops', pixel: 'bad' };
+  const sent = [];
+  const fetcher = async (url, options) => {
+    const action = url.split('?')[0].split('/').at(-1), body = options.body && JSON.parse(options.body);
+    if (action === 'apply') sent.push(body);
+    return new Response(JSON.stringify(action === 'apply'
+      ? { state: { document: body.document, revision: body.revision + 1, targetId: target, runtimeRevision: body.revision + 1 } }
+      : { saved: 'test.toe' }));
+  };
+  const loaded = { state: { document: JSON.stringify(edited), revision: 4, runtimeRevision: 3, targetId: target, failure,
+    lastKnownGood: { revision: 3, document: good } }, format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
+    frontendCompiler: { protocol: GrapeTopCompiler.protocol, catalogHash: bootstrap.catalogHash, required: true } };
+  const session = new EditorSession(new HostClient(target, '', fetcher, 20000), bootstrap, loaded, 0, 60000, undefined, '9.9.9 Test');
+  t.after(() => session.dispose());
+  assert.equal(session.snapshot().stuck.failure.log, failure.log, 'known as soon as the editor opens');
+  session.revertToLastGood();
+  assert.equal(JSON.stringify(session.graph()), good, 'back to the graph TD runs');
+  assert.equal(session.snapshot().undo, true, 'one Undo step');
+  await session.flush();
+  assert.equal(sent.at(-1).document, JSON.stringify(session.graph()), 'delivered as any edit');
+  assert.equal(session.snapshot().stuck, undefined, 'TD runs a program again: no longer stuck');
 });

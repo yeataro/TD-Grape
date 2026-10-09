@@ -18,7 +18,15 @@ const nowGhost=new Set(['missing port']);
 // one (sgrape_sources.configure). The TD side now reads the compiler result, so unused Uniforms are in it
 // too (Uniform D1); compared here as legacy listed them. 舊產碼結果只列用到的 Uniform，TD 端則替每個宣告留列；
 // 現在 TD 讀產碼結果，所以沒用到的也在裡面。這裡照舊產品的列法比較。
-const asLegacy=r=>({...r,bindings:r.bindings.filter(b=>b.kind!=='uniform'||new RegExp('^uniform \\S+ '+b.name+';$','m').test(r.pixel))});
+// The variable map (Refactor.63: a name in the GLSL leads to its node) is new; every name in it is in the GLSL and
+// belongs to a node of the source map. 變數表是新的（GLSL 裡的名字找回節點）；表裡每個名字都在 GLSL 裡、屬於 sourceMap 的節點。
+const asLegacy=r=>{
+  for(const [name,node] of Object.entries(r.sourceMap.variables)){
+    assert.ok(new RegExp('\\b'+name+'\\b').test(r.pixel),name);assert.ok(r.sourceMap.pixel.some(row=>row.node===node),node);
+  }
+  const {variables,...sourceMap}=r.sourceMap;
+  return {...r,sourceMap,bindings:r.bindings.filter(b=>b.kind!=='uniform'||new RegExp('^uniform \\S+ '+b.name+';$','m').test(r.pixel))};
+};
 test('frontend compilation matches legacy GLSL, bindings, ports, source map and diagnostics',()=>{
   for(const row of cases){
     assert.equal(compiler.supports(row.graph),true,row.name);

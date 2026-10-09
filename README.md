@@ -69,3 +69,5 @@ These credits document the work contributed by the human author and AI tools.
 This project uses [TDFam](https://github.com/dotsimulate/TDFam), developed by **Lyell Hintz ([dotsimulate](https://dotsimulate.com))**, **Dan Molnar ([Function Store](https://www.functionstore.xyz/link-in-bio))**, and other contributors. Thank you for providing this open-source foundation.
 
 TDFam provides foundational capabilities for custom operator families in TouchDesigner and is licensed under **Apache-2.0**. See the accompanying [LICENSE](src/third_party/TDFam/LICENSE) and [NOTICE](src/third_party/TDFam/NOTICE) for details.
+
+The editor also bundles [React](https://react.dev) and React DOM, [React Flow](https://reactflow.dev) (`@xyflow/react`), and [Prism](https://prismjs.com) for GLSL highlighting, all under the **MIT** license. Their license texts ship with the editor in `react-third-party-notices.txt`, collected by the build from the packages actually bundled.

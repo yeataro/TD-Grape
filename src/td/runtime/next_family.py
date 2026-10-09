@@ -40,6 +40,7 @@ MAX_GRAPH_BYTES = 512000     # the graph text; the core keeps a copy until we re
 # 約每 KB 卡 2.2 ms，送出一次編兩次。512 KB 仍可能卡數秒，數字是沿用的，待子圖展開實測時重訂。
 MAX_GLSL_BYTES = 512000      # the pixel shader source
 MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
+MAX_FAILURE_LOG = 20000  # TD's compile log kept for a failure; a log is a few hundred characters 失敗時留下的 TD 紀錄
 
 # TOP texture inputs (Refactor.43; texture-inputs.md). Each input of the graph is an In TOP in the
 # Grape OP: listed in the GLSL TOP's TOPs list in the graph's order (that order is sTD2DInputs[i]),
@@ -321,9 +322,19 @@ class NextFamily:
         return ident
 
     def state(self):
+        """The graph, its revision and the running program's revision. While the Shader is stuck (Refactor.63): the last
+        failure (kind, TD's log, the GLSL that failed) and the Last Known Good graph, so an editor opened later still sees
+        why and can go back to the program TD runs (design-interview Q38 2-5).
+        圖、版本、正在跑的程式版本。Shader 卡住時：最後的失敗（種類、TD 的紀錄、失敗的 GLSL）與 Last Known Good 的圖，
+        之後打開的編輯器也看得到原因、能回到 TD 正在跑的那一版。"""
         meta, text = self.stored()
-        return {'revision': meta['document']['revision'], 'document': text,
-                'runtimeRevision': meta['runtime']['revision'], 'targetId': meta['targetId']}
+        result = {'revision': meta['document']['revision'], 'document': text,
+                  'runtimeRevision': meta['runtime']['revision'], 'targetId': meta['targetId']}
+        if isinstance(meta.get('failure'), dict):
+            result['failure'] = meta['failure']
+        if meta['runtime'].get('document') is not None:
+            result['lastKnownGood'] = {'revision': meta['runtime']['revision'], 'document': meta['runtime']['document']}
+        return result
 
     def running(self):
         """The program TD runs now (last known good) as (sha256, program), read and checked in one place (Refactor.62):
@@ -566,12 +577,16 @@ class NextFamily:
                 shader_updated, shader_error = False, str(error)
                 if not isinstance(error, CompileFailed):
                     internal_error = traceback.format_exc(limit=8)
+                # Kept until a program runs again, for editors opened later (Refactor.63). 留到程式再次換上，給之後打開的編輯器。
+                meta['failure'] = {'kind': 'compile' if internal_error is None else 'internal', 'revision': next_revision,
+                                   'log': shader_error[:MAX_FAILURE_LOG], 'pixel': compiled['pixel']}
             else:
                 placed[0]()
                 notices = self._write_uniforms(uniforms, previous_uniforms)
                 meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
                                    'sha256': digest(runtime_text), 'document': None,
                                    'editorVersion': editor_version}
+                meta.pop('failure', None)  # a program runs again 程式又換上了
         if meta['runtime']['revision'] != next_revision and meta['runtime'].get('document') is None:
             # The graph moves past the running program: keep that program's graph once.
             # 圖往前走、執行部分停住時，才留一份那時的圖。
@@ -604,5 +619,8 @@ class NextFamily:
         # shaderError: TD's compile log when the GLSL did not compile (the graph was saved anyway).
         # uniforms: each Uniform's components as TD has them now (Q60); notices: things to tell people,
         # as code + English + parameters (Q58). uniforms：各分量的現況；notices：要告訴人的事。
+        # shaderFailure: 'compile' (TD did not compile it) or 'internal' (TD-Grape's own error), so the editor says which
+        # (Refactor.63). shaderFailure：compile（TD 沒編過）或 internal（TD-Grape 自己的錯），讓編輯器說對。
         return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated,
-                'shaderError': shader_error, 'uniforms': self.uniform_states(), 'notices': notices}
+                'shaderError': shader_error, 'shaderFailure': (meta.get('failure') or {}).get('kind') if shader_error else None,
+                'uniforms': self.uniform_states(), 'notices': notices}

@@ -17,6 +17,7 @@ import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
+import { glslErrors } from './glsl_errors';
 import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
@@ -41,6 +42,20 @@ const nodeTypes: NodeTypes = { grape: NodeCard };
 // 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。
 const addressTarget = () => new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([^/]+)\/$/)?.[1] ?? '';
 const draftKeyOf = (target: string) => 'grape-react-draft:' + target;
+function StuckNotice({ state, session, onShowGlsl }: { state: EditorState; session: EditorSession; onShowGlsl(line?: number): void }) {
+  const { failure, lastKnownGood } = state.stuck!, first = glslErrors(failure.log)[0];
+  const revision = lastKnownGood?.revision ?? '';
+  return <div className="floating-notice error" role="group" aria-label={say(tr('shader.stuckLabel', 'Shader not applied'))}>
+    <span>{say(failure.kind === 'internal'
+      ? tr('shader.stuckInternal', 'TD-Grape ran into an internal error while applying the Shader; TD keeps running revision {revision}.', { revision })
+      : tr('shader.stuckCompile', 'TD could not compile the Shader; TD keeps running revision {revision}.', { revision }))}</span>
+    <span className="notice-detail">{first ? say(tr('glsl.lineError', 'Line {line}: {message}', { line: first.line, message: first.text }))
+      : failure.log.split('\n').find(line => line.trim()) ?? ''}</span>
+    <div className="notice-actions">
+      <button onClick={() => onShowGlsl(first?.line)}>{say(tr('shader.showGlsl', 'Show in GLSL'))}</button>
+      {lastKnownGood && <button onClick={session.revertToLastGood}>{say(tr('shader.revert', 'Revert to last good'))}</button>}</div>
+  </div>;
+}
 function download(value: unknown, name = 'grape-draft.json') {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
@@ -341,6 +356,11 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
             <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
             <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button></div>
           </div>}
+          {/* The Shader stuck after a failed apply (Refactor.63, human 2026-10-10): what TD said, where in the GLSL, and back
+              to the program TD still runs. Floating, never in the way of editing. 套用失敗、Shader 卡住：TD 說了什麼、在 GLSL 哪裡、
+              回到 TD 仍在跑的那一版。浮動，不擋編輯。 */}
+          {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
+            onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}

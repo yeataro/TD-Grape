@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "0b06fc846c6006fd675592d96d0f171fc75f8ac85a213c75210cafdd99fbe2f5",
+  "catalogHash": "08420a9298d0e084e9db8c99a8e8ccffdb0056237088de65ea3cb57299daee60",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -95,7 +95,10 @@
             "trail": [],
             "line": 6
           }
-        ]
+        ],
+        "variables": {
+          "sg_n_color": "color"
+        }
       },
       "stages": {
         "pixel": {
@@ -1154,6 +1157,25 @@
       },
       "descriptionKey": "help.td_value",
       "definitionUuid": "sgrape.builtin.td_value"
+    },
+    {
+      "key": "test_compile_error",
+      "label": "Compile Error (test)",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.test_compile_error",
+      "definitionUuid": "sgrape.builtin.test_compile_error"
     },
     {
       "key": "texture_sample",
@@ -5000,6 +5022,47 @@
             "inputs": {},
             "outputs": {
               "out": "vec2"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.test_compile_error": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
             }
           }
         ]
