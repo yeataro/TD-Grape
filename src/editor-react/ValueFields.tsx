@@ -62,6 +62,9 @@ function DrivenField({ state }: { state: ComponentState }) {
 // group at their limit). An input's caption is its name and type; a value without a port shows "Color" or its type
 // (tentative, value-input.md 四). 值的開頭文字：在上面按中鍵（或 Alt＋右鍵）打開整組的數值梯尺，每個分量加上同一個量
 // （照 TouchDesigner；舊產品整列調值：整數碰到界限整組停）。輸入的開頭文字是名字與型別；沒有接孔的值顯示 Color 或型別（暫定）。
+/** The colour of a colour's i-th channel letter (R, G, B, A), the same as in the value boxes. 顏色第 i 個通道字母的顏色，同數值框。 */
+export const componentColor = (i: number) => `var(--component-${'xyzw'[i]})`;
+
 /** The colour of a value's first three components (0–1), as the browser's colour input writes it: what a swatch or
  * a plain default image shows. 數值前三個分量（0–1）的顏色，寫成瀏覽器顏色輸入的格式：色塊、純色預設圖用。 */
 export const colorHex = (list: readonly unknown[]) =>
@@ -152,7 +155,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
         const change = (next: Value) => commit(withComponent(next));
         const mode = modes?.[i], bound = mode?.mode === 'bind';
         return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
-          {count > 1 && <span className="component" style={color ? { color: `var(--component-${'xyzw'[i]})` } : undefined}>{names[i]}</span>}
+          {count > 1 && <span className="component" style={color ? { color: componentColor(i) } : undefined}>{names[i]}</span>}
           {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
             : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
             : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}

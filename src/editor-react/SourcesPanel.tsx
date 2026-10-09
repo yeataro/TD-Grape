@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, 
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
-import { ValueFields, colorHex } from './ValueFields';
+import { ValueFields, colorHex, componentColor } from './ValueFields';
 import { useSession } from './contexts';
 import { Badge, ConfirmDialog, FoldSection, MenuButton, Select } from './controls';
 import { Icon } from './icons';
@@ -204,7 +204,10 @@ export function SourcesPanel({ declarations, references }: {
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
           options={declaration.color === true
             // A colour reads as a colour (human 2026-10-09); the type stays vec3/vec4. 顏色看得出是顏色（人類）；型別仍是 vec3／vec4。
-            ? [{ value: 'vec3', label: 'RGB' }, { value: 'vec4', label: 'RGBA' }] : types.map(type => ({ value: type, label: type }))} /></>}>
+            // Each letter in its channel's colour, as in the value boxes (human 2026-10-09). 每個字母用該通道的顏色，同數值框（人類）。
+            ? (['vec3', 'vec4'] as const).map(type => ({ value: type, label: <span aria-label={type === 'vec3' ? 'RGB' : 'RGBA'}>
+              {[...(type === 'vec3' ? 'RGB' : 'RGBA')].map((letter, i) => <span key={i} style={{ color: componentColor(i) }}>{letter}</span>)}</span> }))
+            : types.map(type => ({ value: type, label: type }))} /></>}>
       {uniformValue(declaration)}
     </SourceCard>)}
     </FoldSection>
