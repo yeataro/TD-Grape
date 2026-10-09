@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.59.8 快照標籤**（人類 10-10）：Samples 自選 TOP 的快照標籤改到右下角、深色半透明底配淺色字（`--image-label`／`--text-on-image`，每個主題都是深底淺字，參考舊產品 `.preview span`），加相機圖示（`icons.tsx camera`），文字「快照」；滑鼠提示寫拍攝時間與「不是即時畫面，按一下重拍」；按標籤重拍，新圖到之前舊圖留著。共用來源卡片的通用按鈕底色規則排除這個標籤（原本把它蓋成不透明灰）。驗證（Grape_TOP1）：標籤離右下各 4px、底色黑 78%、字白 92%；按下後拍攝時間更新、重拍中舊圖仍在。
 - **Refactor.59.7 分頁標題、檔名提示、載入中畫面**（人類 10-10）：
   - 分頁標題動態（`td_identity.ts tabTitle`）：Grape OP 名字在前，「檔名 : 路徑」、`[ TD Build … ]`，產品名最後；沒開圖時「TD-Grape」。只給連著 TD 的編輯器。
   - 檔名滑鼠提示寫詳細（`detailLabel`）：「TouchDesigner build：完整路徑」、位址、TD 裡的 TD-Grape 版本、這個頁面的版本。TD 回覆的身分多 `folder`（`project.folder`）與 `version`（服務中的編輯器版本），`grape_manager_ext.py`；Manager 已重裝。

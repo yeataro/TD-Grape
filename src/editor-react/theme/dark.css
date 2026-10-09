@@ -161,6 +161,11 @@
   --surface-box: color-mix(in srgb, var(--palette-accent) 13%, transparent);
   --border-node: color-mix(in srgb, var(--palette-node), var(--palette-contrast) var(--tint-node-border));
   --overlay-down: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
+  /* A label over an image: dark see-through with light text in every theme (the image decides the background).
+     圖上的標籤：每個主題都是深色半透明配淺色字（底是圖）。 */
+  --image-label: color-mix(in srgb, var(--palette-shadow) 78%, transparent);
+  --image-label-hover: color-mix(in srgb, var(--palette-shadow) 92%, transparent);
+  --text-on-image: color-mix(in srgb, var(--palette-lift) 92%, transparent);
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */
   --layer-shadow: color-mix(in srgb, var(--palette-shadow) var(--tint-layer-shadow), transparent);
   --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);

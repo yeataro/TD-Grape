@@ -331,8 +331,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    (legacy .source-card-body input: --node-value-bg; human: the name box was too dark; unify them). Triangles and tags stay
    bare. 卡片上的輸入框、按鈕、選擇器用數值框的顏色（比卡片亮一階），照舊產品（人類：名稱框太深、要統一）。三角形與標籤不加底色。 */
 .source-card { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
-.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button) { background: var(--surface-control); border-color: transparent; }
-.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button):hover { background: var(--surface-control-hover); }
+.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge, .image-label), .select-button) { background: var(--surface-control); border-color: transparent; }
+.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge, .image-label), .select-button):hover { background: var(--surface-control-hover); }
 
 /* The head: name, type, use count, "⋯". 名稱列：名稱、型別、使用數、「⋯」。 */
 .source-head { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); }
@@ -363,6 +363,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .texture-frame img { display: block; width: 100%; height: 100%; }
 .texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
 .texture-preview figcaption.centred { position: relative; left: auto; bottom: auto; }
+/* A label over an image (the snapshot's): bottom right, light text on a dark see-through label, so it reads on bright and
+   dark images alike (human 2026-10-10; legacy .preview span). 圖上的標籤：右下角，深色半透明底配淺色字，亮圖暗圖都看得清
+   （人類；舊產品 .preview span）。 */
+.texture-preview figcaption.image-label-slot { left: auto; right: 4px; }
+.image-label { display: inline-flex; align-items: center; gap: 4px; height: auto; padding: 2px 6px; border: 0; border-radius: var(--radius-field);
+  background: var(--image-label); color: var(--text-on-image); font-size: var(--font-xs); line-height: var(--line-xs); }
+.image-label .icon { width: var(--font-sm); height: var(--font-sm); }
+.image-label:hover { background: var(--image-label-hover); }
 .checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker); }
 
 /* A source not created yet: a grey card (human). 還沒建立的來源：灰色卡片（人類）。 */
