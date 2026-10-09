@@ -8,7 +8,7 @@
 
 **進行方式（人類 2026-10-09）**：先把基本能力定下來；標準功能都做完之後，會有一段多輪測試調整的時期（外觀、手感這類比較不確定的東西在那時一起調）。在那之前，外觀只求可用、結構乾淨，不追細節。
 
-**最新：Refactor.63.6.2**（2026-10-10，錯誤圖示放大、改正紅；63.6.1 錯誤節點改掛 TD 式紅底黑叉圖示；63.6 錯誤節點標記〔試驗，畫布設定、預設關〕；63.5 GLSL 型別色照舊產品；63.4 GLSL 面板：邊緣漸層、可點名稱用連結顏色、Uniform／常數名稱選取引用節點、輸出名稱帶回 Color Output；63.3 停在 GLSL 分頁時編輯器打不開的修正；63.2 回到正在跑的程式時卡住會解除；63.1 Force Compile Error 成為正式節點；63 編譯失敗看得到、回得去：浮動提示、GLSL 面板上色與行號、回到 Last Known Good；62.1 在 Grape OP 自己的 GLSL TOP 上編譯；62 TD 服務清理；61.6 貼圖輸入一帶清理；61.5 預設圖也有圖片提示；61.4 圖片提示加網路位置；61.3 快照的圖顯示尺寸與格式；61.2 快照提示說明 TD 的 cook；61.1 快照只重拍按的那一張、不閃、接了線不選預設；R.61 子圖形狀對齊 Q46）。最近一次 Deliver 是 Refactor.60.6（2026-10-10，`TD-Grape-dev.95`，TOE 已提交；含 R.60 的範本與 Manager 改動，以及人類在 Grape_TOP1 把 In TOP 改成褐色的試驗）；TD 目前在開發模式（外部資料夾）跑 63.6.2；TOE 存的是 60.6 的內嵌資產，下次存 TOE 前先 `Deliver()`。逐版內容見 [STATUS](STATUS.md)。
+**最新：Refactor.63.6.3**（2026-10-10，中文「跑」改「執行」；63.6.2 錯誤圖示放大、改正紅；63.6.1 錯誤節點改掛 TD 式紅底黑叉圖示；63.6 錯誤節點標記〔試驗，畫布設定、預設關〕；63.5 GLSL 型別色照舊產品；63.4 GLSL 面板：邊緣漸層、可點名稱用連結顏色、Uniform／常數名稱選取引用節點、輸出名稱帶回 Color Output；63.3 停在 GLSL 分頁時編輯器打不開的修正；63.2 回到正在跑的程式時卡住會解除；63.1 Force Compile Error 成為正式節點；63 編譯失敗看得到、回得去：浮動提示、GLSL 面板上色與行號、回到 Last Known Good；62.1 在 Grape OP 自己的 GLSL TOP 上編譯；62 TD 服務清理；61.6 貼圖輸入一帶清理；61.5 預設圖也有圖片提示；61.4 圖片提示加網路位置；61.3 快照的圖顯示尺寸與格式；61.2 快照提示說明 TD 的 cook；61.1 快照只重拍按的那一張、不閃、接了線不選預設；R.61 子圖形狀對齊 Q46）。最近一次 Deliver 是 Refactor.60.6（2026-10-10，`TD-Grape-dev.95`，TOE 已提交；含 R.60 的範本與 Manager 改動，以及人類在 Grape_TOP1 把 In TOP 改成褐色的試驗）；TD 目前在開發模式（外部資料夾）跑 63.6.3；TOE 存的是 60.6 的內嵌資產，下次存 TOE 前先 `Deliver()`。逐版內容見 [STATUS](STATUS.md)。
 
 **最近幾輪的大塊（R.53–59）：**
 - 編輯器外框（R.53）、新增節點的入口（R.54）、數值輸入 widget（R.55）、共用來源面板與卡片（R.57）、拖線預告與拔線還原（R.56–57）。
@@ -123,6 +123,6 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）。Grape OP：`/project1/Grape_TOP_test`、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類用 Tab 選單建立）、測試複本 `r54_probe`（等人類同意刪）；範本 `/TD_Grape/masters/grape_top`。每個 Samples 都 Clone `/TD_Grape/Samples`（R.58.9）。
 - 編輯服務 port 65465（被佔用時往後找，R.36）；例：`http://127.0.0.1:65465/shader/6cb6a90247c140bea7df98a2f11c1858/`（r54_probe）。
-- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.60.6（存 `TD-Grape-dev.95`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 63.6.2。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
+- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.60.6（存 `TD-Grape-dev.95`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 63.6.3。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.94.toe` 這類是遞增存檔的正常狀態）；未提交的修改可能是人類的，須保留。
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴。
