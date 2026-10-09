@@ -58,7 +58,11 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
   // A background drag: where the view was when it started plus how far the pointer went. 拖背景：開始時的位置加上游標移動的距離。
   let drag: { id: number; x: number; y: number; from: Viewport; moved: boolean } | null = null;
   const down = (event: PointerEvent) => {
-    if (event.pointerType !== 'mouse' || event.button > 1 || !(event.target as Element).closest('.react-flow__pane')) return;
+    // React Flow's own pan condition: on its pane, never on anything marked nopan (nodes, fields). Being inside the pane is
+    // not enough, nodes live inside it too (fix: nodes could not be dragged). 同 React Flow 原生平移的條件：在它的 pane 上、
+    // 不在任何標了 nopan 的東西上（節點、欄位）。只看「在 pane 裡」不夠，節點也在裡面（修正：節點拖不動）。
+    const on = event.target as Element;
+    if (event.pointerType !== 'mouse' || event.button > 1 || !on.closest('.react-flow__pane') || on.closest('.nopan')) return;
     event.stopPropagation();
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: base(), moved: false };
     try { element.setPointerCapture(event.pointerId); } catch { /* the pointer is already gone; moves still arrive while over the canvas 指標已離開；在畫布上時仍收得到移動 */ }
