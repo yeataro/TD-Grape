@@ -21,6 +21,8 @@ footer { color: #958b9f; font-size: 11px; }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
+/* Multi-selection frame (Refactor.50.3), as the legacy #selectionbounds. 多選框，照舊產品。 */
+.selection-frame { position: absolute; left: 0; top: 0; border: 1px dashed var(--select-frame); pointer-events: none; }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
 .grape-node.box-in { outline: 2px dashed var(--select-other); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }

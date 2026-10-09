@@ -91,7 +91,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
-| 2026-10-09 | **多選框（之後單獨一輪，人類：麻煩的一輪）**：舊產品選取多個節點時外面有一個框（選取工具列、拉框調大小、自動排列；legacy `src/editor/selection_ui.js` 85–413 行）。新編輯器還沒有，所以 R.50.2 框選時目前的選取看起來有點怪。可直接搬的只有純計算：`selectionSpreadPositions`（拉框時每個節點的新位置）、`autoArrangePositions`（自動排列）；畫框、把手、工具列、事件綁著舊產品的畫布與全域變數，要用 React Flow 座標重寫，也不照抄它的整個畫面全部重刷。 |
+| 2026-10-09 | **多選框的其餘部分（之後單獨一輪，人類：麻煩的一輪）**：外框本身已在 R.50.3 做好（多選時顯示）。還沒做的：選取工具列、拉框調大小、自動排列（legacy `src/editor/selection_ui.js` 85–413 行）。可直接搬的只有純計算：`selectionSpreadPositions`（拉框時每個節點的新位置）、`autoArrangePositions`（自動排列）；畫框、把手、工具列、事件綁著舊產品的畫布與全域變數，要用 React Flow 座標重寫，也不照抄它的整個畫面全部重刷。 |
 | 2026-10-09 | **TD 上新增／刪除 Uniform 列，編輯器要不要跟著（人類提出，最後回頭看）**：人類的想法是連線時以 TD 為主、TD 上新增刪除都有效。助手評估照字面做（自動改圖）複雜易錯，建議改成使用者按一下才同步（TD 有、圖沒有的列列成灰色＋「加到圖上」；TD 上被刪的列標「找不到」讓人選重新加回或刪除——舊產品的 `sourceMissing` 行為，人類：有點惱人但是保護）。詳見 workspace `work/in-place-refactor-design/uniform-d.md` 第三節。 |
 | 2026-10-09 | **【後續版本／發布後】TD 從網頁資產讀共用表（Uniform D 起，人類要求標記）**：預設 Uniform 的表（`uniform_presets.json`→`editor-bootstrap.json`）只在 GrapeEditor 的 VFS 放一份，Manager 從那裡讀 expression 對照（先例：Manager 已從同一份讀 `catalogHash`，`grape_manager_ext.py` 第 37～41 行）。**以後若把網頁託管從 TD 徹底剝離（例如部署到網路），TD 會失去這個來源**，要先決定共用表改放哪裡。凡是「TD 從網頁資產讀東西」的地方，都要在讀取處註解標明這個依賴。 |
 | 2026-10-09 | **「TD-Grape 拒絕」的用語要再想（人類 10-09 截圖，之後再處理）**：狀態列顯示「TD-Grape 拒絕：[apply / grape-op / host_rejected] …」。人類：這裡實際上是 **TD 端的部分**（Grape OP 接收送出的程式，`next_family.py`／`host_api.py` 回 422）拒絕，「TD-Grape」說得不夠精確，要想更精確的說法。另外括號裡的技術代號（`apply / grape-op / host_rejected`，來自 `host.ts` 的 HostError）直接露給使用者。屬「訊息要說出真正的行為者」（記憶 messages-name-the-real-actor），併到錯誤回報／連線那一輪一起整理。截圖只看得到開頭，這次被拒的原因未知（Grape_TOP1 的 status 沒有 refused 紀錄：讀綁定時的檢查失敗不寫 status）。 |

@@ -10,6 +10,7 @@ import { HostClient, type StateResponse } from './host';
 import { Editor as EditorSession } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
+import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { PanelShell } from './PanelShell';
@@ -64,6 +65,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
       minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <Background gap={22} color="#393543" /><Controls showInteractive={false} />
+      <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>
   </RightDragSelect></BodyDragContext.Provider>;
 });

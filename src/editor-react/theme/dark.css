@@ -36,6 +36,7 @@
   --group-ghost: var(--palette-node);
   --select-primary: var(--palette-select-green);
   --select-other: var(--palette-select-yellow);
+  --select-frame: var(--palette-select-yellow);
   --wire-selected: var(--palette-wire-cream);
   --wire-hover: var(--palette-wire-lilac);
 }
