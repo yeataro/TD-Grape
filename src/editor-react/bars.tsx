@@ -98,7 +98,8 @@ export function NetworkBar({ session, prefs, onGlsl }: {
         <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')}
           pressed={prefs.boxSelect} onClick={() => prefs.set({ boxSelect: !prefs.boxSelect })} />
       </ToolGroup>
-      {/* Canvas preferences; icons later (human 2026-10-09). 畫布偏好，之後換成圖示（人類）。 */}
+      {/* Canvas preferences; icons later (human 2026-10-09). Body drag is a real user setting (Q64): it moves to the settings
+          screen. 畫布偏好，之後換成圖示（人類）。Body 拖曳是正式的使用者設定（Q64），之後搬到設定畫面。 */}
       <ToolGroup>
         <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
         <label className="check"><input type="checkbox" checked={prefs.snap} onChange={event => prefs.set({ snap: event.target.checked })} />{say(tr('toolbar.snap', 'Snap'))}</label>
