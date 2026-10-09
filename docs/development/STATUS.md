@@ -2,6 +2,14 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.55.4 — Uniform 節點：輸出在上、值的開頭是 TD 參數頁名稱 — 2026-10-09
+
+- 人類 10-09：Uniform 的輸出在下面不 OK。**只有 Uniform 節點**輸出移到最上面（人類：拉出差別、符合由上往下的流程；Uniform 本來就特殊）：輸出 → declaration → 數值。其他節點不變（輸入在上、輸出在下）。
+- 數值行的開頭文字是它在 TD 所屬的參數頁：一般 Uniform「Vectors」、顏色 Uniform「Colors」（TD 的頁名，不翻譯）；這段文字就是數值梯尺的互動區（按中鍵整組調值）。
+- 55.2 為了把文字放行尾加的 `captionAtEnd` 不再使用，已拿掉。
+- 驗證：editor 74；內建瀏覽器＋真實 TD（只讀）：4 個 Uniform 節點依序是輸出、declaration、數值（Vectors／Colors）；Subtract 仍是輸入、輸入、輸出。
+- 注意：節點高度改變後，人類的測試圖裡有幾個節點互相重疊（例如兩個 uAbsTime、vec3 與 uniform1），只是位置，沒有動它。
+
 ## Refactor.55.3 — Uniform 節點上的值、值節點常數色、節點列的節奏、展開不變窄 — 2026-10-09
 
 （55.2、55.3 一起提交。）

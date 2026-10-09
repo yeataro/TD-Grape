@@ -60,7 +60,7 @@ function DrivenField({ state }: { state: ComponentState }) {
 // group at their limit). An input's caption is its name and type; a value without a port shows "Color" or its type
 // (tentative, value-input.md 四). 值的開頭文字：在上面按中鍵（或 Alt＋右鍵）打開整組的數值梯尺，每個分量加上同一個量
 // （照 TouchDesigner；舊產品整列調值：整數碰到界限整組停）。輸入的開頭文字是名字與型別；沒有接孔的值顯示 Color 或型別（暫定）。
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption, captionAtEnd = false }: {
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
@@ -72,8 +72,6 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   defaults?: Value;
   /** The leading text; left out, "Color" or the type. 開頭文字；沒給就是 Color 或型別。 */
   caption?: ReactNode;
-  /** The text sits at the row's end (a Uniform node's output label, human 2026-10-09). 文字放在這一行最後（Uniform 節點的輸出名）。 */
-  captionAtEnd?: boolean;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
   // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
@@ -102,7 +100,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     show: amount => setShift(group.gesture.current ? amount : 0),
     preview: preview && (amount => preview(shifted(amount))), commit: amount => commit(shifted(amount)),
     format: amount => (amount >= 0 ? '+' : '') + amount });
-  const head_ = <span ref={head} className="value-caption nodrag nopan"
+  const leading = <span ref={head} className="value-caption nodrag nopan"
       title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder.')) : undefined}
       onPointerDown={event => {
         if (!groupable || !(event.button === 1 || (event.button === 2 && event.altKey))) return;
@@ -113,8 +111,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       onMouseDown={event => { if (event.button === 1) event.preventDefault(); }}
       onContextMenu={event => { if (event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) event.preventDefault(); }}>
       {caption ?? (color ? say(tr('value.color', 'Color')) : type)}</span>;
-  return <div className={'value-row' + (captionAtEnd ? ' caption-end' : '')}>
-    {!captionAtEnd && head_}
+  return <div className="value-row">
+    {leading}
     <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
     {count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
       aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
@@ -137,7 +135,6 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       })}
     </div>
     </div>
-    {captionAtEnd && head_}
     {/* A colour value is a two-row widget: its swatch is a row of its own, the whole width, not indented (human
         2026-10-09). 顏色值是佔兩行的 widget：色塊自己一行、佔整塊寬度、左邊不縮進來（人類）。 */}
     {color && count >= 3 && <div className={'value-swatch nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>

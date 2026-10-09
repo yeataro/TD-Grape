@@ -1,4 +1,4 @@
-import { memo, type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { core, typeColor, type NodeControl, type NodePresentation } from './core';
 import type { FlowNode } from './projection';
@@ -30,14 +30,15 @@ function Control({ id, control }: { id: string; control: NodeControl }) {
 }
 
 // A Uniform node edits its value on the canvas (legacy uniform node; Refactor.55.2): the same value widget as the Sources
-// panel, on the output's row (human 2026-10-09): the triangle at the far left, the output's name at the end is where the
-// middle button changes the whole value. Shows what drives it in TD.
-// Uniform 節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，放在輸出那一行（人類）：三角形在最左邊，
-// 最後的輸出名就是按中鍵整組調值的地方。顯示 TD 上的驅動狀態。
-function UniformValue({ declaration, caption }: { declaration: Declaration; caption: ReactNode }) {
+// panel, below its output. Its leading text, where the middle button changes the whole value, is the TD parameter page the
+// Uniform lives on: Vectors, or Colors for a colour (human 2026-10-09). Shows what drives it in TD.
+// Uniform 節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，在輸出下面。開頭文字（按中鍵整組調值的地方）
+// 是它在 TD 所屬的參數頁：Vectors，顏色是 Colors（人類）。顯示 TD 上的驅動狀態。
+function UniformValue({ declaration }: { declaration: Declaration }) {
   const session = useSession();
   const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
-  return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0} caption={caption} captionAtEnd
+  return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
+    caption={declaration.color === true ? 'Colors' : 'Vectors'}
     color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modesOf(declaration, td)}
     commit={value => session.setDeclarationValue(declaration.id, value)}
     preview={value => session.previewDeclarationValue(declaration.id, value)} />;
@@ -100,6 +101,15 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       </div>)}
     </div>
   </article>;
+  // A Uniform node is a source: its output comes first, so it reads from the top down (human 2026-10-09; only Uniform
+  // nodes, to set them apart). Uniform 節點是來源：輸出放最上面，由上往下讀（人類：只有 Uniform 節點，拉出差別）。
+  const uniform = data.declaration?.kind === 'uniform' ? data.declaration : undefined;
+  const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+    <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
+    {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
+        接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
+    <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
+  </div>);
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
@@ -110,7 +120,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
           <small>{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
+      {uniform && outputRows}
       {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {uniform && <UniformValue declaration={uniform} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
@@ -129,14 +141,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
-      {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-        {data.declaration?.kind === 'uniform' ? <UniformValue declaration={data.declaration}
-          caption={<>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></>} />
-          : <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>}
-        {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
-            接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
-        <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
-      </div>)}
+      {!uniform && outputRows}
     </div>
   </article>;
 });
