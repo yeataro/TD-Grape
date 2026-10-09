@@ -180,57 +180,67 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .fold-actions { display: flex; gap: 4px; }
 .fold-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .fold-body { padding-top: 4px; }
-/* A source card (human 2026-10-09 trial): a strip at its left in its kind's colour (a node title turned on its side, at the
-   title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */
-.source-row { position: relative; overflow: hidden; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
-  padding: 8px var(--source-fade) 8px calc(8px + var(--source-strip)); margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-/* One vertical rhythm for cards and node bodies (human 2026-10-09: the gaps top to bottom were uneven): every row is an
-   IO row with its box centred, rows sit with no gap, so every visible gap is two insets; the padding takes one inset off,
-   so the top and bottom look as wide as the side. 卡片與節點本體同一個垂直節奏（人類：上到下間隙不平衡）：每一列都是一個 IO 列、
-   框置中，列之間不留空，看得見的間隙都是兩個內縮；內距扣掉一個內縮，上下看起來和側邊一樣寬。 */
-:is(.node-body, .source-card) { --io-inset: calc((var(--io-row) - var(--io-field)) / 2); }
-.source-card { row-gap: 0; padding-block: calc(var(--source-fade) - var(--io-inset)); }
-.source-card > :is(.expand-toggle, .builtin-row) { height: var(--io-row); }
-.source-head { min-height: var(--io-row); } .source-head :is(.source-name, .select-button) { height: var(--io-field); }
-/* Open, a faint line between the head and the value, the same gap on both sides (human 2026-10-09).
-   打開時名稱列和數值之間一條淡線，上下間隙一樣（人類）。 */
-.source-body { gap: 0; margin-top: var(--io-inset); padding-top: var(--io-inset); border-top: 1px solid var(--border-node); }
-/* Whatever runs past the content edge fades out in the card's right gap (human 2026-10-09: a gradient in the gap, as
-   some sites do); right-aligned controls end at the content edge and are untouched.
-   超出內容區的東西在卡片右邊的空隙裡漸層淡出（人類：在 gap 放漸層）；靠右的控制項停在內容區邊緣，不受影響。 */
-/* Above the component letters (z-index 1) so they fade too. 在分量字母（z-index 1）之上，字母也一起淡出。 */
-.source-row::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--surface-node)); }
-/* Inputs on a card use the value-box colour, a step above the card, as the legacy source cards (legacy .source-card-body
-   input: --node-value-bg; human 2026-10-09: the name box was too dark). 卡片上的輸入框用數值框的顏色（比卡片亮一階），照舊產品；人類：名稱框太深。 */
-.source-row { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
-/* Buttons and selects on a card use the same colour as its inputs (human 2026-10-09: unify them). 卡片上的按鈕、選擇器和輸入框同色（人類：統一）。 */
-/* Triangles stay bare (human 2026-10-09). 三角形不加底色（人類）。 */
-.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button) { background: var(--surface-control); border-color: transparent; }
-.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button):hover { background: var(--surface-control-hover); }
-/* A source not created yet: a grey card (human 2026-10-09). 還沒建立的來源：灰色卡片（人類）。 */
-.source-row.unused { background: none; color: var(--text-muted); } .source-row.unused::before { background: var(--border-node); }
-.source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
-  background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 /* The Sources panel has its own, smaller set of content sizes, about 75% of a node's (human 2026-10-09); the value widget,
-   fields and buttons inside follow, as they follow colours set from outside. Text keeps a 10px floor.
-   共用來源面板有自己一組較小的內容尺寸，約節點的 75%（人類）；裡面的數值 widget、輸入框、按鈕都跟著，和顏色由外部定義同理。字最小 10px。 */
-/* Value boxes go down to 36px so four fit in a card at the narrowest panel (300px). 數值框最窄 36px，最窄的面板（300px）卡片裡也放得下四格。 */
+   fields and buttons inside follow, as they follow colours set from outside. Text keeps a 10px floor. Value boxes go down
+   to 36px so four fit in a card at the narrowest panel (300px).
+   共用來源面板有自己一組較小的內容尺寸，約節點的 75%（人類）；裡面的數值 widget、輸入框、按鈕都跟著，和顏色由外部定義同理。
+   字最小 10px。數值框最窄 36px，最窄的面板（300px）卡片裡也放得下四格。 */
 .sources { --io-row: 28px; --io-field: 22px; --io-field-min: 36px; --field-pad: 4px 8px; --button-pad: 3px 8px;
   --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 10px; --line-md: 14px; --font-base: 11px; --line-base: 15px;
   font-size: var(--font-sm); line-height: var(--line-sm); }
-.source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; }
-/* A card: the triangle alone in a narrow left column; the head and the value share the right one, so their edges line up
-   (human 2026-10-09: nothing lined up). Overflow fades in the card's right padding, from the fade's start to the border.
-   卡片：左邊窄欄只有三角形；名稱列和數值共用右欄，左右緣對齊（人類：到處沒對齊）。溢出在卡片右內距裡淡出，一直淡到邊框。 */
-.source-card { grid-template-columns: var(--expand-width) minmax(0, 1fr); column-gap: 6px; align-items: start; }
+
+/* A source card (SourceCard.tsx; human 2026-10-09, after the legacy card). 來源卡片（參考舊產品）。
+   - A strip at its left in its kind's colour (a node title turned on its side, at the title's strength).
+     左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度）。
+   - Two columns: the triangle alone at the left; the head and the value share the right one, so their edges line up
+     (human: nothing lined up). 兩欄：左欄只有三角形；名稱列和數值共用右欄，左右緣對齊（人類：到處沒對齊）。
+   - One vertical rhythm with node bodies (human: the gaps top to bottom were uneven): every row is an IO row with its box
+     centred, rows sit with no gap, so every visible gap is two insets; the padding takes one inset off, so the top and
+     bottom look as wide as the side. 與節點本體同一個垂直節奏（人類：上到下間隙不平衡）：每列都是 IO 列、框置中、列間不留空，
+     看得見的間隙都是兩個內縮；內距扣掉一個內縮，上下和側邊一樣寬。
+   - What runs past the content edge fades out in the right padding, from the fade's start to the border, above the
+     component letters (z-index 1) (human: a gradient in the gap). 超出內容的在右內距淡出、一直淡到邊框，蓋在分量字母之上（人類：在 gap 放漸層）。 */
+:is(.node-body, .source-card) { --io-inset: calc((var(--io-row) - var(--io-field)) / 2); }
+.source-card { position: relative; overflow: hidden; margin-bottom: 8px; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
+  padding: calc(var(--source-fade) - var(--io-inset)) var(--source-fade) calc(var(--source-fade) - var(--io-inset)) calc(8px + var(--source-strip));
+  display: grid; grid-template-columns: var(--expand-width) minmax(0, 1fr); column-gap: 6px; row-gap: 0; align-items: start; }
+.source-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
+  background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
+.source-card::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface-node)); }
 .source-card > .expand-toggle { grid-column: 1; }
 .source-card > :is(.source-head, .source-body, .builtin-row) { grid-column: 2; min-width: 0; }
-.source-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.source-card > :is(.expand-toggle, .builtin-row) { height: var(--io-row); }
+/* Inputs, buttons and selects on a card use the value-box colour, a step above the card, as the legacy source cards
+   (legacy .source-card-body input: --node-value-bg; human: the name box was too dark; unify them). Triangles and tags stay
+   bare. 卡片上的輸入框、按鈕、選擇器用數值框的顏色（比卡片亮一階），照舊產品（人類：名稱框太深、要統一）。三角形與標籤不加底色。 */
+.source-card { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
+.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button) { background: var(--surface-control); border-color: transparent; }
+.source-card :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button):hover { background: var(--surface-control-hover); }
+
+/* The head: name, type, use count, "⋯". 名稱列：名稱、型別、使用數、「⋯」。 */
+.source-head { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); }
+.source-head > .builtin-row { flex: 1; min-width: 0; }
 .source-head > .badge { margin: 0; flex: none; }
-/* A default image's preview: a 16:9 window, the image fitted inside with its own ratio over a checkerboard, so alpha
-   shows (Refactor.58; human 2026-10-09: as TD's TOP viewer). 預設圖預覽：16:9 的窗，圖照自己的比例 fit 進去、底下墊
-   棋盤格，透明度看得出來（人類：同 TD 的 TOP viewer）。 */
+.source-head :is(.source-name, .select-button) { height: var(--io-field); }
+/* When narrow the name matters most (human): it keeps a minimum and the type shrinks first. A name that cannot be changed
+   (a texture input's position name) is plain code, no box. 變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。不能改的名字
+   （貼圖輸入的位置名）是純程式字，沒有框。 */
+.source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
+.source-fixed-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A select is as wide as its value, kept inside the panel; no fill until the pointer is on it (human: tried, kept).
+   選擇器隨值變寬、限制在面板內；滑過才有底色（人類：試過，留下）。 */
+.source-head .select-button { min-width: 0; max-width: 55%; }
+.source-card .source-head .select-button { background: none; }
+.source-card .source-head .select-button:hover { background: var(--surface-control-hover); }
+
+/* Open: a faint line between the head and the body, the same gap on both sides (human). 打開：名稱列和本體之間一條淡線，上下間隙一樣（人類）。 */
+.source-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0;
+  margin-top: var(--io-inset); padding-top: var(--io-inset); border-top: 1px solid var(--border-node); }
+
+/* A default image's preview (TexturePreview.tsx): a 16:9 window, the image fitted inside with its own ratio over a
+   checkerboard, so alpha shows (Refactor.58; human: as TD's TOP viewer). 預設圖預覽：16:9 的窗，圖照自己的比例 fit 進去、
+   底下墊棋盤格，透明度看得出來（人類：同 TD 的 TOP viewer）。 */
 .texture-preview { position: relative; aspect-ratio: 16 / 9; margin: var(--io-inset) 0;
   display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
 .texture-frame { position: absolute; inset: 0; margin: auto; }
@@ -238,26 +248,15 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
 .texture-preview figcaption.centred { position: relative; left: auto; bottom: auto; }
 .checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker); }
-/* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
-   變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
-.source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
-/* A name that cannot be changed (a texture input's position name): plain code, no box. 不能改的名字：純程式字，沒有框。 */
-.source-fixed-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
-.source-head .select-button { min-width: 0; max-width: 55%; }
-/* The type and default-image selects without a fill; it comes back under the pointer (human 2026-10-09: tried, kept).
-   型別與預設圖選單不加底色；滑過時才出現（人類：試過，留下）。 */
-.source-row .source-head .select-button { background: none; }
-.source-row .source-head .select-button:hover { background: var(--surface-control-hover); }
-.source-actions { display: flex; align-items: center; gap: 6px; } .source-actions button { flex: none; }
-.source-actions small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
-/* A one-line source keeps its name and buttons whole; only the description shrinks, shortened with an ellipsis.
-   一行的來源：名稱和按鈕保持完整；只有說明會縮，放不下用省略號。 */
+
+/* A source not created yet: a grey card (human). 還沒建立的來源：灰色卡片（人類）。 */
+.source-card.unused { background: none; color: var(--text-muted); } .source-card.unused::before { background: var(--border-node); }
+/* A one-line source (a time preset, a TD value) keeps its name and buttons whole; only the description shrinks, with an
+   ellipsis. 一行的來源（時間、TD 內建值）：名稱和按鈕保持完整；只有說明會縮，放不下用省略號。 */
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: none; }
-.builtin-row small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .builtin-row button { flex: none; }
-.builtin-row small { color: var(--text-muted); }
+.builtin-row small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.builtin-row button { flex: none; }
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
-.source-flag { display: flex; align-items: center; gap: 6px; font-size: var(--font-md); line-height: var(--line-md); }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
 .td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: var(--font-sm); line-height: var(--line-sm); border-radius: 4px; background: var(--overlay-down); }
 .td-expression { color: var(--td-expression); } .td-export { color: var(--td-export); } .td-other { color: var(--text-muted); }

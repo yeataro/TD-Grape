@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type PointerEvent, type ReactNode } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
-import { ValueFields, colorHex, componentColor } from './ValueFields';
+import { NameField, SourceCard, UnusedCard, kindGroup } from './SourceCard';
+import { TexturePreview } from './TexturePreview';
+import { ValueFields, componentColor } from './ValueFields';
 import { useSession } from './contexts';
-import { Badge, ConfirmDialog, FoldSection, MenuButton, Select } from './controls';
-import { Icon } from './icons';
-import { DRAG_TYPE } from './AddNodePanel';
+import { Badge, ConfirmDialog, FoldSection, Select } from './controls';
 import { modesOf } from './declaration_modes';
-import type { ComponentState, UniformStates } from './host';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
 // no list of its own, it reads the graph's declarations and the TD built-in value table). For now: TOP
@@ -20,11 +19,6 @@ const textureNames: Record<string, Message> = {
   white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
   custom: tr('texture.custom', 'TOP chosen on Samples'),
 };
-// The plain ones are drawn here from their values, the same as the constant TOPs in Samples
-// (install_grape_templates.py); they are the images' content, not a look. 純色的照數值直接畫，數值同 Samples 裡的
-// Constant TOP；這是圖的內容，不是外觀。
-const plainTextures: Record<string, readonly number[]> = { white: [1, 1, 1], black: [0, 0, 0], normal: [.5, .5, 1] };
-
 // A colour Uniform's type reads as its channels, each letter in its channel's colour, as in the value boxes (human
 // 2026-10-09). 顏色 Uniform 的型別寫成通道，每個字母用該通道的顏色，同數值框（人類）。
 const colorTypes = ['vec3', 'vec4'] as const;
@@ -32,126 +26,6 @@ const channelLabel = (type: string) => {
   const name = type === 'vec3' ? 'RGB' : 'RGBA';
   return <span aria-label={name}>{[...name].map((letter, i) => <span key={i} style={{ color: componentColor(i) }}>{letter}</span>)}</span>;
 };
-
-type Shot = 'loading' | 'none' | 'failed' | { src: string };
-/** What a default image looks like, open on its card (Refactor.58; human 2026-10-09). The images come from TD once
- * and are shared by every Grape OP. The TOP chosen on Samples is a snapshot taken when the card opens, and says so;
- * with none chosen the input is transparent, so a checkerboard says that (human).
- * 預設圖的樣子（打開卡片時）。圖片從 TD 拿一次、所有 Grape OP 共用。Samples 上選的 TOP 是打開卡片那一刻的快照，並標明；
- * 沒選時輸入是透明的，用棋盤格表示（人類）。 */
-function TexturePreview({ texture }: { texture: string }) {
-  const session = useSession(), custom = texture === 'custom', plain = plainTextures[texture];
-  const [failed, setFailed] = useState(false), [shot, setShot] = useState<Shot>('loading');
-  useEffect(() => setFailed(false), [texture]);
-  // Asked, not just shown, so "none chosen" and "no TD" read differently. 用問的，才分得出「沒選」和「TD 不在」。
-  useEffect(() => {
-    if (!custom) return;
-    let live = true, url = '';
-    setShot('loading');
-    fetch(session.host.textureUrl(texture), { headers: { 'X-Sgrape-Token': session.host.token } })
-      .then(async response => response.ok ? { src: url = URL.createObjectURL(await response.blob()) } as Shot
-        : response.status === 404 ? 'none' as const : 'failed' as const, () => 'failed' as const)
-      .then(next => { if (live) setShot(next); else if (url) URL.revokeObjectURL(url); });
-    return () => { live = false; if (url) URL.revokeObjectURL(url); };
-  }, [custom, texture, session]);
-  // The window is 16:9; the image fits inside with its own ratio, as TD's TOP viewer (human 2026-10-09): wider than
-  // the window fills its width, otherwise its height. Plain colours and "none chosen" are square.
-  // 預覽窗 16:9；圖照自己的比例 fit 進去，同 TD 的 TOP viewer（人類）：比窗寬就撐滿寬，否則撐滿高。純色與「沒選」是正方形。
-  const [ratio, setRatio] = useState(0);
-  useEffect(() => setRatio(0), [texture, shot]);
-  // Sized in percent of the window, not by the grid, which treats a percent height as auto (Refactor.58 fix: a 4:3
-  // image ran past the window). 用窗的百分比定大小，不靠 grid（grid 把百分比高度當自動，4:3 的圖曾超出窗）。
-  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker') => {
-    const [width, height] = r > 16 / 9 ? [100, 16 / 9 / r * 100] : [r / (16 / 9) * 100, 100];
-    return <div className={className} style={{ width: width + '%', height: height + '%', ...style }}>{content}</div>;
-  };
-  const image = (src: string, onError?: () => void) => <img src={src} alt="" draggable={false} onError={onError}
-    onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
-  // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。
-  const picture = (src: string, onError?: () => void) => frame(ratio || 16 / 9, image(src, onError), ratio ? undefined : { visibility: 'hidden' });
-  const note = (text: Message, hint?: Message, centred = false) =>
-    <figcaption className={'badge' + (centred ? ' centred' : '')} title={hint ? say(hint) : undefined}>{say(text)}</figcaption>;
-  const unavailable = <span>{say(tr('sources.noPreview', 'No preview'))}</span>;
-  if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame')}</figure>;
-  if (custom) return <figure className="texture-preview">
-    {typeof shot === 'object' && picture(shot.src)}
-    {shot === 'none' && frame(1, null)}
-    {shot === 'failed' && unavailable}
-    {/* Nothing to cover, so in the middle (human 2026-10-09). 沒有圖可擋，放正中央（人類）。 */}
-    {shot === 'none' && note(tr('sources.noChosenTop', 'No TOP chosen · the input is transparent'), undefined, true)}
-    {typeof shot === 'object' && note(tr('sources.snapshot', 'Snapshot · not live'),
-      tr('sources.snapshotHint', 'Taken when this card opened; close and open it again for a new one.'))}
-  </figure>;
-  return <figure className="texture-preview">{failed ? unavailable : picture(session.host.textureUrl(texture), () => setFailed(true))}</figure>;
-}
-
-function NameField({ declaration }: { declaration: Declaration }) {
-  const session = useSession(), [draft, setDraft] = useState(declaration.name);
-  useEffect(() => setDraft(declaration.name), [declaration.name]);
-  const commit = () => { if (draft !== declaration.name && !session.renameDeclaration(declaration.id, draft)) setDraft(declaration.name); };
-  return <input className="source-name" aria-label={say(tr('sources.name', 'Name'))} value={draft}
-    onChange={event => setDraft(event.target.value)} onBlur={commit}
-    onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(declaration.name); event.currentTarget.blur(); } }} />;
-}
-
-// A source card shows its kind's colour on a strip at its left, as a node title turned on its side (human 2026-10-09
-// trial; a handle for reordering may come later). 來源卡片左邊一條是它種類的顏色，像轉了方向的節點標題（人類試驗；之後可能當排序把手）。
-const groupColor = (group: string) => ({ '--group-color': `var(--group-${group})` }) as CSSProperties;
-const kindGroup = (declaration: Declaration) => core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'function';
-
-// Dragged onto the canvas, a source is added there, the same way as from the Add Node panel (its add-list id; human
-// 2026-10-09). Only from the card itself, never from its fields and buttons, so text can still be selected.
-// 拖到畫布上就在那裡新增，和 Add Node 面板同一條路（用它在新增清單的代號；人類）。只從卡片本身拖，不從輸入框和按鈕，文字仍可選取。
-function useDragToCanvas(choice: string) {
-  const grab = useRef(false);
-  return { draggable: true,
-    onPointerDown: (event: PointerEvent) => { grab.current = !(event.target as Element).closest('input, button, .value-row'); },
-    onDragStart: (event: DragEvent) => {
-      if (!grab.current) { event.preventDefault(); return; }
-      event.dataTransfer.setData(DRAG_TYPE, choice); event.dataTransfer.effectAllowed = 'copy';
-    } };
-}
-
-// One source card: a triangle, then the head (name and type); the rest only when open. Closed by default, on this page
-// only (human 2026-10-09). 一張來源卡片：三角形、名稱與型別；其他的打開才顯示。預設收起，只在這一頁記得（人類）。
-// One source card (human 2026-10-09, after the legacy card). Two columns: the triangle alone at the left; the head (name,
-// type, use count, "⋯") and, open, the value in the right one, so they share one left edge and one right edge. The count
-// is a tag as the section counts and never moves; "⋯" adds to the graph, selects references, deletes. No "+": the menu
-// and dragging onto the canvas both add it (human).
-// 一張來源卡片（人類，參考舊產品）。兩欄：左欄只有三角形；右欄是名稱列（名稱、型別、使用數、「⋯」）和打開後的數值，左右緣都對齊。
-// 使用數是和區段數量一樣的標籤，位置不動；「⋯」加到圖上、選取引用、刪除。不放「＋」：選單和拖到畫布都能加（人類）。
-// `group`: its colour group; `refKey`: what counts as a use (a declaration ID, or `tdValue:` and an entry); without
-// `onRemove` it cannot be deleted (a TD value). group：顏色組；refKey：算使用數的依據；沒有 onRemove 就不能刪（TD 內建值）。
-function SourceCard({ group, refKey, choice, head, children, uses, onAdd, onRemove }: {
-  group: string; refKey: string; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove?(): void;
-}) {
-  const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className="source-row source-card" style={groupColor(group)} {...drag}>
-    {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
-      aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
-      : <span className="expand-toggle" aria-hidden="true" />}
-    <div className="source-head">
-      {head}
-      {/* Unused: a plain grey tag; in use: the kind's colour, and a click selects those nodes, as the menu's Select
-          references (human 2026-10-09). 沒在用：灰色標籤；有在用：種類色，點了選取那些節點，同選單的選取引用（人類）。 */}
-      <Badge count={uses} group={uses ? group : undefined}
-        title={tr('sources.usedBySelect', 'Used by {count} nodes · click to select them', { count: uses })}
-        onClick={() => session.selectReferences(refKey)} />
-      <MenuButton icon="menu" narrow label={tr('sources.more', 'More')} items={[
-        { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
-        { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,
-          select: () => session.selectReferences(refKey) },
-        ...(onRemove ? [{ key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove }] : []),
-      ]} />
-    </div>
-    {open && <div className="source-body">{children}</div>}
-  </div>;
-}
-
-/** A one-line source (a TD value, an unused time Uniform) that can be dragged onto the canvas. 可以拖到畫布的一行來源。 */
-function DragRow({ choice, className, title, children }: { choice: string; className: string; title?: string; children: ReactNode }) {
-  return <div className={className} title={title} {...useDragToCanvas(choice)}>{children}</div>;
-}
 
 export function SourcesPanel({ declarations, references }: {
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>>;
@@ -239,9 +113,9 @@ export function SourcesPanel({ declarations, references }: {
           head={<div className="builtin-row" title={hint}><code>{preset.name}</code><small>{preset.expression}</small></div>}>{uniformValue(declared)}</SourceCard>
         // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
         // 還沒建立：灰色卡片、只有 Create；拖到畫布上就建立並放上去。
-        : <DragRow key={preset.entry} className="source-row source-card unused" choice={'preset:' + preset.entry} title={hint}>
-          <span className="expand-toggle" aria-hidden="true" /><div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
-            <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></DragRow>; })}
+        : <UnusedCard key={preset.entry} choice={'preset:' + preset.entry} title={hint}>
+          <div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
+            <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></UnusedCard>; })}
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
       hint={tr('sources.constantsHint', 'Fixed values written into the shader. Changing one recompiles it.')}

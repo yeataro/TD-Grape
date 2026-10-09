@@ -16,6 +16,11 @@
   - 使用數 key 是 `tdValue:<entry>`；`selectReferences` 也接受它。
   - 驗證：15 張、高 39px、色條為 runtime 色、名稱與時間區對齊、TD_NUM_2D_INPUTS 顯示 1。
 - 第 3–5 步（子 OP Samples Clone 主組件那份、out label、照 label 找）尚未做。
+- 整理一次（人類同意；畫面不變）：
+  - 卡片拆到 `SourceCard.tsx`（卡片、名稱框、拖曳、未建立的卡片 `UnusedCard`，原 `DragRow`），預覽拆到 `TexturePreview.tsx`；`SourcesPanel.tsx` 267→142 行。
+  - 樣式：`source-row` 併進 `source-card`（兩個名字指同一個東西、規則互相覆蓋），刪掉沒人用的 `.source-actions`、`.source-flag`；`.source-body` 的間距原本寫了兩次（0 被 6px 蓋掉），統一為垂直節奏的 0（本體只有一個子元素，看不出差別）。
+  - 刪掉過時的卡片註解、一個早就沒用的 import。
+  - 驗證：整理前後量 29 張卡片的位置、大小、名稱列、選單、標籤、色條、底色，完全相同；editor 75。
 - 記下（workspace `floating-panels.md`）：
   - 37：型別顯示規則（原 32）。
   - 38：來源卡片上的輸出孔。
