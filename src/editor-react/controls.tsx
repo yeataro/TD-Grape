@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
@@ -96,6 +97,31 @@ export function Popover({ anchor, label, onClose, className, children }: {
 }
 
 /** An icon button that opens a Popover. 打開小面板的圖示按鈕。 */
+/** Asks before something that cannot be taken back lightly (legacy confirmOverlay, inspector.js:2488): a title, what will
+ * happen, Cancel (focused) and the action in the danger red. Esc or a click on the dimmed page cancels. Our own box, never
+ * the browser's confirm(). 做不太能收回的事之前先問（照舊產品）：標題、會發生什麼、取消（預設焦點）與紅色的動作鍵。Esc 或點暗下的頁面＝取消。
+ * 我們自己的框，不用瀏覽器的 confirm()。 */
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: {
+  title: Message | string; message: Message | string; confirmLabel: Message | string; onConfirm(): void; onCancel(): void;
+}) {
+  const cancel = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancel.current?.focus({ preventScroll: true });
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); onCancel(); } };
+    addEventListener('keydown', key, true);
+    return () => removeEventListener('keydown', key, true);
+  }, [onCancel]);
+  return createPortal(<div className="confirm-backdrop" onPointerDown={event => { if (event.target === event.currentTarget) onCancel(); }}>
+    <div className="confirm-dialog" role="alertdialog" aria-modal="true" aria-label={say(title)}>
+      <strong>{say(title)}</strong><p>{say(message)}</p>
+      <div className="confirm-actions">
+        <button type="button" ref={cancel} onClick={onCancel}>{say(tr('confirm.cancel', 'Cancel'))}</button>
+        <button type="button" className="danger" onClick={onConfirm}>{say(confirmLabel)}</button>
+      </div>
+    </div>
+  </div>, document.body);
+}
+
 export function PopoverButton({ icon, label, className, children }: { icon: IconName; label: Message | string; className?: string; children: ReactNode }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return <>

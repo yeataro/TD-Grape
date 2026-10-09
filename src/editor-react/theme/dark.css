@@ -79,6 +79,7 @@
   /* The value widget's colour slots (ValueFields): defaults here; a container may set its own set.
      數值 widget 的顏色欄位：預設在這裡；放它的容器可以給自己的一組。 */
   --field-bg: var(--surface-node-field);
+  --field-bg-hover: color-mix(in srgb, var(--surface-node-field), var(--palette-lift) 8%);
   --field-fill: color-mix(in srgb, var(--palette-accent) var(--tint-field-fill), transparent);
   --field-text: var(--text-strong);
   --field-label: var(--text-muted);

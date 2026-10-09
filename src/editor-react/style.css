@@ -16,7 +16,8 @@ input { border-radius: var(--radius-field); background: var(--surface-field); }
 /* One comfortable inset for every text input (human 2026-10-09: the source name sat against its left edge); value boxes
    and swatches keep their own. 所有文字輸入框共用一個舒服的內距（人類：來源名稱貼著左邊）；數值框、色塊用自己的。 */
 input:where(:not([type="checkbox"], [type="radio"], [type="color"])) { padding: var(--field-pad); }
-input:focus-visible { outline: 1px solid var(--accent); }
+/* One keyboard focus ring for inputs and buttons, a thin accent line (not the browser's own). 鍵盤聚焦框統一：細的強調色線（不用瀏覽器的）。 */
+input:focus-visible, button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 button { padding: var(--button-pad); white-space: nowrap; } /* a button's text never wraps (human 2026-10-09) 按鈕文字不換行（人類） */
 /* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-fill); }
@@ -24,6 +25,12 @@ button { color: var(--text-strong); } button:hover { background: var(--surface-c
 button:disabled, button[aria-disabled="true"] { opacity: .45; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
 button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
 button.primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+/* The confirmation dialog (ConfirmDialog): the page dimmed behind it, a raised box. 確認對話框：後面的頁面變暗，前面一個浮起的框。 */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--surface-dim); }
+.confirm-dialog { width: min(420px, calc(100vw - 32px)); padding: 18px 20px; border: 1px solid var(--border-control); border-radius: var(--radius-popup);
+  background: var(--surface-raised); box-shadow: 0 12px 32px var(--shadow); display: grid; gap: 10px; }
+.confirm-dialog p { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* A button that deletes highlights in the error red (human 2026-10-09; legacy .danger). 刪除類按鈕的高亮用錯誤紅（人類；舊產品 .danger）。 */
 button.danger:not([aria-disabled="true"]):hover { color: var(--status-error); border-color: var(--status-error);
   background: color-mix(in srgb, var(--status-error) 12%, transparent); }
@@ -176,7 +183,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   background: linear-gradient(to right, transparent, var(--surface-node)); }
 /* Inputs on a card use the value-box colour, a step above the card, as the legacy source cards (legacy .source-card-body
    input: --node-value-bg; human 2026-10-09: the name box was too dark). 卡片上的輸入框用數值框的顏色（比卡片亮一階），照舊產品；人類：名稱框太深。 */
-.source-row { --surface-field: var(--field-bg); }
+.source-row { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
+/* Buttons and selects on a card use the same colour as its inputs (human 2026-10-09: unify them). 卡片上的按鈕、選擇器和輸入框同色（人類：統一）。 */
+.source-row :is(button:not(.icon-button, .expand-toggle), .select-button) { background: var(--surface-control); border-color: transparent; }
+.source-row :is(button:not(.icon-button, .expand-toggle), .select-button):hover { background: var(--surface-control-hover); }
+/* A source not created yet: a grey card (human 2026-10-09). 還沒建立的來源：灰色卡片（人類）。 */
+.source-row.unused { background: none; color: var(--text-muted); } .source-row.unused::before { background: var(--border-node); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
   background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 /* The Sources panel has its own, smaller set of content sizes, about 75% of a node's (human 2026-10-09); the value widget,
@@ -197,7 +209,6 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .builtin-row small { color: var(--text-muted); }
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
 .source-flag { display: flex; align-items: center; gap: 6px; font-size: var(--font-md); line-height: var(--line-md); }
-.builtin-row.unused code { color: var(--text-muted); }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
 .td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: var(--font-sm); line-height: var(--line-sm); border-radius: 4px; background: var(--overlay-down); }
 .td-expression { color: var(--td-expression); } .td-export { color: var(--td-export); } .td-other { color: var(--text-muted); }
@@ -267,7 +278,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    不該撐寬節點（人類）。 */
 .value-group.wired { visibility: hidden; contain: inline-size; }
 /* One triangle for everything that opens in place: a value, a source card. 原地展開的共用三角形：數值、來源卡片。 */
-:is(.value-expand, .expand-toggle) { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
+:is(.value-expand, .expand-toggle) { flex: 0 0 auto; display: grid; place-items: center; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 :is(.value-expand, .expand-toggle) .icon { width: 12px; height: 12px; transform: rotate(-90deg); }
 :is(.value-expand, .expand-toggle)[aria-expanded="true"] .icon { transform: none; }
 .source-head > .expand-toggle { height: auto; align-self: stretch; }

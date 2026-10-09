@@ -21,13 +21,18 @@ export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
 // 把新節點放進文件：新增的唯一路徑，也用在丟棄的候選文件上預演。
+// A preset Uniform's declaration, created the first time it is needed (Q61; Create in the Sources panel, Q61 supplement).
+// 預設 Uniform 的宣告，第一次需要時建立（Q61；共用來源面板的 Create）。
+function presetDeclaration(document: GraphDocument, entry: string) {
+  const preset = core.uniformPresets.find(item => item.entry === entry)!;
+  return document.document.declarations.find(d => d.kind === 'uniform' && d.entry === entry)
+    ?? document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
+      kind: 'uniform', name: preset.name, type: preset.type, entry });
+}
 function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition) {
   const net = document.networks.get('pixel')!, id = newId();
   if ('preset' in spec) {
-    const preset = core.uniformPresets.find(item => item.entry === spec.preset)!;
-    let declaration = document.document.declarations.find(d => d.kind === 'uniform' && d.entry === spec.preset);
-    if (!declaration) declaration = document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
-      kind: 'uniform', name: preset.name, type: preset.type, entry: spec.preset });
+    const declaration = presetDeclaration(document, spec.preset);
     net.insert({ id, nodeType: 'sgrape.builtin.declaration', params: { declarationId: declaration.id }, ui: { ...position } });
   } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position } });
   return id;
@@ -346,6 +351,10 @@ export class Editor {
   // Preset Uniforms (time, Q61): placing one creates its Uniform the first time and reuses it after; one
   // step, one Undo. The core fills in the name and type. 預設 Uniform：第一次放到圖上時建立，之後重用；名字型別由核心照表填。
   placePreset = (entry: string, position: XYPosition) => this.addNode({ preset: entry }, position);
+  /** Create a preset Uniform without placing it (human 2026-10-09: an unused one is a grey card with Create).
+   * 建立預設 Uniform、不放到圖上（人類：沒用到的是灰色卡片，只有 Create）。 */
+  createPreset = (entry: string) => this.transactGraph(tr('sources.presetCreated', '{name} created',
+    { name: core.uniformPresets.find(item => item.entry === entry)?.name ?? entry }), document => { presetDeclaration(document, entry); });
   // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
   // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
   addTopInput = () => {

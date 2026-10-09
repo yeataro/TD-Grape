@@ -4,7 +4,7 @@ import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields } from './ValueFields';
 import { useSession } from './contexts';
-import { Badge, FoldSection, IconButton, Select } from './controls';
+import { Badge, ConfirmDialog, FoldSection, IconButton, Select } from './controls';
 import { Icon } from './icons';
 import { DRAG_TYPE } from './AddNodePanel';
 import { modesOf } from './declaration_modes';
@@ -92,11 +92,16 @@ export function SourcesPanel({ declarations, references }: {
   // The panel is an index of the table beside the td_value node (Q45); TOP for now.
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
+  // Deleting a source that nodes on the canvas use asks first: those nodes go with it (human 2026-10-09; legacy asked for
+  // every source, here only when it is used). 刪掉畫布上有節點在用的來源先問：那些節點會一起刪掉（人類；舊產品每次都問，這裡只在有人用時問）。
+  const [confirming, setConfirming] = useState<Declaration | null>(null);
+  const remove = (declaration: Declaration) => (references[declaration.id] ?? 0) > 0 ? setConfirming(declaration) : session.removeDeclaration(declaration.id);
   const actions = (declaration: Declaration) => <div className="source-actions">
-    {/* Delete at the left, the use count between, shortened when narrow; Add to graph last, where the "+" of a closed
-        card is (human 2026-10-09). Delete 在最左、使用數在中間（窄時省略）；加到圖上放最後，和收起時的「＋」同位置（人類）。 */}
-    <button className="danger" onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
-    <small>{say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}</small>
+    {/* Delete (a trash icon, red on hover; human 2026-10-09) at the left, the use count between, shortened when narrow; Add to graph last, where the "+" of a closed
+        card is (human 2026-10-09). 刪除圖示在最左、使用數在中間（窄時省略）；加到圖上放最後，和收起時的「＋」同位置（人類）。 */}
+    <IconButton icon="delete" danger label={tr('sources.remove', 'Delete')} onClick={() => remove(declaration)} />
+    {/* Just the count; the words on hover (human 2026-10-09). 只寫數字，滑過看完整說明（人類）。 */}
+    <small title={say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}>{references[declaration.id] ?? 0}</small>
     <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
   </div>;
   // Each section's count, in its colour group (legacy source counts; Refactor.54: the Sources area is coloured).
@@ -104,6 +109,11 @@ export function SourcesPanel({ declarations, references }: {
   const count = (n: number, kind: string) => <Badge count={n} group={core.declarationKinds.get(kind)?.colorGroup ?? 'runtime'}
     title={tr('sources.available', '{count} available', { count: n })} />;
   return <section className="sources">
+    {confirming && <ConfirmDialog title={tr('sources.removeTitle', 'Delete {name}?', { name: confirming.name })}
+      message={tr('sources.removeConfirm', '{name} is used by {count} nodes on the canvas. Deleting it also deletes those nodes.',
+        { name: confirming.name, count: references[confirming.id] ?? 0 })}
+      confirmLabel={tr('sources.remove', 'Delete')} onCancel={() => setConfirming(null)}
+      onConfirm={() => { session.removeDeclaration(confirming.id); setConfirming(null); }} />}
     <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       hint={tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.')}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
@@ -137,11 +147,15 @@ export function SourcesPanel({ declarations, references }: {
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
       const row = <div className="builtin-row" title={hint}><code>{preset.name}</code>
-          <small>{declared ? say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declared.id] ?? 0 })) : preset.expression}</small>
-          {declared && <button className="danger" onClick={() => session.removeDeclaration(declared.id)}>{say(tr('sources.remove', 'Delete'))}</button>}
+          <small title={declared ? say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declared.id] ?? 0 })) : undefined}>{declared ? references[declared.id] ?? 0 : preset.expression}</small>
+          {declared && <IconButton icon="delete" danger label={tr('sources.remove', 'Delete')} onClick={() => remove(declared)} />}
           <button onClick={() => session.placePreset(preset.entry, center())}>{say(tr('sources.place', 'Add to graph'))}</button></div>;
+      // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
+      // 還沒建立：灰色卡片、只有 Create；拖到畫布上就建立並放上去。
       return declared ? <SourceCard key={preset.entry} declaration={declared} choice={'preset:' + preset.entry} head={row}>{uniformValue(declared)}</SourceCard>
-        : <DragRow key={preset.entry} className="builtin-row unused" choice={'preset:' + preset.entry}>{row}</DragRow>; })}
+        : <DragRow key={preset.entry} className="source-row unused" choice={'preset:' + preset.entry} title={hint}>
+          <div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
+            <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></DragRow>; })}
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
