@@ -46,6 +46,7 @@
     - 驗證：Grape 176×132 置中、Jellybeans 235×132、沒選 132×132。
     - 上一輪只量了本來就是 16:9 的 Jellybeans，所以沒發現。
   - 「沒選 TOP」的說明放在預覽窗正中央（人類）；快照的「快照・非即時」仍在左下角，不擋圖。驗證：臨時放一個同樣結構的預覽窗量，說明中心與窗中心同為 (161, 342)，量完移除；人類的圖當時已沒有「沒選」的卡片，沒去改它。
+  - 靜態網站用的 Grape（人類）：`src/static-site/textures/grape.png`，和 TD 預覽同一張（320×240 PNG、52KB）。TD 的建置只收 `src/editor-react/static/`，不帶它；做靜態網站時 `textureUrl` 指向這裡。
   - 顏色 Uniform 的 RGB／RGBA 每個字母用該通道的顏色，同數值框的分量字母（人類）。抽出共用的 `componentColor(i)`（`ValueFields.tsx`），兩處都用它。驗證：選單上的 R／G／B 和數值框的 R／G／B 計算出的顏色相同。
 - 未 Deliver（TOE 未存）；未 push。
 
