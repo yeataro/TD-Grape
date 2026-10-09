@@ -49,7 +49,7 @@ a { color: var(--accent); }
 /* A text button in the location and foot bars (e.g. Retry connection) has a fill, so it keeps a gap off the bar's edges
    like the title bar's; icon buttons have no fill and keep their size (human 2026-10-09).
    網址列與底列的文字按鈕（例如 Retry connection）有底色，所以和標題列一樣離列的上下邊緣留空隙；圖示按鈕沒有底色，大小不變（人類）。 */
-:is(.location-bar, .foot-bar) button:not(.icon-button) { height: var(--control-height); padding-block: 0; }
+:is(.location-bar, .foot-bar) button:not(.icon-button) { height: var(--control-height); padding-block: 0; margin-inline: var(--bar-text-gap); }
 /* The countdown pie (Refactor.59.3): a wedge in the accent that empties over the wait; checking keeps it full and faint.
    The pie is a circle stroked as wide as itself (r 4, stroke 8), its dash shrinking. 倒數圓餅：強調色扇形在等待中變空；檢查中全滿、變淡。 */
 .retry-pie svg { width: var(--icon-size); height: var(--icon-size); transform: rotate(-90deg); }
@@ -127,7 +127,11 @@ a { color: var(--accent); }
 .icon-button.narrow { width: var(--icon-button-narrow); }
 .icon-button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
 .icon-button.mode-toggle[aria-pressed="true"] { color: var(--pressed-mode); background: var(--surface-pressed-mode); border-color: var(--pressed-mode); }
-.icon-button[aria-expanded="true"] { color: var(--text-secondary); background: var(--overlay-up); }
+.icon-button[aria-haspopup][aria-expanded="true"] { color: var(--text-secondary); background: var(--overlay-up); }
+/* A panel toggle (opens a region, no popup) tells open from closed by the icon alone: bright when open, the usual dim when
+   closed, no fill behind it (human 2026-10-09: fills made the bar busy). 面板開關（打開一塊區域、不是彈出選單）只靠圖示
+   亮暗表示開關：開著亮、關著是平常的暗色，背後不加底色（人類：底色讓列不簡潔）。 */
+.icon-button:not([aria-haspopup])[aria-expanded="true"] { color: var(--text-strong); }
 .icon-button:is([aria-pressed="true"], [aria-expanded="true"]) .icon-fill { opacity: .17; }
 .placeholder { color: var(--text-muted); }
 .link-button { padding: 0; border: 0; background: none; font-size: inherit; }
