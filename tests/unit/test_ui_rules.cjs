@@ -19,3 +19,21 @@ test('only preferences.ts uses localStorage', () => {
   const found = files.filter(file => /localStorage/.test(fs.readFileSync(path.join(web, file), 'utf8')));
   assert.deepEqual(found, []);
 });
+
+// Rule 六: animations move only the element itself (human 2026-10-10; legacy's glow animated an inherited variable on :root,
+// restyling and repainting the whole page every frame). No animation on the root, no keyframes on custom properties, and
+// keyframes change only cheap or small-element properties.
+// 動畫只動元素自己（人類；舊產品的光暈在根元素上動畫會往下傳的變數，每一格整頁重算重畫）。根元素不做動畫、不動畫自訂屬性、
+// keyframes 只改便宜或只用在小元素上的屬性。
+test('animations stay on the element itself', () => {
+  const css = fs.readFileSync(path.join(web, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rootAnimated = [...css.matchAll(/(^|})\s*([^{}]*)\{([^{}]*)\}/g)]
+    .filter(([, , selector, body]) => /(^|[\s,])(:root|html|body)(?![\w-])/.test(selector) && /(^|;|\s)animation(-name)?\s*:/.test(body))
+    .map(([, , selector]) => selector.trim());
+  assert.deepEqual(rootAnimated, [], 'no animation on :root, html or body');
+  const allowed = new Set(['transform', 'opacity', 'filter', 'stroke-dashoffset']);
+  for (const [, name, body] of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g)) {
+    const properties = [...body.matchAll(/([\w-]+)\s*:/g)].map(m => m[1]).filter(p => !/^(from|to)$/.test(p));
+    assert.deepEqual(properties.filter(p => !allowed.has(p)), [], `@keyframes ${name} changes only ${[...allowed].join(', ')}`);
+  }
+});

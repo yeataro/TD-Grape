@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **動畫規則**（人類 10-10 同意）：EDITOR_UI_RULES 六加「動畫只動元素自己的大小、位置、透明度」——不在根元素做動畫、不動畫自訂屬性，陰影濾鏡描邊的動畫只用在小元素；起因是舊產品光暈動畫在 `:root` 逐格改會往下傳的變數。`test_ui_rules.cjs` 把關：根元素沒有 animation、keyframes 只改 transform／opacity／filter／stroke-dashoffset。驗證：暫時加違規寫法，兩條檢查都會失敗，還原後 78 過。
 - **Refactor.59.6 Logo 等待動畫元件**（人類 10-10：一個共用的小 SVG 動畫，哪裡在等就放哪裡）：`BrandMark` 多 `loading` 選項——`<BrandMark loading />` 是選定的 wave（三顆輪流放大變亮），也可指定 `spin`、`orbit`、`breathe`、`fade`、`hop`、`gather`、`glow`、`trace`（`loadingStyles`）；動作只在 `style.css`，一輪長度是主題的 `--loading-cycle`（1.2s）；glow 用亮度濾鏡、不寫色碼。九種與調用名稱的預覽頁：workspace `work/refactor/loading-animations.html`，元件改了要同步（人類，寫在元件註解）。還沒放到任何畫面上（載入中、檢查連線中是下一步）。曾加「作業系統要求減少動態時停住」的規則，屬舊產品沒有的新行為、且預覽窗格回報減少動態（人類的 Windows 可能關了動畫效果），已拿掉、待談。驗證：頁面內暫時插入九個 `loading-*`，九種的動畫名稱、長度、錯開時間都和預覽頁一致；標題列的 Logo 仍是靜止的。
 - **Refactor.59.5 「如何恢復」不換行**：底列的「如何恢復」不縮、不換行，縮的是前面的訊息（省略號）。驗證：模擬斷線，中文時「如何恢復」一行高 16px、訊息被截斷。驗證途中恢復連線時出現版本衝突（TD 在 534、頁面在 532：這段時間有別的編輯頁寫入 r54_probe），未替人類選版本。
 - **Deliver Refactor.59.4**（人類 10-09 待做清單第二節）：`/dev_tools/grape_editor` `Deliver()`——網頁資產打包進 VFS、關閉外部資料夾、版本核對為 `0.8.276 Refactor.59.4`、存成 `TD-Grape-dev.94.toe`；頁面從打包版本重新載入，23 個節點、已同步。R.52 之後第一次。之後開發要先 `DevMode()`。
