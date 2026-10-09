@@ -240,6 +240,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }
+/* The type and default-image selects without a fill; it comes back under the pointer (human 2026-10-09: tried, kept).
+   型別與預設圖選單不加底色；滑過時才出現（人類：試過，留下）。 */
+.source-row .source-head .select-button { background: none; }
+.source-row .source-head .select-button:hover { background: var(--surface-control-hover); }
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions button { flex: none; }
 .source-actions small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 /* A one-line source keeps its name and buttons whole; only the description shrinks, shortened with an ellipsis.
