@@ -37,9 +37,9 @@
   --icon-button: 28px;
   --icon-button-narrow: 18px;
   /* ports: drawn 13px (1.3x the old 10px), grabbed 8px further out (human 2026-10-09). 接孔畫 13px、可抓範圍再往外 8px。 */
-  --port-size: 13px;
-  --port-grab: 8px;
-  --port-ring: 3.5px;   /* the port ring (legacy looked about twice as thick, human 2026-10-09) 接孔圓框粗細（人類：舊的約兩倍粗） */
+  --port-size: 13px;    /* outer diameter, ring included 外徑（含圓框） */
+  --port-grab: 8px;     /* the grab area is 29px across 可抓範圍 29px */
+  --port-ring: 2.5px;   /* about a fifth of the diameter, as the legacy 11px port with its 2px ring (human 2026-10-09: balanced) 約外徑五分之一，照舊產品比例（人類：很均衡） */
   --port-point: 2px;    /* the handle element: a point at the port's centre, where wires end 接孔元素：圓心的一點，線的端點 */
   --wire-width: 3.5px;  /* a wire (selected and hovered: 5px) 接線粗細（選中與滑過 5px） */
   --brand-mark: 26px;
@@ -70,7 +70,7 @@
   --icon-button-narrow: 24px;
   --port-size: 14px;
   --port-grab: 9px;
-  --port-ring: 4px;
+  --port-ring: 2.75px;
   --brand-mark: 26px;
   --brand-font: 17px;
   --tab-pad: 9px 12px;

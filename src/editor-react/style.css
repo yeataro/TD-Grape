@@ -196,7 +196,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    所以縮成一點後每條線都到圓心、線頭被圓圈蓋住（人類：讓圓框超出 DIV）。圓圈與可抓範圍畫在它周圍；輸入輸出一樣大。 */
 .react-flow__handle { width: var(--port-point); height: var(--port-point); min-width: var(--port-point); min-height: var(--port-point);
   background: none; border: 0; }
-.react-flow__handle::before, .react-flow__handle::after { content: ""; position: absolute; left: 50%; top: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
+/* box-sizing: the page's border-box rule (*) does not reach pseudo-elements; without it the ring grew by its border.
+   頁面的 border-box 規則管不到偽元素；少了這行，圓圈會再多出框線的寬度。 */
+.react-flow__handle::before, .react-flow__handle::after { content: ""; position: absolute; left: 50%; top: 50%; box-sizing: border-box; border-radius: 50%; transform: translate(-50%, -50%); }
 .react-flow__handle::before { width: calc(var(--port-size) + 2 * var(--port-grab)); height: calc(var(--port-size) + 2 * var(--port-grab)); }
 .react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: var(--port-ring) solid var(--port-color); pointer-events: none; }
 :root:not([data-ports="b"]) .react-flow__handle.source::after,
