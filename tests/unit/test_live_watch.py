@@ -65,7 +65,7 @@ def setup(uniforms):
     owned(family)
     watched = []
     watch = live_watch.LiveWatch(resolve=lambda target: family if target == 't' * 32 else None,
-                                 watcher=lambda paths: watched.append(list(paths)), frame=lambda: 120)
+                                 watcher=lambda paths, comps: watched.append((list(paths), list(comps))), frame=lambda: 120)
     return family, watch, watched
 
 
@@ -75,14 +75,25 @@ class LiveWatchTests(unittest.TestCase):
         family, watch, watched = setup([mix])
         connection = Connection()
         watch.drain([('open', connection, None)])
-        self.assertEqual(watched, [['/project1/grape1/shader']])
+        self.assertEqual(watched, [(['/project1/grape1/shader'], ['/project1/grape1'])])
         self.assertEqual(connection.sent, [{'type': 'state', 'frame': 120, 'uniforms': {
             'u1': [{'mode': 'constant', 'value': 0.0}, {'mode': 'constant', 'value': 0.0}]}}])
         watch.drain([('close', connection, None)])
-        self.assertEqual(watched[-1], [], 'nobody connected: nothing watched')
+        self.assertEqual(watched[-1], ([], []), 'nobody connected: nothing watched')
         unknown = Connection(target='x' * 32)
         watch.drain([('open', unknown, None)])
         self.assertTrue(unknown.closed)
+
+    def test_a_rewired_grape_op_nudges_its_editors(self):
+        # Refactor.60: TD's onWireChange for a watched Grape OP becomes one small message; others are ignored.
+        # 監看中的 Grape OP 在 TD 重新接線：送一則小訊息；其他的不理。
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        connection.sent.clear()
+        watch.wires_changed(family.comp)
+        watch.wires_changed(Owner('/project1/other'))
+        self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120}])
 
     def test_editor_values_are_written_once_per_frame_latest_only(self):
         family, watch, _ = setup([uniform('u1', 'uGain')])

@@ -1,11 +1,12 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { NameField, SourceCard, UnusedCard, kindGroup } from './SourceCard';
-import { TexturePreview } from './TexturePreview';
+import { TexturePreview, textureNames } from './TexturePreview';
 import { ValueFields, componentColor } from './ValueFields';
 import { useSession } from './contexts';
+import { Icon } from './icons';
 import { Badge, ConfirmDialog, FoldSection, Select } from './controls';
 import { modesOf } from './declaration_modes';
 
@@ -14,11 +15,6 @@ import { modesOf } from './declaration_modes';
 // texture inputs, Uniforms, time (preset Uniforms), global constants and TD built-in values.
 // 共用來源面板的內容：面板只是索引，讀圖的宣告與各張表、不另存清單。目前：TOP 貼圖輸入、Uniform、時間、全域常數、TD 內建值。
 // Default images (human 2026-10-09: the Samples outputs). 預設圖（Samples 的出口）。
-const textureNames: Record<string, Message> = {
-  grape: tr('texture.grape', 'Grape'), banana: tr('texture.banana', 'Banana'), jellybeans: tr('texture.jellybeans', 'Jellybeans'),
-  white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
-  custom: tr('texture.custom', 'TOP chosen on Samples'),
-};
 // A colour Uniform's type reads as its channels, each letter in its channel's colour, as in the value boxes (human
 // 2026-10-09). 顏色 Uniform 的型別寫成通道，每個字母用該通道的顏色，同數值框（人類）。
 const colorTypes = ['vec3', 'vec4'] as const;
@@ -51,6 +47,12 @@ export function SourcesPanel({ declarations, references }: {
   // column lines up (human 2026-10-09). 每個 Uniform 型別選單和所有選項裡最寬的一樣寬（RGBA 或更長的型別名），整欄對齊（人類）。
   const uniformTypeSizes = [...colorTypes.map(channelLabel), ...types];
   // The default-image selects line up the same way (human 2026-10-09). 預設圖選單一樣對齊（人類）。
+  // What each texture input has wired in TD, asked when inputs are shown (Refactor.60). 每個輸入在 TD 接了什麼，有輸入要顯示時才問。
+  const sources = useSyncExternalStore(session.inputsSubscribe, session.inputsSnapshot);
+  useEffect(() => { if (inputs.length) void session.refreshInputs(); }, [session, inputs.length]);
+  const defaultSelect = (declaration: Declaration) => <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
+    value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
+    options={textureOptions} sizeTo={textureOptions.map(option => option.label)} />;
   const textureOptions = core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }));
   // The panel is an index of the table beside the td_value node (Q45); TOP for now.
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
@@ -77,10 +79,13 @@ export function SourcesPanel({ declarations, references }: {
         {/* Named by its position, not editable (human 2026-10-09). 照位置命名、不能改（人類）。 */}
         <code className="source-fixed-name" title={say(tr('sources.inputConnector', 'Input {number} of the Grape OP in TD', { number: inputs.indexOf(declaration) + 1 }))}>
           {core.declarationLabel(declarations, declaration)}</code>
-        <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
-          value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
-          options={textureOptions} sizeTo={textureOptions.map(option => option.label)} /></>}>
-      <TexturePreview texture={String(declaration.defaultTexture)} />
+        {/* Wired from outside: what is wired, read only; the default waits below as "when unwired" (Refactor.60; human 2026-10-10).
+            外面接了東西：顯示接了什麼、唯讀；預設圖退到下面「沒接時」（人類）。 */}
+        {sources?.[declaration.id] ? <span className="input-source" title={sources[declaration.id]!}><Icon name="plug" />
+          {say(tr('sources.inputSource', 'Input: {name}', { name: sources[declaration.id]!.split('/').pop() ?? '' }))}</span>
+          : defaultSelect(declaration)}</>}>
+      {sources?.[declaration.id] && <div className="unwired-default"><span>{say(tr('sources.whenUnwired', 'When unwired'))}</span>{defaultSelect(declaration)}</div>}
+      <TexturePreview id={declaration.id} texture={String(declaration.defaultTexture)} />
     </SourceCard>)}
     </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}

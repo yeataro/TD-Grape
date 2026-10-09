@@ -164,6 +164,11 @@
   /* A label over an image: dark see-through with light text in every theme (the image decides the background).
      圖上的標籤：每個主題都是深色半透明配淺色字（底是圖）。 */
   --image-label: color-mix(in srgb, var(--palette-shadow) 78%, transparent);
+  /* An image preview as TD's TOP viewer: transparency as near-black and dark-grey squares, a flat surround.
+     圖片預覽同 TD 的 TOP viewer：透明用近黑與深灰方格，圖外面是平的底。 */
+  --checker-base: color-mix(in srgb, var(--palette-ink), var(--palette-shadow) 60%);
+  --checker-square: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) 8%);
+  --preview-surround: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) 5%);
   --image-label-hover: color-mix(in srgb, var(--palette-shadow) 92%, transparent);
   --text-on-image: color-mix(in srgb, var(--palette-lift) 92%, transparent);
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */

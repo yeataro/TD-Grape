@@ -124,6 +124,16 @@ watch.text = (
     "def onExpressionChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n\n"
     "def onExportChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n")
 watch.comment = 'Live Uniform values. Watches nothing while no editor is connected.'
+# Input wiring (Refactor.60): tells a connected editor that a Grape OP was rewired, so an open preview takes a new snapshot.
+# Watches only Grape OPs with a connected editor; off otherwise. 接線改變：通知連著的編輯器重拍；只看有編輯器連著的 Grape OP。
+wires = node(manager, opexecuteDAT, 'wire_watch', 1000, -800)
+wires.par.op = ''
+wires.par.active = False
+wires.par.wirechange = True
+wires.text = (
+    "# Input wiring of Grape OPs with a connected editor (Refactor.60): see live_watch. 有編輯器連著的 Grape OP 的接線，見 live_watch。\n"
+    "def onWireChange(changeOp):\n    parent().ext.GrapeManagerExt.LiveWiresChanged(changeOp)\n")
+wires.comment = 'Input wiring. Watches nothing while no editor is connected.'
 
 # Default-image previews (Refactor.58): one Select TOP that is pointed at an image only while it is read, made no
 # larger than 320 px on its long side on the GPU. 預設圖預覽：一個 Select TOP，只在讀的時候指向那張圖，在 GPU 上把長邊

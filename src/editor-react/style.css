@@ -358,7 +358,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    checkerboard, so alpha shows (Refactor.58; human: as TD's TOP viewer). 預設圖預覽：16:9 的窗，圖照自己的比例 fit 進去、
    底下墊棋盤格，透明度看得出來（人類：同 TD 的 TOP viewer）。 */
 .texture-preview { position: relative; aspect-ratio: 16 / 9; margin: var(--io-inset) 0;
-  display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
+  display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--preview-surround); color: var(--text-muted); }
 .texture-frame { position: absolute; inset: 0; margin: auto; }
 .texture-frame img { display: block; width: 100%; height: 100%; }
 .texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
@@ -371,7 +371,16 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   background: var(--image-label); color: var(--text-on-image); font-size: var(--font-xs); line-height: var(--line-xs); }
 .image-label .icon { width: var(--font-sm); height: var(--font-sm); }
 .image-label:hover { background: var(--image-label-hover); }
-.checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker); }
+span.image-label:hover { background: var(--image-label); }
+/* A texture input wired from outside (Refactor.60): what is wired, read only, where the default menu was; the default
+   waits on its own row as "when unwired". 外面接了東西的貼圖輸入：顯示接了什麼、唯讀，放在原本預設圖選單的位置；預設圖退到自己一列。 */
+.input-source { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.input-source .icon { width: var(--font-sm); height: var(--font-sm); flex: none; }
+.unwired-default { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); color: var(--text-muted); font-size: var(--font-xs); }
+.unwired-default .select-button { font-size: var(--font-xs); color: var(--text-secondary); }
+/* As TD's TOP viewer (human 2026-10-10 screenshot): near-black and dark-grey squares; the window around the image is a flat
+   dark grey. 同 TD 的 TOP viewer（人類截圖）：近黑與深灰的方格；圖外面是平的深灰。 */
+.checker { background: repeating-conic-gradient(var(--checker-square) 0 25%, var(--checker-base) 0 50%) 0 0 / var(--checker) var(--checker); }
 
 /* A source not created yet: a grey card (human). 還沒建立的來源：灰色卡片（人類）。 */
 .source-card.unused { background: none; color: var(--text-muted); } .source-card.unused::before { background: var(--border-node); }

@@ -114,13 +114,15 @@ class GrapeManagerExt:
             if events or self.live.watched:
                 self.live.drain(events)
 
-    def _watch(self, paths):
-        """What the Parameter Execute DAT `uniform_watch` watches: the GLSL OPs of Grape OPs with a
-        connected editor; nothing when none is connected. 只監看有編輯器連著的 Grape OP 的 GLSL OP。"""
-        watcher = self.ownerComp.op('uniform_watch')
-        if watcher is not None:
-            watcher.par.op = ' '.join(paths)
-            watcher.par.active = bool(paths)
+    def _watch(self, paths, comps=()):
+        """What the watchers watch, only Grape OPs with a connected editor, nothing when none is: `uniform_watch` their
+        GLSL OPs' parameters, `wire_watch` their input wiring (Refactor.60).
+        監看的範圍只有連著編輯器的 Grape OP、沒人連就不看：uniform_watch 看 GLSL OP 的參數，wire_watch 看接線。"""
+        for name, ops in (('uniform_watch', paths), ('wire_watch', comps)):
+            watcher = self.ownerComp.op(name)
+            if watcher is not None:
+                watcher.par.op = ' '.join(ops)
+                watcher.par.active = bool(ops)
 
     def LiveValuesChanged(self, changes):
         if self.live:
@@ -129,6 +131,10 @@ class GrapeManagerExt:
     def LiveStateChanged(self, par):
         if self.live:
             self.live.changed(par)
+
+    def LiveWiresChanged(self, comp):
+        if self.live:
+            self.live.wires_changed(comp)
 
     def Diagnostics(self):
         result = self.queue.outcomes() if self.queue else []

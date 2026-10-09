@@ -51,7 +51,10 @@ MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
 # (Refactor.58.9, human 2026-10-09, Q66): the OPs inside Samples can change freely. Samples in a Grape OP is a Clone of
 # the main component's. Samples 的哪個出口是哪張圖，由 out TOP 的 label 決定，名字同圖裡的 defaultTexture（人類，Q66）：
 # Samples 裡的 OP 可以隨意換。Grape OP 裡的 Samples 是主組件那份的 Clone。
-DEFAULT_TEXTURES = ('grape', 'banana', 'jellybeans', 'white', 'black', 'normal', 'custom')
+# `none` (Refactor.60): the In TOP gets no default and passes what TD does with nothing connected (transparent), the
+# default for a new input (human 2026-10-10). The TOP chosen on Samples (`custom`) is gone: wire it into the input instead.
+# none：In TOP 不接預設圖，就是 TD 沒接時的樣子（透明），新增輸入的預設（人類）。Samples 上自選 TOP 已拿掉：改接進輸入。
+DEFAULT_TEXTURES = ('none', 'grape', 'banana', 'jellybeans', 'white', 'black', 'normal')
 INPUT_STORE = 'grapeInput'  # storage key on an In TOP: the ID of the input it belongs to
 INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
 
@@ -186,13 +189,28 @@ class NextFamily:
     def target(self):
         return self.comp
 
-    def chosen_output(self):
-        """The output of Samples that passes the TOP chosen there (its last one), for a preview (Refactor.58).
-        Samples 上選的 TOP 從哪個出口出來（最後一個），給預覽用。"""
-        samples = self.comp.op('Samples')
-        if samples is None or not samples.par.Top.eval():
-            raise LookupError('No TOP is chosen on Samples.')
-        return samples.outputConnectors[sample_output(samples, 'custom')].outOP
+    def input_sources(self):
+        """What is wired into each texture input from outside (Refactor.60): the OP feeding the Grape OP's input
+        connector — the nearest one, a Null in between is what is named — or None when nothing is (the In TOP then
+        passes its default). Read only when asked. 每個貼圖輸入從外面接了什麼：餵進接口的 OP（最近的那個）；沒接是 None
+        （In TOP 就送預設圖）。只在被問時讀。"""
+        result = []
+        for connector in self.comp.inputConnectors:
+            top = connector.inOP
+            ident = top.fetch(INPUT_STORE, None) if top is not None else None
+            if ident is None:
+                continue
+            source = connector.connections[0].owner if connector.connections else None
+            result.append({'id': ident, 'source': source.path if source is not None else None})
+        return result
+
+    def input_top(self, ident):
+        """The In TOP of one texture input: what the shader actually receives, for a snapshot (Refactor.60).
+        一個貼圖輸入的 In TOP：Shader 實際收到的，給快照用。"""
+        for top in self.comp.ops('*'):
+            if top.OPType == 'inTOP' and top.fetch(INPUT_STORE, None) == ident:
+                return top
+        raise LookupError('This Grape OP has no texture input with this ID.')
 
     def _refuse(self, message):
         notify(self.comp, message)
@@ -383,6 +401,9 @@ class NextFamily:
                 # Found by label; when Samples cannot say, the input is left without a default and TD's status bar says
                 # so — the shader is applied all the same. 照 label 找；找不到時這個輸入不接預設圖、在狀態列說明，Shader 照常套用。
                 if samples is None:
+                    continue
+                if entry['defaultTexture'] == 'none':  # TD's own "nothing connected" TD 自己的「沒接」
+                    target.inputConnectors[0].disconnect()
                     continue
                 try:
                     connector = sample_output(samples, entry['defaultTexture'])

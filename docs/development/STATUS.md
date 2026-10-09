@@ -58,6 +58,15 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.60 貼圖輸入顯示實際收到的圖**（人類 10-10；範圍與決定 workspace `texture-input-actual.md`）：
+  - TD 回報每個貼圖輸入接了什麼（`next_family.input_sources`：Grape OP 輸入接口連到的最近一個 OP，沒接是 null）；`GET /api/<id>/inputs`、`GET /api/<id>/input/<輸入 ID>`（拍那個輸入的 In TOP＝Shader 實際收到的；取代原本拍自選 TOP 的 `texture`）。
+  - 接線改變時 TD 主動通知：Manager 新 OP Execute DAT `wire_watch`（`onWireChange`，只監看有編輯器連著的 Grape OP、沒人連就關），經現有 WebSocket 送 `{type:'inputs'}`；編輯器重新問輸入、開著的預覽自動重拍。實測：接上、拔掉、換接都會觸發，同一格內合併成一次。
+  - 卡片：外面有接時，標頭換成唯讀〔🔌 輸入：名稱〕（提示是完整路徑），預設圖退到「沒接時」一列；預覽是 In TOP 快照，右下〔📷 輸入：名稱〕按一下重拍。沒接時顯示預設圖，右下〔預設：名稱〕。透明預覽照 TD 的 TOP viewer：近黑與深灰方格、圖外平的深灰（`--checker-base`／`--checker-square`／`--preview-surround`）。
+  - 預設圖清單：加 `none`（透明，同 TD 沒接時：In TOP 不接預設圖），放第一個、新增的輸入都用它；範本 `input1` 仍是 Grape（範本的示範內容）。拿掉 Samples 的自選 TOP：核心 `custom`、TD 主組件 Samples 的 `custom` 出口／Select TOP／TOP 參數（一次性腳本 `../work/refactor/migrate_samples_r60.py`，5 個 Clone 跟著）、範本安裝程式、編輯器分支。
+  - 實驗用的圖直接修（人類：都是實驗用的）：Grape_TOP1 的 `input2` 從 `custom` 改成 `none`。**助手出錯一次**：第一次改時沒把版本號加一（為了通過 TD 的執行部分檢查），人類舊分頁拿著舊圖（rev 218）照樣送了三次「只存圖」，把修正蓋回 `custom`（rev 221），衝突檢查被繞過。改用 TD 只存圖的方式重修（rev 222，執行部分保留它自己的圖）。教訓：改 TD 裡的圖內容一定要加版本號。
+  - 另發現（未修，記在 CURRENT）：核心打開圖時不檢查宣告內容，存著不認得的預設圖照樣打開、選單空白。
+  - 驗證：Python 31（新增：輸入回報與快照、接線通知）、test:core 142、test:editor 78。瀏覽器＋真實 TD（Grape_TOP1）：input1 顯示〔🔌 輸入：moviefilein1〕、沒接時 Grape、快照；input2 透明棋盤格＋〔預設：透明〕。在 TD 拔掉 moviefilein1，卡片自己變回 Grape 預設圖；接回去又自己變回輸入與快照。
+  - 待人類看：來源名稱與「透明（同 TD 沒接時）」在卡片上被截斷。
 - **Refactor.59.8 快照標籤**（人類 10-10）：Samples 自選 TOP 的快照標籤改到右下角、深色半透明底配淺色字（`--image-label`／`--text-on-image`，每個主題都是深底淺字，參考舊產品 `.preview span`），加相機圖示（`icons.tsx camera`），文字「快照」；滑鼠提示寫拍攝時間與「不是即時畫面，按一下重拍」；按標籤重拍，新圖到之前舊圖留著。共用來源卡片的通用按鈕底色規則排除這個標籤（原本把它蓋成不透明灰）。驗證（Grape_TOP1）：標籤離右下各 4px、底色黑 78%、字白 92%；按下後拍攝時間更新、重拍中舊圖仍在。
 - **Refactor.59.7 分頁標題、檔名提示、載入中畫面**（人類 10-10）：
   - 分頁標題動態（`td_identity.ts tabTitle`）：Grape OP 名字在前，「檔名 : 路徑」、`[ TD Build … ]`，產品名最後；沒開圖時「TD-Grape」。只給連著 TD 的編輯器。

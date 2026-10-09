@@ -115,8 +115,6 @@ annotation(top, 'annotate_content', 'Made by the Editor: graph, shader, status',
 
 # Bottom left: inputs. input1 is listed in the TOPs list (never wired); Samples gives its default.
 samples = node(top, baseCOMP, 'Samples', -500, -150, 160, 130)
-select_page = samples.appendCustomPage('Select')
-select_page.appendTOP('Top', label='TOP')
 # Named as their labels (Refactor.58.9, human 2026-10-09); the outs keep out1-out7, whose digits set the connector order.
 # 名字同 label（人類）；出口維持 out1～out7，TD 照名字裡的數字排出口順序。
 grape_image = node(samples, moviefileinTOP, 'grape', -178, -117, 130, 72)
@@ -131,23 +129,21 @@ black = node(samples, constantTOP, 'black', -178, -617, 130, 105)
 black.par.colorr, black.par.colorg, black.par.colorb = 0.0, 0.0, 0.0
 flat = node(samples, constantTOP, 'normal', -178, -742, 130, 105)
 flat.par.colorr, flat.par.colorg, flat.par.colorb = 0.5, 0.5, 1.0  # flat normal (0, 0, 1) encoded
-chosen = node(samples, selectTOP, 'custom', -178, -867)
-chosen.par.top.expr = 'parent().par.Top'
 # Each out says which image it is by its label, the graph's defaultTexture names (Refactor.58.9).
 # 每個 out 用 label 說明它是哪張圖，名字同圖裡的 defaultTexture。
 for i, (source_op, y, label) in enumerate([(grape_image, -125, 'grape'), (banana, -250, 'banana'), (jelly, -375, 'jellybeans'),
-                                           (white, -492, 'white'), (black, -609, 'black'), (flat, -734, 'normal'),
-                                           (chosen, -867, 'custom')], start=1):
+                                           (white, -492, 'white'), (black, -609, 'black'), (flat, -734, 'normal')], start=1):
     out = node(samples, outTOP, 'out' + str(i), 50, y)
     out.par.label = label
     out.inputConnectors[0].connect(source_op)
 annotation(samples, 'annotate_samples', 'Default inputs',
     'Default images for an input when nothing is connected from outside.\n'
     "A Clone of the main component's Samples: change that one and every Grape OP follows; the content stays when the "
-    'main component is missing. Each out is named by its label: grape, banana, jellybeans, white, black, normal, '
-    'custom (the TOP chosen in the TOP parameter, kept per Grape OP).\n'
-    'Which one an input uses comes from the graph (defaultTexture); it is wired by label when the editor applies.',
-    -205, -895, 410, 880)
+    'main component is missing. Each out is named by its label: grape, banana, jellybeans, white, black, normal.\n'
+    'Which one an input uses comes from the graph (defaultTexture); it is wired by label when the editor applies. '
+    'An input set to none gets nothing here: transparent, as TD with nothing connected. To use your own image, wire it '
+    'into the Grape OP input.',
+    -205, -770, 410, 755)
 # The default graph's texture input (human 2026-10-09): input1, default image Grape. The editor
 # manages the In TOPs from then on (next_family.py _place_inputs). 預設圖的貼圖輸入；之後由編輯器管理。
 default_input = bootstrap['defaultDocument']['graph']['declarations'][0]

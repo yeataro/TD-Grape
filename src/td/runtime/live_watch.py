@@ -78,13 +78,14 @@ class LiveWatch:
             self._watch()
 
     def _watch(self):
-        paths = []
+        paths, comps = [], []
         for entry in self.watched.values():
+            comps.append(entry['family'].comp.path)
             try:
                 paths.append(entry['family']._shader(entry['family'].comp).path)
             except Exception:
                 pass
-        self.watcher(paths)
+        self.watcher(paths, comps)
 
     def _entry_of(self, par):
         try:
@@ -169,9 +170,20 @@ class LiveWatch:
                     connection.send(text, replaceable=True)
         self.flush()
 
+    def wires_changed(self, comp):
+        """A watched Grape OP was rewired in TD (OP Execute onWireChange, one call a frame at most): its editors ask what
+        is wired in now (Refactor.60). Only a nudge; the editor reads the inputs over HTTP.
+        TD 上重新接線（每格最多一次）：通知它的編輯器去問現在接了什麼。只是提醒；編輯器經 HTTP 讀。"""
+        entry = self.watched.get(getattr(comp, 'path', None))
+        if entry is None:
+            return
+        text = json.dumps({'type': 'inputs', 'frame': self.frame()})
+        for connection in entry['connections']:
+            connection.send(text, replaceable=True)
+
     def close(self):
         for connection in list(self.links):
             connection.close()
         self.links.clear()
         self.watched.clear()
-        self.watcher([])
+        self.watcher([], [])

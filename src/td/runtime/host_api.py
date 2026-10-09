@@ -74,7 +74,7 @@ class HostAPI:
 
     def _dispatch(self, method, path, body):
         path = urlsplit(path).path
-        match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)', path)
+        match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)(?:/([A-Za-z0-9_-]{1,64}))?', path)
         if method == 'GET' and path == '/api/shaders':
             return 200, self.choices()
         shared = re.fullmatch(r'/api/textures/([a-z]+)\.png', path)
@@ -88,14 +88,14 @@ class HostAPI:
             return 200, self.shared[name]
         if not match:
             return 404, {'error': 'Open a registered Grape OP to edit its graph.', 'code': 'target_required'}
-        target_id, action = match.groups()
+        target_id, action, argument = match.groups()
         try:
             family = self.resolve(target_id)
             if family is None:
                 return 404, {'error': 'This Grape OP is not available to the Manager.', 'code': 'target_unavailable'}
             if method == 'POST' and not isinstance(body, dict):
                 raise ValueError('Host actions require a JSON object.')
-            return 200, self._action(family, method, action, body)
+            return 200, self._action(family, method, action, body, argument)
         except LookupError as error:
             return 404, {'error': str(error), 'code': 'texture_unavailable', 'layer': 'grape-op', 'operation': action}
         except UnsupportedOperation as error:
@@ -109,7 +109,7 @@ class HostAPI:
             return 409 if conflict else 422, {'error': ('Conflict: ' if conflict and not str(error).startswith('Conflict:') else '') + str(error),
                 'code': 'revision_conflict' if conflict else 'host_rejected', 'layer': 'grape-op', 'operation': action}
 
-    def _action(self, family, method, action, body):
+    def _action(self, family, method, action, body, argument=None):
         # TD only checks the envelope and what it executes; no history, sources or graph reads.
         # TD 只核對信封與自己要執行的東西；不碰歷史、來源或圖的內容。
         if method == 'GET' and action == 'shaders':
@@ -127,12 +127,14 @@ class HostAPI:
         # The person chose "also give this Grape OP a new Grape ID" (Refactor.52, Q63). 使用者勾了換新 ID。
         if method == 'POST' and action == 'identity':
             return {'targetId': family.regenerate()}
-        # The TOP chosen on this Grape OP's Samples, as it looks now: a snapshot, not live (Refactor.58).
-        # 這個 Grape OP 在 Samples 上選的 TOP 現在的樣子：快照，不是即時。
-        if method == 'GET' and action == 'texture':
+        # What each texture input has wired in, and one input as the shader receives it now: a snapshot, not live
+        # (Refactor.60). 每個貼圖輸入接了什麼；以及某個輸入 Shader 現在收到的樣子：快照，不是即時。
+        if method == 'GET' and action == 'inputs':
+            return {'inputs': family.input_sources()}
+        if method == 'GET' and action == 'input' and argument:
             if not self.capture:
                 raise UnsupportedOperation('The editor host cannot take previews.')
-            return Image(self.capture(family.chosen_output()), keep=False)
+            return Image(self.capture(family.input_top(argument)), keep=False)
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

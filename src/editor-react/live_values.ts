@@ -11,7 +11,9 @@ import type { UniformStates } from './host';
 // 收到：連上時與模式改變時的 state、每個 TD 影格一包的 values（比手上舊的就丟掉）。自己重連；連線狀態由編輯器自己判斷。
 export type LiveMessage =
   | { type: 'state'; frame: number; uniforms: UniformStates }
-  | { type: 'values'; frame: number; values: Record<string, (number | null)[]> };
+  | { type: 'values'; frame: number; values: Record<string, (number | null)[]> }
+  // A Grape OP was rewired in TD (Refactor.60): ask what its inputs have now. TD 上重新接線：去問現在接了什麼。
+  | { type: 'inputs'; frame: number };
 /** The part of a browser WebSocket used here (tests pass a fake). 這裡用到的 WebSocket 介面。 */
 export type LiveSocket = {
   readonly readyState: number; send(text: string): void; close(): void;
@@ -44,7 +46,7 @@ export class LiveValues {
     socket.onmessage = event => {
       let message: LiveMessage;
       try { message = JSON.parse(String(event.data)) as LiveMessage; } catch { return; }
-      if (message.type !== 'state' && message.type !== 'values') return;
+      if (message.type !== 'state' && message.type !== 'values' && message.type !== 'inputs') return;
       if (message.type === 'values' && message.frame < this.frame) return; // older than what we have 比手上的舊
       this.frame = Math.max(this.frame, message.frame);
       this.receive(message);

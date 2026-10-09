@@ -426,10 +426,12 @@ const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', ty
     },
     header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
 /** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
- * `defaultTexture`; human 2026-10-09: the Samples outputs, Grape first). `custom` is the TOP chosen
- * on the Grape OP's Samples. How TD provides them is TD's business (Q45).
- * 外面沒接東西時用的預設圖（人類 10-09：Samples 的出口，預設 Grape）；custom＝Samples 上自選的 TOP。 */
-exports.defaultTextures = Object.freeze(['grape', 'banana', 'jellybeans', 'white', 'black', 'normal', 'custom']);
+ * `defaultTexture`). `none` (Refactor.60; human 2026-10-10) is TD's own "nothing connected" — transparent — and comes first:
+ * a new input starts with it, as TD users expect. The rest are the Samples outputs. The TOP chosen on Samples (`custom`)
+ * is gone: wire the image into the input instead. How TD provides them is TD's business (Q45).
+ * 外面沒接東西時用的預設圖。none＝TD 自己的「沒接」（透明），排第一、新增的輸入用它，符合 TD 使用者的預期（人類 10-10）；
+ * 其他是 Samples 的出口。Samples 上自選的 TOP 已拿掉：改把圖接進輸入。 */
+exports.defaultTextures = Object.freeze(['none', 'grape', 'banana', 'jellybeans', 'white', 'black', 'normal']);
 const textureOutputs = Object.freeze([
     { key: 'out', direction: 'output', type: 'sampler2D' },
     { key: 'size', direction: 'output', type: 'vec2' },
@@ -440,7 +442,7 @@ const textureOutputs = Object.freeze([
 // TOP 貼圖輸入：每一筆都成為 Grape OP 的輸入接口、照清單順序；GLSL 索引是它的位置。TD 自己宣告 sTD2DInputs。
 const topInputKind = { kind: 'topInput', role: 'source', colorGroup: 'sampler', types: ['sampler2D'], constant: false,
     ordered: true, outputs: textureOutputs,
-    initial: () => ({ defaultTexture: 'grape' }),
+    initial: () => ({ defaultTexture: 'none' }),
     validate: d => {
         if (d.type !== 'sampler2D')
             throw Error('Unsupported declaration type');

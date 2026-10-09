@@ -343,17 +343,22 @@ class HostRoutingTests(unittest.TestCase):
         self.assertIs(api.dispatch('GET', '/api/textures/banana.png')[1], image)  # read once a connection 每次連線讀一次
         self.assertEqual(textures.call_count, 1)
         self.assertEqual(api.dispatch('GET', '/api/textures/white.png')[0], 404)
-        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[1]['code'], 'texture_unavailable')  # no Samples 沒有 Samples
-        # Found by the out TOP's label, wherever it sits (Refactor.58.9). 照 out TOP 的 label 找，不管排在哪。
-        out7 = SimpleNamespace(par=SimpleNamespace(label=Par('custom')))
-        outs = [SimpleNamespace(outOP=SimpleNamespace(par=SimpleNamespace(label=Par(name)))) for name in ('grape', 'banana')]
-        samples = SimpleNamespace(par=SimpleNamespace(Top=Par(None)), outputConnectors=[outs[0], SimpleNamespace(outOP=out7), outs[1]])
-        comp.ops['Samples'] = samples
-        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[0], 404)  # nothing chosen 沒選
-        samples.par.Top = Par('/project1/moviefilein1')
-        code, image = api.dispatch('GET', '/api/' + TARGET + '/texture')
+        # Refactor.60: what each input has wired in, and one input's In TOP as a snapshot (not kept).
+        # 每個輸入接了什麼；某個輸入的 In TOP 快照（不留）。
+        tops = [SimpleNamespace(OPType='inTOP', fetch=lambda key, default=None, i=i: i) for i in ('input1', 'dPhoto')]
+        wired = SimpleNamespace(owner=SimpleNamespace(path='/project1/moviefilein1'))
+        comp.inputConnectors = [SimpleNamespace(inOP=tops[0], connections=[]), SimpleNamespace(inOP=tops[1], connections=[wired])]
+        code, result = api.dispatch('GET', '/api/' + TARGET + '/inputs')
+        self.assertEqual((code, result['inputs']), (200, [{'id': 'input1', 'source': None}, {'id': 'dPhoto', 'source': '/project1/moviefilein1'}]))
+        def input_top(ident):
+            if ident not in ('input1', 'dPhoto'):
+                raise LookupError('This Grape OP has no texture input with this ID.')
+            return tops[('input1', 'dPhoto').index(ident)]
+        fam.input_top = input_top
+        code, image = api.dispatch('GET', '/api/' + TARGET + '/input/dPhoto')
         self.assertEqual((code, image.keep, image.data[:4]), (200, False, b'\x89PNG'))
-        capture.assert_called_once_with(out7)
+        capture.assert_called_once_with(tops[1])
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/input/nope')[1]['code'], 'texture_unavailable')
 
     def test_sample_output_by_label(self):
         # Exactly one out with the label, wherever it sits; none or two is a LookupError (Refactor.58.9).

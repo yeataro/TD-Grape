@@ -842,7 +842,9 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
   const { session, calls } = open(t);
   session.addTopInput();
   const inputs = () => JSON.parse(JSON.stringify(session.snapshot().declarations.filter(d => d.kind === 'topInput')));
-  assert.deepEqual(inputs().map(d => [d.name, d.defaultTexture]), [['input1', 'grape'], ['input2', 'grape']]);
+  // The template's input1 shows Grape (its own content); a new input starts transparent, as TD (Refactor.60).
+  // 範本的 input1 用 Grape（範本的內容）；新增的輸入一開始是透明，同 TD。
+  assert.deepEqual(inputs().map(d => [d.name, d.defaultTexture]), [['input1', 'grape'], ['input2', 'none']]);
   session.setDefaultTexture(inputs()[1].id, 'black');
   session.placeDeclaration(inputs()[1].id, { x: 0, y: 0 });
   const ref = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.declaration');

@@ -41,13 +41,11 @@ export class HostClient {
       ? () => new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.root + 'live') as unknown as LiveSocket
       : undefined);
   }
-  /** Where a default image's preview is (Refactor.58): the shared ones by name, the same for every Grape OP;
-   * the TOP chosen on this Grape OP's Samples ("custom") as a snapshot. 預設圖預覽的位址：公用的照名字、
-   * 每個 Grape OP 都一樣；這個 Grape OP 在 Samples 上選的 TOP（custom）是快照。 */
-  textureUrl(texture: string): string {
-    return texture === 'custom' ? this.root + 'texture' : '/api/textures/' + encodeURIComponent(texture) + '.png';
-  }
-  async call<T>(action: 'state' | 'apply' | 'save' | 'identity', body?: unknown): Promise<T> {
+  /** A shared default image, by name, the same for every Grape OP (Refactor.58). 公用預設圖，照名字、每個 Grape OP 都一樣。 */
+  textureUrl(texture: string): string { return '/api/textures/' + encodeURIComponent(texture) + '.png'; }
+  /** One texture input as the shader receives it now: a snapshot of its In TOP (Refactor.60). 某個輸入 Shader 現在收到的：In TOP 的快照。 */
+  inputUrl(id: string): string { return this.root + 'input/' + encodeURIComponent(id); }
+  async call<T>(action: 'state' | 'apply' | 'save' | 'identity' | 'inputs', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
       const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',

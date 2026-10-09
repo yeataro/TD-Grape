@@ -8,7 +8,7 @@
 
 **進行方式（人類 2026-10-09）**：先把基本能力定下來；標準功能都做完之後，會有一段多輪測試調整的時期（外觀、手感這類比較不確定的東西在那時一起調）。在那之前，外觀只求可用、結構乾淨，不追細節。
 
-**最新：Refactor.59.8**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 59.8。逐版內容見 [STATUS](STATUS.md)。
+**最新：Refactor.60**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 60。逐版內容見 [STATUS](STATUS.md)。
 
 **最近幾輪的大塊（R.53–59）：**
 - 編輯器外框（R.53）、新增節點的入口（R.54）、數值輸入 widget（R.55）、共用來源面板與卡片（R.57）、拖線預告與拔線還原（R.56–57）。
@@ -50,6 +50,9 @@
 
 ### 二、已決定、待做
 
+- **核心打開圖時不檢查宣告內容**（R.60 發現）：存著不認得的預設圖（例如已拿掉的 `custom`）照樣打開、選單空白；應該打開時擋下或標成 Ghost（同看不懂的節點）。
+- **貼圖輸入卡片的截斷**（R.60）：來源名稱與「透明（同 TD 沒接時）」被截斷，待人類看。
+
 - **外觀試驗定案**：人類等所有東西出來，最後整理 CSS 給助手寫進主題（workspace `floating-panels.md` 44、45）；同時：畫布左下說明不能有陰影、選取相關樣式、連線身分的版面（R.52 頁首檔名、草稿與衝突浮窗偏擠）、Swizzle 分量列與 Math 卡片的樣式。
 - **切換 Grape OP 時的閃動**（R.51.1）：載入中畫面已做（R.59.7，Logo 等待動畫 `<BrandMark loading />`，九種候選與調用名稱見 workspace `work/refactor/loading-animations.html`，元件改了要同步）。剩：載入中時網址列仍寫「選擇 Grape OP」、共用來源面板仍是「打開一個 Grape OP 後…」；排查時先錄下那幾幀。待談：作業系統要求「減少動態」時（舊產品三處都停住動畫；人類的 Windows 可能關了動畫效果）停住或只淡入淡出。
 
@@ -57,7 +60,7 @@
 
 - **參數面板**：分量樣式的切換選單；卡片不畫標頭、面板畫標頭，控制項只宣告一次（Q67 補充）；Math／Swizzle／Convert 的控制項搬過去；數值 widget 的互動區與純量開頭文字（`value-input.md` 四：同一個入口、階梯圖示、面板用分量名稱）；自訂參數頁（見待處理）。
 - **錯誤回報與連線**：「TD-Grape 拒絕」說成真正拒絕的那一方、技術代號不直接露出（記憶 messages-name-the-real-actor）；TD 編譯錯誤指回節點（只在失敗時才做）；換了 port 時把草稿帶到新視窗（R.52 只做了並排資訊）；草稿只存一份、「找到先前草稿」時畫布被鎖（違反編輯不等 TD）；衝突選 TD 端後編輯端版本只能 Undo 叫回（人類選 A）。
-- **貼圖輸入後續**：數量上限（7.17）；In TOP 照位置命名、輸入名稱在 Label；R.43 之前建的 Grape OP 裡沒歸屬的 `input1`；Input Extend UV 預設 Zero 使邊緣 alpha 偏低（TD 原生，要不要改預設再問）。workspace `texture-inputs.md`。
+- **貼圖輸入後續**：R.60 已做「顯示實際收到的圖」與接線通知（`texture-input-actual.md`）；剩數量上限（7.17）；In TOP 照位置命名、輸入名稱在 Label；R.43 之前建的 Grape OP 裡沒歸屬的 `input1`；Input Extend UV 預設 Zero 使邊緣 alpha 偏低（TD 原生，要不要改預設再問）。workspace `texture-inputs.md`。
 - **多選框與 group**：選取工具列、拉框調大小、自動排列（legacy `selection_ui.js` 85–413，只搬純計算）；有 group 時多選框比 group 的框再大一點（`floating-panels.md` 46）。
 - **子圖與陣列**：見「待處理」的子圖形狀；陣列長度引用 `sg_extent_` 含 `fn_` 前綴會存進圖，陣列那一輪改成有結構的引用；catalog 欄位名 `definitionUuid` 未改。
 - **更新機制**：workspace `update-mechanism.md`（Clone＋TDUpdater 是方向不是定案）；主組件「TD-Grape」頁還留著舊產品參數（`Updateshaders` 等），做時一起處理，刪除要先問。
@@ -110,6 +113,6 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）。Grape OP：`/project1/Grape_TOP_test`、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類用 Tab 選單建立）、測試複本 `r54_probe`（等人類同意刪）；範本 `/TD_Grape/masters/grape_top`。每個 Samples 都 Clone `/TD_Grape/Samples`（R.58.9）。
 - 編輯服務 port 65465（被佔用時往後找，R.36）；例：`http://127.0.0.1:65465/shader/6cb6a90247c140bea7df98a2f11c1858/`（r54_probe）。
-- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.59.4（存 `TD-Grape-dev.94`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 59.8。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
+- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.59.4（存 `TD-Grape-dev.94`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 60。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.94.toe` 這類是遞增存檔的正常狀態）；未提交的修改可能是人類的，須保留。
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴。
