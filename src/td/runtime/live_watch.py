@@ -202,7 +202,11 @@ class LiveWatch:
     def wires_changed(self, comp):
         """A watched Grape OP was rewired in TD (OP Execute onWireChange, one call a frame at most): its editors ask what
         is wired in now (Refactor.60). Only a nudge; the editor reads the inputs over HTTP.
-        TD 上重新接線（每格最多一次）：通知它的編輯器去問現在接了什麼。只是提醒；編輯器經 HTTP 讀。"""
+        TD 上重新接線（每格最多一次）：通知它的編輯器去問現在接了什麼。只是提醒；編輯器經 HTTP 讀。
+        A watched Grape OP that is deleted is reported with None (seen in TD 2025.33230, Refactor.63.6.5); deletion is
+        _follow's, so it is ignored here. 監看中的 Grape OP 被刪掉時 TD 傳 None（實測）；刪除由 _follow 處理，這裡略過。"""
+        if comp is None:
+            return
         self._inputs(comp, retake=True)
 
     def _inputs(self, comp, retake):

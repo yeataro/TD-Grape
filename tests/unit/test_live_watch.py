@@ -97,6 +97,7 @@ class LiveWatchTests(unittest.TestCase):
         connection.sent.clear()
         watch.wires_changed(family.comp)
         watch.wires_changed(Owner('/project1/other', id=2))
+        watch.wires_changed(None)  # a watched Grape OP deleted: TD passes None (Refactor.63.6.5) 被刪掉時 TD 傳 None
         self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120, 'retake': True}])
 
     def test_a_renamed_or_deleted_grape_op_is_followed(self):
