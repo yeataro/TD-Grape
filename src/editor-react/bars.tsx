@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles, setShadow, shadowOn } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -211,6 +211,10 @@ function AppearancePanels() {
       <SliderPlaceholder label={tr('appearance.brightness', 'Brightness')} />
       {/* Under A/B test until the tuning phase (Q64). A／B 測試，調整期決定。 */}
       <Segmented label={tr('appearance.ports', 'Port style')} value={currentPorts()} options={portStyles} onChange={setPorts} />
+      {/* Shadow trials (human 2026-10-09 A/B); the switches go once decided. 陰影試驗（人類 A/B）；決定後拿掉開關。 */}
+      {([['layers', tr('appearance.shadowLayers', 'Layered shadows')], ['canvas', tr('appearance.shadowCanvas', 'Canvas inner shadow')],
+        ['cards', tr('appearance.shadowCards', 'Card shadows')]] as const).map(([key, label]) =>
+        <label key={key} className="check"><input type="checkbox" checked={shadowOn(key)} onChange={event => setShadow(key, event.target.checked)} />{say(label)}</label>)}
     </PopoverButton>
     <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
       <SettingsRow label={tr('action.language', 'Language')}>

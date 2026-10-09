@@ -31,17 +31,29 @@ let style: Style = browser ? readChoice('appearance.style', ['grape', 'td'], 'gr
 let mode: Mode = browser ? readChoice('appearance.mode', ['dark', 'light'], 'dark') : 'dark';
 let size: Size = browser ? readChoice('appearance.size', ['standard', 'comfortable'], 'standard') : 'standard';
 let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : 'a';
+// Trial switches for shadows (human 2026-10-09 A/B): layered small shadows, the canvas's inner shadow, shadows on source
+// cards. Chosen ones stay and the switches go once decided. 陰影的試驗開關（人類 A/B）：層疊微陰影、畫布內陰影、來源卡片陰影；
+// 決定後留下選中的、拿掉開關。
+export type ShadowTrial = 'layers' | 'canvas' | 'cards';
+const shadowDefaults: Record<ShadowTrial, boolean> = { layers: false, canvas: true, cards: false };
+const shadows = Object.fromEntries((Object.keys(shadowDefaults) as ShadowTrial[]).map(key => [key,
+  browser ? readChoice('appearance.shadow.' + key, ['on', 'off'], shadowDefaults[key] ? 'on' : 'off') === 'on' : shadowDefaults[key]])) as Record<ShadowTrial, boolean>;
 const listeners = new Set<() => void>();
 function apply() {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = style === 'td' ? 'td' : mode;
   document.documentElement.dataset.size = size;
   document.documentElement.dataset.ports = ports;
+  for (const [key, on] of Object.entries(shadows)) document.documentElement.dataset['shadow' + key[0]!.toUpperCase() + key.slice(1)] = on ? 'on' : 'off';
 }
 apply();
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}/${ports}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}/${Object.values(shadows).map(Number).join('')}`;
+export const shadowOn = (key: ShadowTrial) => shadows[key];
+export function setShadow(key: ShadowTrial, on: boolean) {
+  if (shadows[key] !== on) { shadows[key] = on; writePreference('appearance.shadow.' + key, on ? 'on' : 'off'); changed(); }
+}
 export const currentPorts = () => ports;
 export const currentStyle = () => style;
 export const currentMode = () => hasMode(style, mode) ? mode : 'dark';
