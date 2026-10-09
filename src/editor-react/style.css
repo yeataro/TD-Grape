@@ -79,8 +79,12 @@ a { color: var(--accent); }
 :root[data-shadow-layers="on"] :is(.foot-bar, .location-bar, .panel-zone) { position: relative; }
 :root[data-shadow-layers="on"] .foot-bar { z-index: 5; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
 :root[data-shadow-layers="on"] .location-bar { z-index: 3; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
-:root[data-shadow-layers="on"] .panel-zone-left { z-index: 4; box-shadow: var(--layer-offset) 0 var(--layer-blur) var(--overlay-down); }
-:root[data-shadow-layers="on"] .panel-zone-right { z-index: 4; box-shadow: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--overlay-down); }
+/* Panels cast sideways and up, so they read as lying on the title bar too (human 2026-10-09: make it visible).
+   面板往側邊和往上都投陰影，看得出它也疊在標題列上（人類：讓它看得出來）。 */
+:root[data-shadow-layers="on"] .panel-zone-left { z-index: 4;
+  box-shadow: var(--layer-offset) 0 var(--layer-blur) var(--overlay-down), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
+:root[data-shadow-layers="on"] .panel-zone-right { z-index: 4;
+  box-shadow: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--overlay-down), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--overlay-down); }
 :root[data-shadow-layers="on"] :is(.network-bar-group, .react-flow__panel) { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--overlay-down); }
 /* Trial: source cards lift a little off the panel. 試驗：來源卡片從面板上浮起一點。 */
 :root[data-shadow-cards="on"] .source-card { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--overlay-down); }
