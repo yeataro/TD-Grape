@@ -2,7 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
-import { ValueFields, useSession } from './NodeCard';
+import { ValueFields } from './ValueFields';
+import { useSession } from './contexts';
 import { Badge, FoldSection, Select } from './controls';
 import type { ComponentState, UniformStates } from './host';
 

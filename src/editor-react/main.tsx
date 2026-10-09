@@ -17,12 +17,13 @@ import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
-import { SourcesPanel } from './SourcesPanel';
 import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
+import { PANELS, type PanelInput } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
-import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
+import { NodeCard } from './NodeCard';
+import { SessionContext, TextContext, BodyDragContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
-import { AddNodePanel, DRAG_TYPE } from './AddNodePanel';
+import { DRAG_TYPE } from './AddNodePanel';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
@@ -223,16 +224,9 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
   }, [session, draft]);
   // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
-  const panels: Record<string, PanelView> = {
-    addNode: { title: tr('addNode.title', 'Add Node'), content: session
-      ? <AddNodePanel choices={choices} onAdd={choice => addAt(choice, middle())} />
-      : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
-    sources: { title: tr('sources.title', 'Shared Sources'), content: session
-      ? <SourcesPanel declarations={state.declarations} references={state.references} />
-      : <p className="hint">{say(tr('sources.noGraph', 'Open a Grape OP to see its shared sources.'))}</p> },
-    glsl: { title: tr('glsl.title', 'GLSL'), content: <pre className="code-view" aria-label={say(tr('glsl.label', 'Generated GLSL'))}>
-      {state.glsl || say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre> },
-  };
+  const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
+  const panels: Record<string, PanelView> = Object.fromEntries(Object.entries(PANELS)
+    .map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     <div className="workspace">
       <PanelZone side="left" layout={layout} panels={panels} />

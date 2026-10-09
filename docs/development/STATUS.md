@@ -14,7 +14,15 @@
 - **記下、未做**：型別選單的分類子選單（選單元件的新能力，要先問）；GLSL 按鈕改成跳出浮動 GLSL 面板（等浮動面板）；平移／縮放阻尼與 Frame 過渡（人類：一定要做，動手前先說做法）；數值輸入大改時再設計 slider；GLSL 高亮與 Markdown 顯示一起做（自己的小模組，不用外部程式庫；等第一個用到 Markdown 的那一輪）。
 - **待重現**：人類回報框選開著時左鍵拖曳，所有節點都變成預選樣式；助手在內建瀏覽器重現不出來（只有碰到的節點出現預覽），已請人類在新版頁面再試並補充步驟。
 - **驗證**：editor 67、check:editor；內建瀏覽器＋真實 TD：Snap 淡紫、框選綠；捲軸色（軌道 #1b1b21）；頁面上已沒有原生 `<select>`；節點標題的型別選單畫在 `body`、落在按鈕下方 4px；節點數值框 #43414e。
-- commit：`41ee6d8`、`4cd6793`，以及本段這一筆。
+- commit：`41ee6d8`、`4cd6793`、`c738e79`。
+- **清理（人類：先改完提交，再清理一次；清助手說不乾淨的地方）**：
+  - **所有面板一張表**（[panels.tsx](../../src/editor-react/panels.tsx)）：每列寫名字、預設位置、內容；表的順序＝預設分頁順序、`first`＝一開始顯示的分頁。版面（[layout.tsx](../../src/editor-react/layout.tsx)）只排代號、預設配置由表算出；畫面只把表轉成分頁內容。原本一個面板的資料分在 main.tsx 與 layout.tsx 兩處。
+  - **GLSL 面板**拆成自己的檔（[GlslPanel.tsx](../../src/editor-react/GlslPanel.tsx)）。
+  - **一組數值**（`ValueFields`、色塊、TD 驅動狀態）拆成自己的 widget 檔（[ValueFields.tsx](../../src/editor-react/ValueFields.tsx)），節點卡片與共用來源面板共用；之後數值輸入大改時重新設計（人類：有些定義可能要寫回節點定義，排在比較後面）。
+  - **編輯畫面往下交的東西**（session、文字、Body 拖曳）搬到 [contexts.ts](../../src/editor-react/contexts.ts)；共用來源面板不再依賴節點卡片的檔案。
+  - 拿掉原生下拉選單留下的樣式；整理 `IconButton` 重複的註解；[README](../../src/editor-react/README.md) 的責任表補上共用部件與面板表。
+  - 順手（人類 10-09）：面板分頁標題照舊產品改小（11px、一般粗細，顯示中的才加粗）。
+  - 驗證：editor 67、check:editor、語系檔沒變；內建瀏覽器＋真實 TD：三個面板都有內容、8 個節點、沒有錯誤；清掉存的版面時預設是 Sources｜Add Node（顯示中）｜GLSL，之後已還原存的版面。
 
 ## Refactor.54.2 — 人類累積的一批：字級、字型、游標、接孔、Snap、設定、浮動提示 — 2026-10-09
 

@@ -11,10 +11,12 @@ body { margin: 0; }
 #root { height: 100vh; display: flex; flex-direction: column; }
 /* Form controls take the page's line height too (browsers give them `normal`, the usual cause of uneven CJK/Latin rows).
    表單控制項也用頁面的行高（瀏覽器預設給它們 normal，是中英文不齊最常見的原因）。 */
-button, select, input { font: inherit; line-height: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
-input, select { border-radius: var(--radius-field); background: var(--surface-field); }
-input:focus-visible, select:focus-visible { outline: 1px solid var(--accent); }
-button, select { padding: 6px 9px; }
+button, input { font: inherit; line-height: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
+input { border-radius: var(--radius-field); background: var(--surface-field); }
+input:focus-visible { outline: 1px solid var(--accent); }
+button { padding: 6px 9px; }
+/* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-fill); }
 button { color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
 button:disabled, button[aria-disabled="true"] { opacity: .45; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
 button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
@@ -98,9 +100,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 .panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .panel-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
-.panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); }
+/* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
+   分頁標題照舊產品：小字、一般粗細，顯示中的才加粗。 */
+.panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left;
+  font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 400; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); font-weight: 600; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
 .code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
 /* A handle is drawn thin and grabbed wide (human 2026-10-09). 把手畫得細、抓的範圍寬。 */
@@ -137,8 +141,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .fold-body { padding-top: 4px; }
 .source-row { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
-/* A select is as wide as its longest option; keep it inside the panel. 下拉選單會被最長選項撐寬，限制在面板內。 */
-.source-head select { min-width: 0; max-width: 55%; }
+/* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
+.source-head .select-button { min-width: 0; max-width: 55%; }
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: var(--text-muted); }
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .builtin-row small { color: var(--text-muted); }
@@ -152,8 +156,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .grape-node.ghost .ghost-note { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-secondary); padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
-.node-title strong { flex: 1; } .node-title small, .node-title select { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
-.node-title select { max-width: 78px; padding: 3px; }
+.node-title strong { flex: 1; } .node-title small, .node-title .select-button { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
+/* A select in a node title: just the value and a chevron on the title colour, as the legacy type menu.
+   節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */
+.node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
+.node-title .select-button:hover { color: var(--text-strong); }
 .node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }
 .node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
 .port-row { position: relative; padding: 5px 14px; display: flex; gap: 8px; align-items: center; min-height: 30px; }
@@ -169,10 +176,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 :root[data-ports="b"] .react-flow__handle[data-connected="true"] { background: var(--port-color); }
 .value-group { min-width: 0; } .value-fields { display: grid; grid-template-columns: 1fr; gap: 5px; }
 .vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
-.value-fields label span { width: 10px; font-size: var(--font-sm); line-height: var(--line-sm); } .value-fields input, .value-fields select { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
+.value-fields label span { width: 10px; font-size: var(--font-sm); line-height: var(--line-sm); } .value-fields input, .value-fields .select-button { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
 .value-fields input, .value-fields .select-button, .control-field .select-button { background: var(--surface-node-field); }
 input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; }
-.control-field { display: flex; gap: 8px; align-items: center; } .control-field select { flex: 1; min-width: 0; }
+.control-field { display: flex; gap: 8px; align-items: center; } .control-field .select-button { flex: 1; min-width: 0; }
 .control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
 .react-flow__controls button:hover { background: var(--surface-control-hover); }
@@ -222,12 +229,6 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .dropdown-menu button[role="menuitemradio"]::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
 .dropdown-menu .hint { margin: 4px 8px; }
 .dropdown-menu.fit { min-width: 0; }
-/* A select in a node title: just the value and a chevron on the title colour, as the legacy type menu.
-   節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */
-.node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
-.node-title .select-button:hover { color: var(--text-strong); }
-/* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
-input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-fill); }
 .dropdown-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
 /* Message history, opening upward from the foot bar (Refactor.53). 訊息歷史，從底列往上開。 */
 /* Small panels called up from a button (controls.tsx Popover). 從按鈕叫出的小面板。 */

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
 import { say, tr, type Message } from './text';
+import { PANELS } from './panels';
 
 // The editor's layout (Refactor.53; work/in-place-refactor-design/floating-panels.md): a title bar, a left and a
 // right panel zone around the network, panels in groups shown as tabs. The layout is a personal preference: kept
@@ -17,13 +18,15 @@ export type LayoutData = { version: 1; titleBar: boolean; left: Zone; right: Zon
 /** What a zone shows for one panel. 一個面板在區裡顯示什麼。 */
 export type PanelView = { title: Message; content: ReactNode };
 
-// Default arrangement, as the legacy editor (Sources, Add Node and GLSL as tabs on the left). The right zone has no panel
-// until the Parameter panel exists. These numbers are tentative (human 2026-10-09: to be tuned).
-// 預設配置照舊產品：左邊 Sources｜Add Node｜GLSL 分頁；右邊等參數面板做了才有。數字是暫定的。
-const PANELS: Record<string, Side> = { sources: 'left', addNode: 'left', glsl: 'left' };
-const defaults = (): LayoutData => ({ version: 1, titleBar: true,
-  left: { open: true, width: 380, groups: [{ panels: ['sources', 'addNode', 'glsl'], active: 'addNode', size: 1 }] },
-  right: { open: false, width: 380, groups: [] } });
+// Default arrangement from the panel table (panels.tsx): each side one group of its panels, in table order. The
+// widths are tentative (human 2026-10-09: to be tuned). 預設配置由面板表決定：每一側一組、照表的順序。寬度暫定。
+const rows = Object.entries(PANELS) as [string, { side: Side; first?: true }][];
+const defaultZone = (side: Side, open: boolean): Zone => {
+  const panels = rows.filter(([, row]) => row.side === side).map(([id]) => id);
+  const active = panels.find(id => rows.find(([other]) => other === id)![1].first) ?? panels[0];
+  return { open, width: 380, groups: active ? [{ panels, active, size: 1 }] : [] };
+};
+const defaults = (): LayoutData => ({ version: 1, titleBar: true, left: defaultZone('left', true), right: defaultZone('right', false) });
 export const ZONE_MIN = 220, ZONE_MAX = 900;
 const KEY = 'grape-react-layout';
 
@@ -44,7 +47,7 @@ function readLayout(): LayoutData {
         width: Math.min(ZONE_MAX, Math.max(ZONE_MIN, Number(value?.width) || defaults()[side].width)) };
     };
     const layout: LayoutData = { version: 1, titleBar: stored.titleBar !== false, left: zone('left'), right: zone('right') };
-    for (const [id, side] of Object.entries(PANELS)) if (!seen.has(id)) {
+    for (const [id, { side }] of rows) if (!seen.has(id)) {
       const groups = layout[side].groups;
       if (groups[0]) groups[0].panels.push(id); else groups.push({ panels: [id], active: id, size: 1 });
     }
