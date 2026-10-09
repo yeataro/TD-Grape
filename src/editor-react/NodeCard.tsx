@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { core, typeColor, type NodeControl, type NodePresentation } from './core';
 import type { FlowNode } from './projection';
@@ -11,7 +11,6 @@ import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext, MergingContext } from './contexts';
 import { modesOf } from './declaration_modes';
 import type { Declaration } from './core';
-import { OutputRow } from './PortRow';
 
 /** Choices shown as they are written (type names). 照原樣顯示的選項（型別名）。 */
 const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
@@ -121,11 +120,12 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const start = !inputs.length && !view.spare;
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   const kind = data.declaration && sourceKinds[data.declaration.kind], sourceTag = kind ? say(kind) + ' · ' : '';
-  const outputRows = outputs.map(port => <OutputRow key={port.key} label={view.portLabels?.outputs?.[port.key] ?? port.key} type={port.type}>
+  const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+    <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
     {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
         接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
     <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
-  </OutputRow>);
+  </div>);
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>

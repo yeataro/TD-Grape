@@ -1,5 +1,5 @@
 /** Small developer entry point. Builtins and developer modules share this API. */
-import { object, copy, type Declaration, type Node, type Value } from './model';
+import { object, copy, type Node, type Value } from './model';
 import { types, type, literal, number, fill, count, type Type } from './numeric';
 import type { CatalogRow, NodeModule, NodeContext, Configuration } from './node_module';
 import {declarationKinds,declarationLabel} from './declarations';
@@ -20,9 +20,6 @@ export function fixedPorts(specs:PortSpec[]):readonly PortSpec[]{
   const freeze=(v:unknown):void=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}};freeze(specs);return specs;
 }
 const outputPorts=Object.fromEntries(types.map(t=>[t,fixedPorts([out(t)])]));
-/** What a reference to a declaration gives: its kind's outputs, or one `out` of its type. The reference node and the
- * Sources card both ask here (Refactor.58.1). 引用宣告時給哪些輸出：種類定的，或一個同型別的 out。引用節點與來源卡片都問這裡。 */
-export const declarationOutputs=(d:Declaration):readonly PortSpec[]=>declarationKinds.get(d.kind)?.outputs??outputPorts[type(d.type)]!;
 const selectedType=(node:Node,selection:Configuration)=>{
   const selected=type('type' in selection?selection.type:selection.signature.type);
   if(node.params.fixedType&&node.params.fixedType!==selected)throw Error('Fixed node type');return selected;
@@ -150,7 +147,7 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
     supports:(n,c)=>!c.owner&&(!target(n,c)||!!kindOf(n,c)?.types.includes(target(n,c)!.type)),
     // What a reference gives comes from the kind (a TOP texture input gives three outputs).
     // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
-    ports:(n,c)=>{const d=target(n,c);if(!d)throw Error('The declaration no longer exists');return declarationOutputs(d);},
+    ports:(n,c)=>{const d=target(n,c);if(!d)throw Error('The declaration no longer exists');return kindOf(n,c)?.outputs??outputPorts[type(d.type)]!;},
     validate:()=>{},
     // It switches only among declarations of the same kind: another kind gives other outputs.
     // 只在同一種宣告之間切換：別的種類給的輸出不同。
@@ -175,8 +172,6 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
 const tdValueTable=new Map(tdValues.map(entry=>[entry.id,entry]));
 const tdValuePorts=new Map<string,readonly PortSpec[]>();
 const tdValuePort=(t:string)=>{let p=tdValuePorts.get(t);if(!p){p=fixedPorts([out(t)]);tdValuePorts.set(t,p);}return p;};
-/** What a TD built-in value gives: one `out` of its type (its node and its Sources card). TD 內建值給的輸出：一個同型別的 out。 */
-export const tdValueOutputs=(entry:TdValue):readonly PortSpec[]=>tdValuePort(entry.type);
 /** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
 export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!entry&&(!target||entry.targets.includes(target))
   &&valueTypes.includes(entry.type)&&!entry.expression.includes('{');
@@ -184,7 +179,7 @@ export function tdValueNode(catalog:CatalogRow):NodeModule {
   const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
   return {catalog,role:'value',colorGroup:'runtime',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),
-    ports:n=>tdValueOutputs(entryOf(n)!),validate:()=>{},
+    ports:n=>tdValuePort(entryOf(n)!.type),validate:()=>{},
     presentation:(n,c)=>({label:entryOf(n)?.name,inlineControls:[{kind:'select',key:'entry',label:'entry',literal:true,command:'entry',
       value:String(n.params.entry),options:tdValues.filter(e=>usableTdValue(e,c.target)).map(e=>({value:e.id,label:e.name,literal:true}))}]}),
     edit:(n,command,value,c)=>{

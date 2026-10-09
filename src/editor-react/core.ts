@@ -13,8 +13,6 @@ import type * as tdValueTable from '../core-ts/td_values';
 import type * as presetTable from '../core-ts/uniform_presets';
 import type * as commonTable from '../core-ts/common_sources';
 import { tr, TextError, type Message } from './text';
-import type { PortSpec } from '../core-ts/ports';
-import type { Declaration as ModelDeclaration } from '../core-ts/model';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
 // 只接入既有生成核心；型別引用不把另一份 registry／compiler 打進 React bundle。
@@ -27,7 +25,6 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   freeDeclarationName: typeof declarations.freeDeclarationName; freeLegacyName: typeof declarations.freeLegacyName; defaultTextures: typeof declarations.defaultTextures;
   uniformPresets: typeof presetTable.uniformPresets; commonSources: typeof commonTable.commonSources;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
-  declarationOutputs: (declaration: ModelDeclaration) => readonly PortSpec[]; tdValueOutputs: (entry: tdValueTable.TdValue) => readonly PortSpec[];
 };
 export type { TdValue } from '../core-ts/td_values';
 export type { NameProblem } from '../core-ts/declarations';
