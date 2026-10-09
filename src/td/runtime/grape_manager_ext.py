@@ -51,7 +51,8 @@ class GrapeManagerExt:
         self.live = self._module('live_watch').LiveWatch(resolve=self.Resolve, watcher=self._watch, frame=lambda: absTime.frame)
         self.api = self._module('host_api').HostAPI(
             bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
-            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build}, textures=self.Texture,
+            applied=self.live.applied, identity=lambda: {'file': project.name, 'folder': project.folder, 'build': app.build, 'version': editor.snapshot.version},
+            textures=self.Texture,
             capture=self.Capture)
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)

@@ -206,9 +206,10 @@ function RetryPie({ checking, retryAt, retryMs, onRetry }: { checking: boolean; 
   const left = retryAt === undefined ? 0 : Math.max(0, retryAt - Date.now());
   const label = say(checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryNow', 'Retrying automatically; click to retry now'));
   return <button type="button" className={'icon-button retry-pie' + (checking ? ' checking' : '')} disabled={checking} aria-label={label} title={label} onClick={onRetry}>
-    <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="retry-track" cx="10" cy="10" r="8" />
-      <circle key={retryAt ?? 'checking'} className="retry-sweep" cx="10" cy="10" r="4"
-        style={{ animationDuration: left + 'ms', animationDelay: (left - (retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>
+    {/* Checking: the mark's waiting animation (human 2026-10-10: one waiting animation everywhere). 檢查中：標誌的等待動畫。 */}
+    {checking ? <BrandMark loading /> : <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="retry-track" cx="10" cy="10" r="8" />
+      <circle key={retryAt ?? 'idle'} className="retry-sweep" cx="10" cy="10" r="4"
+        style={{ animationDuration: left + 'ms', animationDelay: (left - (retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>}
   </button>;
 }
 

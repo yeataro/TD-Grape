@@ -26,9 +26,9 @@ import { addChoices, type AddChoice } from './add_entries';
 import { DRAG_TYPE } from './AddNodePanel';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
-import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
+import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, LoadingCanvas, useShell, type Shell } from './shell';
 import { listGrapeOps } from './grape_ops';
-import { sourceNow, draftRow, nowRow, tdRow, buildLabel, type TdIdentity, type DraftSource } from './td_identity';
+import { sourceNow, draftRow, nowRow, tdRow, detailLabel, tabTitle, type TdIdentity, type DraftSource } from './td_identity';
 import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
@@ -313,6 +313,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping}
             stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
+            : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
             }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
@@ -352,7 +353,9 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
 
 // What the shell shows while no graph is open: every stage is a normal editor with nothing drawn yet
 // (human 2026-10-09). 還沒有圖時外殼顯示什麼：每個階段都是正常的編輯器、只是畫布上還沒有東西。
-type Waiting = { message: Message | string; reset?: () => Promise<void> };
+// loading: a Grape OP is on its way — its own state, never the "no graph" screen (human 2026-10-09).
+// loading：Grape OP 正在打開，是自己的狀態，不用「沒有圖」的畫面（人類）。
+type Waiting = { message: Message | string; reset?: () => Promise<void>; loading?: boolean };
 function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bootstrap; text: (key: string) => string; version: string }) {
   const [target, setTarget] = useState(addressTarget);
   const [session, setSession] = useState<EditorSession | null>(null), [path, setPath] = useState('');
@@ -363,6 +366,8 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   // 哪個 TD 在回應：開頁時問一次，之後每個回覆都更新。
   const [td, setTd] = useState<TdIdentity | null>(null), [opened, setOpened] = useState<TdIdentity | null>(null);
   useEffect(() => { listGrapeOps(token).then(found => { if (found.td) setTd(found.td); }, () => { /* shown when the menu opens */ }); }, [token]);
+  // The browser tab names the Grape OP being edited (Refactor.59.7). 瀏覽器分頁標題寫出正在編輯的 Grape OP。
+  useEffect(() => { document.title = tabTitle(path, td); }, [path, td]);
   // Open the Grape OP in the address. 打開網址上的 Grape OP。
   useEffect(() => {
     let live = true, opened: EditorSession | null = null;
@@ -371,7 +376,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     if (!target) { setWaiting({ message: tr('picker.noTarget', 'Choose a Grape OP to edit.') }); return; }
     const wrong = { message: tr('picker.wrongTarget', 'This Grape OP is not in the current project. Choose another one.') };
     if (!/^[a-f0-9]{32}$/.test(target)) { setWaiting(wrong); return; }
-    setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…') });
+    setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…'), loading: true });
     const client = new HostClient(target, token);
     client.seen = setTd;
     client.call<StateResponse>('state').then(loaded => {
@@ -413,7 +418,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
       editing={<>
         {/* The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
             專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。 */}
-        {td && <span className="project-file" title={say(buildLabel(td))}>{td.file}</span>}
+        {td && <span className="project-file" title={say(detailLabel(td, version))}>{td.file}</span>}
         <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></>} />
     {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} seen={setTd} />}
     {pending && <div className="switch-dialog" role="dialog" aria-label={say(tr('switch.title', 'Switch Grape OP'))}>

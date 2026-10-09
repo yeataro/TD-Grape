@@ -128,6 +128,7 @@
   "glsl.label": "Generated GLSL",
   "glsl.title": "GLSL",
   "identity.build": "TD {build}",
+  "identity.detail": "TouchDesigner {build}: {path}\nat {host}\nTD-Grape in TD: {served}\nThis page: {page}",
   "identity.draftLabel": "Draft",
   "identity.draftUnknown": "source unknown (written by an older editor)",
   "identity.nowLabel": "Connected now",

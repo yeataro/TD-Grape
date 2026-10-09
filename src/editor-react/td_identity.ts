@@ -7,7 +7,7 @@ import { tr, type Message } from './text';
 
 /** As TD reports it on every reply: the project file (with its incremental save number) and TD's build.
  * TD 每個回覆都帶：專案檔名（含增量存檔的版號）與 TD 版本。 */
-export type TdIdentity = { file: string; build: string };
+export type TdIdentity = { file: string; build: string; folder?: string; version?: string };
 /** Kept with a draft: that TD, the page address (with its port) and when the draft was last written.
  * 跟著草稿存：當時的 TD、頁面網址（含 port）、最後寫入的時間。 */
 export type DraftSource = Partial<TdIdentity> & { url: string; time: string };
@@ -19,6 +19,21 @@ export const fileLabel = (td: Partial<TdIdentity> | null | undefined): Message |
   td?.file || tr('identity.unknownFile', 'unknown file');
 export const buildLabel = (td: Partial<TdIdentity> | null | undefined): Message | string =>
   td?.build ? tr('identity.build', 'TD {build}', { build: td.build }) : tr('identity.unknownBuild', 'TD version unknown');
+/** Everything about the TD on the other end, for the file name's tooltip (Refactor.59.7; human 2026-10-10: as detailed as
+ * wanted): TD's own title line, the address, and the TD-Grape builds on both sides.
+ * 檔名提示用的完整資訊（人類：多詳細都可以）：TD 自己的標題列寫法、連線位址、兩邊的 TD-Grape 版本。 */
+export const detailLabel = (td: Partial<TdIdentity> | null | undefined, page: string): Message | string =>
+  tr('identity.detail', 'TouchDesigner {build}: {path}\nat {host}\nTD-Grape in TD: {served}\nThis page: {page}', {
+    build: td?.build ?? '?', path: td?.folder ? td.folder + '/' + (td.file ?? '') : (td?.file ?? '?'),
+    host: location.host, served: td?.version ?? '?', page });
+/** The browser tab's title (Refactor.59.7): the Grape OP first, as narrow tabs cut from the right; then file : path, TD's
+ * build, the product last (human 2026-10-10). For the editor connected to TD only; the internet version decides its own.
+ * 分頁標題：Grape OP 名字在最前（分頁窄時從右邊截斷）；再來是檔名：路徑、TD build，產品名最後（人類）。只給連著 TD 的編輯器用。 */
+export const tabTitle = (path: string, td: Partial<TdIdentity> | null | undefined) => {
+  if (!path) return 'TD-Grape';
+  const name = path.split('/').pop() || path;
+  return [name, td?.file ? td.file + ' : ' + path : path].join(' - ') + (td?.build ? '  [ TD Build ' + td.build + ' ]' : '') + ' - TD-Grape';
+};
 const timeLabel = (time: string) => {
   const date = new Date(time);
   return Number.isNaN(date.getTime()) ? time : date.toLocaleString(undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });

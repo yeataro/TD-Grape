@@ -128,6 +128,7 @@
   "glsl.label": "產生的 GLSL",
   "glsl.title": "GLSL",
   "identity.build": "TD {build}",
+  "identity.detail": "TouchDesigner {build}：{path}\n位址 {host}\nTD 裡的 TD-Grape：{served}\n這個頁面：{page}",
   "identity.draftLabel": "草稿",
   "identity.draftUnknown": "來源不明（較早版本的編輯器存的）",
   "identity.nowLabel": "現在連到",

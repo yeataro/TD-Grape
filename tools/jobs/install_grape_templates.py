@@ -154,7 +154,7 @@ default_input = bootstrap['defaultDocument']['graph']['declarations'][0]
 assert default_input['kind'] == 'topInput' and default_input['defaultTexture'] == 'grape'
 input1 = node(top, inTOP, 'input1', -200, -125, 130, 72)
 input1.store('grapeInput', default_input['id'])
-input1.par.label = default_input['name']
+input1.par.label = 'sTD2DInputs[0]'  # its place in TD's array, as next_family.py writes on every apply (Refactor.58.1) 它在 TD 陣列裡的位置，同每次送圖時寫的
 input1.inputConnectors[0].connect(samples.outputConnectors[0])
 # Samples follows the main component's copy (Refactor.58.9; Q66): a Clone, found by the global shortcut, none when the
 # main component is missing (the content stays). Samples 跟著主組件那份：Clone，用全域捷徑找，主組件不在時為空（內容留著）。

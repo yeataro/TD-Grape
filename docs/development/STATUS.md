@@ -58,6 +58,13 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.59.7 分頁標題、檔名提示、載入中畫面**（人類 10-10）：
+  - 分頁標題動態（`td_identity.ts tabTitle`）：Grape OP 名字在前，「檔名 : 路徑」、`[ TD Build … ]`，產品名最後；沒開圖時「TD-Grape」。只給連著 TD 的編輯器。
+  - 檔名滑鼠提示寫詳細（`detailLabel`）：「TouchDesigner build：完整路徑」、位址、TD 裡的 TD-Grape 版本、這個頁面的版本。TD 回覆的身分多 `folder`（`project.folder`）與 `version`（服務中的編輯器版本），`grape_manager_ext.py`；Manager 已重裝。
+  - 載入中是自己的畫面（`shell.tsx LoadingCanvas`）：Logo 等待動畫（wave）＋「正在打開 Grape OP…」，不再套「沒有圖」的畫面（沒有選 Grape OP 的按鈕）；Retry 檢查中改顯示 Logo 等待動畫。
+  - 範本的 `input1` label 一開始就寫 `sTD2DInputs[0]`（同送圖時寫的）；已重建範本。
+  - 驗證：瀏覽器標題 `r54_probe - TD-Grape-dev.94.toe : /project1/r54_probe [ TD Build 2025.33230 ] - TD-Grape`，切到 Grape_TOP_test 後跟著變；提示四行內容正確；讀取暫時延遲 3 秒時看到載入中畫面（wave 動畫在跑、沒有選擇按鈕）。TD：r54_probe、Grape_TOP1 的 In TOP label 已是 `sTD2DInputs[i]`（58.9 未驗證項目結案）。test:editor 78、Python 26 過。
+  - 還沒做：載入中時網址列仍寫「選擇 Grape OP」、共用來源面板仍是「打開一個 Grape OP 後…」（閃動的來源）。
 - **動畫規則**（人類 10-10 同意）：EDITOR_UI_RULES 六加「動畫只動元素自己的大小、位置、透明度」——不在根元素做動畫、不動畫自訂屬性，陰影濾鏡描邊的動畫只用在小元素；起因是舊產品光暈動畫在 `:root` 逐格改會往下傳的變數。`test_ui_rules.cjs` 把關：根元素沒有 animation、keyframes 只改 transform／opacity／filter／stroke-dashoffset。驗證：暫時加違規寫法，兩條檢查都會失敗，還原後 78 過。
 - **Refactor.59.6 Logo 等待動畫元件**（人類 10-10：一個共用的小 SVG 動畫，哪裡在等就放哪裡）：`BrandMark` 多 `loading` 選項——`<BrandMark loading />` 是選定的 wave（三顆輪流放大變亮），也可指定 `spin`、`orbit`、`breathe`、`fade`、`hop`、`gather`、`glow`、`trace`（`loadingStyles`）；動作只在 `style.css`，一輪長度是主題的 `--loading-cycle`（1.2s）；glow 用亮度濾鏡、不寫色碼。九種與調用名稱的預覽頁：workspace `work/refactor/loading-animations.html`，元件改了要同步（人類，寫在元件註解）。還沒放到任何畫面上（載入中、檢查連線中是下一步）。曾加「作業系統要求減少動態時停住」的規則，屬舊產品沒有的新行為、且預覽窗格回報減少動態（人類的 Windows 可能關了動畫效果），已拿掉、待談。驗證：頁面內暫時插入九個 `loading-*`，九種的動畫名稱、長度、錯開時間都和預覽頁一致；標題列的 Logo 仍是靜止的。
 - **Refactor.59.5 「如何恢復」不換行**：底列的「如何恢復」不縮、不換行，縮的是前面的訊息（省略號）。驗證：模擬斷線，中文時「如何恢復」一行高 16px、訊息被截斷。驗證途中恢復連線時出現版本衝突（TD 在 534、頁面在 532：這段時間有別的編輯頁寫入 r54_probe），未替人類選版本。

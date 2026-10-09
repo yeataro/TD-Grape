@@ -8,13 +8,13 @@
 
 **進行方式（人類 2026-10-09）**：先把基本能力定下來；標準功能都做完之後，會有一段多輪測試調整的時期（外觀、手感這類比較不確定的東西在那時一起調）。在那之前，外觀只求可用、結構乾淨，不追細節。
 
-**最新：Refactor.59.5**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 59.5。逐版內容見 [STATUS](STATUS.md)。
+**最新：Refactor.59.7**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 59.7。逐版內容見 [STATUS](STATUS.md)。
 
 **最近幾輪的大塊（R.53–59）：**
 - 編輯器外框（R.53）、新增節點的入口（R.54）、數值輸入 widget（R.55）、共用來源面板與卡片（R.57）、拖線預告與拔線還原（R.56–57）。
 - 貼圖輸入的預設圖預覽（R.58）；Samples 改為 Clone 主組件那份、出口用 label 找（R.58.9）。
 - 外觀面板：陰影與光暈試驗、可調數值（R.58.2–58.6）；試驗定案等人類最後給 CSS。
-- 分量樣式與分量染色（R.59）；邏輯色組、Compare 一個選單（R.59.1）；列與選單的間距、Retry 倒數圓餅、面板開關圖示亮暗（R.59.2–59.5）。
+- 分量樣式與分量染色（R.59）；邏輯色組、Compare 一個選單（R.59.1）；列與選單的間距、Retry 倒數圓餅、面板開關圖示亮暗（R.59.2–59.5）；Logo 等待動畫元件、分頁標題、檔名提示、載入中畫面（R.59.6–59.7）。
 
 **更早：** Refactor.1–14 建立 TS 接線規劃、前端 compiler、節點模組、Editor Service、新 Manager 與原生 Grape TOP；R.15–32 第一條正式 React 路徑、TD 不在時照常編輯（Q28）、圖格式 grape-graph 1（Q44）、清掉舊入口與舊 Python 核心；R.33–52 Grape OP 新結構、在地化、來源（常數、Uniform、TD 內建值、貼圖輸入）、選取、固定入口、連線身分。權威規則摘要在 AGENTS.md。
 
@@ -50,10 +50,8 @@
 
 ### 二、已決定、待做
 
-- **瀏覽器分頁標題動態**（10-10 定）：Grape OP 名字放最前面（分頁窄時從右邊截斷，開好幾個 Grape OP 才分得出來；分頁圖示已代表產品），產品名移到最後；檔名與路徑用冒號（同 TD 視窗標題），TD build 用方括號放在產品名前。例：`PBR_MAT_Graph3 - TD-Grape-dev.4.toe : /project1/PBR_MAT_Graph3  [ TD Build 2025.33230 ] - TD-Grape`。現在 `index.html` 寫死「TD-Grape · React TOP Editor」。這是連著 TD 時的標題；放到網際網路上（沒有 TD、沒有檔名與 TD build）是另一回事，到時另定（人類 10-10）。
-- **網址列檔名的滑鼠提示寫詳細一點**（10-10）：版號放這裡、不另外顯示；多詳細都可以。寫 TD build、專案檔完整路徑（像 TD 視窗標題「TouchDesigner 2025.33230: C:/…/TD-Grape-dev.4.toe」）、連線的位址（例：`at 127.0.0.1:65465`，和頁面網址同一個）、TD 那邊的 TD-Grape 版本、這個頁面的版本。
 - **外觀試驗定案**：人類等所有東西出來，最後整理 CSS 給助手寫進主題（workspace `floating-panels.md` 44、45）；同時：畫布左下說明不能有陰影、選取相關樣式、連線身分的版面（R.52 頁首檔名、草稿與衝突浮窗偏擠）、Swizzle 分量列與 Math 卡片的樣式。
-- **切換 Grape OP 時的閃動與「載入中」畫面**（R.51.1；10-10）：「載入中」是自己的狀態，不套「沒有圖」的預設畫面；排查時先錄下那幾幀。人類 10-10：載入中用 Logo 的等待動畫，**三顆圓輪流放大變亮（B 輪流亮）**，Logo 形狀不動、16px 也看得清楚；做成共用元件，其他等待的地方（例如檢查連線中）也用它。九種候選與調用名稱的預覽頁：workspace `work/refactor/loading-animations.html`。元件已做（R.59.6 `<BrandMark loading />`），還沒放到畫面上。待談：作業系統要求「減少動態」時要不要停住（舊產品沒有；人類的 Windows 可能關了動畫效果）。
+- **切換 Grape OP 時的閃動**（R.51.1）：載入中畫面已做（R.59.7，Logo 等待動畫 `<BrandMark loading />`，九種候選與調用名稱見 workspace `work/refactor/loading-animations.html`，元件改了要同步）。剩：載入中時網址列仍寫「選擇 Grape OP」、共用來源面板仍是「打開一個 Grape OP 後…」；排查時先錄下那幾幀。待談：作業系統要求「減少動態」時（舊產品三處都停住動畫；人類的 Windows 可能關了動畫效果）停住或只淡入淡出。
 
 ### 三、等某一輪一起做
 
@@ -89,7 +87,6 @@
 
 ## 未完成／未驗證
 
-- Samples（Refactor.58.9）：In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未在 TD 上看。
 - Refactor.17（開放 47 個常用節點）標「待人類實機確認」後沒有紀錄；人類若已確認，刪這一條。（R.32 從 Tab 選單建立：人類 10-09 已用它建出 `Grape_TOP1`。）
 - **Human Takeover Test**：人類不靠 AI 完成一項維護（如新增 unary 節點），未執行。見 [B 案](REFACTOR_REACT_FLOW_PLAN_B.md#human-takeover-test)。
 - **完整 TOE 冷啟動**：未驗證。

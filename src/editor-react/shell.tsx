@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
+import { BrandMark } from './icons';
 import { listGrapeOps, type GrapeOpRow } from './grape_ops';
 import type { TdIdentity } from './td_identity';
 import { tr, say, errorText, type Message } from './text';
@@ -48,6 +49,12 @@ export function GrapeOpMenu({ anchor, token, onClose, seen }: { anchor: HTMLElem
 }
 
 /** The canvas while no graph is open: a normal editor with nothing drawn yet (human 2026-10-09). 還沒有圖時的畫布。 */
+/** A Grape OP is opening: the mark's waiting animation and what is happening, nothing to choose (Refactor.59.7).
+ * Grape OP 正在打開：標誌的等待動畫與正在做什麼，沒有要選的東西。 */
+export function LoadingCanvas({ message }: { message: Message | string }) {
+  return <div className="empty-canvas loading-canvas"><BrandMark loading label={say(message)} /><p>{say(message)}</p></div>;
+}
+
 export function EmptyCanvas({ message, children }: { message: Message | string; children?: ReactNode }) {
   return <div className="empty-canvas"><p>{say(message)}</p>
     <GrapeOpEntry label={tr('picker.choose', 'Choose a Grape OP')} className="primary" />{children}</div>;
