@@ -16,11 +16,12 @@ const where = (layout, panel) => tree.paneOf(layout.root, panel).path;
 // Plain objects, so values made inside the loaded module compare by content. 換成一般物件，模組裡產生的值才能照內容比。
 const plain = value => JSON.parse(JSON.stringify(value));
 
-test('the default is the legacy arrangement: one tab pane on each side, the right closed', () => {
+// Refactor.76: the Parameter panel lives on the right, so it starts open (as legacy). R.76：參數面板住在右邊，一開始打開（照舊產品）。
+test('the default is the legacy arrangement: one tab pane on each side, both open', () => {
   const layout = fresh();
   assert.equal(shape(layout.root), 'row(sources|addNode|glsl, canvas, appearance)');
   assert.equal(tree.paneOf(layout.root, 'sources').pane.active, 'addNode');
-  assert.deepEqual(plain(layout.closed), { left: false, right: true });
+  assert.deepEqual(plain(layout.closed), { left: false, right: false });
   assert.deepEqual(plain(layout.root.sizes), [tree.SIDE_WIDTH, 1, tree.SIDE_WIDTH]);
   assert.ok(tree.sideHasPanels(layout, 'left') && tree.sideHasPanels(layout, 'right'));
 });
@@ -124,14 +125,15 @@ test('resizing and choosing a tab change only that pane', () => {
 
 test('the canvas keeps its minimum: with both sides open and too little room, the side already open closes (legacy)', () => {
   const both = { ...fresh(), closed: { left: false, right: false } };   // 380 | canvas | 380
+  const leftOnly = { ...fresh(), closed: { left: false, right: true } };
   assert.equal(tree.canvasWidth(both, 1400), 1400 - 2 * tree.SIDE_WIDTH);
-  assert.equal(tree.canvasWidth(fresh(), 1400), 1400 - tree.SIDE_WIDTH, 'a closed side takes nothing');
+  assert.equal(tree.canvasWidth(leftOnly, 1400), 1400 - tree.SIDE_WIDTH, 'a closed side takes nothing');
   assert.equal(tree.sideToClose(both, 1400, 'right'), null, 'room enough');
   const narrow = 2 * tree.SIDE_WIDTH + tree.CANVAS_MIN_WIDTH - 1;
   assert.equal(tree.sideToClose(both, narrow, 'right'), 'left', 'opening the right closes the left');
   assert.equal(tree.sideToClose(both, narrow, 'left'), 'right');
   assert.equal(tree.sideToClose(both, narrow, null), 'right', 'the window narrowed: the right closes');
-  assert.equal(tree.sideToClose(fresh(), 300, null), null, 'one side open: nothing to close, it narrows on screen');
+  assert.equal(tree.sideToClose(leftOnly, 300, null), null, 'one side open: nothing to close, it narrows on screen');
   const beside = tree.movePanel(both, 'glsl', { kind: 'beside', pane: canvasPath(both.root), edge: 'right' });
   assert.equal(tree.canvasWidth(beside, 1400), 1400 - 3 * tree.SIDE_WIDTH, 'a pane beside the canvas takes its pixels too');
 });

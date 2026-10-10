@@ -111,10 +111,10 @@ export function defaultLayout(panels: PanelDefaults): LayoutData {
   };
   const left = side('left'), right = side('right');
   const children = [left, { kind: 'canvas' } as Pane, right].filter((pane): pane is Pane => !!pane);
-  // Default as the legacy editor and R.53: the right side closed until the Parameter panel lives there.
-  // 預設照舊產品與 R.53：右側收著，等參數面板住進去。
+  // Default as the legacy editor: the Parameter panel open on the right (Refactor.76; until then the right side started closed).
+  // 預設照舊產品：參數面板在右邊、打開（R.76；之前右側一開始收著）。
   return { version: 2, titleBar: true, root: { kind: 'split', direction: 'row', children, sizes: children.map(pane => hasCanvas(pane) ? 1 : SIDE_WIDTH) },
-    hidden: [], closed: { left: false, right: true } };
+    hidden: [], closed: { left: false, right: false } };
 }
 
 /** A stored layout, used only if it reads cleanly: unknown panels are dropped, new ones go to their default side, a R.53

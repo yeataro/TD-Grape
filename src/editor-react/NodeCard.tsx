@@ -15,13 +15,13 @@ import { modesOf } from './declaration_modes';
 import type { Declaration } from './core';
 
 /** Choices shown as they are written (type names). 照原樣顯示的選項（型別名）。 */
-const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
+export const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
 
 
 // `bare`: a control at the head of the body (what the node points to, e.g. its declaration) shows only its choice, as the
 // legacy editor (human 2026-10-09: the label wasted space and lined up with nothing). The name stays for assistive tech.
 // bare：本體開頭的控制項（節點指向什麼，例如宣告）只顯示選到的值，照舊產品（人類：標籤浪費空間、也對不齊）。名稱仍給輔助工具。
-function Control({ id, control, bare = false }: { id: string; control: NodeControl; bare?: boolean }) {
+export function Control({ id, control, bare = false }: { id: string; control: NodeControl; bare?: boolean }) {
   const session = useSession(), text = useContext(TextContext);
   const label = control.literal ? control.label : text(control.label);
   if (control.kind === 'row') return <div className="control-row">{control.children?.map(child => <Control key={child.key} id={id} control={child} />)}</div>;
@@ -41,7 +41,7 @@ function Control({ id, control, bare = false }: { id: string; control: NodeContr
 // Uniform 或常數節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，在輸出下面。開頭文字（按中鍵整組調值的地方）：
 // Uniform 是它在 TD 所屬的參數頁（Vectors，顏色是 Colors）；常數是「Constant」（人類）。顯示 TD 上的驅動狀態；拖曳中只有
 // Uniform 會送到 TD（常數是編進 Shader 的）。
-function DeclarationValue({ declaration }: { declaration: Declaration }) {
+export function DeclarationValue({ declaration }: { declaration: Declaration }) {
   const session = useSession();
   const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
   return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
@@ -53,7 +53,7 @@ function DeclarationValue({ declaration }: { declaration: Declaration }) {
 
 // What kind of shared source a reference node is, shown before its type in the title (legacy "Uniform · vec3"; human
 // 2026-10-09: "Global · float" for a constant). 引用節點是哪一種共用來源，標題裡寫在型別前（照舊產品；人類：常數寫 Global）。
-const sourceKinds: Record<string, Message> = {
+export const sourceKinds: Record<string, Message> = {
   uniform: tr('sourceKind.uniform', 'Uniform'), constant: tr('sourceKind.constant', 'Global'), topInput: tr('sourceKind.topInput', 'TOP Input') };
 
 // Drawn from the module's spare declaration only; no node-specific branch here.
@@ -67,11 +67,11 @@ function SpareInput({ id, spare }: { id: string; spare: NonNullable<NodePresenta
 }
 
 /** The one component a port stands for, if it is one (Refactor.59). 接孔代表的單一分量（若只有一個）。 */
-const single = (components?: readonly number[]) => components?.length === 1 ? components[0] : undefined;
+export const single = (components?: readonly number[]) => components?.length === 1 ? components[0] : undefined;
 /** A port's label; when its letters are its components, each letter carries its own (e.g. "RG"); a one-component port
  * carries it whole (e.g. "alpha"). The colours are the theme's, under the component-tint switch (style.css).
  * 接孔標籤；字母就是分量時每個字母各帶自己的分量（例如「RG」），單一分量的接孔整個帶（例如「alpha」）。顏色由主題與分量染色開關決定。 */
-function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
+export function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
   if (components?.length === text.length && text.length > 1)
     return <>{[...text].map((letter, i) => <span key={i} className="component-letter" data-component={components[i]}>{letter}</span>)}</>;
   const one = single(components);

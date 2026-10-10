@@ -756,6 +756,19 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 /* A control in a node is one IO row too, its box as tall as a value box (one rhythm, like a table).
    節點裡的控制項也是一個輸入輸出區塊的高度，框和數值框一樣高（同一個節奏，像表格）。 */
 .control-field { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); }
+/* The Parameter panel draws the current node like its card (Refactor.76): the same title bar and rows, filling the panel, no
+   shadow; whether it keeps the outline is tried as we go (human 2026-10-11). 參數面板把目前的節點畫得像它的卡片（R.76）：同樣的標題列與列，
+   填滿面板、沒有陰影；外框要不要邊走邊試（人類）。 */
+.params-card { width: 100%; min-width: 0; max-width: none; box-shadow: none; }
+.params-title > strong { flex: none; }
+.params-name { flex: 1; min-width: 0; height: var(--control-height); padding-block: 0; }
+.params-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
+.params-card .control-field > span { flex: 0 0 auto; color: var(--text-secondary); }
+.params-wired { flex: 1; min-width: 0; height: var(--io-row); display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.params-card .port-row > button { align-self: center; flex: none; }
+.params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 12px; border-top: 1px solid var(--border-node); }
+.params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
+.params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
 .control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
 .control-row { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); } .control-row > .control-field { flex: 1; min-width: 0; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .grape-node .hint, .grape-node .ghost-note { contain: inline-size; }

@@ -6,15 +6,16 @@ import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
 import { GlslPanel } from './GlslPanel';
 import { AppearancePanel } from './AppearancePanel';
+import { ParamsPanel } from './ParamsPanel';
 import { tr, say, type Message } from './text';
 
 // Every panel of the editor, one row each: its name, where it goes by default, what it shows. The layout
 // (layout.tsx) only arranges these ids; a new panel is one new row here. Table order is the default tab order;
 // `first` is the tab shown first. Defaults as the legacy editor: Sources | Add Node | GLSL on the left, Add Node
-// shown; the right side closed until the Parameter panel lives there.
+// shown; the Parameter panel on the right (Refactor.76), shown first there.
 // 編輯器的所有面板，一列一個：名字、預設放哪、顯示什麼。版面（layout.tsx）只排這些代號；新面板＝這裡多一列。
 // 表的順序＝預設分頁順序；first＝一開始顯示的分頁。預設照舊產品：左邊 Sources｜Add Node｜GLSL、顯示 Add Node；
-// 右側收著，等參數面板住進去。
+// 參數面板在右邊（R.76），右側一開始顯示它。
 /** What a panel's content is made from: the graph being edited (Q47 4). 面板內容的來源：正在編輯的圖。 */
 export type PanelInput = { session: EditorSession | null; state: EditorState; choices: readonly AddChoice[]; add(choice: AddChoice): void };
 type PanelRow = { title: Message; side: Side; first?: true; content(input: PanelInput): ReactNode };
@@ -31,6 +32,10 @@ export const PANELS = {
   glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ session, state }) => session
     ? <GlslPanel state={state} />
     : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p> },
+  // The Parameter panel (Refactor.76): the current node. 參數面板（R.76）：目前的節點。
+  params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, content: ({ session, state }) => session
+    ? <ParamsPanel state={state} />
+    : <p className="hint">{say(tr('params.noGraph', 'Open a Grape OP to edit its nodes.'))}</p> },
   // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.
   // 外觀：從外觀選單打開；浮動面板做好之前放右邊。
   appearance: { title: tr('appearance.panel', 'Appearance'), side: 'right', content: () => <AppearancePanel /> },
