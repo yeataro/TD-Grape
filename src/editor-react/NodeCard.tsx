@@ -117,6 +117,12 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         ? tr('ghost.misplaced', '{type} cannot be used here. Kept as it is, left out of the shader.', { type: authored.nodeType })
         : data.ghost === 'missing'
         ? tr('ghost.missing', 'The shared source it points to no longer exists. Kept as it is, left out of the shader.')
+        // A known node type whose stored settings this version cannot use (e.g. a TD built-in value since removed): name what
+        // the graph stores, the only clue left (Refactor.64.2, human 2026-10-10; custom node names may help later).
+        // 認得的節點種類、但存的設定這一版用不了（例如已拿掉的 TD 內建值）：寫出圖裡存的值，這是唯一的線索（人類；之後自訂名稱或許能幫忙）。
+        : core.registry.get(authored.nodeType)
+        ? tr('ghost.unsupported', 'This version cannot use what this {label} stores ({settings}). Kept as it is, left out of the shader.',
+          { label: text(data.label), settings: Object.entries(authored.params ?? {}).map(([key, value]) => key + ': ' + (typeof value === 'string' ? value : JSON.stringify(value))).join(', ') })
         : tr('ghost.unknown', 'This version does not understand {type}. Kept as it is, left out of the shader.', { type: authored.nodeType }))}</div>
       {inputs.map(port => <div className="port-row input-row" key={port.key}>
         <Handle type="target" position={Position.Left} id={port.key} isConnectable={false} aria-label={`${id} input ${port.key}`} data-connected="true" />

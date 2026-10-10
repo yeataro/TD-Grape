@@ -124,6 +124,7 @@
   "ghost.misplaced": "{type} cannot be used here. Kept as it is, left out of the shader.",
   "ghost.missing": "The shared source it points to no longer exists. Kept as it is, left out of the shader.",
   "ghost.unknown": "This version does not understand {type}. Kept as it is, left out of the shader.",
+  "ghost.unsupported": "This version cannot use what this {label} stores ({settings}). Kept as it is, left out of the shader.",
   "glsl.clickError": "Click an error to scroll to its line.",
   "glsl.compileFailed": "TD could not compile this GLSL; the lines TD reported are marked in red.",
   "glsl.compileFailedEarlier": "TD could not compile an earlier version of this GLSL; it has changed since, so the line numbers below may not match.",

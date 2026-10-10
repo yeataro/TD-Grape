@@ -124,6 +124,7 @@
   "ghost.misplaced": "{type} 不能用在這裡。原樣保留、不參與產碼。",
   "ghost.missing": "它指向的共用來源已經不存在。原樣保留、不參與產碼。",
   "ghost.unknown": "這個版本看不懂 {type}。原樣保留、不參與產碼。",
+  "ghost.unsupported": "這個版本用不了這個 {label} 存的設定（{settings}）。原樣保留、不參與產碼。",
   "glsl.clickError": "點錯誤可捲到該行。",
   "glsl.compileFailed": "TD 沒能編譯這段 GLSL，TD 回報的錯誤行已用紅色標出。",
   "glsl.compileFailedEarlier": "TD 沒能編譯這段 GLSL 的較早版本；之後已經改過，下面的行號可能對不上。",
