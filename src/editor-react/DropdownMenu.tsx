@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type CSSProperties } from 'react';
 import { say, type Message } from './text';
-import { barOf } from './follow_bar';
+import { fromBar } from './follow_bar';
 
 // A dropdown menu widget (Refactor.51; human 2026-10-09: one dropdown component used as a widget, many places
 // will need one). It only shows and operates a menu: drawn under the element that called it up (above it when
@@ -72,10 +72,10 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     buttons[(at + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
   };
-  // A menu opened from a bar fades in, one opened while editing (in a node, a panel) does not: it must keep up with the hand
+  // A menu opened from a bar fades in and is glass (R.75.24), one opened while editing (in a node, a panel) does not: it must keep up with the hand
   // (Refactor.75.21, human 2026-10-11). It closes at once. 從列上打開的選單淡入；編輯中打開的（節點、面板裡）不淡入，要跟手
   // （R.75.21，人類）。關閉立刻消失。
-  return createPortal(<div ref={menu} className={'dropdown-menu' + (fit ? ' fit' : '') + (barOf(anchor) ? ' fade-in' : '')} role="menu" aria-label={label}
+  return createPortal(<div ref={menu} className={'dropdown-menu' + (fit ? ' fit' : '') + fromBar(anchor)} role="menu" aria-label={label}
     style={fit ? { ...place, minWidth: anchor.offsetWidth } : place} onKeyDown={move}>
     {note && <p className="hint">{say(note)}</p>}
     {items.map(item => <Fragment key={item.key}>{item.divider && <hr />}

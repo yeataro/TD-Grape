@@ -10,6 +10,9 @@ const watchSize: Watch = (target, changed) => { const observer = new ResizeObser
 type Window = Pick<typeof globalThis, 'addEventListener' | 'removeEventListener'>;
 /** The bar an element sits in (title, location or foot bar), if any. 元素所在的列（標題列、網址列、底列），沒有就是 null。 */
 export const barOf = (element: Element) => element.closest('.title-bar, .location-bar, .foot-bar');
+/** A panel or menu opened from a bar fades in (Refactor.75.21) and is glass (R.75.24, human 2026-10-11: every one opened from a
+ * bar, none inside a pane). 從列上打開的面板或選單：淡入（R.75.21）、玻璃（R.75.24，人類：列上打開的全部，窗格裡的都不要）。 */
+export const fromBar = (anchor: Element) => barOf(anchor) ? ' fade-in glass' : '';
 
 /** Places now and whenever the anchor's bar (or the anchor, when it is in none) or the window changes size; returns how to
  * stop. 現在放一次，之後所在的列（不在列裡就是它自己）或視窗大小一變就再放；回傳停止的方法。 */

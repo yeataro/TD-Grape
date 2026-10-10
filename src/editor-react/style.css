@@ -140,9 +140,9 @@ a { color: var(--accent); }
 /* The gear decides: follow the system's "reduce motion", always on, always off (R.75.21–22). 齒輪決定：跟隨系統、一律開、一律關。 */
 :root[data-motion="off"] .fade-in { animation: none; }
 @media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .fade-in { animation: none; } }
-/* Glass, tried on two panels only (Refactor.75.22, human 2026-10-11: the status panel and the message history): the canvas
+/* Glass on every panel and menu opened from a bar, none inside a pane (Refactor.75.22, 75.24, human 2026-10-11): what is behind
    shows through, blurred. Follows the system's "reduce transparency" unless the gear says always on or off.
-   玻璃效果，先試兩個面板（R.75.22，人類：狀態面板與訊息歷史）：透出模糊的畫布。跟隨系統的「減少透明度」，除非齒輪指定一律開或關。 */
+   玻璃效果：列上打開的面板與選單全部，窗格裡的都不要（R.75.22、75.24，人類）：透出模糊的後方。跟隨系統的「減少透明度」，除非齒輪指定一律開或關。 */
 :root:is([data-glass="system"], [data-glass="on"]) .glass { background: var(--surface-glass); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
 @media (prefers-reduced-transparency: reduce) {
   :root[data-glass="system"] .glass { background: var(--surface-raised); -webkit-backdrop-filter: none; backdrop-filter: none; } }
