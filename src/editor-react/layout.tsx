@@ -204,12 +204,16 @@ function TabPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 'tab
 //   (human: the two must be told apart; the line's length shows which).
 // 放到哪，由游標下方是什麼決定（舊產品；人類 10-10，Resolume Wire）。目前全部開放（R.68.4，人類：先都試過再決定限制）：
 // - 分頁列上：兩個分頁之間（直線）；
-// - 分頁窗格：靠近邊緣（外圍 30%，取最近的那條邊）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
+// - 分頁窗格：靠近邊緣（離邊緣在四角標記的寬度內，取最近的那條邊；R.74.2）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
 //   中間＝合併成分頁，位置看游標在寬度的哪一段（格子，放下後有幾個分頁就幾格；Wire）；
 // - 畫布：上下帶＝畫布上方或下方切一格；左右兩塊（和側欄一樣寬，R.68.1）＝畫布旁切一格；那一側沒東西顯示時，靠外的一段＝放到那一側本身、
 //   整個高度（人類：兩者要分得出來；線的長度表示是哪一種）。
 // A line is drawn on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊上，粗細由主題決定。
-const EDGE = .3, BAND = 56, OUTER = 96;
+// A tabbed pane's edge is as wide as the drop frame's corner mark (--drop-corner; Refactor.74.2, human 2026-10-10: 30% of
+// the pane left too little for joining as a tab, and a fixed width matches what the frame shows).
+// 分頁窗格的「邊」和放下框四角的標記一樣寬（--drop-corner；R.74.2，人類：外圍 30% 讓合併成分頁的區域太小，固定寬度和框上看到的一致）。
+const BAND = 56, OUTER = 96;
+const edgeWidth = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--drop-corner')) || 18;
 type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; width?: number; height?: number;
   /** What dropping here does, written beside the mark (R.68.2, human 2026-10-10); an upright line says which edge it is on,
    * so its words go inside. 放下會發生什麼，寫在提示旁（人類 10-10）；直線標明是哪一條邊，說明寫在內側。 */
@@ -251,10 +255,9 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
       const at = next ? next.getBoundingClientRect().left : tabs.at(-1)!.getBoundingClientRect().right;
       return { drop: { kind: 'tab', pane: path, index }, mark: { kind: 'along', left: at, top: strip.top, height: strip.height } };
     }
-    const near: [Edge, number][] = [['top', (y - box.top) / box.height], ['bottom', (box.bottom - y) / box.height],
-      ['left', (x - box.left) / box.width], ['right', (box.right - x) / box.width]];
+    const near: [Edge, number][] = [['top', y - box.top], ['bottom', box.bottom - y], ['left', x - box.left], ['right', box.right - x]];
     const [edge, distance] = near.reduce((closest, item) => item[1] < closest[1] ? item : closest);
-    if (distance < EDGE) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
+    if (distance < edgeWidth()) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
     // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
     // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
     const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
