@@ -8,7 +8,11 @@
 ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border: 2px solid var(--scroll-track); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 body { margin: 0; }
-#root { height: 100vh; display: flex; flex-direction: column; }
+/* The page is as tall as what is seen now (Refactor.73.3, as the legacy editor's 1dvh): on a phone 100vh is the height with the
+   browser's bars hidden, so with them shown the foot bar sat behind the bottom bar and the page scrolled (human 2026-10-10).
+   dvh follows the bars and a resized window (an iPad window). 頁面和現在看得到的一樣高（R.73.3，同舊產品的 1dvh）：手機上 100vh
+   是瀏覽器列收起時的高度，列出現時底列被壓在下方工具列後面、整頁還能捲（人類 10-10）。dvh 跟著瀏覽器列與視窗大小（iPad 視窗）。 */
+#root { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
 /* The page before the editor's code has loaded (index.html): the waiting mark in the middle. 程式載入前的頁面：中央的等待標誌。 */
 .boot-screen { flex: 1; display: grid; place-items: center; }
 .boot-screen .brand-mark { width: var(--loading-mark); height: var(--loading-mark); }
@@ -790,7 +794,7 @@ button.badge { border: 0; height: auto; min-height: 0; } button.badge:disabled {
 button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 
 /* Create node (CreateNode.tsx) and the Add Node panel (AddNodePanel.tsx), Refactor.54. 新增節點的兩個入口。 */
-.create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); display: flex; flex-direction: column; gap: 8px;
+.create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); height: min(440px, calc(100dvh - 16px)); display: flex; flex-direction: column; gap: 8px;
   padding: 10px; border: 1px solid var(--border-control); border-radius: var(--radius-popup); background: var(--surface-raised); box-shadow: 0 10px 30px var(--shadow); }
 .create-head { display: flex; align-items: center; justify-content: space-between; }
 .create-search, .add-node-search { width: 100%; }
