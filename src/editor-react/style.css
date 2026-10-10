@@ -293,17 +293,18 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .grape-node.selected { --node-select: var(--select); outline: 2px solid var(--node-select); }
 /* Trial (Refactor.63.6.1, human 2026-10-10: as TD, not the legacy red outline): TD's error mark on the node's top-right corner,
    half outside it. 試驗（人類：照 TD，不用舊產品的紅框）：TD 的錯誤標記，掛在節點右上角、一半在外面。 */
-/* Node marks share one dark outline, seen as --mark-ring outside the shape whatever the mark's size (Refactor.65.1, human
-   2026-10-10: one thickness; the ghost outlined in black too). Drawn under the fill (paint-order), so half the stroke shows;
-   the stroke is worked out in the 24-unit icon box from the mark's size. 節點標記共用一圈深色外框，不論標記大小，看到的都是
-   --mark-ring、畫在圖形外側（人類：粗細統一；幽靈也要黑框）。畫在填色下面，所以露出一半；粗細依標記大小換算成 24 單位的圖示框。 */
-.node-error-badge, .node-ghost-mark { --mark-ring: 2px; width: calc(var(--mark-size) * 1px); height: calc(var(--mark-size) * 1px); }
-.node-error-badge .icon-badge, .node-ghost-mark .icon-solid { stroke: var(--node-mark-outline); stroke-width: calc(var(--mark-ring) * 48 / var(--mark-size));
-  stroke-linejoin: round; paint-order: stroke; }
-.node-error-badge .icon, .node-ghost-mark .icon { overflow: visible; }
-.node-error-badge { --mark-size: 30; position: absolute; z-index: 1; top: 0; right: 0; transform: translate(40%, -40%); }
+.node-error-badge { position: absolute; z-index: 1; top: 0; right: 0; width: 30px; height: 30px; transform: translate(40%, -40%); }
 .node-error-badge .icon { width: 100%; height: 100%; stroke: var(--node-error-mark); stroke-width: 2.5; }
 .node-error-badge .icon-badge { fill: var(--node-error-badge); }
+/* The marks' dark outline (Refactor.65.2, human 2026-10-10: one thickness, the error mark's as it is): the error mark's own
+   band — 2.5 icon units on its 30px — is the measure, so every other mark shows a band that wide, drawn outside its shape
+   (paint-order: half the stroke shows), worked out from the mark's size; outside so the ghost's small eye holes stay open.
+   標記的深色外框（人類：粗細統一，以錯誤圖示現在的樣子為準）：錯誤圖示自己的框（30px 上的 2.5 單位）就是尺；其他標記露出同樣寬的框，
+   畫在圖形外側（露出一半的筆寬），依標記大小換算；畫在外側，幽靈的小眼洞才不會被蓋住。 */
+.node-ghost-mark { --mark-ring: calc(2.5px * 30 / 24); width: calc(var(--mark-size) * 1px); height: calc(var(--mark-size) * 1px); }
+.node-ghost-mark .icon-solid { stroke: var(--node-mark-outline); stroke-width: calc(var(--mark-ring) * 48 / var(--mark-size));
+  stroke-linejoin: round; paint-order: stroke; }
+.node-ghost-mark .icon { overflow: visible; }
 /* The ghost mark (Refactor.64.3, human 2026-10-10: option G4 of work/refactor/ghost-marker-preview.html): a solid ghost, 38px, on the
    top-right corner like the error mark; the marks' shared dark outline keeps it apart from the card's outline (65.1).
    Ghost 標記（人類選預覽頁的 G4）：實心幽靈、38px，位置同錯誤圖示；標記共用的深色外框讓它和卡片框線分開（65.1）。 */
