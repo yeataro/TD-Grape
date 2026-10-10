@@ -24,15 +24,19 @@ const canApply = (state: EditorState | null) => !!state?.dirty && !['sending', '
 
 /** How many of a bar's parts to fold away so the rest fits (Refactor.69, human 2026-10-10): parts are marked `data-fold`,
  * 1 folding first; each keeps its own size, so the bar measures them and folds the fewest it can. A folded part counts with
- * the width it had when it last showed. 一列要收起幾個部分才放得下：部分標 data-fold，1 先收；每個部分大小固定，所以量它們、
- * 收最少的。收起的部分用它最後一次顯示時的寬度算。 */
+ * the width it had when it last showed; a part marked `data-shrink` gives way first, down to its minimum (69.1).
+ * 一列要收起幾個部分才放得下：部分標 data-fold，1 先收；每個部分大小固定，所以量它們、收最少的。收起的部分用它最後一次顯示時的
+ * 寬度算；標 data-shrink 的部分先讓，讓到它的最小寬度（69.1）。 */
 function useFolding(bar: RefObject<HTMLElement | null>): number {
   const [folded, setFolded] = useState(0), widths = useRef(new Map<Element, number>());
   useLayoutEffect(() => {
     const element = bar.current;
     if (!element) return;
     const showing = (part: Element) => getComputedStyle(part).display !== 'none';
-    const outer = (part: Element) => { const style = getComputedStyle(part); return part.getBoundingClientRect().width + parseFloat(style.marginLeft) + parseFloat(style.marginRight); };
+    const outer = (part: Element) => {
+      const style = getComputedStyle(part), width = (part as HTMLElement).dataset.shrink !== undefined ? parseFloat(style.minWidth) || 0 : part.getBoundingClientRect().width;
+      return width + parseFloat(style.marginLeft) + parseFloat(style.marginRight);
+    };
     const gap = (part: Element) => parseFloat(getComputedStyle(part.parentElement!).columnGap) || 0;
     const fit = () => {
       const parts = [...element.querySelectorAll<HTMLElement>('[data-fold]')];
@@ -166,7 +170,12 @@ const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, chec
 export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppearance }: {
   session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs; onAppearance?(): void;
 }) {
-  const state = useEditorState(session), fullscreen = useFullscreen();
+  const state = useEditorState(session), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
+  // As it narrows (human 2026-10-10): the latest message gives way first, down to its "…" (it opens the history); the icons
+  // basically stay, but if they must, they fold from the left; the sync state, which matters more, folds after them; the ⋮
+  // menu never. 變窄時（人類 10-10）：最新訊息先讓，讓到剩「…」（它是打開歷史的入口）；圖示原則上留著，非收不可時從左邊收；比它們重要的
+  // 同步狀態在它們之後才收；⋮ 選單永遠不收。
+  const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [history, setHistory] = useState<HTMLElement | null>(null);
   const states = [tr('status.sending', 'Sending to TD'), tr('status.unsent', 'Changes not yet sent to TD'), tr('status.synced', 'Synced with TD')];
@@ -178,7 +187,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
   const digits = '0'.repeat(Math.max(5, String(state?.revision ?? '').length));
   const sizes = [say(tr('status.noGraph', 'No graph open')), ...states.map(text => line(text, digits))];
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
-  return <footer className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
+  return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
       { key: 'reload', label: say(tr('foot.reloadPage', 'Reload editor page')), select: () => location.reload() },
       { key: 'reloadTd', label: say(tr('foot.reloadApplied', 'Reload applied graph')), disabled: true, title: say(notYet), select: () => {} },
@@ -189,18 +198,18 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
       { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || state?.phase === 'sending', divider: true, select: () => void session?.save() },
       { key: 'apply', label: say(tr('action.applyShader', 'Apply Shader')), disabled: !canApply(state), select: () => void session?.flush() },
     ]} />
-    <span className="foot-sync">{sizes.map(text => <span key={text} className="foot-sync-size" aria-hidden="true">{text}</span>)}
+    <span {...fold(5, 'foot-sync')}>{sizes.map(text => <span key={text} className="foot-sync-size" aria-hidden="true">{text}</span>)}
       <span>{state ? line(sync, state.revision) : say(sync)}</span></span>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看歷史。 */}
-    <button type="button" className="foot-message" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
+    <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
       disabled={!session} onClick={event => setHistory(history ? null : event.currentTarget)}>{first}{full === first ? '' : ' …'}</button>
     {session && state && offline.includes(state.phase) && <RetryPie checking={!!state.checking} retryAt={state.retryAt} retryMs={state.retryMs} onRetry={() => void session.check()} />}
     {session && state?.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>
       <p>{say(recoveryHelp)}</p></details>}
     <span className="spacer" />
     {/* Settings of how editing behaves (legacy gear). Body drag is a real setting here (Q64). 編輯行為的設定（舊產品齒輪）。 */}
-    <PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
+    <span {...fold(1)}><PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
       <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
       {/* Trial (Refactor.58.2): the wheel glides; off gives the wheel back to React Flow. 試驗：滾輪平滑；關掉就還給 React Flow。 */}
       <label className="check"><input type="checkbox" checked={prefs.damping} onChange={event => prefs.set({ damping: event.target.checked })} />{say(tr('toolbar.damping', 'Canvas damping'))}</label>
@@ -210,10 +219,10 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
       <ComponentTint />
-    </PopoverButton>
-    <AppearancePanels onPanel={onAppearance} />
-    <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
-      onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} />
+    </PopoverButton></span>
+    <AppearancePanels onPanel={onAppearance} fold={fold} />
+    <span {...fold(4)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
+      onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
   </footer>;
 }
@@ -272,11 +281,11 @@ function ComponentTint() {
     {say(tr('toolbar.componentTint', 'Component colours'))}</label>;
 }
 
-function AppearancePanels({ onPanel }: { onPanel?(): void }) {
+function AppearancePanels({ onPanel, fold }: { onPanel?(): void; fold(order: number): { 'data-fold': number; className?: string } }) {
   useSyncExternalStore(appearanceSubscribe, appearance);
   const style = currentStyle();
   return <>
-    <PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
+    <span {...fold(2)}><PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
       <SettingsRow label={tr('appearance.title', 'Appearance')}>
         <Select label={tr('appearance.title', 'Appearance')} value={style} onChange={setStyle}
           options={styles.map(item => ({ value: item.value, label: say(item.label) }))} /></SettingsRow>
@@ -288,14 +297,14 @@ function AppearancePanels({ onPanel }: { onPanel?(): void }) {
       <Segmented label={tr('appearance.ports', 'Port style')} value={currentPorts()} options={portStyles} onChange={setPorts} />
       {/* Looks being tried and values being tuned are in the Appearance panel (Refactor.58.2). 試驗與可調的數值在外觀面板。 */}
       {onPanel && <button className="link-button" onClick={onPanel}>{say(tr('appearance.openPanel', 'More in the Appearance panel…'))}</button>}
-    </PopoverButton>
-    <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
+    </PopoverButton></span>
+    <span {...fold(3)}><PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
       <SettingsRow label={tr('action.language', 'Language')}>
         <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
           options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></SettingsRow>
       <Segmented label={tr('appearance.sizeTitle', 'Language and size')} value={currentSize()} options={sizes} onChange={setSize} />
       <SliderPlaceholder label={tr('appearance.scale', 'Interface scale')} />
-    </PopoverButton>
+    </PopoverButton></span>
   </>;
 }
 
