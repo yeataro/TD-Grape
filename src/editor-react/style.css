@@ -766,6 +766,14 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-card .control-field > span { flex: 0 0 auto; color: var(--text-secondary); }
 .params-wired { flex: 1; min-width: 0; height: var(--io-row); display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .params-card .port-row > button { align-self: center; flex: none; }
+/* An input's socket in the panel (Refactor.76.1): drop a wire from a node's output on the row; as the canvas's ports, filled
+   when wired, ringed while the pointer is over the row. 面板裡輸入的接孔（R.76.1）：把節點輸出拉來的線放在這一列；和畫布的接孔一樣，
+   接了線就實心，游標在這列上時加一圈。 */
+.params-card .port-row { padding-left: 8px; }
+.params-card .port-row > .params-port { flex: none; align-self: center; width: var(--port-size); height: var(--port-size); margin-left: -2px; border-radius: 50%;
+  box-sizing: border-box; border: var(--port-ring) solid var(--port-color); background: var(--surface-port); }
+.params-card .port-row > .params-port[data-connected="true"] { background: var(--port-color); }
+.params-card .port-row:hover > .params-port { box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent); }
 .params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 12px; border-top: 1px solid var(--border-node); }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }

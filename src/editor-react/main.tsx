@@ -181,6 +181,18 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。
         if (state.toHandle && !state.isValid) { session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.')); return; }
         if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
+        // Released on an input of the Parameter panel (Refactor.76.1, human 2026-10-11: the canvas's wire cannot be drawn over
+        // the panel, but where it is let go can be read, without touching the wiring): the same wire as onto that input on the
+        // canvas, checked the same way. 放在參數面板的輸入上（R.76.1，人類：畫布的線畫不到面板，但可以讀放開的位置，不弄髒接線邏輯）：
+        // 和接到畫布上那個輸入一樣的線、一樣的檢查。
+        const released = 'changedTouches' in event ? event.changedTouches[0]! : event;
+        const panelPort = document.elementFromPoint(released.clientX, released.clientY)?.closest<HTMLElement>('[data-panel-port]');
+        if (panelPort) {
+          const wire = { source: state.fromNode.id, sourceHandle: state.fromHandle.id, target: panelPort.dataset.node!, targetHandle: panelPort.dataset.panelPort! };
+          if (state.fromHandle.type === 'source' && session.valid(wire)) session.connect(wire);
+          else session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.'));
+          return;
+        }
         const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
         // Released on empty canvas from a connected input: pull that input's wire (Q33). 從接了線的輸入拉到空白處：拔線。
         if (side === 'input' && projection.edges.some(edge => edge.target === node && edge.targetHandle === port)) { session.disconnectInput(node, port); return; }

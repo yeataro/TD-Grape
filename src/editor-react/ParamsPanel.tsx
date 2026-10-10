@@ -78,8 +78,11 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
       {inputs.map(port => {
         const source = sourceOf(port.key), label = <><PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key}
           components={view.components?.inputs?.[port.key]} /> <small>{port.type}</small></>;
+        // The whole row takes a wire dragged from a node's output (Refactor.76.1); the socket shows where, filled when wired.
+        // 整列都接得住從節點輸出拉來的線（R.76.1）；接孔標出位置，接了線就實心。
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
-          data-component={single(view.components?.inputs?.[port.key])}>
+          data-component={single(view.components?.inputs?.[port.key])} data-panel-port={port.key} data-node={id}>
+          <span className="params-port" data-connected={source !== undefined} aria-hidden="true" />
           {source !== undefined ? <><span>{label}</span><span className="params-wired">{source}</span>
             <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></>
             : port.fallback !== undefined ? <><span>{label}</span><code className="port-fallback">{port.fallback}</code></>
