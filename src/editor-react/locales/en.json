@@ -164,7 +164,7 @@
   "layout.sideEmpty": "No panels on this side",
   "layout.titleBar": "Title bar",
   "light.applied": "Graph applied",
-  "light.checking": "Checking the connection…",
+  "light.checking": "Checking…",
   "light.conflict": "Conflict",
   "light.none": "No graph",
   "light.offline": "TD unreachable",

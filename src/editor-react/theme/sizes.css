@@ -89,6 +89,7 @@
   --drop-label-gap: 12px;
   /* The sync light's dot in the foot bar (Refactor.70.1). 底列同步燈號的圓點大小。 */
   --sync-dot: 8px;
+  --sync-pie: 11px;  /* the countdown pie while waiting to retry (R.70.4) 等待重試時的倒數圓餅 */
   /* Between the foot bar's parts (R.70.1, human: the 8px of the other bars looked too wide here). 底列各部分的間距（人類：8px 太寬）。 */
   --foot-gap: 4px;
   --float-gap: 8px;

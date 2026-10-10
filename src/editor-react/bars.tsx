@@ -219,16 +219,34 @@ const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, chec
  * folds first as the bar narrows. 同步燈號（人類 10-10）：圓點、版號、簡短的字。圓點的顏色是狀態——圖已在 TD 是綠、有修改還沒送出是黃、
  * 連不上 TD／回應不確定／版本衝突／停止是紅、沒有圖是灰；有東西在路上（送出中、檢查連線中）時會閃。列變窄時字先收起。 */
 type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
+// Every word the light can show; all of them, unseen, keep its width that of the longest in the language shown, so the message
+// after it never moves (R.70.4, human 2026-10-10, as the sync state of 10-09). 燈號可能出現的每個字；全部看不見地疊在一起，
+// 讓寬度等於目前語言最長的那個，後面的訊息就不會跳（R.70.4，人類，同 10-09 的同步狀態）。
+const words = {
+  none: tr('light.none', 'No graph'), applied: tr('light.applied', 'Graph applied'), unsent: tr('light.unsent', 'Graph not sent'),
+  sending: tr('light.sending', 'Sending'), checking: tr('light.checking', 'Checking…'), offline: tr('light.offline', 'TD unreachable'),
+  uncertain: tr('light.uncertain', 'Unsure'), conflict: tr('light.conflict', 'Conflict'), stopped: tr('light.stopped', 'Stopped'),
+};
 const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
-  if (!state) return { tone: 'none', busy: false, word: tr('light.none', 'No graph') };
+  if (!state) return { tone: 'none', busy: false, word: words.none };
   const busy = state.phase === 'sending' || !!state.checking;
   // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
   // 檢查連線中直接寫在列上，圓點同時閃，看得出在工作（R.70.2，人類）。
-  const word = state.checking ? tr('light.checking', 'Checking the connection…') : state.phase === 'offline' ? tr('light.offline', 'TD unreachable') : state.phase === 'uncertain' ? tr('light.uncertain', 'Unsure')
-    : state.phase === 'conflict' ? tr('light.conflict', 'Conflict') : state.phase === 'error' ? tr('light.stopped', 'Stopped')
-    : state.phase === 'sending' ? tr('light.sending', 'Sending') : state.dirty ? tr('light.unsent', 'Graph not sent') : tr('light.applied', 'Graph applied');
+  const word = state.checking ? words.checking : state.phase === 'offline' ? words.offline : state.phase === 'uncertain' ? words.uncertain
+    : state.phase === 'conflict' ? words.conflict : state.phase === 'error' ? words.stopped
+    : state.phase === 'sending' ? words.sending : state.dirty ? words.unsent : words.applied;
   return { tone: alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy, word };
 };
+/** While waiting for the next automatic check, the dot is a pie that empties over the wait (R.70.4, human: as the usage ring);
+ * otherwise a dot. 等待下一次自動檢查時，圓點是隨等待變空的圓餅（R.70.4，人類：像用量的圓環）；其他時候是圓點。 */
+function LightDot({ state }: { state: EditorState | null }) {
+  const waiting = !!state && state.retryAt !== undefined && !state.checking;
+  if (!waiting) return <span className="sync-dot" />;
+  const left = Math.max(0, state.retryAt! - Date.now());
+  return <svg className="sync-pie" viewBox="0 0 20 20" aria-hidden="true"><circle className="sync-pie-ring" cx="10" cy="10" r="8.5" />
+    <circle key={state.retryAt} className="sync-pie-sweep" cx="10" cy="10" r="4"
+      style={{ animationDuration: left + 'ms', animationDelay: (left - (state.retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>;
+}
 
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync light, the latest message, settings, full
  * screen. The light opens the status (the state now, what to do when TD is away, the state's own record); the message opens
@@ -265,7 +283,12 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
       aria-expanded={!!status} onClick={event => setStatus(status ? null : event.currentTarget)}>
       {/* The revision with an r, the head of "revision" as the tooltip and the record say it (R.70.3, human 2026-10-10).
           版號前加 r，即提示與紀錄裡「revision」的字頭（R.70.3，人類）。 */}
-      <span className="sync-dot" />{state ? say(tr('light.revision', 'r{revision}', { revision: state.revision })) : '–'}<span {...fold(1, 'sync-word')}>{say(word)}</span></button>
+      <LightDot state={state} />
+      <span className="sync-slot">
+        <span className="sync-size" aria-hidden="true">{say(tr('light.revision', 'r{revision}', { revision: '0000' }))}</span>
+        <span>{state ? say(tr('light.revision', 'r{revision}', { revision: state.revision })) : '–'}</span></span>
+      <span {...fold(1, 'sync-slot sync-word')}>{Object.values(words).map((each, index) => <span key={index} className="sync-size" aria-hidden="true">{say(each)}</span>)}
+        <span>{say(word)}</span></span></button>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the message history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看訊息歷史。 */}
     <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}

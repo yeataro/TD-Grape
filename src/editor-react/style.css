@@ -98,7 +98,17 @@ a { color: var(--accent); }
   white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sync-light.tone-normal { --tone: var(--sync-ok); } .sync-light.tone-unsent { --tone: var(--sync-unsent); }
 .sync-light.tone-alarm { --tone: var(--sync-alarm); } .sync-light.tone-none { --tone: var(--sync-none); }
-.sync-dot { width: var(--sync-dot); height: var(--sync-dot); border-radius: 50%; background: var(--tone); }
+.sync-dot { width: var(--sync-dot); height: var(--sync-dot); border-radius: 50%; background: var(--tone);
+  margin: calc((var(--sync-pie) - var(--sync-dot)) / 2); /* takes the pie's room, so dot and pie never move the rest 佔圓餅的位置，換來換去不會推動旁邊 */ }
+/* Waiting to try again: a pie that empties over the wait (R.70.4). The wedge is a circle stroked as wide as itself, its dash
+   shrinking. 等待重試：隨等待變空的圓餅；扇形是描邊和自己一樣寬的圓，虛線逐漸縮短。 */
+.sync-pie { width: var(--sync-pie); height: var(--sync-pie); transform: rotate(-90deg); }
+.sync-pie-ring { fill: none; stroke: var(--tone); stroke-width: 1.5; }
+.sync-pie-sweep { fill: none; stroke: var(--tone); stroke-width: 8; stroke-dasharray: 25.13; stroke-dashoffset: 0;
+  animation-name: sync-countdown; animation-timing-function: linear; animation-fill-mode: both; }
+@keyframes sync-countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 25.13; } }
+/* The revision and the word keep their widest width: unseen copies stacked in one cell (R.70.4). 版號與字保持最寬的寬度：看不見的副本疊在同一格。 */
+.sync-slot { display: inline-grid; } .sync-slot > * { grid-area: 1 / 1; } .sync-size { visibility: hidden; }
 .sync-light.busy .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
 @keyframes sync-pulse { 50% { opacity: .3; } }
 .sync-word { color: var(--text-muted); }
@@ -131,6 +141,8 @@ a { color: var(--accent); }
    (human 2026-10-09: the whole page had a scrollbar, 1px). 可以點的一行字：上下不留內距，不會把底列（和整頁）撐高（人類：整頁多了捲軸，差 1px）。 */
 .foot-message { flex: 0 1 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-block: 0;
   background: none; border-color: transparent; color: var(--message, var(--text)); }
+/* No hover frame on the message (R.70.4, human 2026-10-10: it looked odd). 訊息滑過時不加外框（人類：看起來怪）。 */
+.foot-message:hover { background: none; border-color: transparent; }
 /* "How to recover" never wraps or shrinks; the message before it shortens instead (Refactor.59.5: it broke into two lines in
    Chinese). 「如何恢復」不換行也不縮；縮的是它前面的訊息（中文時曾被擠成兩行）。 */
 .workspace { flex: 1; }

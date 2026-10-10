@@ -222,11 +222,12 @@
   /* Where a moved panel would go, and where it cannot (Refactor.68): the handles' purple for now (human 2026-10-10), the alarm red.
      搬面板時會放在哪、以及放不下的地方：暫時和把手同一個紫色（人類 10-10），放不下用警示紅。 */
   --drop-target: var(--accent);
-  /* The sync light's dot (Refactor.70.1): in TD, not yet sent, TD away or in conflict, no graph. 同步燈號的圓點：已在 TD、未送出、TD 不在或衝突、沒有圖。 */
-  --sync-ok: color-mix(in srgb, var(--palette-select-green), var(--palette-ink) 10%);
-  --sync-unsent: var(--status-warning);
-  --sync-alarm: var(--palette-alarm);
-  --sync-none: var(--text-faint);
+  /* The sync light (Refactor.70.1, 70.4): a true green and a true red, every tone at 85% (human 2026-10-10: the full red
+     frightened); no graph a lighter grey. 同步燈號：正綠、正紅，每種顏色 85%（人類：全紅太嚇人）；沒有圖的灰亮一級。 */
+  --sync-ok: color-mix(in srgb, var(--palette-select-green) 85%, transparent);
+  --sync-unsent: color-mix(in srgb, var(--status-warning) 85%, transparent);
+  --sync-alarm: color-mix(in srgb, var(--palette-alarm) 85%, transparent);
+  --sync-none: color-mix(in srgb, var(--text-secondary) 85%, transparent);
   --drop-refused: var(--palette-alarm);
   --accent-fill: var(--palette-accent);
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
