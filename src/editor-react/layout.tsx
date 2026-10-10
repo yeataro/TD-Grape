@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode,
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode,
   type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { say, tr, type Message } from './text';
@@ -246,6 +246,15 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
 function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<string, PanelView>; start: MutableRefObject<Drag> }) {
   const [drag, setDrag] = useState<{ panel: string; x: number; y: number; hint: Hint } | null>(null);
   const now = useRef(layout); now.current = layout;
+  // A line's words go above it, or below when above would leave the layout (the title bar; R.68.3, human 2026-10-10).
+  // 線的說明放在上方；上方會超出版面（蓋到標題列）時放到下方（人類 10-10）。
+  const label = useRef<HTMLSpanElement>(null), [below, setBelow] = useState(false);
+  useLayoutEffect(() => {
+    const mark = drag?.hint?.mark, element = label.current;
+    if (mark?.kind !== 'across' || !element) return;
+    const gap = parseFloat(getComputedStyle(element).getPropertyValue('--drop-label-gap')) || 0;
+    setBelow(mark.top - gap - element.offsetHeight < (document.querySelector('.workspace')?.getBoundingClientRect().top ?? 0));
+  }, [drag]);
   start.current = (event, panel) => {
     if (event.button !== 0) return;
     const x0 = event.clientX, y0 = event.clientY, pointer = event.pointerId, controller = new AbortController();
@@ -276,12 +285,12 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
   const mark = drag.hint?.mark;
   return createPortal(<>
     {/* Where it cannot go, the label gives the reason instead (one place to read). 放不下時，標籤改寫原因（只看一個地方）。 */}
-    {mark && <div className={'drop-mark ' + mark.kind + (mark.side ? ' ' + mark.side : '') + (drag.hint!.refused ? ' refused' : '')}
+    {mark && <div className={'drop-mark ' + mark.kind + (mark.side ? ' ' + mark.side : '') + (drag.hint!.refused ? ' refused' : '') + (below ? ' below' : '')}
       style={{ left: mark.left, top: mark.top, width: mark.width, height: mark.height }}>
       {mark.kind === 'frame' && ['tl', 'tr', 'bl', 'br'].map(corner => <span key={corner} className={'drop-corner ' + corner} />)}
       {mark.slots && <span className="drop-slots">{Array.from({ length: mark.slots.count }, (_, index) =>
         <span key={index} className={'drop-slot' + (index === mark.slots!.at ? ' at' : '')} />)}</span>}
-      {(drag.hint!.refused ?? mark.label) && <span className="drop-label">{say(drag.hint!.refused ?? mark.label!)}</span>}</div>}
+      {(drag.hint!.refused ?? mark.label) && <span ref={label} className="drop-label">{say(drag.hint!.refused ?? mark.label!)}</span>}</div>}
     <div className="drag-label" style={{ left: drag.x + 14, top: drag.y + 10 }}>{say(panels[drag.panel]?.title ?? drag.panel)}</div>
   </>, document.body);
 }

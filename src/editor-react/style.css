@@ -313,15 +313,19 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .drop-slots { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; gap: var(--drop-slot-gap); }
 .drop-slot { width: var(--drop-slot); height: var(--drop-slot); border-radius: var(--drop-line); background: var(--surface-control); }
 .drop-slot.at { background: var(--drop-target); }
-.drag-label, .drop-label { padding: 4px 10px; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm);
-  white-space: nowrap; pointer-events: none; border: 1px solid var(--border-control); background: var(--surface-raised); }
-.drag-label { position: fixed; z-index: 31; color: var(--text-strong); opacity: .9; }
-/* What dropping here does, bold, centred on its mark with a gap (R.68.2, human 2026-10-10): above a line across, above the
-   slots, beside a side's line on the canvas side; red with the reason where it cannot go.
-   放下會發生什麼，粗體，置中在提示上、留一點間距（人類 10-10）：橫線的上方、格子的上方、側邊直線的畫布那一側；放不下時是紅的、寫原因。 */
-.drop-label { position: absolute; font-weight: 600; color: var(--text-strong); }
-.drop-mark.refused .drop-label { color: var(--drop-refused); border-color: var(--drop-refused); }
+.drag-label, .drop-label { padding: 4px 10px; border-radius: var(--radius-control); white-space: nowrap; pointer-events: none; }
+.drag-label { position: fixed; z-index: 31; font-size: var(--font-sm); line-height: var(--line-sm); border: 1px solid var(--border-control);
+  background: var(--surface-raised); color: var(--text-strong); opacity: .9; }
+/* What dropping here does, bold, centred on its mark with a gap (R.68.2, human 2026-10-10): above a line across (below it
+   when above would leave the layout), above the slots, beside a side's line on the canvas side. In the mark's colour, a size
+   up, so it stands out (R.68.3, human); red with the reason where it cannot go.
+   放下會發生什麼，粗體，置中在提示上、留一點間距（人類 10-10）：橫線的上方（上方會超出版面時放下方）、格子的上方、側邊直線的畫布那一側。
+   用提示的顏色、字大一級，比較醒目（R.68.3，人類）；放不下時是紅的、寫原因。 */
+.drop-label { position: absolute; font-size: var(--font-base); line-height: var(--line-base); font-weight: 600;
+  background: var(--drop-target); color: var(--text-on-accent); }
+.drop-mark.refused .drop-label { background: var(--drop-refused); }
 .drop-mark.across .drop-label { left: 50%; bottom: calc(100% + var(--drop-label-gap)); translate: -50% 0; }
+.drop-mark.across.below .drop-label { bottom: auto; top: calc(100% + var(--drop-label-gap)); }
 .drop-mark.frame .drop-label { left: 50%; top: 50%; translate: -50% calc(-100% - var(--drop-slot) / 2 - var(--drop-label-gap)); }
 .drop-mark.along .drop-label { top: 50%; translate: 0 -50%; }
 .drop-mark.along.left .drop-label { left: calc(100% + var(--drop-label-gap)); }
