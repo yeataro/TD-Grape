@@ -463,8 +463,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 @keyframes ghost-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.8px); } }
 :root[data-motion="off"] .ghost-figure * { animation: none; }
 @media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .ghost-figure * { animation: none; } }
-/* On a ghost wire: a smaller ghost at the middle, not in the way of the wire (R.75.27). Ghost 線中點的小幽靈，不擋線。 */
-.wire-ghost-mark { position: absolute; width: 24px; height: 24px; pointer-events: none; }
+/* On a ghost wire: a ghost at the middle, as big as the node's (R.75.27; R.75.28, human 2026-10-11: 24px was too small), not
+   in the way of the wire. Ghost 線中點的幽靈，和節點上的一樣大（R.75.28，人類：24px 太小），不擋線。 */
+.wire-ghost-mark { position: absolute; width: 38px; height: 38px; pointer-events: none; }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
 .react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }
