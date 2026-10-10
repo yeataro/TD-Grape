@@ -9,7 +9,7 @@ import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented,
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
-import { language, setLanguage, say, tr, type Message } from './text';
+import { clockTime, language, setLanguage, say, tr, type Message } from './text';
 import { frameNodes } from './viewport';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
@@ -413,7 +413,7 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
     ? tr('status.savedAt', 'TD project {file}: last saved {time}', { file, time: clockOf(last.time) })
     : behind ? tr('status.savedBehind', 'TD project {file}: saved r{saved} ({time}), {behind} not saved', { file, saved: last.revision, time: clockOf(last.time), behind })
       : tr('status.savedNow', 'TD project {file}: saved r{saved} ({time})', { file, saved: last.revision, time: clockOf(last.time) });
-  const clock = (time: number) => new Date(time).toLocaleTimeString();
+  const clock = clockTime;
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
     <div {...list}>{records.map((record, i) => <div key={i}
@@ -470,7 +470,7 @@ function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries
   const shown = entries.slice(-HISTORY);
   return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history" onClose={onClose}>
     <div {...list}>{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
-      <time>{new Date(entry.time).toLocaleTimeString()}</time><span>{say(entry.message)}</span></div>)
+      <time>{clockTime(entry.time)}</time><span>{say(entry.message)}</span></div>)
       : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
   </Popover>;
 }

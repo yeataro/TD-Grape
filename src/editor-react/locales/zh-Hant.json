@@ -109,7 +109,7 @@
   "edit.valueChanged": "數值已更新，等待套用",
   "edit.wired": "接線已更新",
   "edit.wireMoved": "接線已搬過去",
-  "edit.wireRefused": "接線被核心拒絕：型別或圖結構不相容",
+  "edit.wireRefused": "無法接線：型別或圖結構不相容",
   "editor.tagline": "TouchDesigner 視覺化著色器編輯器",
   "foot.fullscreen": "全螢幕",
   "foot.history": "訊息歷史",

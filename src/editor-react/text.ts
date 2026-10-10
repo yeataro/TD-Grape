@@ -56,6 +56,12 @@ export function setLanguage(next: Language) {
   languageListeners.forEach(listener => listener());
 }
 export const say = (message: Message | string) => localize(message, current);
+/** A time of day as 24-hour HH:MM:SS, the same in every language and always as wide (Refactor.75.8, human 2026-10-11).
+ * 24 小時制 HH:MM:SS，各語言一樣、寬度固定（R.75.8，人類）。 */
+export const clockTime = (time: number | Date) => {
+  const at = new Date(time), pad = (n: number) => String(n).padStart(2, '0');
+  return pad(at.getHours()) + ':' + pad(at.getMinutes()) + ':' + pad(at.getSeconds());
+};
 
 // Data that carries its own English (Q34 修訂 4): the code is derived here, where the text is used.
 // 自帶英文的資料：代號在使用處推導。

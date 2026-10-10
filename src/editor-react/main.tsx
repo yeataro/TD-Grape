@@ -174,7 +174,9 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
       onConnectEnd={(event, state) => {
         if (reconnecting.current) return;
-        if (state.toHandle && !state.isValid) { session.notice(new TextError(tr('edit.wireRefused', 'The core refused this wire: the types or the graph structure do not fit.'))); return; }
+        // A warning, not an error: nothing broke, the wire just does not fit (Refactor.75.8, human 2026-10-11: red was too much).
+        // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。
+        if (state.toHandle && !state.isValid) { session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.')); return; }
         if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
         const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
         // Released on empty canvas from a connected input: pull that input's wire (Q33). 從接了線的輸入拉到空白處：拔線。

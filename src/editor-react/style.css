@@ -777,8 +777,13 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .settings-row .select-button { width: 100%; }
 .slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: var(--font-lg); line-height: var(--line-lg); padding: 0 4px; }
 .slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
-.log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; }
-.log-entry time { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* Two columns, the time's as wide as the widest time, so every message starts at the same place (Refactor.75.8, human
+   2026-10-11: in Chinese the times differ in width). 兩欄，時間欄和最寬的時間一樣寬，訊息都從同一個位置開始（R.75.8，人類：中文的時間寬度不一）。 */
+.log-list { display: grid; grid-template-columns: max-content 1fr; align-content: start; }
+.log-list > .hint { grid-column: 1 / -1; }
+.log-entry { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; column-gap: 10px; padding: 4px 6px; border-radius: 4px;
+  font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; }
+.log-entry time { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .log-entry.warning span { color: var(--status-warning); } .log-entry.error span { color: var(--status-error); }
 .grape-op-kind { font-size: var(--font-xs); line-height: var(--line-xs); padding: 1px 5px; border-radius: 3px; background: var(--overlay-up); } .grape-op-path { overflow-wrap: anywhere; }
 /* The location bar's middle: project file, then the Grape OP (Refactor.52). 網址列中間：專案檔名，接著 Grape OP。 */

@@ -296,6 +296,9 @@ export class Editor {
     this.state = { ...this.state, ...patch }; this.publish();
   }
   private tell(level: Level, message: Message | string) { this.status({ message, level }); }
+  /** Something the person tried did not happen, nothing broke (Refactor.75.8: a refused wire is a warning, not an error).
+   * 使用者想做的事沒有發生、但沒有東西壞掉（R.75.8：接線被拒絕是警告，不是錯誤）。 */
+  warn = (message: Message) => this.tell('warning', message);
   private sources() {
     const references: Record<string, number> = {};
     for (const node of this.document.document.stages.pixel?.nodes ?? []) {

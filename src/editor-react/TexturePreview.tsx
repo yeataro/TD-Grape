@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import { tr, say, type Message } from './text';
+import { clockTime, tr, say, type Message } from './text';
 import { colorHex } from './ValueFields';
 import { useSession } from './contexts';
 import { Icon } from './icons';
@@ -96,7 +96,7 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
         // When it was taken and how to take another; in brackets, why a Sequential movie stands still while unseen.
         // 何時拍的、怎麼重拍；括號裡說明 Sequential 的影片沒人看時停住。
         title={[say(tr('sources.snapshotTaken', 'Snapshot taken at {time}, not live. Click for a new one.', {
-            time: shot.time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })),
+            time: clockTime(shot.time) })),
           say(tr('sources.snapshotCook', '(TD only cooks what is in use: a movie set to Sequential does not play on while nothing views it.)'))]
           .join('\n')}>
         <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
