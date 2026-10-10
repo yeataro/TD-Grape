@@ -88,23 +88,26 @@ a { color: var(--accent); }
    like the title bar's; icon buttons have no fill and keep their size (human 2026-10-09).
    網址列與底列的文字按鈕（例如 Retry connection）有底色，所以和標題列一樣離列的上下邊緣留空隙；圖示按鈕沒有底色，大小不變（人類）。 */
 :is(.location-bar, .foot-bar) button:not(.icon-button) { height: var(--control-height); padding-block: 0; margin-inline: var(--bar-text-gap); }
-/* The countdown pie (Refactor.59.3): a wedge in the accent that empties over the wait; checking keeps it full and faint.
-   The pie is a circle stroked as wide as itself (r 4, stroke 8), its dash shrinking. 倒數圓餅：強調色扇形在等待中變空；檢查中全滿、變淡。 */
-.retry-pie svg { width: var(--icon-size); height: var(--icon-size); transform: rotate(-90deg); }
-.retry-pie .retry-track { fill: none; stroke: var(--border-control); stroke-width: 1.5; }
-.retry-pie .retry-sweep { fill: none; stroke: var(--accent); stroke-width: 8; stroke-dasharray: 25.13; stroke-dashoffset: 0;
-  animation-name: retry-countdown; animation-timing-function: linear; animation-fill-mode: both; }
-.retry-pie .brand-mark { width: var(--icon-size); height: var(--icon-size); }
-@keyframes retry-countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 25.13; } }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
 /* Each piece of the line (tagline, version, About) folds on its own (Refactor.69). 這一行的每一塊（副標題、版號、About）各自收起。 */
 .brand-line > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 /* A part of the title bar folded away as it narrows (bars.tsx useFolding). 標題列變窄時收起的部分。 */
-/* The sync state's short stand-in, shown once the full one folds (69.2). 同步狀態的簡短替身，完整的收起後才出現（69.2）。 */
-.foot-sync-short { display: none; align-items: center; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.foot-sync-short.appeared { display: inline-flex; }
-.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sync-none); }
-.sync-dot.synced { background: var(--sync-synced); } .sync-dot.unsent { background: var(--sync-unsent); } .sync-dot.sending { background: var(--sync-sending); }
+/* The sync light (Refactor.70, human 2026-10-10): our grape and the revision; the grape takes the state's colour unless all is
+   well, when it keeps its own; it ripples while something is on its way. 同步燈號：葡萄加版號；狀況正常時保留葡萄原色，否則換成狀態色；
+   有東西在路上時輪流亮。 */
+.sync-light { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 4px; border: 0; background: none; color: inherit;
+  white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sync-light .brand-mark { width: var(--sync-light); height: var(--sync-light); }
+.sync-light.tone-unsent { --tone: var(--sync-unsent); } .sync-light.tone-alarm { --tone: var(--sync-alarm); } .sync-light.tone-none { --tone: var(--sync-none); }
+.sync-light:not(.tone-normal) .brand-mark circle:nth-child(1) { fill: color-mix(in srgb, var(--tone), var(--palette-contrast) 22%); }
+.sync-light:not(.tone-normal) .brand-mark circle:nth-child(2) { fill: var(--tone); }
+.sync-light:not(.tone-normal) .brand-mark circle:nth-child(3) { fill: color-mix(in srgb, var(--tone), var(--palette-contrast) 11%); }
+/* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
+.status-now { display: flex; flex-direction: column; gap: 6px; padding: 4px 6px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+.status-now p { margin: 0; color: var(--text-secondary); }
+.status-now.tone-alarm > strong { color: var(--sync-alarm); } .status-now.tone-unsent > strong { color: var(--sync-unsent); }
+.status-retry { display: flex; align-items: center; gap: 10px; }
+.status-help { font-size: var(--font-md); line-height: var(--line-md); }
 :is(.title-bar, .foot-bar, .network-bar, .location-bar) .folded { display: none; }
 /* The location bar's file and path: they shrink to an ellipsis first, then fold (69.4); the rest keeps its size.
    網址列的檔名與路徑：先縮成省略號，再收起（69.4）；其他不縮。 */
@@ -121,17 +124,12 @@ a { color: var(--accent); }
 .foot-bar.warning, .foot-bar.offline { --message: var(--status-warning); }
 /* The sync state is as wide as its longest wording, with some room (bars.tsx); copies stack in one cell, unseen.
    同步狀態和最長那句一樣寬、再多留一點；副本疊在同一格、看不見。 */
-.foot-sync { display: inline-grid; flex-shrink: 0; white-space: nowrap; padding-right: 1.5em; font-variant-numeric: tabular-nums; }
-.foot-sync > * { grid-area: 1 / 1; } .foot-sync-size { visibility: hidden; }
 /* A line of text that opens the history: no padding above or below, so it never makes the bar (and the page) taller
    (human 2026-10-09: the whole page had a scrollbar, 1px). 可以點的一行字：上下不留內距，不會把底列（和整頁）撐高（人類：整頁多了捲軸，差 1px）。 */
 .foot-message { flex: 0 1 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-block: 0;
   background: none; border-color: transparent; color: var(--message, var(--text)); }
 /* "How to recover" never wraps or shrinks; the message before it shortens instead (Refactor.59.5: it broke into two lines in
    Chinese). 「如何恢復」不換行也不縮；縮的是它前面的訊息（中文時曾被擠成兩行）。 */
-.foot-bar .recovery-help { position: relative; flex-shrink: 0; } .foot-bar .recovery-help summary { white-space: nowrap; }
-.foot-bar .recovery-help p { position: absolute; bottom: calc(100% + 8px); left: 0; width: 420px; margin: 0;
-  padding: 10px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); color: var(--text); }
 .workspace { flex: 1; }
 .network { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .canvas { position: relative; flex: 1; min-height: 0; }

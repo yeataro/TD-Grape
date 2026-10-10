@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
@@ -42,6 +42,8 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
     const element = bar.current;
     if (!element) return;
     const showing = (part: Element) => getComputedStyle(part).display !== 'none';
+    // A popover opened from the bar floats over it and takes no room. 從列上打開的浮動面板浮在上面、不佔位置。
+    const inFlow = (child: Element) => !['absolute', 'fixed'].includes(getComputedStyle(child).position);
     const outer = (part: Element) => {
       const style = getComputedStyle(part), width = (part as HTMLElement).dataset.shrink !== undefined ? parseFloat(style.minWidth) || 0 : part.getBoundingClientRect().width;
       return width + parseFloat(style.marginLeft) + parseFloat(style.marginRight);
@@ -53,7 +55,7 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
       const parts = [...element.querySelectorAll<HTMLElement>('[data-fold], [data-appear]')];
       for (const part of parts) if (showing(part)) widths.current.set(part, outer(part) + gap(part));
       // What the bar needs apart from its parts; then each count adds the parts it shows. 除了這些部分之外需要的寬；每個數再加上它顯示的部分。
-      const children = [...element.children].filter(child => showing(child) && !child.classList.contains('spacer'));
+      const children = [...element.children].filter(child => showing(child) && inFlow(child) && !child.classList.contains('spacer'));
       const style = getComputedStyle(element);
       let fixed = children.reduce((sum, child) => sum + outer(child), 0) + gap(children[0]!) * (children.length - 1)
         + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
@@ -207,32 +209,37 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   </div>;
 }
 
-const offline = ['offline', 'uncertain'];
+const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflict', 'error'];
 const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, check that TD is still open (restore its window if minimized), global cooking is on, and TD is not busy with a long task; on a remote device, check the network. After TD restarts, open the editor again from the Grape OP.');
 
-/** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync state, the latest message
- * (its history above it), what to do when TD is away, full screen. 底列：編輯器所有的提示（人類）。功能表、同步狀態、
- * 最新訊息（點開往上看歷史）、TD 不在時能做的事、全螢幕。 */
+/** The sync light (Refactor.70, human 2026-10-10): our grape is the light. Its colour is the state — the grape's own purple when
+ * the graph is in TD, yellow for changes not yet sent, red when TD cannot be reached, answered unclearly, conflicts or stopped,
+ * grey with no graph; it ripples (the waiting animation) while something is on its way: sending, or checking the connection.
+ * 同步燈號（人類 10-10）：我們的葡萄就是燈號。顏色是狀態——圖已在 TD 時是葡萄原本的紫、有修改還沒送出是黃、連不上 TD／回應不確定／
+ * 版本衝突／停止時是紅、沒有圖是灰；有東西在路上（送出中、檢查連線中）時輪流亮（等待動畫）。 */
+type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
+const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean } => !state ? { tone: 'none', busy: false }
+  : { tone: alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy: state.phase === 'sending' || !!state.checking };
+
+/** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync light and revision, the latest message,
+ * settings, full screen. The light and the message open one status panel: the state now, what to do when TD is away, the
+ * history (Refactor.70). 底列：編輯器所有的提示（人類）。功能表、同步燈號與版號、最新訊息、設定、全螢幕。燈號與訊息打開同一個狀態面板：
+ * 現在的狀態、TD 不在時怎麼辦、歷史（R.70）。 */
 export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppearance }: {
   session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs; onAppearance?(): void;
 }) {
   const state = useEditorState(session), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
-  // As it narrows (human 2026-10-10): the latest message gives way first, down to its "…" (it opens the history); then the
-  // sync state shortens to a coloured dot and the revision, its words in the tooltip (69.2); the icons basically stay, but if
-  // they must, they fold from the left; the short sync state, which matters more, folds after them; the ⋮ menu never.
-  // 變窄時（人類 10-10）：最新訊息先讓，讓到剩「…」（它是打開歷史的入口）；接著同步狀態縮成色點加版號，完整的話放進提示（69.2）；圖示原則上
-  // 留著，非收不可時從左邊收；比它們重要的簡短同步狀態在它們之後才收；⋮ 選單永遠不收。
+  // As it narrows (human 2026-10-10): the latest message gives way first, down to its "…"; the icons basically stay, but if
+  // they must, they fold from the left; the sync light, which matters more, folds after them; the ⋮ menu never.
+  // 變窄時（人類 10-10）：最新訊息先讓，讓到剩「…」；圖示原則上留著，非收不可時從左邊收；比它們重要的同步燈號在它們之後才收；⋮ 選單永遠不收。
   const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
-  const [history, setHistory] = useState<HTMLElement | null>(null);
-  const states = [tr('status.sending', 'Sending to TD'), tr('status.unsent', 'Changes not yet sent to TD'), tr('status.synced', 'Synced with TD')];
-  const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? states[0]! : state.dirty ? states[1]! : states[2]!;
-  const line = (text: typeof sync, revision: number | string) => say(tr('status.line', '{state} · revision {revision}', { state: text, revision }));
-  // The sync state keeps the width of its longest wording (every state, at least five revision digits, plus some room), so the message
-  // after it never jumps (human 2026-10-09). Invisible copies size the box; it follows the language by itself.
-  // 同步狀態保持最長那句的寬度（每一種狀態、至少五位數版本號，再多留一點空間），後面的訊息就不會跳（人類）。看不見的副本撐出寬度，換語言也自動跟上。
-  const digits = '0'.repeat(Math.max(5, String(state?.revision ?? '').length));
-  const sizes = [say(tr('status.noGraph', 'No graph open')), ...states.map(text => line(text, digits))];
+  const [panel, setPanel] = useState<HTMLElement | null>(null);
+  const open = (event: { currentTarget: HTMLElement }) => setPanel(panel ? null : event.currentTarget);
+  const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? tr('status.sending', 'Sending to TD')
+    : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD');
+  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: sync, revision: state.revision })) : say(sync);
+  const { tone, busy } = lightOf(state);
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -245,23 +252,15 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
       { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || state?.phase === 'sending', divider: true, select: () => void session?.save() },
       { key: 'apply', label: say(tr('action.applyShader', 'Apply Shader')), disabled: !canApply(state), select: () => void session?.flush() },
     ]} />
-    <span {...fold(1, 'foot-sync')}>{sizes.map(text => <span key={text} className="foot-sync-size" aria-hidden="true">{text}</span>)}
-      <span>{state ? line(sync, state.revision) : say(sync)}</span></span>
-    {/* The short sync state: a dot in the state's colour and the revision; the whole line in the tooltip (69.2).
-        簡短的同步狀態：狀態色的點加版號；完整的那句在提示裡（69.2）。 */}
-    <span data-appear={1} {...fold(6, 'foot-sync-short' + (folded >= 1 ? ' appeared' : ''))} title={state ? line(sync, state.revision) : say(sync)}>
-      <span className={'sync-dot ' + (!state ? 'none' : state.phase === 'sending' ? 'sending' : state.dirty ? 'unsent' : 'synced')} />
-      {state?.revision ?? '–'}</span>
-    {/* The latest message; its whole text (e.g. TD's compile log) on hover, the history on click (Q35).
-        最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看歷史。 */}
-    <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
-      disabled={!session} onClick={event => setHistory(history ? null : event.currentTarget)}>{first}{full === first ? '' : ' …'}</button>
-    {session && state && offline.includes(state.phase) && <RetryPie checking={!!state.checking} retryAt={state.retryAt} retryMs={state.retryMs} onRetry={() => void session.check()} />}
-    {session && state?.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>
-      <p>{say(recoveryHelp)}</p></details>}
+    <button type="button" {...fold(5, 'sync-light tone-' + tone)} title={now} aria-label={now} aria-haspopup="dialog" aria-expanded={!!panel} onClick={open}>
+      <BrandMark loading={busy} />{state?.revision ?? '–'}</button>
+    {/* The latest message; its whole text (e.g. TD's compile log) on hover; the status panel on click (Q35).
+        最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡；點開是狀態面板。 */}
+    <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!panel}
+      disabled={!session} onClick={open}>{first}{full === first ? '' : ' …'}</button>
     <span className="spacer" />
     {/* Settings of how editing behaves (legacy gear). Body drag is a real setting here (Q64). 編輯行為的設定（舊產品齒輪）。 */}
-    <span {...fold(2)}><PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
+    <span {...fold(1)}><PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
       <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
       {/* Trial (Refactor.58.2): the wheel glides; off gives the wheel back to React Flow. 試驗：滾輪平滑；關掉就還給 React Flow。 */}
       <label className="check"><input type="checkbox" checked={prefs.damping} onChange={event => prefs.set({ damping: event.target.checked })} />{say(tr('toolbar.damping', 'Canvas damping'))}</label>
@@ -273,10 +272,41 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
       <ComponentTint />
     </PopoverButton></span>
     <AppearancePanels onPanel={onAppearance} fold={fold} />
-    <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
+    <span {...fold(4)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
-    {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
+    {panel && <StatusPanel anchor={panel} state={state} now={now} tone={tone} entries={log} onRetry={() => void session?.check()} onClose={() => setPanel(null)} />}
   </footer>;
+}
+
+/** The status panel (Refactor.70): the state now in the light's colour; while TD is away, the automatic retry (its countdown
+ * and Retry now, which was the countdown pie) and how to recover; then the history (Q35), the latest at the bottom.
+ * 狀態面板（R.70）：現在的狀態（燈號的顏色）；TD 不在時，自動重試（倒數與「立即重試」，原本的倒數圓餅）與如何恢復；下面是歷史，最新的在最下面。 */
+function StatusPanel({ anchor, state, now, tone, entries, onRetry, onClose }: {
+  anchor: HTMLElement; state: EditorState | null; now: string; tone: Tone; entries: readonly Report[]; onRetry(): void; onClose(): void;
+}) {
+  const list = useRef<HTMLDivElement>(null), [, tick] = useState(0);
+  useLayoutEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [entries]);
+  // The countdown moves on by itself. 倒數自己往下走。
+  useEffect(() => {
+    if (state?.retryAt === undefined) return;
+    const timer = setInterval(() => tick(n => n + 1), 500);
+    return () => clearInterval(timer);
+  }, [state?.retryAt]);
+  const seconds = state?.retryAt === undefined ? 0 : Math.ceil(Math.max(0, state.retryAt - Date.now()) / 1000);
+  const shown = entries.slice(-HISTORY), reason = state && alarm.includes(state.phase) ? say(state.message).split('\n')[0] : '';
+  return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
+    <div className={'status-now tone-' + tone}>
+      <strong>{now}</strong>
+      {reason && <p>{reason}</p>}
+      {state && away.includes(state.phase) && <div className="status-retry">
+        <span>{say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}</span>
+        <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
+      {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp)}</p>}
+    </div>
+    <div ref={list} className="log-list">{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
+      <time>{new Date(entry.time).toLocaleTimeString()}</time><span>{say(entry.message)}</span></div>)
+      : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
+  </Popover>;
 }
 
 // The browser's own full screen (legacy foot bar, bottom-right). 瀏覽器自己的全螢幕（舊產品底列右下）。
@@ -288,16 +318,6 @@ function useFullscreen() {
 const HISTORY = 100; // tentative (human 2026-10-09: "within some number of past entries"). 暫定筆數。
 /** The recent reports, opening upward from the foot bar, newest at the bottom, scrollable (human 2026-10-09).
  * 最近的回報紀錄，從底列往上開，最新的在最下面，可捲動（人類）。 */
-function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries: readonly Report[]; onClose(): void }) {
-  const list = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [entries]);
-  const shown = entries.slice(-HISTORY);
-  return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history" onClose={onClose}>
-    <div ref={list} className="log-list">{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
-      <time>{new Date(entry.time).toLocaleTimeString()}</time><span>{say(entry.message)}</span></div>)
-      : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
-  </Popover>;
-}
 
 // The appearance and size panels of the foot bar (legacy moon and "AA"; floating-panels.md 32, 33). Both only change
 // CSS (human 2026-10-09). The sliders (brightness, overall scale) are placeholders: they touch more (canvas coordinates,
@@ -313,19 +333,6 @@ const SliderPlaceholder = ({ label }: { label: Message }) =>
 const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
 // Component tint (Refactor.59; Q67): ports, labels and wires of one component take its colour. 分量染色：單一分量的接孔、標籤、接線用分量色。
-// The automatic retry as a countdown pie (Refactor.59.3; human 2026-10-09): it empties over the wait, then the editor checks;
-// pressing it checks at once and starts over. While a check is on its way it waits, full and faint.
-// 自動重試的倒數圓餅（人類）：等待期間逐漸變空，空了就檢查；按下去馬上檢查、從頭開始。檢查中保持全滿、變淡、不能按。
-function RetryPie({ checking, retryAt, retryMs, onRetry }: { checking: boolean; retryAt?: number; retryMs?: number; onRetry(): void }) {
-  const left = retryAt === undefined ? 0 : Math.max(0, retryAt - Date.now());
-  const label = say(checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryNow', 'Retrying automatically; click to retry now'));
-  return <button type="button" className={'icon-button retry-pie' + (checking ? ' checking' : '')} disabled={checking} aria-label={label} title={label} onClick={onRetry}>
-    {/* Checking: the mark's waiting animation (human 2026-10-10: one waiting animation everywhere). 檢查中：標誌的等待動畫。 */}
-    {checking ? <BrandMark loading /> : <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="retry-track" cx="10" cy="10" r="8" />
-      <circle key={retryAt ?? 'idle'} className="retry-sweep" cx="10" cy="10" r="4"
-        style={{ animationDuration: left + 'ms', animationDelay: (left - (retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>}
-  </button>;
-}
 
 function ComponentTint() {
   useSyncExternalStore(appearanceSubscribe, appearance);
@@ -337,7 +344,7 @@ function AppearancePanels({ onPanel, fold }: { onPanel?(): void; fold(order: num
   useSyncExternalStore(appearanceSubscribe, appearance);
   const style = currentStyle();
   return <>
-    <span {...fold(3)}><PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
+    <span {...fold(2)}><PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
       <SettingsRow label={tr('appearance.title', 'Appearance')}>
         <Select label={tr('appearance.title', 'Appearance')} value={style} onChange={setStyle}
           options={styles.map(item => ({ value: item.value, label: say(item.label) }))} /></SettingsRow>
@@ -350,7 +357,7 @@ function AppearancePanels({ onPanel, fold }: { onPanel?(): void; fold(order: num
       {/* Looks being tried and values being tuned are in the Appearance panel (Refactor.58.2). 試驗與可調的數值在外觀面板。 */}
       {onPanel && <button className="link-button" onClick={onPanel}>{say(tr('appearance.openPanel', 'More in the Appearance panel…'))}</button>}
     </PopoverButton></span>
-    <span {...fold(4)}><PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
+    <span {...fold(3)}><PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
       <SettingsRow label={tr('action.language', 'Language')}>
         <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
           options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></SettingsRow>
