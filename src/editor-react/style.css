@@ -768,7 +768,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
   font-size: var(--font-md); line-height: var(--line-md); }
 .params-title { padding: 8px var(--params-pad); }
 .params-title > strong { flex: none; }
-.params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; }
+.params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; background: var(--surface-name-field); }
 .params-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
 /* The body is one grid, as TD's parameter dialog (Refactor.76.2, human 2026-10-11): the expand triangle at the far left (TD's
    +) | names flush right | types flush left | fields. Every row (an input, a value's line, a control) is a subgrid across all

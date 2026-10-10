@@ -85,6 +85,7 @@
   --tint-node-border: 12%;  /* a node's outline, also the line under its title (legacy: one colour) 節點外框線，也是標題下的線（舊產品同色） */
   --tint-select-primary: 15%; /* how much brighter the current node is among several selected 多選時目前節點亮多少 */
   --tint-layer-glow: 2%;    /* the light seeping in from a layer's edges (trial; human 2026-10-09: 2%) 內發光的濃度（試驗；人類：2%） */
+  --tint-name-field: 5%;    /* a name box on a title bar (human 2026-10-11: about 5% white, not a black box) 標題列上的名稱框（人類：約 5% 的白，不要黑框） */
   --tint-wire-ready: 30%;   /* the glow round a port a dragged wire will land on (legacy --wire-ready-glow #aa84d64d) 拖線要接上的接孔外圍光暈 */   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
   /* Toned down from the legacy .88/.85/.72/.54/.32 (human 2026-10-09: all white text was frighteningly bright).
@@ -212,6 +213,9 @@
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */
   --layer-shadow: color-mix(in srgb, var(--palette-shadow) var(--tint-layer-shadow), transparent);
   --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);
+  /* A name box on a coloured title bar: the bar shows through, a little towards the text (Refactor.76.5).
+     彩色標題列上的名稱框：透出標題列的顏色，往文字色偏一點（R.76.5）。 */
+  --surface-name-field: color-mix(in srgb, var(--palette-contrast) var(--tint-name-field), transparent);
   --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
   --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
   --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));
