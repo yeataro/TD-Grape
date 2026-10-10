@@ -168,6 +168,7 @@
   "light.conflict": "Conflict",
   "light.none": "No graph",
   "light.offline": "TD unreachable",
+  "light.revision": "r{revision}",
   "light.sending": "Sending",
   "light.stopped": "Stopped",
   "light.uncertain": "Unsure",

@@ -263,7 +263,9 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
     ]} />
     <button type="button" {...fold(6, 'sync-light tone-' + tone + (busy ? ' busy' : ''))} title={now} aria-label={now} aria-haspopup="dialog"
       aria-expanded={!!status} onClick={event => setStatus(status ? null : event.currentTarget)}>
-      <span className="sync-dot" />{state?.revision ?? '–'}<span {...fold(1, 'sync-word')}>{say(word)}</span></button>
+      {/* The revision with an r, the head of "revision" as the tooltip and the record say it (R.70.3, human 2026-10-10).
+          版號前加 r，即提示與紀錄裡「revision」的字頭（R.70.3，人類）。 */}
+      <span className="sync-dot" />{state ? say(tr('light.revision', 'r{revision}', { revision: state.revision })) : '–'}<span {...fold(1, 'sync-word')}>{say(word)}</span></button>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the message history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看訊息歷史。 */}
     <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}

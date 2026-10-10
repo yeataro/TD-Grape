@@ -168,6 +168,7 @@
   "light.conflict": "版本衝突",
   "light.none": "沒有開圖",
   "light.offline": "連不到 TD",
+  "light.revision": "r{revision}",
   "light.sending": "送出中",
   "light.stopped": "已停止",
   "light.uncertain": "回應不確定",
