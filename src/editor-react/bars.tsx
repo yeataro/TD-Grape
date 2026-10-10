@@ -395,6 +395,10 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
   const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records);
   const box = useRef<HTMLDivElement>(null), [floor, setFloor] = useState(0);
   useLayoutEffect(() => { const height = box.current?.offsetHeight ?? 0; if (height > floor) setFloor(height); });
+  // Back to normal, it fits its content again (Refactor.75.9, human 2026-10-11): only while TD is away does it not shrink.
+  // 恢復正常時重新貼合內容（R.75.9，人類）：只有 TD 不在的期間不縮。
+  const calm = !!state && !alarm.includes(state.phase);
+  useLayoutEffect(() => { if (calm) setFloor(0); }, [calm]);
   // The countdown moves on by itself. 倒數自己往下走。
   useEffect(() => {
     if (state?.retryAt === undefined) return;
@@ -417,7 +421,8 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
     <div {...list}>{records.map((record, i) => <div key={i}
-      className={'log-entry' + (alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
+      className={'log-entry' + (record.kind === 'offline' && (record.link === 'deleted' || record.link === 'reloading') ? ' warning'
+        : alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
       title={record.reason === undefined ? undefined : say(record.reason)}>
       <time>{clock(record.time)}{record.until === undefined ? '' : '–' + clock(record.until)}</time><span>{say(recordWords(record))}</span></div>)}</div>
     {/* The state (R.75.4, human 2026-10-11: less repeated, less wordy): the countdown pie, the cause, and Retry now on its
