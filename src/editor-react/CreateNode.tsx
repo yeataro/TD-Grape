@@ -55,10 +55,14 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     } else if (event.key === 'Enter' && active) { event.preventDefault(); onPick(active.choice, active.port?.port); }
   };
   const title = wire ? `${wire.type} · ${wire.end.side === 'output' ? '→' : '←'}` : say(tr('create.title', 'Create node'));
+  // On a touch screen the search is not focused at once: the keyboard would cover half the screen, and most picks are from the
+  // list; a tap on the box brings it (Refactor.75.10, human 2026-10-11). With a mouse it is focused as before.
+  // 觸控螢幕上不馬上聚焦搜尋框：鍵盤會蓋掉半個畫面，而且多半是從清單挑；點一下搜尋框才出現（R.75.10，人類）。滑鼠照舊聚焦。
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   return <div ref={box} className="create-node" role="dialog" aria-label={say(tr('create.title', 'Create node'))} style={place} onKeyDown={keys}>
     <header className="create-head"><strong>{title}</strong>
       <button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))} onClick={onClose}><Icon name="close" /></button></header>
-    <input className="create-search" autoFocus value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
+    <input className="create-search" autoFocus={!touch} value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
       onChange={event => { setQuery(event.target.value); setIndex(0); }} />
     <div className="create-columns">
       <div className="create-list" role="listbox" aria-label={say(tr('create.results', 'Nodes'))}>
