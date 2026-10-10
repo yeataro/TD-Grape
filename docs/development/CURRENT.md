@@ -129,6 +129,7 @@
 - Refactor.17（開放 47 個常用節點）標「待人類實機確認」後沒有紀錄；人類若已確認，刪這一條。（R.32 從 Tab 選單建立：人類 10-09 已用它建出 `Grape_TOP1`。）
 - **Human Takeover Test**：人類不靠 AI 完成一項維護（如新增 unary 節點），未執行。見 [B 案](REFACTOR_REACT_FLOW_PLAN_B.md#human-takeover-test)。
 - **完整 TOE 冷啟動**：未驗證。
+- **發佈前確認（人類 10-11：發佈前再說）**：Mac Safari、iPhone／iPad 讀不讀得到系統的「減少透明度」（預期讀不到、玻璃照常顯示，只能用齒輪「一律關閉」；Chrome／Edge 讀得到）。「動畫效果」各系統都讀得到。
 - **R.71–75.10 未在真實情況驗證**：真的關掉 TD（關閉原因 4001）、刪掉 Grape OP（4004）、手機真的離線、iPhone 聚焦輸入不放大（75.10）、在 TD 存檔時記下版號（73）、按鈕存檔的兩行訊息與超過 10 秒的存檔（75.12）。
 - **未遷移**：MAT／ISF、TOP 貼圖輸入後續（3D／Cube、調整順序、輸入狀態）、陣列與進階來源、舊 `expose` 旗標、pixel preview、Personal Library。
 
