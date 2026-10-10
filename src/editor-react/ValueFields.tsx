@@ -191,7 +191,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
     const change = (next: Value) => commit(withComponent(next));
     const mode = modes?.[i], bound = mode?.mode === 'bind';
-    return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
+    return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined} data-component={count > 1 ? i : undefined}>
       {letter && count > 1 && <span className="component component-letter letter-slot" data-component={i}>{names[i]}</span>}
       {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
         : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>

@@ -459,6 +459,7 @@
   "toolbar.bodyDrag": "Body drag",
   "toolbar.boxSelect": "Box select (drag selects instead of panning)",
   "toolbar.boxSelectName": "Box select",
+  "toolbar.componentLetters": "Component letters in value boxes",
   "toolbar.componentTint": "Component colours",
   "toolbar.damping": "Canvas damping",
   "toolbar.downloadDraft": "Download draft",

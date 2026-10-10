@@ -749,6 +749,16 @@ span.image-label:hover { background: var(--image-label); }
    TD 驅動的值保持自己的樣子：TD 的模式色、深色的鎖定底，在框裡垂直置中。 */
 .value-field .td-driven { display: flex; align-items: center; }
 .value-field > .component ~ * { padding-left: 18px; }
+/* Component letters off (Refactor.76.10, the gear; human 2026-10-11): no letter in any value box, the digits take the
+   component's colour instead (only under the tint switch, as letters do), and boxes need only the digits' room.
+   分量字母關掉（R.76.10，齒輪；人類）：所有數值框都不放字母，改由數字帶分量的顏色（和字母一樣，只在分量染色開著時），框只要放得下數字。 */
+:root[data-component-letters="off"] { --io-field-min: 50px; }
+:root[data-component-letters="off"] .value-field > .component { display: none; }
+:root[data-component-letters="off"] .value-field > .component ~ * { padding-left: 6px; }
+:root[data-component-letters="off"][data-component-tint="on"] .value-field[data-component="0"] > :is(input, .select-button) { color: var(--component-x); }
+:root[data-component-letters="off"][data-component-tint="on"] .value-field[data-component="1"] > :is(input, .select-button) { color: var(--component-y); }
+:root[data-component-letters="off"][data-component-tint="on"] .value-field[data-component="2"] > :is(input, .select-button) { color: var(--component-z); }
+:root[data-component-letters="off"][data-component-tint="on"] .value-field[data-component="3"] > :is(input, .select-button) { color: var(--component-w); }
 /* The slider fill (legacy numeric slider): how far the value is through its decade. 填色：值在它那一段走到哪裡。 */
 input.number { background-image: linear-gradient(to right, var(--field-fill) 0 var(--fill), transparent var(--fill) 100%); }
 .control-field .select-button { background: var(--field-bg); }

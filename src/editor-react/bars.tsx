@@ -6,7 +6,7 @@ import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
 import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, componentLettersOn, setComponentLetters, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
@@ -379,6 +379,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
       <ComponentTint />
+      <ComponentLetters />
       <Effects />
     </PopoverButton></span>
     <AppearancePanels onPanel={onAppearance} fold={fold} />
@@ -532,6 +533,12 @@ function ComponentTint() {
   useSyncExternalStore(appearanceSubscribe, appearance);
   return <label className="check"><input type="checkbox" checked={componentTintOn()} onChange={event => setComponentTint(event.target.checked)} />
     {say(tr('toolbar.componentTint', 'Component colours'))}</label>;
+}
+
+function ComponentLetters() {
+  useSyncExternalStore(appearanceSubscribe, appearance);
+  return <label className="check"><input type="checkbox" checked={componentLettersOn()} onChange={event => setComponentLetters(event.target.checked)} />
+    {say(tr('toolbar.componentLetters', 'Component letters in value boxes'))}</label>;
 }
 
 function AppearancePanels({ onPanel, fold }: { onPanel?(): void; fold(order: number): { 'data-fold': number; className?: string } }) {
