@@ -1079,6 +1079,25 @@ test('the reason TD gives for closing is what the light and the message say, and
   }
 });
 
+// Audit since R.67: TD says why it closed while a send is on its way; the send then fails and the light keeps TD's reason.
+// 送出途中 TD 說了關閉原因；送出接著失敗，燈號保留 TD 說的原因。
+test('a reason TD gives while a send is on its way is kept when the send fails', async t => {
+  const sockets = [];
+  let fail;
+  const { session } = open(t, async (action, body, remote) => {
+    if (action === 'state') return remote.get();
+    await new Promise(resolve => { fail = resolve; });
+    throw new TypeError('fetch failed');
+  }, 60000, undefined, () => { const each = fakeSocket(); sockets.push(each); return each; });
+  sockets[0].readyState = 1; sockets[0].onopen();
+  session.addConstant();
+  const sending = session.flush();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  sockets[0].readyState = 3; sockets[0].onclose({ code: 4002, reason: 'service-stopped' });
+  fail(); await sending;
+  assert.deepEqual([session.snapshot().phase, session.snapshot().link], ['offline', 'stopped']);
+});
+
 // Refactor.73 (human 2026-10-10): the editor never saves the TD project, so after an apply it says which revision the file
 // holds and how far it is behind, briefly; a save in TD moves that on. R.73：編輯器不會自己存 TD 專案，套用後簡短說出檔案存的是哪一版、
 // 落後多少；在 TD 存檔後跟著更新。

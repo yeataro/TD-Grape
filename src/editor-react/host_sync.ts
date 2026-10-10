@@ -139,6 +139,9 @@ export class HostSync {
   private runtimeKey: string | null; // fingerprint of the program TD runs; null when unknown
   private failedKey: string | null = null; // fingerprint of a program TD could not compile
   private uncertain?: Sent;
+  // A cause TD said while a send was on its way; the send's own failure only sees "unreachable" (audit since R.67).
+  // 送出途中 TD 說的原因；送出自己失敗時只看得到「連不到」。
+  private told?: Link;
   blocked = false;
   status: SyncStatus;
   /** What TD reported along with a reply (Uniform D1). 回覆裡 TD 一起帶回的現況與訊息。 */
@@ -189,7 +192,7 @@ export class HostSync {
         const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime, this.editorVersion));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
-        this.confirm(sent.document);
+        this.confirm(sent.document); this.told = undefined;
         const saved = result.projectSaved ?? this.status.saved;
         let message = appliedMessage(result.state.revision, saved), level: Level = 'info';
         if (runtime && result.shaderError) {
@@ -227,8 +230,9 @@ export class HostSync {
     }
     this.blocked = failure.phase !== 'error';
     if (sent && (failure.phase === 'uncertain' || (failure.phase === 'offline' && failure.landed))) this.uncertain = sent;
-    const reason = errorText(error);
-    this.set(failure.phase === 'offline' ? { phase: 'offline', link: failure.link, message: offlineMessage[failure.link], level: 'warning' }
+    const reason = errorText(error), link = this.told ?? (failure.phase === 'offline' ? failure.link : 'unreachable');
+    this.told = undefined;
+    this.set(failure.phase === 'offline' ? { phase: 'offline', link, message: offlineMessage[link], level: 'warning' }
       : { phase: failure.phase, link: undefined, level: failure.phase === 'error' ? 'error' : 'warning',
         message: failure.phase === 'conflict' ? conflictMessage
           : failure.phase === 'uncertain' ? tr('sync.uncertain', 'Delivery result unknown; automatic sending stopped while checking the version with TD. {reason}', { reason })
@@ -240,6 +244,7 @@ export class HostSync {
    * 即時連線在送出之前就發現了：斷了（unreachable）或 TD 不回心跳（busy）。只從「已同步」或「不在」進來；送出中、衝突、
    * 結果不確定各走自己的路。 */
   lost(link: Link) {
+    if (this.pending && said(link)) this.told = link;
     if (this.disposed || this.pending || !['ready', 'offline'].includes(this.status.phase)) return;
     if (this.status.phase === 'offline' && (this.status.link === link || (said(this.status.link) && !said(link)))) return;
     this.blocked = true;
