@@ -100,6 +100,11 @@ a { color: var(--accent); }
 /* Each piece of the line (tagline, version, About) folds on its own (Refactor.69). 這一行的每一塊（副標題、版號、About）各自收起。 */
 .brand-line > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 /* A part of the title bar folded away as it narrows (bars.tsx useFolding). 標題列變窄時收起的部分。 */
+/* The sync state's short stand-in, shown once the full one folds (69.2). 同步狀態的簡短替身，完整的收起後才出現（69.2）。 */
+.foot-sync-short { display: none; align-items: center; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.foot-sync-short.appeared { display: inline-flex; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sync-none); }
+.sync-dot.synced { background: var(--sync-synced); } .sync-dot.unsent { background: var(--sync-unsent); } .sync-dot.sending { background: var(--sync-sending); }
 :is(.title-bar, .foot-bar) .folded { display: none; }
 /* The foot bar's icons keep their size; only the latest message gives way, down to its "…" (69.1). 底列圖示不縮；只有最新訊息讓，讓到剩「…」。 */
 .foot-bar > :not(.foot-message, .spacer) { flex-shrink: 0; }

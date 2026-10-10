@@ -222,6 +222,11 @@
   /* Where a moved panel would go, and where it cannot (Refactor.68): the handles' purple for now (human 2026-10-10), the alarm red.
      搬面板時會放在哪、以及放不下的地方：暫時和把手同一個紫色（人類 10-10），放不下用警示紅。 */
   --drop-target: var(--accent);
+  /* The short sync state's dot (Refactor.69.2): synced, not yet sent, on its way, no graph. 簡短同步狀態的點：已同步、未送出、送出中、沒有圖。 */
+  --sync-synced: color-mix(in srgb, var(--palette-green), var(--palette-contrast) 45%);
+  --sync-unsent: var(--status-warning);
+  --sync-sending: var(--accent);
+  --sync-none: var(--text-faint);
   --drop-refused: var(--palette-alarm);
   --accent-fill: var(--palette-accent);
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
