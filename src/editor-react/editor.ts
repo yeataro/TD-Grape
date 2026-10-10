@@ -2,7 +2,7 @@ import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, t
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
   type Declaration, type NameProblem, type ObjectValue } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
-import { type HostClient, type StateResponse, type UniformStates } from './host';
+import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
@@ -245,11 +245,11 @@ export class Editor {
       this.status({ message: tr('live.refused', 'TD-Grape can no longer read this Grape OP in TD: {reason}', { reason: message.message }), level: 'error' }, 'td');
       return;
     }
-    // The project was saved in TD (Refactor.71, human 2026-10-10): said as the editor's own save says it; a save this page asked
-    // for is said by its reply. 在 TD 存檔了：和編輯器自己存檔說得一樣；這一頁自己要求的存檔由回覆來說。
+    // The project was saved in TD (Refactor.71): every save says so here, whoever asked and however long it took
+    // (Refactor.75.12). 在 TD 存檔了：每一次存檔都由這裡說，不管是誰要求、存了多久（R.75.12）。
     if (message.type === 'saved') {
       if (message.projectSaved) this.sync.savedInTd(message.projectSaved);
-      if (!this.saving) this.status({ message: savedMessage(message.file, this.state), level: 'info' }, 'td');
+      this.status({ message: savedMessage(message.file, this.state), level: 'info' }, 'td');
       return;
     }
     if (message.type === 'state') { this.setTd(message.uniforms); return; }
@@ -716,10 +716,17 @@ export class Editor {
     if (this.sync.busy || this.state.phase !== 'conflict') return;
     try { await this.sync.overwrite(); } catch (error) { this.notice(error); }
   };
-  private saving = false;
+  /** One line when asked, one when TD says it is saved; the reply speaks only when something went wrong (Refactor.75.12, human
+   * 2026-10-11: leave a line for what happens, people work out the rest). A big project can take longer than the service
+   * waits (10 s): TD has started, and says so when it is done. 要求時一行、TD 說存好時一行；回覆只在出問題時說話
+   * （R.75.12，人類：有事就留訊息，因果使用者自己知道）。大專案可能存得比服務等的 10 秒久：TD 已開始，存好時會說。 */
   save = async () => {
-    this.saving = true;
-    try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); } finally { this.saving = false; }
+    this.tell('info', tr('save.saving', 'Saving the TD project…'));
+    try { await this.sync.save(); } catch (error) {
+      if (error instanceof HostError && error.code === 'application_outcome_unknown')
+        this.warn(tr('save.noAnswer', 'TD started saving but has not answered yet; it will say so when the project is saved.'));
+      else this.notice(error);
+    }
   };
   /** A new Grape ID for this Grape OP in TD (Refactor.52); null when it was not changed. 換新 Grape ID。 */
   renewId = async () => {

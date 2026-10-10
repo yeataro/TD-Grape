@@ -1014,7 +1014,7 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
 
 // Refactor.71 (human 2026-10-10: TD had been minimized long before the editor showed it): the live connection tells before
 // anything is sent. Closed = TD unreachable; no answer to the heartbeat = TD not responding; either way a check brings it back.
-// A save in TD is told; a save this page asked for is said once, by its reply.
+// A save in TD is told; a save this page asked for: one line when asked, one when TD says it is saved (Refactor.75.12).
 // R.71：即時連線在送出之前就會說。斷了＝連不到 TD；心跳沒回＝TD 沒處理；檢查後恢復。TD 存檔會告訴編輯器；這一頁自己要求的存檔只說一次。
 test('the heartbeat is answered or not; a closed live connection is TD unreachable; a save in TD is told', async t => {
   const { LiveValues } = load(path.join(root, 'src/editor-react/live_values.ts'));
@@ -1046,11 +1046,22 @@ test('the heartbeat is answered or not; a closed live connection is TD unreachab
   live2.onmessage?.({ data: JSON.stringify({ type: 'saved', frame: 9, file: 'project.toe' }) });
   const told = session.log.entries().at(-1);
   assert.deepEqual([told.source, told.message.code, zh(told.message)], ['td', 'save.done', 'TD 專案已保存：project.toe']);
-  // A save this page asked for: the event that comes during it is not said again. 這一頁要求的存檔：期間來的通知不再說一次。
+  // A save this page asked for: one line when asked, one when TD says it is saved; the reply adds none (R.75.12).
+  // 這一頁要求的存檔：要求時一行、TD 說存好時一行；回覆不再多說。
   const count = session.log.entries().length;
   saving = () => live2.onmessage?.({ data: JSON.stringify({ type: 'saved', frame: 10, file: 'test.toe' }) });
   await session.save();
-  assert.equal(session.log.entries().length, count + 1, 'said once, by the reply');
+  assert.deepEqual(session.log.entries().slice(count).map(entry => zh(entry.message)), ['保存 TD 專案…', 'TD 專案已保存：test.toe']);
+});
+
+// Refactor.75.12 (human 2026-10-11: a big project can take more than 10 s to save): the service stops waiting, TD goes on.
+// 大專案可能存超過 10 秒：服務不再等，TD 照樣存；說 TD 已開始、存好時會通知，不當成失敗。
+test('a save that outlasts the service is said as started, not failed', async t => {
+  const { session } = open(t, async action => action === 'save' ? new Response(JSON.stringify({ code: 'application_outcome_unknown',
+    error: 'TD started this operation but has not returned its result.' }), { status: 503 }) : undefined);
+  await session.save();
+  const last = session.log.entries().at(-1);
+  assert.deepEqual([last.level, zh(last.message)], ['warning', 'TD 已開始存檔、還沒回覆結果；存好時會另外通知。']);
 });
 
 // Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003

@@ -351,7 +351,6 @@ export class HostSync {
     const result = await this.host.call<{ saved: boolean | string; projectSaved?: ProjectSaved }>('save', {});
     if (!result.saved) throw new TextError(tr('save.notConfirmed', "TD did not confirm that the project was saved; the applied graph is only in TD's memory."));
     if (result.projectSaved) this.savedInTd(result.projectSaved);
-    return savedMessage(typeof result.saved === 'string' ? result.saved : null, this.status);
   };
   // "Also give this Grape OP a new Grape ID" (Refactor.52, Q63): only once everything is in TD, so the
   // new ID never leaves changes behind. Returns the new ID; switching to it is the shell's.
