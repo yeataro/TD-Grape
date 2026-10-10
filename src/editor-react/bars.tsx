@@ -4,12 +4,12 @@ import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
-import { clockOf, type Link } from './host_sync';
+import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
-import { clockTime, language, setLanguage, say, tr, type Message } from './text';
+import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
 import { frameNodes } from './viewport';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
@@ -279,7 +279,7 @@ function LightDot({ state }: { state: EditorState | null }) {
 
 /** How long the foot bar keeps showing the last result before it says something is on its way (Refactor.73.2, human
  * 2026-10-10: 0.1 s). 底列在說「正在途中」之前，先維持上一個結果多久（R.73.2，人類：0.1 秒）。 */
-export const CALM_MS = 100;
+const CALM_MS = 100;
 const passing = (state: EditorState | null) => !!state && (state.phase === 'sending' || (state.phase === 'ready' && state.dirty));
 /** What the foot bar shows (Refactor.73.2, human 2026-10-10: the bar jumped at every edit, three states within ~20 ms). Sending
  * is not delayed; only the showing is. A result (applied, an error, TD away) shows at once; "on its way" (not sent yet,

@@ -1,6 +1,6 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood, type ProjectSaved } from './host';
-import { tr, TextError, errorText, type Message } from './text';
+import { tr, TextError, errorText, clockOf, type Message } from './text';
 import type { Level } from './reports';
 
 // Exchanging the authored document with the host (TD): open, deliver, recover, conflicts, save.
@@ -39,11 +39,6 @@ type Sent = { document: string; revision: number };
 // shaderFailure: 'compile' or 'internal' (TD-Grape's own error), so the message says which (Refactor.63).
 type Applied = { state: StateResponse['state']; shaderError?: string | null; shaderFailure?: 'compile' | 'internal' | null;
   uniforms?: UniformStates; notices?: Message[]; projectSaved?: ProjectSaved };
-/** A save's time as people read it: the clock today, with the date otherwise. 存檔時間：今天只寫時刻，其他天加日期。 */
-export const clockOf = (time: number, now = Date.now()) => {
-  const at = new Date(time), pad = (n: number) => String(n).padStart(2, '0'), clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
-  return at.toDateString() === new Date(now).toDateString() ? clock : (at.getMonth() + 1) + '/' + at.getDate() + ' ' + clock;
-};
 /** After an apply: the editor never saves the TD project, so it says how far the file is behind (Refactor.73, human
  * 2026-10-10: short). 套用後：編輯器從不自己存 TD 專案，所以說出檔案落後多少（R.73，人類：精簡）。 */
 export function appliedMessage(revision: number, saved?: ProjectSaved): Message {

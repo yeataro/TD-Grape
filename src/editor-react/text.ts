@@ -58,9 +58,15 @@ export function setLanguage(next: Language) {
 export const say = (message: Message | string) => localize(message, current);
 /** A time of day as 24-hour HH:MM:SS, the same in every language and always as wide (Refactor.75.8, human 2026-10-11).
  * 24 小時制 HH:MM:SS，各語言一樣、寬度固定（R.75.8，人類）。 */
+const pad = (n: number) => String(n).padStart(2, '0');
 export const clockTime = (time: number | Date) => {
-  const at = new Date(time), pad = (n: number) => String(n).padStart(2, '0');
+  const at = new Date(time);
   return pad(at.getHours()) + ':' + pad(at.getMinutes()) + ':' + pad(at.getSeconds());
+};
+/** A save's time as people read it (Refactor.73): HH:MM today, with the date otherwise. 存檔時間：今天只寫 HH:MM，其他天加日期。 */
+export const clockOf = (time: number, now = Date.now()) => {
+  const at = new Date(time), clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
+  return at.toDateString() === new Date(now).toDateString() ? clock : (at.getMonth() + 1) + '/' + at.getDate() + ' ' + clock;
 };
 
 // Data that carries its own English (Q34 修訂 4): the code is derived here, where the text is used.
