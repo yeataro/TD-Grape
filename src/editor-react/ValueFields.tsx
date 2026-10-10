@@ -71,12 +71,13 @@ export const colorHex = (list: readonly unknown[]) =>
   '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
 
 /** Values laid out in the Parameter panel's columns (Refactor.76.2, human 2026-10-11: as TD's parameter dialog, names flush
- * right and fields flush left, with the type between): the name, the type, the fields side by side, the expand triangle;
- * expanded, the fields move to lines of their own under it, its letter as the name and no type (the line above says it). Each
- * line is a row of the container's grid. The same widget and gestures as on a card; only the arrangement differs.
- * 參數面板的欄位排法（R.76.2，人類：照 TD 參數視窗，名稱靠右、欄位靠左，中間多一欄型別）：名稱、型別、並排的欄位、展開三角形；
- * 展開時欄位移到下面、每個分量自己一行，分量字母當名稱、不寫型別（上一行寫了）。每一行是容器格線的一列。和卡片同一個 widget、同樣的手勢，
- * 只有排法不同。 */
+ * right and fields flush left, with the type between): the expand triangle at the far left (TD's +), the name, the type, the
+ * fields side by side; expanded, the side-by-side fields stay and each component also gets a line of its own under them, its
+ * letter as the name and no type (TD). Each line is a row of the container's grid. The same widget and gestures as on a card;
+ * only the arrangement differs.
+ * 參數面板的欄位排法（R.76.2，人類：照 TD 參數視窗，名稱靠右、欄位靠左，中間多一欄型別）：展開三角形在最左（TD 的 +）、名稱、型別、
+ * 並排的欄位；展開時並排的欄位留著，每個分量另在下面自己一行，分量字母當名稱、不寫型別（照 TD）。每一行是容器格線的一列。和卡片同一個
+ * widget、同樣的手勢，只有排法不同。 */
 export const ValueColumns = createContext(false);
 
 export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption, typeText }: {
@@ -140,7 +141,10 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       label: choice.isDefault ? say(tr('number.presetDefault', '{value} (default)', { value: String(choice.value) })) : String(choice.value) }));
   if (own && shared === undefined) choices.unshift({ key: 'default', value: own, checked: list.every((item, i) => Number(item) === own[i]),
     label: say(tr('number.presetDefault', '{value} (default)', { value: `(${own.join(', ')})` })) });
-  const leading = <span ref={head} className="value-caption nodrag nopan"
+  // In columns, a left click on the name or the type also opens or closes the components (TD; human 2026-10-11).
+  // 欄位排法裡，左鍵點名稱或型別也會展開／收起分量（照 TD；人類）。
+  const toggle = columns && count > 1 ? () => setExpanded(open => !open) : undefined;
+  const leading = <span ref={head} className="value-caption nodrag nopan" onClick={toggle} data-toggle={toggle ? '' : undefined}
       title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
       onPointerDown={event => {
         if (!groupable || !(event.button === 1 || (event.button === 2 && event.altKey))) return;
@@ -180,10 +184,9 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     {group.view}</>;
   if (columns) return <>
     <div className="value-line">
-      {leading}<span className="value-type">{typeText ?? type}</span>
-      {!expanded && <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
-        <div className="value-fields" style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>}
-      {expand}
+      {expand}{leading}<span className="value-type" onClick={toggle} data-toggle={toggle ? '' : undefined}>{typeText ?? type}</span>
+      <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
+        <div className="value-fields" style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>
     </div>
     {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
       <span className="value-caption"><span className="component-letter" data-component={i}>{names[i]}</span></span>

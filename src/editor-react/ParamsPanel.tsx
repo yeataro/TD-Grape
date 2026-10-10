@@ -70,8 +70,9 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
         ? <NodeName id={id} name={authored.name ?? ''} />
         : <span className="params-source">{view.literalLabel ? view.label : text(view.label ?? data.label)} <small>{data.outputs[0]?.type}</small></span>}
     </div>
-    {/* One grid for the whole body, as TD's parameter dialog (Refactor.76.2): names flush right | types | fields; every row
-        lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：名稱靠右｜型別｜欄位；每一列都和其他列對齊。 */}
+    {/* One grid for the whole body, as TD's parameter dialog (Refactor.76.2): expand | names flush right | types | fields;
+        every row lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：展開｜名稱靠右｜型別｜欄位；
+        每一列都和其他列對齊。 */}
     {!data.ghost && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
       {!view.typeLocked && (view.selector
         ? <label className="control-field"><span>{say(tr('params.operationType', 'Operation type'))}</span>
@@ -85,11 +86,8 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
         const source = sourceOf(port.key), label = <PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key}
           components={view.components?.inputs?.[port.key]} />;
         const head = <><span className="value-caption">{label}</span><span className="value-type">{port.type}</span></>;
-        // The whole row takes a wire dragged from a node's output (Refactor.76.1); the socket shows where, filled when wired.
-        // 整列都接得住從節點輸出拉來的線（R.76.1）；接孔標出位置，接了線就實心。
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
-          data-component={single(view.components?.inputs?.[port.key])} data-panel-port={port.key} data-node={id}>
-          <span className="params-port" data-connected={source !== undefined} aria-hidden="true" />
+          data-component={single(view.components?.inputs?.[port.key])}>
           {source !== undefined ? <>{head}<span className="params-wired"><span>{source}</span>
             <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></span></>
             : port.fallback !== undefined ? <>{head}<code className="port-fallback">{port.fallback}</code></>

@@ -770,38 +770,34 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-title > strong { flex: none; }
 .params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; }
 .params-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
-/* The body is one grid, as TD's parameter dialog (Refactor.76.2, human 2026-10-11): names flush right | types flush left |
-   fields | the expand triangle. Every row (an input, a value's line, a control) is a subgrid across all four, so all of them
-   line up; a name too long is cut short. Controls, wired inputs and swatches leave the type column empty and run to the edge.
-   本體是一張格線，照 TD 參數視窗（R.76.2，人類）：名稱靠右｜型別靠左｜欄位｜展開三角形。每一列（輸入、值的每一行、控制項）都是橫跨
-   四欄的 subgrid，所以全部對齊；名稱太長就截斷。控制項、接了線的輸入、色塊不寫型別、一直到邊。 */
-.params-grid { display: grid; grid-template-columns: fit-content(40%) max-content minmax(0, 1fr) max-content; column-gap: 8px;
+/* The body is one grid, as TD's parameter dialog (Refactor.76.2, human 2026-10-11): the expand triangle at the far left (TD's
+   +) | names flush right | types flush left | fields. Every row (an input, a value's line, a control) is a subgrid across all
+   four, so all of them line up; a name too long is cut short. Wired inputs and swatches leave the type column empty; a menu takes it.
+   本體是一張格線，照 TD 參數視窗（R.76.2，人類）：展開三角形在最左（TD 的 +）｜名稱靠右｜型別靠左｜欄位。每一列（輸入、值的每一行、
+   控制項）都是橫跨四欄的 subgrid，所以全部對齊；名稱太長就截斷。接了線的輸入、色塊型別欄空著；選單佔用型別欄。 */
+.params-grid { display: grid; grid-template-columns: max-content fit-content(40%) max-content minmax(0, 1fr); column-gap: 8px;
   padding-inline: var(--params-pad); }
 .params-grid > :is(.port-row, .value-line, .control-field, .hint, button), .params-grid > .control-row > .control-field, .params-grid > .port-row > .value-line {
   grid-column: 1 / -1; margin: 0; }
 .params-grid :is(.port-row, .value-line, .control-field) { display: grid; grid-template-columns: subgrid; padding: 0; min-height: var(--io-row); }
 .params-grid > .control-row { display: contents; }
-.params-grid :is(.value-caption, .control-field > span) { grid-column: 1; display: block; min-width: 0; height: var(--io-row); line-height: var(--io-row);
+.params-grid :is(.value-caption, .control-field > span) { grid-column: 2; display: block; min-width: 0; height: var(--io-row); line-height: var(--io-row);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
-.params-grid .value-type { grid-column: 2; height: var(--io-row); line-height: var(--io-row); white-space: nowrap;
+.params-grid .value-type { grid-column: 3; height: var(--io-row); line-height: var(--io-row); white-space: nowrap;
   font-size: var(--font-xs); color: var(--port-color, var(--text-muted)); }
-.params-grid .value-group { grid-column: 3; display: block; }
-.params-grid .value-expand { grid-column: 4; margin-block: var(--io-inset); }
-.params-grid :is(.control-field > .select-button, .params-wired, .port-fallback, .value-swatch), .params-grid > button { grid-column: 3 / -1; min-width: 0; }
+.params-grid .value-group { grid-column: 4; display: block; }
+.params-grid [data-toggle] { cursor: pointer; }
+.params-grid .value-expand { grid-column: 1; margin-block: var(--io-inset); }
+.params-grid :is(.params-wired, .port-fallback, .value-swatch), .params-grid > button { grid-column: 4; min-width: 0; }
+/* A menu has no type, so it starts in the type column, right after its name (human 2026-10-11: no empty cell).
+   選單沒有型別，從型別欄開始、緊接名稱（人類：不要空一格）。 */
+.params-grid .control-field > .select-button { grid-column: 3 / -1; min-width: 0; }
 .params-grid .control-field > .select-button { align-self: center; }
 .params-grid > button { height: var(--io-field); margin-block: var(--io-inset); }
 .params-grid > .hint { padding-block: var(--io-inset); }
 .params-wired { height: var(--io-row); display: flex; align-items: center; gap: 8px; color: var(--text); }
 .params-wired > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .params-wired > button { flex: none; height: var(--io-field); padding: 0 8px; }
-/* An input's socket in the panel (Refactor.76.1): drop a wire from a node's output on the row; as the canvas's ports, filled
-   when wired, ringed while the pointer is over the row. It sits in the card's left padding, on the row's first line.
-   面板裡輸入的接孔（R.76.1）：把節點輸出拉來的線放在這一列；和畫布的接孔一樣，接了線就實心，游標在這列上時加一圈。放在卡片左內距、這一列第一行。 */
-.params-card .port-row > .params-port { position: absolute; left: calc(var(--port-size) / -2 - var(--params-pad) / 2); top: calc((var(--io-row) - var(--port-size)) / 2);
-  width: var(--port-size); height: var(--port-size); border-radius: 50%;
-  box-sizing: border-box; border: var(--port-ring) solid var(--port-color); background: var(--surface-port); }
-.params-card .port-row > .params-port[data-connected="true"] { background: var(--port-color); }
-.params-card .port-row:hover > .params-port { box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent); }
 .params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; border-top: 1px solid var(--border-node); }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
