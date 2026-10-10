@@ -114,6 +114,12 @@ def digest(text):
     return sha256(text.encode('utf-8')).hexdigest()
 
 
+def sample_labels(samples):
+    """The labels of the Samples outputs, in order (Refactor.67, D7): which default images TD has, read, not listed.
+    Samples 各出口的 label：TD 有哪些預設圖，用讀的、不寫名單。"""
+    return [connector.outOP.par.label.eval() for connector in samples.outputConnectors if connector.outOP is not None]
+
+
 def sample_output(samples, name):
     """The index of the Samples output labelled `name`; LookupError when there is none or more than one (Refactor.58.9).
     Samples 裡 label 是 name 的出口編號；沒有或不只一個時 LookupError。"""

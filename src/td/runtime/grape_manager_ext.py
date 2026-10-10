@@ -51,13 +51,15 @@ class GrapeManagerExt:
 
     def Texture(self, name):
         """A shared default image, from the main component's Samples (Refactor.58; the human placed a copy there).
-        The host asks once per connection. Only the images; the plain colours are drawn by the editor.
-        公用預設圖，來自主組件裡的 Samples（人類放的一份）；宿主每次連線只問一次。只有圖片，純色由編輯器畫。"""
+        The host asks once per connection. Whatever Samples has an output labelled `name` for is served, so an image added
+        to Samples later needs no change here (Refactor.67, D7: no list of names); the editor still draws plain colours
+        itself. 公用預設圖，來自主組件裡的 Samples；宿主每次連線只問一次。Samples 有 label 是這個名字的出口就給，之後在
+        Samples 加的圖不用改這裡（D7：不寫名單）；純色仍由編輯器自己畫。"""
         samples = self.ownerComp.parent.GrapeHost.op('Samples')
-        if name not in ('grape', 'banana', 'jellybeans') or samples is None:
+        nxt = self._module('next_family')
+        if samples is None or name not in nxt.sample_labels(samples):
             return None
         # Found by the out TOP's label (Refactor.58.9). 照 out TOP 的 label 找。
-        nxt = self._module('next_family')
         try:
             index = nxt.sample_output(samples, name)
         except LookupError as error:
