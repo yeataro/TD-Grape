@@ -52,7 +52,7 @@
   --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
   --io-row: 36px;       /* one input or output of a node: the IO row (value-input.md; legacy 29px, ×1.2 human 2026-10-09) 輸入輸出區塊的高度 */
   --io-field: 30px;     /* a value box inside it (legacy 24px, ×1.2 human 2026-10-09; 3px above and below) 其中的數值框 */
-  --io-field-min: 58px; /* the narrowest a value box gets; nodes widen to fit (value-input.md 五 4). Trial (Refactor.76.6, human 2026-10-11): 64px before; the letter area 18 + four digits ("1000" at 13px ≈ 30) + 6 ≈ 54, a little more for Verdana. Back: 64px. 數值框最窄寬度；節點依內容撐開。試驗（R.76.6，人類）：原本 64px；字母區 18＋四個字（13px 的「1000」約 30）＋6 ≈ 54，Verdana 再寬一點。改回：64px。 */
+  --io-field-min: 62px; /* the narrowest a value box gets; nodes widen to fit (value-input.md 五 4). Trial (Refactor.76.6–76.7, human 2026-10-11): 64px before; 58 cut five characters in English, so 62: the letter area 18 + five characters ("3.467" at 13px Verdana ≈ 38) + 6. Back: 64px. 數值框最窄寬度；節點依內容撐開。試驗（R.76.6–76.7，人類）：原本 64px；58 時英文五個字會被截，改 62：字母區 18＋五個字（13px Verdana 的「3.467」約 38）＋6。改回：64px。 */
   --io-field-gap: 4px;  /* between value boxes side by side 並排數值框之間 */
   --field-pad: 6px 10px; /* inside a text input 文字輸入框的內距 */
   --button-pad: 6px 9px; /* inside a text button 文字按鈕的內距 */
