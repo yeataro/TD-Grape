@@ -5,6 +5,7 @@ ordinary immutable bytes; they never inspect OPs, VFS, or the source folder.
 """
 import base64
 from collections import deque
+import errno
 from hashlib import sha1, sha256
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -15,6 +16,7 @@ import re
 import select
 import socket
 import struct
+import sys
 import threading
 import uuid
 from types import MappingProxyType
@@ -493,3 +495,53 @@ class EditorHTTP:
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(timeout=1)
+
+
+PORT_TRIES = 10  # the set port and the next nine 設定的 port 與後面九個
+
+
+def port_problem(error):
+    """Why a port could not be used: 'in use', 'reserved', or None when the error is not about the port.
+    port 不能用的原因：被佔用、被保留；和 port 無關時回 None。"""
+    code = getattr(error, 'winerror', None)
+    if code == 10048 or error.errno == errno.EADDRINUSE:
+        return 'in use'
+    if code == 10013 or error.errno == errno.EACCES:
+        return 'reserved'
+    return None
+
+
+def open_service(snapshot, host, requested, tries=PORT_TRIES, serve=None):
+    """Serve on the set port; when it is in use or reserved, on one of the next ports; when none of those works, on
+    one the system picks, so the service always starts (audit D8, human 2026-10-10). An error not about the port is
+    raised as it is. Returns the server and, when it is not on the set port, what to tell: the set port's problem and,
+    when the system picked the port, the last port tried. 先用設定的 port；被佔用或被保留就往後試；都不行就由系統指定，服務一定
+    起得來。和 port 無關的錯誤照原樣丟出。回傳服務，以及不在設定的 port 時要說的事：設定那個 port 的原因；由系統指定時還有最後試到的 port。"""
+    serve = serve or EditorHTTP
+    first = None
+    last = requested
+    for port in range(requested, min(requested + tries, 65536)):
+        try:
+            return serve(snapshot, host, port), (None if port == requested else (first, None))
+        except OSError as error:
+            problem = port_problem(error)
+            if problem is None:
+                raise
+            first = first or problem
+            last = port
+    return serve(snapshot, host, 0), (first, last)
+
+
+def port_notice(requested, actual, problem, last=None):
+    """One conclusion and its reason, for a service not on the set port (human: only the conclusion, with a reason).
+    The browser keeps preferences per address, so they do not carry over. 不在設定的 port 時：只說結論加一句原因。
+    瀏覽器依網址保存偏好，所以不會帶過來。"""
+    if last is None:
+        reason = ('port ' + str(requested) + ' is used by another program (for example another TouchDesigner)'
+                  if problem == 'in use' else
+                  ('Windows reserves port ' if sys.platform == 'win32' else 'the system does not allow port ')
+                  + str(requested) + (', so it cannot be used' if sys.platform == 'win32' else ''))
+    else:
+        reason = 'ports ' + str(requested) + '-' + str(last) + ' could not be used, so the system chose one'
+    return ('The editor uses port ' + str(actual) + ' this time: ' + reason
+            + '. Preferences saved in the browser do not carry over.')

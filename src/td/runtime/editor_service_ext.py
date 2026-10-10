@@ -2,8 +2,6 @@
 from pathlib import Path
 import socket
 
-PORT_TRIES = 10  # the requested port and the next nine
-
 
 class EditorServiceExt:
     def __init__(self, ownerComp):
@@ -85,28 +83,23 @@ class EditorServiceExt:
         previous = getattr(self, '_message', '')  # what Reload had to say 重新載入留下的話
         host = '0.0.0.0' if self.ownerComp.par.Allowlan.eval() else '127.0.0.1'
         requested = int(self.ownerComp.par.Port.eval())
-        # The requested port first, so one TD always gets the same address (browser storage is per
-        # port); when another program (e.g. a second TouchDesigner) holds it, the next free one.
-        # The Port parameter is left as set; the port in use is shown (human 2026-10-09).
-        # 先試設定的 port（同一台 TD 位址不變；瀏覽器儲存依 port 分開）；被佔用時往後找空的。
-        # Port 參數不改，實際使用的 port 顯示出來。
-        last_error = None
-        for port in range(requested, min(requested + PORT_TRIES, 65536)):
-            try:
-                self.http = self.api.EditorHTTP(self.snapshot, host, port)
-                break
-            except OSError as error:
-                last_error = error
-        if not self.http:
-            self._show('Cannot start; ports ' + str(requested) + '-' + str(port) + ' are in use', str(last_error))
+        # The set port first, so one TD always gets the same address (browser storage is per port); see
+        # editor_service.open_service (audit D8). The Port parameter is left as set; the port in use is shown, and a
+        # different one is told in a pop-up that does not stop TD, and on the status bar (human 2026-10-09, 10-10).
+        # 先用設定的 port（同一台 TD 位址不變；瀏覽器儲存依 port 分開）。Port 參數不改；實際的 port 顯示出來，
+        # 和設定不同時用不擋住 TD 的提示框與狀態列告知。
+        try:
+            self.http, moved = self.api.open_service(self.snapshot, host, requested)
+        except OSError as error:  # not about the port: told as it is 和 port 無關：照實說
+            self._show('Cannot start', type(error).__name__ + ': ' + str(error))
             return False
-        if self.http.port != requested:
-            message = ('Port ' + str(requested) + ' is in use (another TouchDesigner?); the editor is served on port '
-                       + str(self.http.port) + '.')
+        if moved:
+            message = self.api.port_notice(requested, self.http.port, *moved)
             self._show('Serving on port ' + str(self.http.port), ' | '.join(m for m in (message, previous) if m))
             try:
                 ui.status = 'TD-Grape: ' + message
-            except Exception:
+                op.TDResources.PopDialog.OpenDefault(text=message, title='TD-Grape')
+            except Exception:  # a missing TD resource never stops the service 少了 TD 資源也不影響服務
                 pass
         else:
             self._show('Serving', previous)

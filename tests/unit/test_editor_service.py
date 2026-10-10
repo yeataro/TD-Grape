@@ -1,4 +1,5 @@
 """Real HTTP and filesystem tests for the host-independent Editor service."""
+import errno
 import http.client
 from hashlib import sha256
 import importlib.util
@@ -74,6 +75,58 @@ class AssetsTest(unittest.TestCase):
         for name in ('../secret', '/absolute', 'folder\\file'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 service.AssetSnapshot({**bundle(), name: b'x'}, 'external')
+
+
+class PortTest(unittest.TestCase):
+    """Audit D8 (human 2026-10-10): which port the service gets, and what is told. 服務拿到哪個 port、要說什麼。"""
+    def serve(self, refuse):
+        """A stand-in that refuses the ports in `refuse` with the given error. 拒絕指定 port 的替身。"""
+        def serve(snapshot, host, port):
+            if port in refuse:
+                raise refuse[port]
+            return port
+        return serve
+
+    def error(self, code, winerror):
+        error = OSError(code, 'refused')
+        error.winerror = winerror
+        return error
+
+    def test_the_set_port_first_then_the_next_then_the_system(self):
+        in_use, reserved = self.error(errno.EADDRINUSE, 10048), self.error(errno.EACCES, 10013)
+        self.assertEqual(service.open_service(None, 'h', 100, serve=self.serve({})), (100, None))
+        self.assertEqual(service.open_service(None, 'h', 100, serve=self.serve({100: in_use})), (101, ('in use', None)))
+        self.assertEqual(service.open_service(None, 'h', 100, serve=self.serve({100: reserved, 101: in_use})),
+                         (102, ('reserved', None)), "the set port's reason")
+        every = {port: in_use for port in range(100, 110)}
+        self.assertEqual(service.open_service(None, 'h', 100, serve=self.serve(every)), (0, ('in use', 109)))
+
+    def test_an_error_not_about_the_port_is_raised_as_it_is(self):
+        other = OSError(errno.EADDRNOTAVAIL, 'no such address')
+        with self.assertRaises(OSError) as caught:
+            service.open_service(None, 'h', 100, serve=self.serve({100: other}))
+        self.assertIs(caught.exception, other)
+
+    def test_notice_is_one_conclusion_with_its_reason(self):
+        self.assertEqual(service.port_notice(65465, 65466, 'in use'),
+            'The editor uses port 65466 this time: port 65465 is used by another program (for example another '
+            'TouchDesigner). Preferences saved in the browser do not carry over.')
+        self.assertEqual(service.port_notice(65465, 51234, 'in use', 65474),
+            'The editor uses port 51234 this time: ports 65465-65474 could not be used, so the system chose one. '
+            'Preferences saved in the browser do not carry over.')
+        self.assertIn('65465', service.port_notice(65465, 65466, 'reserved'))
+
+    def test_a_real_busy_port_is_said_to_be_in_use(self):
+        with socket.socket() as holder:
+            holder.bind(('127.0.0.1', 0))
+            holder.listen()
+            port = holder.getsockname()[1]
+            server, moved = service.open_service(service.AssetSnapshot(bundle(), 'embedded'), '127.0.0.1', port, tries=2)
+            try:
+                self.assertNotEqual(server.port, port)
+                self.assertEqual(moved[0], 'in use')
+            finally:
+                server.close()
 
 
 class HTTPTest(unittest.TestCase):
