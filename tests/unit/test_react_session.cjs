@@ -1082,6 +1082,15 @@ test('a save that outlasts the service is said as started, not failed', async t 
   assert.deepEqual([last.level, zh(last.message)], ['warning', 'TD 已開始存檔、還沒回覆結果；存好時會另外通知。']);
 });
 
+// Refactor.75.14 (human 2026-10-11): TD never took the save; said in the editor's words. TD 沒接手這次存檔：用編輯器的話說。
+test('a save TD never took is said plainly, not as the raw reply', async t => {
+  const { session } = open(t, async action => action === 'save' ? new Response(JSON.stringify({ code: 'manager_not_responding',
+    error: 'TD did not process this request. No changes were made; it will not run later.' }), { status: 503 }) : undefined);
+  await session.save();
+  const last = session.log.entries().at(-1);
+  assert.deepEqual([last.level, zh(last.message)], ['warning', 'TD 沒有處理這次存檔（TD 當時沒有回應），沒有存檔，之後也不會自動存。']);
+});
+
 // Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003
 // reloading, 4004 Grape OP deleted); what the editor only sees afterwards does not replace it; nothing said is "unreachable".
 // R.75：TD 在關閉訊框裡說原因；之後編輯器只看到的症狀不會蓋掉它；沒說就是連不到。

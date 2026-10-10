@@ -247,6 +247,7 @@
   "save.doneUnnamed": "TD project saved",
   "save.noAnswer": "TD started saving but has not answered yet; it will say so when the project is saved.",
   "save.notConfirmed": "TD did not confirm that the project was saved; the applied graph is only in TD's memory.",
+  "save.notProcessed": "TD did not process this save (TD was not responding); nothing was saved, and it will not save later by itself.",
   "save.pending": "Some changes have not been applied yet; resolve the errors first.",
   "save.saving": "Saving the TD project…",
   "selection.delete": "Delete selected",

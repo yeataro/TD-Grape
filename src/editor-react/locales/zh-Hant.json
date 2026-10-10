@@ -247,6 +247,7 @@
   "save.doneUnnamed": "TD 專案已保存",
   "save.noAnswer": "TD 已開始存檔、還沒回覆結果；存好時會另外通知。",
   "save.notConfirmed": "TD 未確認專案保存成功；已套用的圖仍只在 TD 的記憶體中。",
+  "save.notProcessed": "TD 沒有處理這次存檔（TD 當時沒有回應），沒有存檔，之後也不會自動存。",
   "save.pending": "尚有未成功套用的修改；請先處理錯誤。",
   "save.saving": "保存 TD 專案…",
   "selection.delete": "刪除選取",

@@ -729,6 +729,10 @@ export class Editor {
     try { await this.sync.save(); } catch (error) {
       if (error instanceof HostError && error.code === 'application_outcome_unknown')
         this.warn(tr('save.noAnswer', 'TD started saving but has not answered yet; it will say so when the project is saved.'));
+      // TD never took it (its queue drops a request it did not reach in time; Refactor.75.14, human 2026-10-11: said in the
+      // editor's words, not the raw reply). TD 沒接手（佇列把來不及處理的請求作廢；R.75.14，人類：用編輯器的話說，不顯示原始回覆）。
+      else if (error instanceof HostError && error.code === 'manager_not_responding')
+        this.warn(tr('save.notProcessed', 'TD did not process this save (TD was not responding); nothing was saved, and it will not save later by itself.'));
       else this.notice(error);
     } finally { if (!this.disposed) this.status({ saving: false }); }
   };
