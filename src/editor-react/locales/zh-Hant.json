@@ -173,6 +173,7 @@
   "light.offline": "連不到 TD",
   "light.reloading": "重新載入中",
   "light.revision": "r{revision}",
+  "light.saved": "已存檔",
   "light.sending": "送出中",
   "light.serviceStopped": "服務已停止",
   "light.stopped": "已停止",

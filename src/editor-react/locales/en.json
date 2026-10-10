@@ -173,6 +173,7 @@
   "light.offline": "TD unreachable",
   "light.reloading": "Reloading",
   "light.revision": "r{revision}",
+  "light.saved": "Saved",
   "light.sending": "Sending",
   "light.serviceStopped": "Service stopped",
   "light.stopped": "Stopped",

@@ -119,7 +119,7 @@ a { color: var(--accent); }
 .sync-slot { display: inline-grid; justify-items: start; text-align: start; } .sync-slot > * { grid-area: 1 / 1; } .sync-size { visibility: hidden; }
 .sync-light.busy .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
 @keyframes sync-pulse { 50% { opacity: .3; } }
-.sync-word { color: var(--text-muted); }
+.sync-word { color: var(--text-muted); } .sync-word .saved { color: var(--sync-ok); }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
 .foot-bar .sync-light { height: var(--control-height); padding: 0 2px; }
 .log-entry.ok span { color: var(--sync-ok); }

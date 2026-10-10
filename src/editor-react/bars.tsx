@@ -256,7 +256,7 @@ type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
 // after it never moves (R.70.4, human 2026-10-10, as the sync state of 10-09). 燈號可能出現的每個字；全部看不見地疊在一起，
 // 讓寬度等於目前語言最長的那個，後面的訊息就不會跳（R.70.4，人類，同 10-09 的同步狀態）。
 const words = {
-  none: tr('light.none', 'No graph'), applied: tr('light.applied', 'Graph applied'), unsent: tr('light.unsent', 'Graph not sent'),
+  none: tr('light.none', 'No graph'), applied: tr('light.applied', 'Graph applied'), saved: tr('light.saved', 'Saved'), unsent: tr('light.unsent', 'Graph not sent'),
   sending: tr('light.sending', 'Sending'), checking: tr('light.checking', 'Checking…'), offline: tr('light.offline', 'TD unreachable'),
   busy: tr('light.busy', 'TD not responding'), closed: tr('light.closed', 'TD closed'), serviceStopped: tr('light.serviceStopped', 'Service stopped'),
   reloading: tr('light.reloading', 'Reloading'), deleted: tr('light.deleted', 'OP deleted'), device: tr('light.device', 'Device offline'),
@@ -330,6 +330,11 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
   // 狀態那一行一律和燈號說的一樣（R.75；R.75.15，人類：一套說法，面板不另一套），也不說「檢查中」：那是「立即重試」旁閃動的圓點（R.75.4）。
   const cause = state ? lightOf({ ...state, checking: false }).word : tr('status.noGraph', 'No graph open');
   const mark = savedMark(state);
+  // Saved, said in green on the light itself (Refactor.75.18, human 2026-10-11: the feedback that a save worked matters): only
+  // while nothing is on its way and TD's file holds this revision; the status line keeps "Graph applied · … · saved".
+  // 已存檔，用綠字直接寫在燈號上（R.75.18，人類：這是存檔的視覺回饋，很重要）：只在沒有東西在路上、TD 的檔存的就是這一版時；
+  // 狀態那一行仍是「圖已套用 · … · 已存檔」。
+  const savedNow = !!state && !busy && state.phase === 'ready' && !state.dirty && mark?.kind === 'saved';
   const line = state ? say(tr('status.line', '{state} · revision {revision}', { state: cause, revision: state.revision })) : say(cause);
   const now = line + (mark ? ' · ' + say(mark.word) : '');
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
@@ -352,7 +357,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
         <span className="sync-size" aria-hidden="true">{say(tr('light.revision', 'r{revision}', { revision: '0000' }))}</span>
         <span>{state ? say(tr('light.revision', 'r{revision}', { revision: state.revision })) : '–'}</span></span>
       <span {...fold(1, 'sync-slot sync-word')}>{Object.values(words).map((each, index) => <span key={index} className="sync-size" aria-hidden="true">{say(each)}</span>)}
-        <span>{say(word)}</span></span></button>
+        <span className={savedNow ? 'saved' : undefined}>{say(savedNow ? words.saved : word)}</span></span></button>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the message history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看訊息歷史。 */}
     <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
