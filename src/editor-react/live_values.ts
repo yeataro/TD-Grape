@@ -30,7 +30,7 @@ export type LiveMessage =
 /** The part of a browser WebSocket used here (tests pass a fake). 這裡用到的 WebSocket 介面。 */
 export type LiveSocket = {
   readonly readyState: number; send(text: string): void; close(): void;
-  onopen: (() => void) | null; onclose: (() => void) | null; onerror: (() => void) | null;
+  onopen: (() => void) | null; onclose: ((event?: { code?: number; reason?: string }) => void) | null; onerror: (() => void) | null;
   onmessage: ((event: { data: unknown }) => void) | null;
 };
 const OPEN = 1;
@@ -52,7 +52,7 @@ export class LiveValues {
   responding = true;
   /** `responding(false)` when TD stops answering the heartbeat, `true` once it answers again. TD 不回心跳時 false、又回了 true。 */
   constructor(private readonly open: (() => LiveSocket) | undefined, private readonly receive: (message: LiveMessage) => void,
-    private readonly linked: (connected: boolean) => void, private readonly retry = 2000,
+    private readonly linked: (connected: boolean, code?: number) => void, private readonly retry = 2000,
     private readonly nextFrame: (run: () => void) => void = run => typeof requestAnimationFrame === 'function'
       ? void requestAnimationFrame(() => run()) : void setTimeout(run, 16),
     private readonly answering: (responding: boolean) => void = () => {}, private readonly beat = HEARTBEAT) {
@@ -94,12 +94,13 @@ export class LiveValues {
       this.receive(message);
     };
     socket.onerror = () => {};
-    socket.onclose = () => {
+    socket.onclose = event => {
       if (this.socket !== socket) return;
       this.socket = undefined;
       this.waiting.clear();
       clearTimeout(this.beatTimer); this.asked = undefined;
-      if (this.connected) { this.connected = false; this.linked(false); }
+      // The close frame's code says why TD closed it (Refactor.75; editor_service.CLOSED_*). 關閉訊框的代碼說明 TD 為什麼關。
+      if (this.connected) { this.connected = false; this.linked(false, event?.code); }
       this.later();
     };
   }

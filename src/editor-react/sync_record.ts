@@ -9,8 +9,9 @@ import type { Message } from './text';
 export type SyncRecordKind = 'opened' | 'applied' | 'offline' | 'uncertain' | 'conflict' | 'error' | 'recovered';
 /** One line: when, what, which revision; an `applied` line covers `from`…`revision` until `until`; trouble keeps its reason.
  * 一行：何時、什麼事、哪一版；applied 涵蓋 from…revision 到 until；異常留下原因。 */
-export type SyncRecord = { kind: SyncRecordKind; time: number; revision: number; from?: number; until?: number; reason?: Message | string };
-type Sync = { phase: string; revision: number };
+// link: why TD was away, as the light says it (Refactor.75). link：TD 為什麼不在，同燈號的說法。
+export type SyncRecord = { kind: SyncRecordKind; time: number; revision: number; from?: number; until?: number; reason?: Message | string; link?: string };
+type Sync = { phase: string; revision: number; link?: string };
 export const SYNC_RECORDS = 50;
 const trouble = ['offline', 'uncertain', 'conflict', 'error'];
 
@@ -19,7 +20,11 @@ const trouble = ['offline', 'uncertain', 'conflict', 'error'];
 export function recordSync(records: readonly SyncRecord[], before: Sync | null, after: Sync, reason: Message | string | undefined, now: number): readonly SyncRecord[] {
   if (!before) return [{ kind: 'opened', time: now, revision: after.revision }];
   const lines = [...records], wasBad = trouble.includes(before.phase), isBad = trouble.includes(after.phase);
-  if (isBad && before.phase !== after.phase) lines.push({ kind: after.phase as SyncRecordKind, time: now, revision: after.revision, ...(reason === undefined ? {} : { reason }) });
+  // A new line when trouble starts, and when TD says a different reason while still away (Refactor.75).
+  // 異常開始時一行；還不在、但 TD 說了不同原因時也一行。
+  const newCause = after.phase === 'offline' && before.phase === 'offline' && after.link !== before.link;
+  if (isBad && (before.phase !== after.phase || newCause)) lines.push({ kind: after.phase as SyncRecordKind, time: now, revision: after.revision,
+    ...(reason === undefined ? {} : { reason }), ...(after.phase === 'offline' && after.link ? { link: after.link } : {}) });
   else if (wasBad && !isBad) lines.push({ kind: 'recovered', time: now, revision: after.revision });
   if (!isBad && after.revision > before.revision) {
     const last = lines[lines.length - 1];

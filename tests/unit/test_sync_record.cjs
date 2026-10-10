@@ -38,3 +38,13 @@ test('the record keeps the last 50 lines', () => {
   assert.equal(records.length, SYNC_RECORDS);
   assert.equal(records.at(-1).kind, 'recovered');
 });
+
+// Refactor.75: the record keeps why TD was away, and a different reason while still away is a new line.
+// 紀錄保留 TD 為什麼不在；還不在時換了原因也記一行。
+test('the reason TD gave is kept, and a new reason while away is a new line', () => {
+  let records = recordSync([], null, { phase: 'ready', revision: 5 }, undefined, 0);
+  records = recordSync(records, { phase: 'ready', revision: 5 }, { phase: 'offline', revision: 5, link: 'unreachable' }, 'x', 1);
+  records = recordSync(records, { phase: 'offline', revision: 5, link: 'unreachable' }, { phase: 'offline', revision: 5, link: 'closed' }, 'y', 2);
+  records = recordSync(records, { phase: 'offline', revision: 5, link: 'closed' }, { phase: 'offline', revision: 5, link: 'closed' }, 'y', 3);
+  assert.deepEqual(records.map(r => r.kind + ':' + (r.link ?? '')), ['opened:', 'offline:unreachable', 'offline:closed']);
+});

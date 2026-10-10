@@ -20,4 +20,5 @@ def onCreate():
 
 
 def onExit():
-    parent().ext.EditorServiceExt.Stop()
+    # TD is closing: the editors are told so (Refactor.75). TD 正在關閉：告訴編輯器。
+    parent().ext.EditorServiceExt.Stop('closed')

@@ -16,7 +16,14 @@ export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' 
 // program runs again. stuck：套用失敗後 TD 的 Shader 停在較早的程式（TD 最後說的）；程式再次換上就消失。
 export type ShaderStuck = { failure: ShaderFailure; lastKnownGood?: LastKnownGood };
 // saved: the project's last save as TD reports it (Refactor.73). saved：TD 回報的專案上次存檔。
-export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable';
+// Why TD is away (Refactor.71, 75): `busy` and `unreachable` are what the editor sees; the others TD said before it went
+// (closed, the service stopped or reloading, this Grape OP deleted), and `device` is this device having no network.
+// TD 為什麼不在：busy、unreachable 是編輯器看到的；其他是 TD 走之前說的（關閉、服務停止或重新載入、Grape OP 被刪），device 是這台裝置沒網路。
+export type Link = 'busy' | 'unreachable' | 'closed' | 'stopped' | 'reloading' | 'deleted' | 'device';
+/** Causes TD or the browser said for sure; what the editor only sees afterwards does not replace them (Refactor.75).
+ * TD 或瀏覽器確定說出的原因；之後編輯器只看到的症狀不會蓋掉它。 */
+const said = (link?: Link) => !!link && link !== 'busy' && link !== 'unreachable';
+export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: Link;
   retryAt?: number; retryMs?: number; checking?: boolean; stuck?: ShaderStuck; saved?: ProjectSaved };
 const stuckOf = (state: StateResponse['state']): ShaderStuck | undefined =>
   state.failure ? { failure: state.failure, ...(state.lastKnownGood ? { lastKnownGood: state.lastKnownGood } : {}) } : undefined;
@@ -95,9 +102,14 @@ export const conflictMessage = tr('sync.conflict', 'The graph in TD seems to hav
 // The two things the editor can tell apart (Refactor.71): TD is running but its own thread does not handle anything, or TD
 // cannot be reached at all; why, only TD could say. 編輯器分得出的兩種：TD 還開著但自己的執行緒沒在處理、或完全連不到；
 // 為什麼，只有 TD 自己說得出來。
-const offlineMessage = {
+const offlineMessage: Record<Link, Message> = {
   busy: tr('sync.offlineBusy', 'TD is running but not handling requests. Your changes stay in the browser and are sent when TD is back.'),
   unreachable: tr('sync.offlineUnreachable', 'Cannot reach TD (it may be closed or crashed, or the network is down). Your changes stay in the browser and are sent once connected.'),
+  closed: tr('sync.offlineClosed', 'TD was closed. Your changes stay in the browser; after opening TD again, open the editor from the Grape OP.'),
+  stopped: tr('sync.offlineStopped', "TD's editor service was stopped. Your changes stay in the browser and are sent once the service is on again."),
+  reloading: tr('sync.offlineReloading', "TD's editor service is reloading; it reconnects by itself shortly."),
+  deleted: tr('sync.offlineDeleted', 'This Grape OP was deleted in TD. Your changes stay in the browser; keep them with Download draft.'),
+  device: tr('sync.offlineDevice', 'This device has no network. Your changes stay in the browser and are sent once the network is back.'),
 };
 // The page and TD-Grape in TD come from different builds (usually TD-Grape was updated). Not a conflict: no
 // version choice helps; reloading keeps unsent changes as a draft (Refactor.52). 不是衝突：重新整理即可，修改留成草稿。
@@ -232,9 +244,9 @@ export class HostSync {
    * heartbeat (`busy`). Only from "in sync" or "away"; a send on its way, a conflict or an unsure result keep their own path.
    * 即時連線在送出之前就發現了：斷了（unreachable）或 TD 不回心跳（busy）。只從「已同步」或「不在」進來；送出中、衝突、
    * 結果不確定各走自己的路。 */
-  lost(link: 'busy' | 'unreachable') {
+  lost(link: Link) {
     if (this.disposed || this.pending || !['ready', 'offline'].includes(this.status.phase)) return;
-    if (this.status.phase === 'offline' && this.status.link === link) return;
+    if (this.status.phase === 'offline' && (this.status.link === link || (said(this.status.link) && !said(link)))) return;
     this.blocked = true;
     this.set({ phase: 'offline', link, message: offlineMessage[link], level: 'warning' });
     this.recover();
@@ -282,6 +294,9 @@ export class HostSync {
       if (this.disposed) return;
       const failure = classify(error);
       if (failure.phase === 'changed') { this.blocked = true; this.set({ phase: 'error', link: undefined, message: hostChanged, level: 'error' }); return; }
+      // A cause TD said stays until TD is back; checking again only confirms it is still away (Refactor.75).
+      // TD 說過的原因一直保留到它回來；再檢查只是確認還不在。
+      if (said(this.status.link) && this.status.phase === 'offline') return;
       if (failure.phase === 'offline') this.set({ phase: 'offline', link: failure.link, message: offlineMessage[failure.link], level: 'warning' });
       else this.set({ level: 'warning', message: tr('sync.checkFailed', 'Could not check TD: {reason}', { reason: errorText(error) }) });
       return;

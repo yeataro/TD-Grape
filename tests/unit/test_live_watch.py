@@ -13,13 +13,13 @@ Change = namedtuple('Change', 'par prev')
 
 class Connection:
     def __init__(self, target='t' * 32, session='live1'):
-        self.target, self.session, self.sent, self.closed = target, session, [], False
+        self.target, self.session, self.sent, self.closed, self.why = target, session, [], False, None
 
     def send(self, text, replaceable=False):
         self.sent.append(json.loads(text))
 
-    def close(self):
-        self.closed = True
+    def close(self, why=(1000, '')):
+        self.closed, self.why = True, why
 
 
 class Owner:
@@ -206,6 +206,22 @@ class LiveWatchTests(unittest.TestCase):
         self.assertEqual(connection.sent[-1], {'type': 'saved', 'frame': 120, 'file': 'TD-Grape-dev.toe',
                                                'projectSaved': {'revision': 7, 'time': 1000}})
         self.assertEqual(family.live_calls, [], 'a ping is not a value')
+
+    def test_a_deleted_grape_op_closes_its_editors_saying_so(self):
+        # Refactor.75: the close frame says why, so the editor does not take it for TD being unreachable.
+        # 關閉訊框說出原因，編輯器不會當成連不到 TD。
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection, unknown = Connection(), Connection(target='x' * 32)
+        watch.drain([('open', connection, None), ('open', unknown, None)])
+        self.assertEqual(unknown.why, live_watch.DELETED)
+        family.comp.valid = False
+        watch.drain([])
+        self.assertEqual((connection.closed, connection.why), (True, (4004, 'grape-op-deleted')))
+        other = Connection()
+        family.comp.valid = True
+        watch.drain([('open', other, None)])
+        watch.close()
+        self.assertEqual(other.why, live_watch.RELOADING, 'the Manager letting go: back soon')
 
 
 if __name__ == '__main__':

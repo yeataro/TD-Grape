@@ -120,9 +120,11 @@ class EditorServiceExt:
                 return False
         return True
 
-    def Stop(self):
+    def Stop(self, why='stopped'):
+        """Stop the service. `why`: 'stopped' (by hand), 'closed' (TD is closing), 'reloading' (the code is reloaded); the
+        editors are told (Refactor.75). 停止服務；why 告訴編輯器原因：手動停止、TD 關閉、程式重新載入。"""
         if self.http:
-            self.http.close()
+            self.http.close({'closed': self.api.CLOSED_TD, 'reloading': self.api.CLOSED_RELOAD}.get(why, self.api.CLOSED_SERVICE))
             self.http = None
         # The Manager lets go too, so nothing is watched while no editor can connect (Refactor.62).
         # Manager 一起放開：沒有編輯器能連時，什麼都不監看。
@@ -186,6 +188,7 @@ class EditorServiceExt:
             self.Start()
 
     def onDestroyTD(self):
+        # The extension is reloaded (new code): it comes back. 擴充重新載入（換新程式）：會回來。
         if self.http:
-            self.http.close()
+            self.http.close(self.api.CLOSED_RELOAD)
             self.http = None

@@ -199,6 +199,15 @@ def read_websocket_frame(buffer, limit):
     return first & 0x0f, payload, at + 4 + size
 
 
+# Why TD closes a live connection, said in the close frame (Refactor.75, human 2026-10-10): the editor cannot tell these apart
+# from a dropped connection otherwise. Codes 4000-4999 are the application's own (RFC 6455).
+# TD 為什麼關掉即時連線，寫在關閉訊框裡（R.75，人類）：否則編輯器分不出和斷線的差別。4000–4999 是應用程式自己的代碼。
+CLOSED_TD = (4001, 'td-closed')             # TD was closed TD 被關閉
+CLOSED_SERVICE = (4002, 'service-stopped')  # the editor service was stopped 編輯服務被停止
+CLOSED_RELOAD = (4003, 'service-reloading') # the service or the Manager is reloading; back soon 服務或管理器重新載入，馬上回來
+CLOSED_DELETED = (4004, 'grape-op-deleted') # this Grape OP is not in TD any more 這個 Grape OP 已不在 TD 裡
+
+
 class LiveConnection:
     """One editor page's WebSocket. send() may be called from TD's thread; everything else runs on
     the connection's worker thread. A newer values bundle may replace older ones still waiting
@@ -212,6 +221,7 @@ class LiveConnection:
         self.sock, self.target, self.hub = sock, target, hub
         self.session = 'live' + str(serial)  # unique per service run (LiveHub) 每次服務不重複
         self.closed = False
+        self._why = (1000, '')  # the close frame's code and reason 關閉訊框的代碼與原因
         self._outbox = deque()
         self._lock = threading.Lock()
         self._wake_read, self._wake_write = socket.socketpair()
@@ -230,8 +240,11 @@ class LiveConnection:
             self._outbox.append((replaceable, text))
         self._wake()
 
-    def close(self):
+    def close(self, why=(1000, '')):
+        """Close, saying why (code, reason); the first reason given is the one sent. 關閉並說原因；以第一個給的為準。"""
         with self._lock:
+            if not self.closed:
+                self._why = why
             self.closed = True
         self._wake()
 
@@ -255,11 +268,11 @@ class LiveConnection:
                 with self._lock:
                     waiting = [text for _, text in self._outbox]
                     self._outbox.clear()
-                    closing = self.closed
+                    closing, (code, reason) = self.closed, self._why
                 if waiting:
                     self.sock.sendall(b''.join(websocket_frame(0x1, text.encode('utf-8')) for text in waiting))
                 if closing:
-                    self.sock.sendall(websocket_frame(0x8, struct.pack('>H', 1000)))
+                    self.sock.sendall(websocket_frame(0x8, struct.pack('>H', code) + reason.encode('utf-8')[:120]))
                     return
                 if self.sock not in readable:
                     continue
@@ -341,12 +354,12 @@ class LiveHub:
             self._events.clear()
         return events
 
-    def close(self):
+    def close(self, why=CLOSED_SERVICE):
         with self._lock:
             self.closed = True
             connections = list(self.connections)
         for connection in connections:
-            connection.close()
+            connection.close(why)
 
 
 class EditorHTTP:
@@ -534,13 +547,14 @@ class EditorHTTP:
         with self._lock:
             self.host_requests = host_requests
 
-    def close(self):
+    def close(self, why=CLOSED_SERVICE):
+        """Stop serving; live editors are told why (Refactor.75). 停止服務；告訴即時連線的編輯器原因。"""
         with self._lock:
             host_requests = self.host_requests
             self.host_requests = None
         if host_requests:
             host_requests.close()
-        self.live.close()
+        self.live.close(why)
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(timeout=1)

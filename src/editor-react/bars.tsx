@@ -4,7 +4,7 @@ import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
-import { clockOf } from './host_sync';
+import { clockOf, type Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
@@ -214,7 +214,12 @@ export function NetworkBar({ session, prefs, onGlsl }: {
 const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflict', 'error'];
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
-const recoveryHelp = {
+const recoveryHelp: Record<Link, Message> = {
+  closed: tr('status.recoveryClosed', 'TD was closed. Open TD again, then open the editor from the Grape OP; this page keeps your changes (or keep them with Download draft).'),
+  stopped: tr('status.recoveryStopped', "TD-Grape's editor service was stopped in TD. Turn it on again (GrapeEditor's Active); this page reconnects and sends your changes."),
+  reloading: tr('status.recoveryReloading', 'The editor service is reloading; this page reconnects by itself within a few seconds.'),
+  deleted: tr('status.recoveryDeleted', 'This Grape OP was deleted in TD. If by mistake, undo it in TD (Ctrl+Z) and this page reconnects; otherwise keep your changes with Download draft.'),
+  device: tr('status.recoveryDevice', 'This device has no network. Once it is back, this page reconnects by itself.'),
   busy: tr('status.recoveryBusy', "TD is still running but is not handling requests. It may be minimized, busy with a long task, paused (its timeline or global cooking), or TD-Grape's component may be stopped. On the computer running TD: restore its window, wait for the task, press play or turn cooking back on."),
   unreachable: tr('status.recoveryUnreachable', 'TD cannot be reached at all. It may have been closed or crashed, or the network is down. Check that TD is still open; after TD restarts, open the editor again from the Grape OP. On a remote device, check the network.'),
 };
@@ -231,7 +236,8 @@ type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
 const words = {
   none: tr('light.none', 'No graph'), applied: tr('light.applied', 'Graph applied'), unsent: tr('light.unsent', 'Graph not sent'),
   sending: tr('light.sending', 'Sending'), checking: tr('light.checking', 'Checking…'), offline: tr('light.offline', 'TD unreachable'),
-  busy: tr('light.busy', 'TD not responding'),
+  busy: tr('light.busy', 'TD not responding'), closed: tr('light.closed', 'TD closed'), serviceStopped: tr('light.serviceStopped', 'Service stopped'),
+  reloading: tr('light.reloading', 'Reloading'), deleted: tr('light.deleted', 'OP deleted'), device: tr('light.device', 'Device offline'),
   uncertain: tr('light.uncertain', 'Unsure'), conflict: tr('light.conflict', 'Conflict'), stopped: tr('light.stopped', 'Stopped'),
 };
 const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
@@ -239,11 +245,14 @@ const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: 
   const busy = state.phase === 'sending' || !!state.checking;
   // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
   // 檢查連線中直接寫在列上，圓點同時閃，看得出在工作（R.70.2，人類）。
-  const word = state.checking ? words.checking : state.phase === 'offline' ? (state.link === 'busy' ? words.busy : words.offline)
+  const word = state.checking ? words.checking : state.phase === 'offline' ? (state.link && state.link !== 'unreachable' ? words[state.link === 'stopped' ? 'serviceStopped' : state.link] : words.offline)
     : state.phase === 'uncertain' ? words.uncertain
     : state.phase === 'conflict' ? words.conflict : state.phase === 'error' ? words.stopped
     : state.phase === 'sending' ? words.sending : state.dirty ? words.unsent : words.applied;
-  return { tone: alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy, word };
+  // A deleted Grape OP or a reloading service is a warning, not TD failing (Refactor.75, human 2026-10-10); reloading also
+  // pulses, as it is on its way back. Grape OP 被刪、服務重新載入是警告（黃），不是 TD 壞了（人類）；重新載入也會閃，表示正在回來。
+  const warn = state.phase === 'offline' && (state.link === 'deleted' || state.link === 'reloading');
+  return { tone: warn ? 'unsent' : alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy: busy || (state.phase === 'offline' && state.link === 'reloading'), word };
 };
 /** While waiting for the next automatic check, the dot is a pie that empties over the wait (R.70.4, human: as the usage ring);
  * otherwise a dot. 等待下一次自動檢查時，圓點是隨等待變空的圓餅（R.70.4，人類：像用量的圓環）；其他時候是圓點。 */
@@ -296,8 +305,10 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
   const [status, setStatus] = useState<HTMLElement | null>(null), [history, setHistory] = useState<HTMLElement | null>(null);
   const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? tr('status.sending', 'Sending to TD')
     : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD');
-  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: sync, revision: state.revision })) : say(sync);
   const { tone, busy, word } = lightOf(state);
+  // While something is wrong, the status line says what the light says, not "Synced" (Refactor.75).
+  // 有狀況時，狀態那一行和燈號說的一樣，不是「已同步」（R.75）。
+  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: alarm.includes(state.phase) ? word : sync, revision: state.revision })) : say(sync);
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -388,7 +399,9 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
   </Popover>;
 }
 /** One line of the state's record in words. 狀態紀錄的一行，寫成字。 */
-const recordWords = ({ kind, revision, from }: SyncRecord): Message => kind === 'opened' ? tr('record.opened', 'Opened the graph at revision {revision}', { revision })
+const recordWords = ({ kind, revision, from, link }: SyncRecord): Message => kind === 'offline' && link && link !== 'unreachable'
+  ? tr('record.away', '{cause} at revision {revision}', { cause: words[link === 'stopped' ? 'serviceStopped' : link as Exclude<Link, 'unreachable' | 'stopped'>], revision })
+  : kind === 'opened' ? tr('record.opened', 'Opened the graph at revision {revision}', { revision })
   : kind === 'applied' ? from !== undefined && from !== revision ? tr('record.appliedRange', 'Applied revisions {from} to {revision}', { from, revision })
     : tr('record.applied', 'Applied revision {revision}', { revision })
   : kind === 'recovered' ? tr('record.recovered', 'In touch with TD again at revision {revision}', { revision })

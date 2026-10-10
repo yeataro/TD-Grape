@@ -3,7 +3,7 @@ import { core, compiler, requireSupported, parseDocument, type UpgradeChange, ty
   type Declaration, type NameProblem, type ObjectValue } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse, type UniformStates } from './host';
-import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type SyncStatus } from './host_sync';
+import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
@@ -146,8 +146,10 @@ export class Editor {
     this.td = loaded.uniforms ?? {};
     // The live connection also tells, before anything is sent, that TD is gone or not answering (Refactor.71).
     // 即時連線也會在送出之前就說出 TD 不在或沒回應（R.71）。
-    this.live = new LiveValues(host.live, message => this.liveMessage(message), connected => this.liveLinked(connected), undefined, undefined,
+    this.live = new LiveValues(host.live, message => this.liveMessage(message), (connected, code) => this.liveLinked(connected, code), undefined, undefined,
       responding => responding ? this.sync.found() : this.sync.lost('busy'));
+    // This device losing its network is the browser's to say (Refactor.75). 這台裝置沒網路由瀏覽器說。
+    if (typeof window !== 'undefined') { addEventListener('offline', this.deviceOffline); addEventListener('online', this.deviceOnline); }
     this.uniformValues = this.readUniformValues();
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
@@ -263,9 +265,14 @@ export class Editor {
   // 斷線：TD 的值可能過時，欄位改回顯示圖裡的值（模式保留）。
   // Connected again: rewiring while away sent no word, so the inputs are asked once if they were asked before (R.61.1).
   // 重新連上：斷線期間的接線改變沒有通知，之前問過輸入的話就再問一次。
-  private liveLinked(connected: boolean) {
+  private deviceOffline = () => this.sync.lost('device');
+  private deviceOnline = () => this.sync.found();
+  private liveLinked(connected: boolean, code?: number) {
     if (connected) { this.sync.found(); if (this.inputs) void this.refreshInputs(); return; }
-    this.sync.lost('unreachable');
+    // Why it closed, as TD said in the close frame (editor_service.CLOSED_*); nothing said is "unreachable" (Refactor.75).
+    // TD 在關閉訊框裡說的原因；沒說就是連不到。
+    const told: Record<number, Link> = { 4001: 'closed', 4002: 'stopped', 4003: 'reloading', 4004: 'deleted' };
+    this.sync.lost(told[code ?? 0] ?? (typeof navigator !== 'undefined' && navigator.onLine === false ? 'device' : 'unreachable'));
     const withoutValue = ({ value: _, ...rest }: UniformStates[string][number]) => rest;
     this.setTd(Object.fromEntries(Object.entries(this.td).map(([id, states]) => [id, states.map(withoutValue)])));
   }
@@ -715,5 +722,7 @@ export class Editor {
   renewId = async () => {
     try { return await this.sync.renew(); } catch (error) { this.notice(error); return null; }
   };
-  dispose() { this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); this.selectionListeners.clear(); }
+  dispose() {
+    if (typeof window !== 'undefined') { removeEventListener('offline', this.deviceOffline); removeEventListener('online', this.deviceOnline); }
+    this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); this.selectionListeners.clear(); }
 }

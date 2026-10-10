@@ -1053,6 +1053,32 @@ test('the heartbeat is answered or not; a closed live connection is TD unreachab
   assert.equal(session.log.entries().length, count + 1, 'said once, by the reply');
 });
 
+// Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003
+// reloading, 4004 Grape OP deleted); what the editor only sees afterwards does not replace it; nothing said is "unreachable".
+// R.75：TD 在關閉訊框裡說原因；之後編輯器只看到的症狀不會蓋掉它；沒說就是連不到。
+test('the reason TD gives for closing is what the light and the message say, and it stays', async t => {
+  const sockets = [];
+  const { session } = open(t, async () => { throw new TypeError('fetch failed'); }, 60000, undefined,
+    () => { const each = fakeSocket(); sockets.push(each); return each; });
+  const ws = sockets[0];
+  ws.readyState = 1; ws.onopen();
+  ws.readyState = 3; ws.onclose({ code: 4001, reason: 'td-closed' });
+  assert.deepEqual([session.snapshot().phase, session.snapshot().link], ['offline', 'closed']);
+  assert.equal(zh(session.snapshot().message), 'TD 已被關閉。修改保留在瀏覽器；重新開啟 TD 後，請從 Grape OP 再打開編輯器。');
+  await session.check();
+  assert.equal(session.snapshot().link, 'closed', 'a failed check only confirms it is still away');
+  ws.onmessage = null;
+  const cases = [[4002, 'stopped'], [4003, 'reloading'], [4004, 'deleted'], [1006, 'unreachable'], [undefined, 'unreachable']];
+  for (const [code, link] of cases) {
+    const other = open(t, async () => { throw new TypeError('fetch failed'); }, 60000, undefined,
+      () => { const each = fakeSocket(); sockets.push(each); return each; }).session;
+    const socket = sockets.at(-1);
+    socket.readyState = 1; socket.onopen();
+    socket.readyState = 3; socket.onclose(code === undefined ? undefined : { code, reason: '' });
+    assert.equal(other.snapshot().link, link, String(code));
+  }
+});
+
 // Refactor.73 (human 2026-10-10): the editor never saves the TD project, so after an apply it says which revision the file
 // holds and how far it is behind, briefly; a save in TD moves that on. R.73：編輯器不會自己存 TD 專案，套用後簡短說出檔案存的是哪一版、
 // 落後多少；在 TD 存檔後跟著更新。

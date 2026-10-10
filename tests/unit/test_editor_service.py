@@ -269,6 +269,27 @@ class HTTPTest(unittest.TestCase):
         sock.close()
         self.server.connect(None)
 
+    def test_a_closing_service_says_why_in_the_close_frame(self):
+        # Refactor.75: 4001 TD closed, 4002 stopped, 4003 reloading, 4004 Grape OP deleted; the first reason given is sent.
+        # 關閉訊框帶原因；以第一個給的為準。
+        self.server.connect(object())
+        sock, head = self.live_socket()
+        self.assertIn('101', head.split('\r\n')[0])
+        connection = self.wait_for(lambda: self.server.live.drain())[0][1]
+        connection.close(service.CLOSED_TD)
+        connection.close(service.CLOSED_SERVICE)
+        received = b''
+        while b'td-closed' not in received:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            received += chunk
+        self.assertEqual(received[:2], bytes([0x88, 2 + len(b'td-closed')]))
+        self.assertEqual(received[2:4], (4001).to_bytes(2, 'big'))
+        self.assertEqual(received[4:], b'td-closed')
+        sock.close()
+        self.server.connect(None)
+
     def test_live_sessions_are_unique_per_run_and_a_closed_hub_takes_no_more(self):
         # Refactor.62: a restarted service never reuses a session name; stopping refuses a late handshake.
         # 重啟的服務不重用連線名稱；停止時不收晚到的連線。

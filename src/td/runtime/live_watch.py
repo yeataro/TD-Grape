@@ -15,6 +15,11 @@ Q53, Q58, Q60; work/in-place-refactor-design/uniform-d.md B).
 """
 import json
 
+# Why a live connection is closed, as the editor service says it (editor_service.CLOSED_*; Refactor.75). Kept here as plain
+# values so this module needs no other. 關閉即時連線的原因（同 editor_service.CLOSED_*）；寫成值，這個模組不必依賴別的。
+DELETED = (4004, 'grape-op-deleted')
+RELOADING = (4003, 'service-reloading')
+
 import uniform_writer
 
 
@@ -67,7 +72,7 @@ class LiveWatch:
         family = self.resolve(connection.target)
         if family is None:
             connection.send(json.dumps({'type': 'error', 'code': 'target_unavailable'}))
-            connection.close()
+            connection.close(DELETED)
             return
         key = family.comp.id
         entry = self.watched.get(key)
@@ -99,7 +104,7 @@ class LiveWatch:
             if not comp.valid:
                 for connection in entry['connections']:
                     self.links.pop(connection, None)
-                    connection.close()
+                    connection.close(DELETED)
                 del self.watched[key]
                 changed = True
             elif comp.path != entry['path']:
@@ -243,8 +248,10 @@ class LiveWatch:
                 connection.send(text)
 
     def close(self):
+        """The Manager lets go (reloading, or the service stopping, which has already said its own reason). 管理器放開
+        （重新載入；或服務停止，它已先說了自己的原因）。"""
         for connection in list(self.links):
-            connection.close()
+            connection.close(RELOADING)
         self.links.clear()
         self.watched.clear()
         self.watcher([], [])
