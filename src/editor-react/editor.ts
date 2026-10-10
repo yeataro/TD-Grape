@@ -7,6 +7,7 @@ import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } 
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
+import { recordSync, type SyncRecord } from './sync_record';
 
 // Handle id of a module-declared spare input. The module owns the command, port key,
 // type and limit; this layer only runs that command and wires the declared port.
@@ -110,6 +111,8 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
   message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   upgrades: readonly UpgradeChange[];
+  /** The sync state's own short record (Refactor.70.1, sync_record.ts). 同步狀態自己的短紀錄。 */
+  syncRecords: readonly SyncRecord[];
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
@@ -145,12 +148,13 @@ export class Editor {
     this.uniformValues = this.readUniformValues();
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
-      (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
+      (status, said) => this.status({ ...status, ...said,
+        syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
       glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
-      ...this.sources() };
+      syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), ...this.sources() };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
       if (uniforms) this.setTd(uniforms);

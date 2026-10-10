@@ -250,7 +250,7 @@ function usePrefs(): CanvasPrefs {
 // added to EditorState must be added here too (Refactor.63.3: the GLSL panel read a missing glslMap and the page went blank).
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
-  projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [] };
+  projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
 const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 
 // The editing frame below the title bar: the layout's panes around the network (location bar, its toolbar, the canvas;

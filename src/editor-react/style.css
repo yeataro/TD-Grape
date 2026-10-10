@@ -92,16 +92,18 @@ a { color: var(--accent); }
 /* Each piece of the line (tagline, version, About) folds on its own (Refactor.69). 這一行的每一塊（副標題、版號、About）各自收起。 */
 .brand-line > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 /* A part of the title bar folded away as it narrows (bars.tsx useFolding). 標題列變窄時收起的部分。 */
-/* The sync light (Refactor.70, human 2026-10-10): our grape and the revision; the grape takes the state's colour unless all is
-   well, when it keeps its own; it ripples while something is on its way. 同步燈號：葡萄加版號；狀況正常時保留葡萄原色，否則換成狀態色；
-   有東西在路上時輪流亮。 */
-.sync-light { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 4px; border: 0; background: none; color: inherit;
+/* The sync light (Refactor.70.1, human 2026-10-10): a dot in the state's colour, the revision and a short word; the dot pulses
+   while something is on its way. 同步燈號：狀態色的圓點、版號、簡短的字；有東西在路上時圓點會閃。 */
+.sync-light { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 0 4px; border: 0; background: none; color: inherit;
   white-space: nowrap; font-variant-numeric: tabular-nums; }
-.sync-light .brand-mark { width: var(--sync-light); height: var(--sync-light); }
-.sync-light.tone-unsent { --tone: var(--sync-unsent); } .sync-light.tone-alarm { --tone: var(--sync-alarm); } .sync-light.tone-none { --tone: var(--sync-none); }
-.sync-light:not(.tone-normal) .brand-mark circle:nth-child(1) { fill: color-mix(in srgb, var(--tone), var(--palette-contrast) 22%); }
-.sync-light:not(.tone-normal) .brand-mark circle:nth-child(2) { fill: var(--tone); }
-.sync-light:not(.tone-normal) .brand-mark circle:nth-child(3) { fill: color-mix(in srgb, var(--tone), var(--palette-contrast) 11%); }
+.sync-light.tone-normal { --tone: var(--sync-ok); } .sync-light.tone-unsent { --tone: var(--sync-unsent); }
+.sync-light.tone-alarm { --tone: var(--sync-alarm); } .sync-light.tone-none { --tone: var(--sync-none); }
+.sync-dot { width: var(--sync-dot); height: var(--sync-dot); border-radius: 50%; background: var(--tone); }
+.sync-light.busy .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
+@keyframes sync-pulse { 50% { opacity: .3; } }
+.sync-word { color: var(--text-muted); }
+/* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
+.foot-bar .sync-light { margin-inline: 0; padding: 0 2px; }
 /* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
 .status-now { display: flex; flex-direction: column; gap: 6px; padding: 4px 6px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
 .status-now p { margin: 0; color: var(--text-secondary); }
@@ -119,7 +121,7 @@ a { color: var(--accent); }
 /* The foot bar's icons keep their size; only the latest message gives way, down to its "…" (69.1). 底列圖示不縮；只有最新訊息讓，讓到剩「…」。 */
 .foot-bar > :not(.foot-message, .spacer) { flex-shrink: 0; }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); font-size: var(--bar-font); line-height: var(--bar-line); }
-.foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }
+.foot-bar { gap: var(--foot-gap); height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }
 .foot-bar.error, .foot-bar.conflict, .foot-bar.uncertain { --message: var(--status-error); }
 .foot-bar.warning, .foot-bar.offline { --message: var(--status-warning); }
 /* The sync state is as wide as its longest wording, with some room (bars.tsx); copies stack in one cell, unseen.
