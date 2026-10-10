@@ -310,7 +310,10 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
   const { tone, busy, word } = lightOf(state);
   // While something is wrong, the status line says what the light says, not "Synced" (Refactor.75).
   // 有狀況時，狀態那一行和燈號說的一樣，不是「已同步」（R.75）。
-  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: alarm.includes(state.phase) ? word : sync, revision: state.revision })) : say(sync);
+  // The status line says the cause, never "checking": checking is shown by the pulsing dot beside Retry (R.75.4).
+  // 狀態那一行說原因、不說「檢查中」：檢查中由「立即重試」旁閃動的圓點表示（R.75.4）。
+  const cause = alarm.includes(state?.phase ?? '') ? lightOf(state && { ...state, checking: false }).word : sync;
+  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: cause, revision: state.revision })) : say(sync);
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -410,15 +413,27 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
       className={'log-entry' + (alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
       title={record.reason === undefined ? undefined : say(record.reason)}>
       <time>{clock(record.time)}{record.until === undefined ? '' : '–' + clock(record.until)}</time><span>{say(recordWords(record))}</span></div>)}</div>
+    {/* The state (R.75.4, human 2026-10-11: less repeated, less wordy): the countdown pie, the cause, and Retry now on its
+        right; how to recover, its title on its own line; which Grape OP and which project file always last.
+        狀態（R.75.4，人類：少重複、少囉嗦）：倒數圓餅、原因，右邊是「立即重試」；如何恢復，標題自己一行；哪個 Grape OP、哪個專案檔永遠在最後。 */}
     <div ref={box} className={'status-now tone-' + tone} style={{ minHeight: floor || undefined }}>
-      <strong>{now}</strong>
-      {reason && <p>{reason}</p>}
-      {state && away.includes(state.phase) && <div className="status-retry">
-        <span>{say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}</span>
-        <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
-      {state?.targetPath && <p className="status-saved">{say(tr('status.grapeOp', 'Grape OP {path}', { path: state.targetPath }))}</p>}
-      {state && <p className="status-saved">{say(saved)}</p>}
-      {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp[state.link ?? 'unreachable'])}</p>}
+      <div className="status-head">
+        {state && away.includes(state.phase) && <span className={'status-pie' + (state.checking ? ' checking' : '')}
+          title={say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}>
+          <LightDot state={state} /></span>}
+        <strong>{now}</strong>
+        {state && away.includes(state.phase) && <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button>}
+      </div>
+      {/* Away, the recovery text says it; other trouble (a conflict, a refusal) keeps TD's own words. 不在時由如何恢復說；
+          其他狀況（衝突、拒絕）保留 TD 自己的話。 */}
+      {reason && state?.phase !== 'offline' && <p>{reason}</p>}
+      {state?.phase === 'offline' && <div className="status-help">
+        <span className="status-help-title">{say(tr('status.howToRecover', 'How to recover'))}</span>
+        <p>{say(recoveryHelp[state.link ?? 'unreachable'])}</p></div>}
+      <div className="status-where">
+        {state?.targetPath && <p>{say(tr('status.grapeOp', 'Grape OP {path}', { path: state.targetPath }))}</p>}
+        {state && <p>{say(saved)}</p>}
+      </div>
     </div>
   </Popover>;
 }

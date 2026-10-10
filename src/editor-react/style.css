@@ -126,10 +126,19 @@ a { color: var(--accent); }
 /* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
 .status-now { display: flex; flex-direction: column; gap: 6px; padding: 10px 6px 4px; margin-top: 6px; border-top: 1px solid var(--border); }
 .status-now p { margin: 0; color: var(--text-secondary); }
-.status-now.tone-alarm > strong { color: var(--sync-alarm); } .status-now.tone-unsent > strong { color: var(--sync-unsent); }
-.status-retry { display: flex; align-items: center; gap: 10px; }
-.status-help { font-size: var(--font-md); line-height: var(--line-md); }
-.status-saved { font-size: var(--font-md); line-height: var(--line-md); }
+.status-now.tone-alarm .status-head > strong { color: var(--sync-alarm); } .status-now.tone-unsent .status-head > strong { color: var(--sync-unsent); }
+/* The countdown pie, the cause, and Retry now on the right (R.75.4, human: the pie at the far left). 倒數圓餅、原因，右邊「立即重試」（人類：圓餅放最左邊）。 */
+.status-head { display: flex; align-items: center; gap: 8px; } .status-head > strong { flex: 1; min-width: 0; }
+.status-now.tone-normal { --tone: var(--sync-ok); } .status-now.tone-unsent { --tone: var(--sync-unsent); }
+.status-now.tone-alarm { --tone: var(--sync-alarm); } .status-now.tone-none { --tone: var(--sync-none); }
+.status-pie { display: inline-flex; } .status-pie.checking .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
+/* How to recover: the title on its own line, smaller and quieter than the text (R.75.4, human: bold alone does not set it
+   apart in Chinese). 如何恢復：標題自己一行，比內文小、顏色淡（人類：中文只靠粗體分不出來）。 */
+.status-help { display: flex; flex-direction: column; gap: 2px; }
+.status-help-title { font-size: var(--font-xs); line-height: var(--line-xs); color: var(--text-muted); letter-spacing: .08em; }
+.status-help p { font-size: var(--font-md); line-height: var(--line-md); color: var(--text); }
+/* Which Grape OP and which project file: always last (R.75.4). 哪個 Grape OP、哪個專案檔：永遠在最後。 */
+.status-where { display: flex; flex-direction: column; gap: 2px; font-size: var(--font-md); line-height: var(--line-md); }
 :is(.title-bar, .foot-bar, .network-bar, .location-bar) .folded { display: none; }
 /* The location bar's file and path: they shrink to an ellipsis first, then fold (69.4); the rest keeps its size.
    網址列的檔名與路徑：先縮成省略號，再收起（69.4）；其他不縮。 */
