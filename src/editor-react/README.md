@@ -15,6 +15,7 @@ Grape OP 的 Edit 打開 `/shader/<Grape OP id>/`（`/?target=<id>` 亦可）。
 | 模組描述如何畫成卡片、模組宣告的 spare 接孔 | [NodeCard.tsx](NodeCard.tsx) |
 | 共用部件（widget）：按鈕、下拉選擇、彈出面板、折疊段落、對齊表格；選單；數值框；一組數值 | [controls.tsx](controls.tsx)、[DropdownMenu.tsx](DropdownMenu.tsx)、[NumberField.tsx](NumberField.tsx)、[ValueFields.tsx](ValueFields.tsx)；數值梯尺 [useValueLadder.tsx](useValueLadder.tsx)（純數學 [valueLadder.ts](valueLadder.ts)）；拖曳改值的純數學 [valueScrub.ts](valueScrub.ts) |
 | 所有面板一張表（名字、預設位置、內容）；版面（窗格樹、分頁、大小，存在這個瀏覽器；搬面板、Layout 選單） | [panels.tsx](panels.tsx)；[layout_tree.ts](layout_tree.ts)（資料）、[layout.tsx](layout.tsx)（畫面） |
+| 參數面板：目前的節點像卡片一樣畫出（名稱、控制項、輸入、註記；R.76）；節點名稱規則在核心 | [ParamsPanel.tsx](ParamsPanel.tsx)；[../core-ts/node_names.ts](../core-ts/node_names.ts) |
 | 額外 Handle 量測通知 | [geometry.ts](geometry.ts)；外框尺寸／拖曳沿用 RF |
 | React Flow 沒提供、自己補的畫布互動（Q29「自己泡茶」；一功能一檔，滿 3 個再收進資料夾；RF 日後提供即可換回） | [RightDragSelect.tsx](RightDragSelect.tsx)（右鍵拖曳框選） |
 | 開圖、最小工具列、草稿恢復提示、TD 不在時的提示與衝突選擇 | [main.tsx](main.tsx)；分類與重試在 [host_sync.ts](host_sync.ts) 的 `classify`／`recover` |
