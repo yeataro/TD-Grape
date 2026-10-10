@@ -4,7 +4,7 @@
  * inside subgraphs (Q46). `id` is stored in graphs and never changes; `name` is the canvas title;
  * `hint` is the English original (translations: locales, code tdValue.<id>, Q34).
  * Moved from the legacy source catalog `builtins` (checked there with TD TouchDesigner 2025.32820);
- * vUV.st and TDPos() added (Q45). The 15 TOP entries usable now were compiled again in TD 2025.33230 (Refactor.41). Entries whose type the core cannot carry yet (samplers, structs,
+ * vUV.st and TDPos() added (Q45); vUV.st folded into vUV's UV output (Refactor.64). The 15 TOP entries usable now were compiled again in TD 2025.33230 (Refactor.41). Entries whose type the core cannot carry yet (samplers, structs,
  * arrays, matrices) wait for their rounds; a graph that uses one shows a ghost.
  * TD 內建值：TD 的 GLSL 已經提供、Shader 只讀的東西。一個節點類型依 id 選一筆；不需要宣告。
  * 由舊來源目錄搬來（舊目錄以上述 TD 版本核對）；補 vUV.st、TDPos()。 */
@@ -14,7 +14,13 @@ export interface TdValue {
   readonly hint: string; readonly helpUrl: string;
   /** Common identity (common_sources.json, Q61) when almost every host provides it. 共同身分。 */
   readonly common?: string;
+  /** Several outputs read from one value (Refactor.64, human 2026-10-10: one UV node with U, UV, UVW); without it the
+   * node has one output `out` of `type` reading `expression`. 一個值讀出幾個輸出（人類：一個 UV 節點、U／UV／UVW 三個輸出）；
+   * 沒有就是一個 `out` 輸出。 */
+  readonly outputs?: readonly TdValueOutput[];
 }
+/** One output of a TD built-in value: its port key (stored in wires), label, GLSL and type. 內建值的一個輸出。 */
+export interface TdValueOutput { readonly key: string; readonly label: string; readonly expression: string; readonly type: string }
 export const tdValues: readonly TdValue[] = Object.freeze([
   {"id": "uTD2DInfos", "name": "uTD2DInfos", "expression": "uTD2DInfos", "type": "TDTexInfo[TD_NUM_2D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2d"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
   {"id": "sTD2DInputs", "name": "sTD2DInputs", "expression": "sTD2DInputs", "type": "sampler2D[TD_NUM_2D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2d"], "hint": "Array of connected sampler2D resources, grouped by texture dimension. Select an array item before sampling.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
@@ -34,7 +40,10 @@ export const tdValues: readonly TdValue[] = Object.freeze([
   {"id": "uTDOutputInfo", "name": "uTDOutputInfo", "expression": "uTDOutputInfo", "type": "TDTexInfo", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
   {"id": "uTDOutputInfoResZw", "name": "uTDOutputInfo.res.zw", "expression": "uTDOutputInfo.res.zw", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Output width and height in pixels.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms", "common": "resolution"},
   {"id": "uTDOutputInfoResXy", "name": "uTDOutputInfo.res.xy", "expression": "uTDOutputInfo.res.xy", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Reciprocal output width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
-  {"id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The original three-component TOP texture coordinates.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
+  // One UV node, three outputs (Refactor.64, human 2026-10-10; was vUV vec3 and vUV.st vec2 as two entries): U for 1D lookups such
+  // as sTDSineLookup, UV for 2D, UVW for 3D, Cube and 2D Array. 一個 UV 節點、三個輸出（原本 vUV 與 vUV.st 兩筆）：U 給 1D、UV 給 2D、
+  // UVW 給 3D／Cube／2D Array。
+  {"id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1: U for 1D, UV for 2D, UVW for 3D, Cube and 2D Array textures.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP", "common": "uv", "outputs": [{"key": "u", "label": "U", "expression": "vUV.s", "type": "float"}, {"key": "uv", "label": "UV", "expression": "vUV.st", "type": "vec2"}, {"key": "uvw", "label": "UVW", "expression": "vUV.stp", "type": "vec3"}]},
   {"id": "uTDPass", "name": "uTDPass", "expression": "uTDPass", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Zero-based GLSL TOP pass index for multipass rendering.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
   {"id": "uTDCurrentDepth", "name": "uTDCurrentDepth", "expression": "uTDCurrentDepth", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Current output depth index when producing a layered or 3D TOP texture.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
   {"id": "sTDNoiseMap", "name": "sTDNoiseMap", "expression": "sTDNoiseMap", "type": "sampler2D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"},
@@ -74,6 +83,5 @@ export const tdValues: readonly TdValue[] = Object.freeze([
   {"id": "tdScreenSpaceCoord", "name": "TDScreenSpaceCoord", "expression": "TDScreenSpaceCoord().st", "type": "vec2", "targets": ["mat"], "stages": ["pixel"], "category": ["tdBuiltin", "geometry"], "hint": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"},
   {"id": "tdInstanceIndex", "name": "TDInstanceIndex", "expression": "TDInstanceIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"},
   {"id": "tdColor", "name": "TDColor", "expression": "TDColor()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"},
-  {"id": "vUVSt", "name": "vUV.st", "expression": "vUV.st", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1 (the first two components of vUV).", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP", "common": "uv"},
   {"id": "tdPos", "name": "TDPos", "expression": "TDPos()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Position of this vertex in SOP space.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_Material"},
 ].map(entry => Object.freeze(entry)));

@@ -143,7 +143,8 @@ export function SourcesPanel({ declarations, references }: {
         和 TD 的說明頁（人類；同舊產品卡片）。 */}
     {builtins.map(entry => <SourceCard key={entry.id} group="runtime" refKey={'tdValue:' + entry.id} choice={'tdValue:' + entry.id}
       uses={references['tdValue:' + entry.id] ?? 0} onAdd={() => session.placeTdValue(entry.id, center())}
-      head={<div className="builtin-row"><code>{entry.name}</code><small>{entry.type}</small></div>}>
+      // An entry with several outputs shows each output's type (vUV: float · vec2 · vec3, Refactor.64). 多個輸出時列出各輸出的型別。
+      head={<div className="builtin-row"><code>{entry.name}</code><small>{entry.outputs ? entry.outputs.map(o => o.type).join(' · ') : entry.type}</small></div>}>
       <p className="source-text">{say(tdValueHint(entry))}
         {entry.helpUrl && <> <a href={entry.helpUrl} target="_blank" rel="noreferrer">{say(tr('sources.tdDocs', 'TouchDesigner docs'))}</a></>}</p>
     </SourceCard>)}

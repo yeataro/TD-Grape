@@ -81,6 +81,6 @@ test('common identities: every one a definition points to exists; graphs never s
   const known=new Set(G.commonSources.map(c=>c.id));
   for(const p of G.uniformPresets)if(p.common!==null)assert.ok(known.has(p.common),p.entry);
   const marked=G.tdValues.filter(e=>e.common);
-  assert.deepEqual(plain(marked.map(e=>[e.id,e.common])),[['uTDOutputInfoResZw','resolution'],['glFragCoord','fragCoord'],['vUVSt','uv']]);
+  assert.deepEqual(plain(marked.map(e=>[e.id,e.common])),[['uTDOutputInfoResZw','resolution'],['vUV','uv'],['glFragCoord','fragCoord']]);
   for(const e of marked)assert.ok(known.has(e.common),e.id);
 });

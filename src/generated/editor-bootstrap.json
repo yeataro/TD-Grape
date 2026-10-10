@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "55e80464b1bb09a55e701b170fbc32ae000f130b4dd372cc46a280b64831442e",
+  "catalogHash": "2bed8ee0cb329455fd2c98ca521ed8d2f75c48987e79b4578e872f6df3cec962",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -1175,7 +1175,7 @@
         "pixel"
       ],
       "defaults": {
-        "entry": "vUVSt"
+        "entry": "vUV"
       },
       "descriptionKey": "help.td_value",
       "definitionUuid": "sgrape.builtin.td_value"
@@ -4960,112 +4960,144 @@
             "type": "float",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "vec2",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "vec3",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "vec4",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "int",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "ivec2",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "ivec3",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "ivec4",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "uint",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "uvec2",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "uvec3",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "uvec4",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "bool",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "bvec2",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "bvec3",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           },
           {
             "type": "bvec4",
             "inputs": {},
             "outputs": {
-              "out": "vec2"
+              "u": "float",
+              "uv": "vec2",
+              "uvw": "vec3"
             }
           }
         ]

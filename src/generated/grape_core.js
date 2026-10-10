@@ -1899,15 +1899,26 @@ function declarationNode(catalog) {
  * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
  * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
 const tdValueTable = new Map(td_values_1.tdValues.map(entry => [entry.id, entry]));
-const uvEntries = new Set(['vUV', 'vUVSt']);
+const uvEntries = new Set(['vUV']);
+// One port layout per entry, made once (an entry with outputs has several). 每一筆一份接孔排列，只做一次。
 const tdValuePorts = new Map();
-const tdValuePort = (t) => { let p = tdValuePorts.get(t); if (!p) {
-    p = fixedPorts([out(t)]);
-    tdValuePorts.set(t, p);
-} return p; };
+const tdValuePort = (entry) => {
+    let p = tdValuePorts.get(entry.id);
+    if (!p) {
+        p = fixedPorts(entry.outputs ? entry.outputs.map(o => ({ key: o.key, direction: 'output', type: o.type })) : [out(entry.type)]);
+        tdValuePorts.set(entry.id, p);
+    }
+    return p;
+};
+// Which components each output stands for, so the screen colours them as Split's (Refactor.59): U, UV, UVW.
+// 每個輸出代表哪幾個分量，畫面照 Split 的方式上色：U、UV、UVW。
+const componentsOf = (entry) => entry.outputs && Object.fromEntries(entry.outputs.map(o => [o.key, o.label.split('').map((_, i) => i)]));
 /** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
-const usableTdValue = (entry, target) => !!entry && (!target || entry.targets.includes(target))
-    && values_1.types.includes(entry.type) && !entry.expression.includes('{');
+const usableTdValue = (entry, target) => {
+    var _a;
+    return !!entry && (!target || entry.targets.includes(target))
+        && values_1.types.includes(entry.type) && !entry.expression.includes('{') && ((_a = entry.outputs) !== null && _a !== void 0 ? _a : []).every(o => values_1.types.includes(o.type));
+};
 exports.usableTdValue = usableTdValue;
 function tdValueNode(catalog) {
     const entryOf = (n) => tdValueTable.get(String(n.params.entry));
@@ -1915,11 +1926,13 @@ function tdValueNode(catalog) {
         // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
         componentNames: n => uvEntries.has(String(n.params.entry)) ? 'uv' : 'xyzw',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
-        ports: n => tdValuePort(entryOf(n).type), validate: () => { },
+        ports: n => tdValuePort(entryOf(n)), validate: () => { },
         presentation: (n, c) => {
-            var _a;
-            return ({ label: (_a = entryOf(n)) === null || _a === void 0 ? void 0 : _a.name, inlineControls: [{ kind: 'select', key: 'entry', label: 'entry', literal: true, command: 'entry',
-                        value: String(n.params.entry), options: td_values_1.tdValues.filter(e => (0, exports.usableTdValue)(e, c.target)).map(e => ({ value: e.id, label: e.name, literal: true })) }] });
+            const entry = entryOf(n);
+            return { label: entry === null || entry === void 0 ? void 0 : entry.name,
+                ...((entry === null || entry === void 0 ? void 0 : entry.outputs) ? { portLabels: { outputs: Object.fromEntries(entry.outputs.map(o => [o.key, o.label])) }, components: { outputs: componentsOf(entry) } } : {}),
+                inlineControls: [{ kind: 'select', key: 'entry', label: 'entry', literal: true, command: 'entry',
+                        value: String(n.params.entry), options: td_values_1.tdValues.filter(e => (0, exports.usableTdValue)(e, c.target)).map(e => ({ value: e.id, label: e.name, literal: true })) }] };
         },
         edit: (n, command, value, c) => {
             var _a, _b;
@@ -1931,7 +1944,7 @@ function tdValueNode(catalog) {
             n.params.entry = id;
             return n;
         },
-        emit: n => ({ outputs: { out: entryOf(n).expression } }) };
+        emit: n => { const entry = entryOf(n); return { outputs: entry.outputs ? Object.fromEntries(entry.outputs.map(o => [o.key, o.expression])) : { out: entry.expression } }; } };
 }
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */
@@ -4657,7 +4670,7 @@ const catalog = {
             "pixel"
         ],
         "defaults": {
-            "entry": "vUVSt"
+            "entry": "vUV"
         },
         "descriptionKey": "help.td_value",
         "definitionUuid": "sgrape.builtin.td_value"
@@ -6136,7 +6149,10 @@ exports.tdValues = Object.freeze([
     { "id": "uTDOutputInfo", "name": "uTDOutputInfo", "expression": "uTDOutputInfo", "type": "TDTexInfo", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "uTDOutputInfoResZw", "name": "uTDOutputInfo.res.zw", "expression": "uTDOutputInfo.res.zw", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Output width and height in pixels.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms", "common": "resolution" },
     { "id": "uTDOutputInfoResXy", "name": "uTDOutputInfo.res.xy", "expression": "uTDOutputInfo.res.xy", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Reciprocal output width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
-    { "id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The original three-component TOP texture coordinates.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    // One UV node, three outputs (Refactor.64, human 2026-10-10; was vUV vec3 and vUV.st vec2 as two entries): U for 1D lookups such
+    // as sTDSineLookup, UV for 2D, UVW for 3D, Cube and 2D Array. 一個 UV 節點、三個輸出（原本 vUV 與 vUV.st 兩筆）：U 給 1D、UV 給 2D、
+    // UVW 給 3D／Cube／2D Array。
+    { "id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1: U for 1D, UV for 2D, UVW for 3D, Cube and 2D Array textures.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP", "common": "uv", "outputs": [{ "key": "u", "label": "U", "expression": "vUV.s", "type": "float" }, { "key": "uv", "label": "UV", "expression": "vUV.st", "type": "vec2" }, { "key": "uvw", "label": "UVW", "expression": "vUV.stp", "type": "vec3" }] },
     { "id": "uTDPass", "name": "uTDPass", "expression": "uTDPass", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Zero-based GLSL TOP pass index for multipass rendering.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "uTDCurrentDepth", "name": "uTDCurrentDepth", "expression": "uTDCurrentDepth", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Current output depth index when producing a layered or 3D TOP texture.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "sTDNoiseMap", "name": "sTDNoiseMap", "expression": "sTDNoiseMap", "type": "sampler2D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
@@ -6176,7 +6192,6 @@ exports.tdValues = Object.freeze([
     { "id": "tdScreenSpaceCoord", "name": "TDScreenSpaceCoord", "expression": "TDScreenSpaceCoord().st", "type": "vec2", "targets": ["mat"], "stages": ["pixel"], "category": ["tdBuiltin", "geometry"], "hint": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
     { "id": "tdInstanceIndex", "name": "TDInstanceIndex", "expression": "TDInstanceIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
     { "id": "tdColor", "name": "TDColor", "expression": "TDColor()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
-    { "id": "vUVSt", "name": "vUV.st", "expression": "vUV.st", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1 (the first two components of vUV).", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP", "common": "uv" },
     { "id": "tdPos", "name": "TDPos", "expression": "TDPos()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Position of this vertex in SOP space.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_Material" },
 ].map(entry => Object.freeze(entry)));
 

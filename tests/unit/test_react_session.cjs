@@ -825,12 +825,12 @@ test('a TD built-in value is placed, coloured as runtime info, wired and sent as
   assert.equal(session.snapshot().declarations.filter(d => d.kind !== 'topInput').length, 0, 'no declaration is needed');
 });
 
-// Color Output takes anything (Refactor.42; Q46): vUV.st wires straight to it.
-test('vUV.st can be wired straight to Color Output and is filled to (x, y, 0.5, 1)', async t => {
+// Color Output takes anything (Refactor.42; Q46): vUV's UV output wires straight to it (one UV node, Refactor.64).
+test('the UV output of vUV can be wired straight to Color Output and is filled to (x, y, 0.5, 1)', async t => {
   const { session, calls } = open(t);
-  session.placeTdValue('vUVSt', { x: 0, y: 0 });
+  session.placeTdValue('vUV', { x: 0, y: 0 });
   const id = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.td_value').id;
-  const wire = { source: id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' };
+  const wire = { source: id, sourceHandle: 'uv', target: 'pixel_out', targetHandle: 'color' };
   assert.equal(session.valid(wire), true);
   session.connect(wire); await session.flush();
   assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec4 sg_color = vec4\(vec2\(sg_n_\w+\), 0\.5, 1\.0\);/);

@@ -175,26 +175,34 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
  * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
  * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
 const tdValueTable=new Map(tdValues.map(entry=>[entry.id,entry]));
-const uvEntries=new Set(['vUV','vUVSt']);
+const uvEntries=new Set(['vUV']);
+// One port layout per entry, made once (an entry with outputs has several). 每一筆一份接孔排列，只做一次。
 const tdValuePorts=new Map<string,readonly PortSpec[]>();
-const tdValuePort=(t:string)=>{let p=tdValuePorts.get(t);if(!p){p=fixedPorts([out(t)]);tdValuePorts.set(t,p);}return p;};
+const tdValuePort=(entry:TdValue)=>{let p=tdValuePorts.get(entry.id);if(!p){
+  p=fixedPorts(entry.outputs?entry.outputs.map(o=>({key:o.key,direction:'output' as const,type:o.type})):[out(entry.type)]);
+  tdValuePorts.set(entry.id,p);}return p;};
+// Which components each output stands for, so the screen colours them as Split's (Refactor.59): U, UV, UVW.
+// 每個輸出代表哪幾個分量，畫面照 Split 的方式上色：U、UV、UVW。
+const componentsOf=(entry:TdValue)=>entry.outputs&&Object.fromEntries(entry.outputs.map(o=>[o.key,o.label.split('').map((_,i)=>i)]));
 /** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
 export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!entry&&(!target||entry.targets.includes(target))
-  &&valueTypes.includes(entry.type)&&!entry.expression.includes('{');
+  &&valueTypes.includes(entry.type)&&!entry.expression.includes('{')&&(entry.outputs??[]).every(o=>valueTypes.includes(o.type));
 export function tdValueNode(catalog:CatalogRow):NodeModule {
   const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
   return {catalog,role:'value',colorGroup:'runtime',
     // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
     componentNames:n=>uvEntries.has(String(n.params.entry))?'uv':'xyzw',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),
-    ports:n=>tdValuePort(entryOf(n)!.type),validate:()=>{},
-    presentation:(n,c)=>({label:entryOf(n)?.name,inlineControls:[{kind:'select',key:'entry',label:'entry',literal:true,command:'entry',
-      value:String(n.params.entry),options:tdValues.filter(e=>usableTdValue(e,c.target)).map(e=>({value:e.id,label:e.name,literal:true}))}]}),
+    ports:n=>tdValuePort(entryOf(n)!),validate:()=>{},
+    presentation:(n,c)=>{const entry=entryOf(n);return {label:entry?.name,
+      ...(entry?.outputs?{portLabels:{outputs:Object.fromEntries(entry.outputs.map(o=>[o.key,o.label]))},components:{outputs:componentsOf(entry)!}}:{}),
+      inlineControls:[{kind:'select',key:'entry',label:'entry',literal:true,command:'entry',
+      value:String(n.params.entry),options:tdValues.filter(e=>usableTdValue(e,c.target)).map(e=>({value:e.id,label:e.name,literal:true}))}]};},
     edit:(n,command,value,c)=>{
       if(command!=='entry')throw Error('Unknown command');
       const id=String(object(value)?.value??value);if(!usableTdValue(tdValueTable.get(id),c.target))throw Error('Unknown TD built-in value');
       n.params.entry=id;return n;},
-    emit:n=>({outputs:{out:entryOf(n)!.expression}})};
+    emit:n=>{const entry=entryOf(n)!;return {outputs:entry.outputs?Object.fromEntries(entry.outputs.map(o=>[o.key,o.expression])):{out:entry.expression}};}};
 }
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */

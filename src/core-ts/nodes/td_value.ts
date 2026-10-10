@@ -16,7 +16,7 @@ const catalog:CatalogRow={
       "pixel"
     ],
     "defaults": {
-      "entry": "vUVSt"
+      "entry": "vUV"
     },
     "descriptionKey": "help.td_value",
     "definitionUuid": "sgrape.builtin.td_value"

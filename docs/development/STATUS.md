@@ -58,6 +58,20 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.64 UV 合成一個節點：U、UV、UVW**（人類 10-10 定，發布前做；存檔代號改變）：
+  - 舊行為對照：
+
+    | 舊行為 | 處理 | 原因 | 出處 |
+    | --- | --- | --- | --- |
+    | `Texture Coordinates` 節點（key `uv`），一個 vec2 輸出（`sg_uv`），分量叫 U／V | 改做法：併進 TD 內建值 `vUV` 的 UV 輸出 | Q45：TD 內建值一個節點類型、照表選 | legacy node_catalog.json `sgrape.builtin.uv`；graph_ui.js:1224 |
+    | 來源目錄的 `vUV`（vec3） | 改做法：同一個節點的 UVW 輸出 | 同一個值不分兩個節點 | legacy source_catalog `vUV` |
+    | 沒有 1D 的 U | 新行為：U 輸出（`vUV.s`），給 `sTDSineLookup` 這類 1D 查表 | 人類 10-10 | — |
+    | 取樣節點沒接 uv 時用第一組 UV（`sg_uv`） | 照舊，不受影響 | — | sgrape_core.py:918 |
+
+  - 核心：TD 內建值表的一筆可帶 `outputs`（每個輸出：接孔代號、標籤、GLSL、型別），`vUV` 一筆三個輸出 `u`／`uv`／`uvw`（標籤 U、UV、UVW；`vUV.s` float、`vUV.st` vec2、`vUV.stp` vec3），分量上色同 Split（U、UV、UVW 各自的分量）；原 `vUVSt` 一筆拿掉，共同身分 `uv` 移到 `vUV`。圖裡存的仍只有 `entry`，接線存接孔代號；舊圖裡的 `vUVSt` 會變 Ghost、接在 `vUV` 舊 `out` 的線會是 Ghost 線（dev TOE 沒有圖用到，未發布，不做轉換）。
+  - 編輯器：共用來源面板的 TD 內建值卡片，多輸出時列出各輸出型別（vUV：float · vec2 · vec3）；清單由 15 筆變 14 筆。
+  - 驗證：core 144（三個輸出各自產碼、接孔與標籤、分量；選單提供 vUV、不再有 vUVSt；Color Output 接 UV 補成 (x, y, 0.5, 1)、接 UVW 補成 (r, g, b, 1)）、editor 81。TD 實測（Grape_TOP_test）：從共用來源放 vUV，卡片顯示 U float、UV vec2、UVW vec3；UV 接到 Color Output → TD 編譯成功（`vUV.s`、`vUV.st`、`vUV.stp` 三行都在、兩段 Compiled Successfully、無錯誤）；Undo 後 TD 回到 17 節點、11 線、無失敗紀錄；測試的面板設定還原。
+  - 限制：節點只要用到一個輸出，三行都會寫出（同其他多輸出節點）。
 - **Refactor.63.6.6 GLSL 面板與錯誤卡片的說法、顏色、換行**（人類 10-10，「先做做看」）：
   - 面板說明改兩行：「TD 沒能編譯這段 GLSL，TD 回報的錯誤行已用紅色標出。」「點錯誤可捲到該行。」（舊句「點一行就會顯示它的位置」不對：點的是錯誤，行只是被標出）。
   - 能點的東西用我們的紫色（用途色 `--code-link` 改取 `--palette-accent`；63.4 是選取綠）：名稱連結與框裡的錯誤（錯誤原本是一般文字色，人類沒發現能點）。行號維持灰色。
