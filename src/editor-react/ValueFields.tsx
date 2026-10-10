@@ -178,7 +178,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     onMouseDown: (event: ReactMouseEvent<HTMLSpanElement>) => { if (event.button === 1) event.preventDefault(); },
   };
   const leading = <span ref={head} className="value-caption nodrag nopan" data-toggle={toggle ? '' : undefined} {...press}
-      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
+      title={groupable ? say(tr('value.groupHelp', 'Click: show or hide each component. Hold still, middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
       onContextMenu={event => {
         event.preventDefault();
         if (!groupable || event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) return;
