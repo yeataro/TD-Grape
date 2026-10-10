@@ -6,7 +6,7 @@ import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
 import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, motionAlwaysOn, setMotionAlways, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
@@ -379,6 +379,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
       <ComponentTint />
+      <MotionAlways />
     </PopoverButton></span>
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
@@ -511,6 +512,14 @@ const SliderPlaceholder = ({ label }: { label: Message }) =>
 const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
 // Component tint (Refactor.59; Q67): ports, labels and wires of one component take its colour. 分量染色：單一分量的接孔、標籤、接線用分量色。
+
+/** Fades always, whatever the system says about reducing motion (Refactor.75.21, human 2026-10-11; in the gear while it is
+ * not yet decided where such settings go). 一律播放淡入，不管系統的減少動態設定（R.75.21，人類；還沒定放哪的設定先放齒輪）。 */
+function MotionAlways() {
+  useSyncExternalStore(appearanceSubscribe, appearance);
+  return <label className="check"><input type="checkbox" checked={motionAlwaysOn()} onChange={event => setMotionAlways(event.target.checked)} />
+    {say(tr('toolbar.motionAlways', "Always play fades (ignore the system's reduce motion)"))}</label>;
+}
 
 function ComponentTint() {
   useSyncExternalStore(appearanceSubscribe, appearance);

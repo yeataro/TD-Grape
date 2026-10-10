@@ -4,7 +4,7 @@ import { DropdownMenu, popupPlace, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
 import { readPreference, writePreference } from './preferences';
-import { followBar } from './follow_bar';
+import { barOf, followBar } from './follow_bar';
 
 // Shared controls of the editor frame (Refactor.53; human 2026-10-09: clean structure, colours and parts all
 // reusable). Bars, zones and panels build from these; their look lives in style.css under the same names and
@@ -111,7 +111,9 @@ export function Popover({ anchor, label, onClose, className, children }: {
     addEventListener('pointerdown', away, true); addEventListener('keydown', key);
     return () => { removeEventListener('pointerdown', away, true); removeEventListener('keydown', key); };
   }, [anchor, onClose]);
-  return <div ref={box} className={'popover' + (className ? ' ' + className : '')} role="dialog" aria-label={say(label)} style={place}>{children}</div>;
+  // Opened from a bar, it fades in; it closes at once (Refactor.75.21). 從列上打開的淡入；關閉立刻消失（R.75.21）。
+  return <div ref={box} className={'popover' + (className ? ' ' + className : '') + (barOf(anchor) ? ' fade-in' : '')} role="dialog"
+    aria-label={say(label)} style={place}>{children}</div>;
 }
 
 /** An icon button that opens a Popover. 打開小面板的圖示按鈕。 */

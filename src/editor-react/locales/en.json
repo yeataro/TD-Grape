@@ -450,6 +450,7 @@
   "toolbar.frameGlide": "Frame transition (F)",
   "toolbar.glsl": "GLSL",
   "toolbar.more": "More tools",
+  "toolbar.motionAlways": "Always play fades (ignore the system's reduce motion)",
   "toolbar.redo": "Redo",
   "toolbar.saveProject": "Save TD project",
   "toolbar.snap": "Snap",

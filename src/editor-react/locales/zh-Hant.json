@@ -450,6 +450,7 @@
   "toolbar.frameGlide": "Frame 過渡（F）",
   "toolbar.glsl": "",
   "toolbar.more": "更多工具",
+  "toolbar.motionAlways": "一律播放淡入（不跟隨系統的減少動態效果）",
   "toolbar.redo": "",
   "toolbar.saveProject": "保存 TD 專案",
   "toolbar.snap": "",
