@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
+const { gzipSync } = require('node:zlib');
 const root = path.resolve(__dirname, '..');
 const index = process.argv.indexOf('--out');
 if (index < 0 || !process.argv[index + 1]) throw Error('Usage: node tools/build_editor.cjs --out OUTPUT_FOLDER');
@@ -53,6 +54,13 @@ async function main() {
   // One product version, in src/version.json (Refactor.25). 產品版本只有一處：src/version.json。
   const version = JSON.parse(fs.readFileSync(path.join(root, 'src/version.json'), 'utf8')).version;
   if (!version || !files.has('index.html')) throw Error('Editor version or page not found');
+  // Text files also go compressed, made once here (Refactor.74, human 2026-10-10: the page took long on a phone): the service
+  // sends `name.gz` as it is to a browser that takes gzip, and the browser unpacks it; TD never compresses anything.
+  // 文字檔另外附一份壓縮版，在這裡做一次（R.74，人類：手機開頁很久）：編輯服務把 name.gz 原樣送給接受 gzip 的瀏覽器，
+  // 由瀏覽器解開；TD 不壓縮任何東西。
+  for (const [name, data] of [...files]) {
+    if (/\.(html|js|css|json|webmanifest|svg|txt)$/.test(name)) files.set(name + '.gz', gzipSync(data, { level: 9 }));
+  }
   const assets = Object.fromEntries([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) =>
     [name, createHash('sha256').update(data).digest('hex')]));
   const metadata = { schemaVersion: 1, version, assets };

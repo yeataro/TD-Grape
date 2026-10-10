@@ -6,6 +6,7 @@ ordinary immutable bytes; they never inspect OPs, VFS, or the source folder.
 import base64
 from collections import deque
 import errno
+import gzip
 from hashlib import sha1, sha256
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,12 +25,31 @@ from urllib.parse import unquote, urlsplit
 
 
 class AssetSnapshot:
+    """The editor's files as one checked set. A `name.gz` beside a file is its compressed copy (Refactor.74): it must unpack to
+    the same bytes; alone (the VFS keeps only the compressed copy) it is unpacked here, so everyone else reads `files` as
+    before. `compressed` is what is sent to a browser that takes gzip.
+    編輯器的檔案，檢查過的一整組。旁邊的 name.gz 是壓縮版（R.74）：解開必須一模一樣；只有壓縮版時（VFS 只放壓縮版）在這裡解開，
+    其他地方照舊讀 files。compressed 是送給接受 gzip 的瀏覽器的內容。"""
     def __init__(self, files, source):
-        normalized = {}
+        stored = {}
         for name, data in files.items():
             if not name or name.startswith('/') or '\\' in name or '..' in name.split('/'):
                 raise ValueError('Invalid asset path: ' + name)
-            normalized[name] = bytes(data)
+            stored[name] = bytes(data)
+        normalized, compressed = {}, {}
+        for name, data in stored.items():
+            if not name.endswith('.gz'):
+                normalized[name] = data
+        for name, data in stored.items():
+            if name.endswith('.gz'):
+                original = name[:-3]
+                try:
+                    unpacked = gzip.decompress(data)
+                except (OSError, EOFError) as error:
+                    raise ValueError('Compressed asset is damaged: ' + name) from error
+                if normalized.setdefault(original, unpacked) != unpacked:
+                    raise ValueError('Compressed asset does not match its file: ' + name)
+                compressed[original] = data
         if 'index.html' not in normalized:
             raise ValueError('index.html is missing from the selected source')
         html = normalized['index.html'].decode('utf-8')
@@ -39,6 +59,7 @@ class AssetSnapshot:
             if name not in normalized:
                 raise ValueError('Referenced asset is missing: ' + name)
         self.files = MappingProxyType(normalized)
+        self.compressed = MappingProxyType(compressed)
         self.source = source
         # The version comes from the build metadata, written from src/version.json (Refactor.25).
         # 版本來自建置資料（由 src/version.json 寫入）。
@@ -53,15 +74,22 @@ class AssetSnapshot:
                 raise ValueError('Build metadata is incomplete')
             self.version = metadata['version']
             for name, expected in metadata.get('assets', {}).items():
-                if name not in normalized:
+                data = compressed.get(name[:-3]) if name.endswith('.gz') else normalized.get(name)
+                if data is None:
                     raise ValueError('Build asset is missing: ' + name)
-                self.modified |= sha256(normalized[name]).hexdigest() != expected
+                self.modified |= sha256(data).hexdigest() != expected
             if self.modified:
                 self.version += ' (modified)'
         digest = sha256()
         for name, data in sorted(normalized.items()):
             digest.update(name.encode('utf-8') + b'\0' + sha256(data).digest())
         self.digest = digest.hexdigest()
+
+    def packed(self):
+        """What the VFS keeps (Refactor.74): the compressed copy where there is one, else the file.
+        VFS 存的內容：有壓縮版就只放壓縮版，沒有就放原檔。"""
+        return {**{name: data for name, data in self.files.items() if name not in self.compressed},
+                **{name + '.gz': data for name, data in self.compressed.items()}}
 
 
 # The reply to host requests while no Manager is connected. 沒有 Manager 連著時對宿主請求的回覆。
@@ -100,6 +128,16 @@ def folder_snapshot(folder):
             path.resolve().relative_to(root)
             files[relative.as_posix()] = path.read_bytes()
     return AssetSnapshot(files, 'external')
+
+
+def takes_gzip(accept):
+    """Whether an Accept-Encoding header takes gzip (not refused with q=0). Accept-Encoding 是否接受 gzip（沒有用 q=0 拒絕）。"""
+    for part in accept.split(','):
+        token, _, params = part.strip().partition(';')
+        if token.strip().lower() in ('gzip', '*'):
+            quality = params.strip().lower()
+            return not (quality.startswith('q=') and float(quality[2:] or 0) == 0)
+    return False
 
 
 def content_type(name):
@@ -410,7 +448,12 @@ class EditorHTTP:
                 data = snapshot.files.get(name)
                 if data is None:
                     return self.reply(404, {'error': 'Asset not found'}, head=head)
-                self.reply(200, data, content_type(name), head=head)
+                # The compressed copy to a browser that takes gzip; the browser unpacks it (Refactor.74).
+                # 接受 gzip 的瀏覽器拿壓縮版，由瀏覽器解開。
+                packed = snapshot.compressed.get(name)
+                if packed is not None and takes_gzip(self.headers.get('Accept-Encoding', '')):
+                    return self.reply(200, packed, content_type(name), head=head, encoding='gzip')
+                self.reply(200, data, content_type(name), head=head, encoding='identity' if packed is not None else None)
 
             def upgrade(self, target, host_requests, length):
                 """WebSocket handshake, then the connection's life on this thread (Uniform D2).
@@ -432,7 +475,7 @@ class EditorHTTP:
                 self.close_connection = True  # the 5 s timeout from setup() stays 沿用 setup() 的 5 秒逾時
                 service.live.serve(self.connection, target)
 
-            def reply(self, status, data, mime=None, head=False, keep=False):
+            def reply(self, status, data, mime=None, head=False, keep=False, encoding=None):
                 if not isinstance(data, bytes):
                     data = json.dumps(data, ensure_ascii=False).encode('utf-8')
                 if status >= 400:
@@ -441,6 +484,12 @@ class EditorHTTP:
                     self.send_response(status)
                     self.send_header('Content-Type', mime or 'application/json; charset=utf-8')
                     self.send_header('Content-Length', str(len(data)))
+                    # A file that also comes compressed says so, and that the reply depends on Accept-Encoding (Refactor.74).
+                    # 有壓縮版的檔案註明編碼，並說明回覆依 Accept-Encoding 而不同。
+                    if encoding is not None:
+                        if encoding != 'identity':
+                            self.send_header('Content-Encoding', encoding)
+                        self.send_header('Vary', 'Accept-Encoding')
                     # Only the shared default images may be kept, for an hour (Refactor.58). 只有公用預設圖能留一小時。
                     self.send_header('Cache-Control', 'private, max-age=3600' if keep and status == 200 else 'no-store')
                     self.send_header('X-Content-Type-Options', 'nosniff')

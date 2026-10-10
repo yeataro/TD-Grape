@@ -147,7 +147,7 @@ class EditorServiceExt:
             for name, data in files.items():
                 vfs.addByteArray(data, name)
         try:
-            replace(candidate.files)
+            replace(candidate.packed())  # only the compressed copy where there is one (Refactor.74) 有壓縮版就只放壓縮版
         except Exception as error:
             replace(previous)
             self._show('Pack failed; embedded assets restored', str(error))

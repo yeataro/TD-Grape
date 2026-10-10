@@ -1,5 +1,6 @@
 """Real HTTP and filesystem tests for the host-independent Editor service."""
 import errno
+import gzip
 import http.client
 from hashlib import sha256
 import importlib.util
@@ -70,6 +71,25 @@ class AssetsTest(unittest.TestCase):
                 path.write_bytes(data)
             (root / '.private').write_text('not a web asset')
             self.assertEqual(dict(service.folder_snapshot(root).files), bundle())
+
+    def test_compressed_copies_must_match_and_stand_in_for_their_file(self):
+        # Refactor.74: name.gz is a file's compressed copy; it must unpack to the same bytes; alone (the VFS keeps only it)
+        # it is unpacked, so files reads as before; packed() keeps only the copy. 壓縮版必須解開一樣；只有它時解開代替原檔。
+        script = bundle()['nested/app.js']
+        both = service.AssetSnapshot({**bundle(), 'nested/app.js.gz': gzip.compress(script)}, 'external')
+        self.assertEqual(both.files['nested/app.js'], script)
+        self.assertEqual(gzip.decompress(both.compressed['nested/app.js']), script)
+        self.assertNotIn('nested/app.js.gz', both.files)
+        packed = both.packed()
+        self.assertIn('nested/app.js.gz', packed)
+        self.assertNotIn('nested/app.js', packed)
+        alone = service.AssetSnapshot(packed, 'embedded')
+        self.assertEqual(alone.files['nested/app.js'], script)
+        self.assertEqual(alone.digest, both.digest)
+        with self.assertRaisesRegex(ValueError, 'does not match'):
+            service.AssetSnapshot({**bundle(), 'nested/app.js.gz': gzip.compress(b'other')}, 'external')
+        with self.assertRaisesRegex(ValueError, 'damaged'):
+            service.AssetSnapshot({**bundle(), 'nested/app.js.gz': b'not gzip'}, 'external')
 
     def test_bad_asset_names_rejected(self):
         for name in ('../secret', '/absolute', 'folder\\file'):
@@ -154,6 +174,20 @@ class HTTPTest(unittest.TestCase):
         self.assertEqual((status, data), (200, b''))
         self.assertEqual(int(headers['Content-Length']), len(bundle()['nested/app.js']))
         self.assertEqual(self.request('/manifest.webmanifest')[1]['Content-Type'], 'application/manifest+json; charset=utf-8')
+
+    def test_a_browser_that_takes_gzip_gets_the_compressed_copy(self):
+        # Refactor.74: sent as it is, marked gzip; the browser unpacks it. Others get the file. 接受 gzip 的拿壓縮版，其他拿原檔。
+        script = bundle()['nested/app.js']
+        self.server.replace(service.AssetSnapshot({**bundle(), 'nested/app.js.gz': gzip.compress(script)}, 'embedded'))
+        status, headers, data = self.request('/nested/app.js', headers={'Accept-Encoding': 'gzip, deflate, br'})
+        self.assertEqual((status, headers.get('Content-Encoding'), headers.get('Vary')), (200, 'gzip', 'Accept-Encoding'))
+        self.assertEqual(gzip.decompress(data), script)
+        self.assertEqual(int(headers['Content-Length']), len(data))
+        self.assertTrue(headers['Content-Type'].startswith('text/javascript'))
+        for accept in ('', 'br', 'gzip;q=0'):
+            status, headers, data = self.request('/nested/app.js', headers={'Accept-Encoding': accept} if accept else None)
+            self.assertEqual((status, data, headers.get('Content-Encoding')), (200, script, None), accept)
+        self.assertNotIn('Content-Encoding', self.request('/icons/test.png', headers={'Accept-Encoding': 'gzip'})[1])
 
     def test_root_and_edit_address_serve_the_new_editor(self):
         # Refactor.24: the new editor is the only entry. 新編輯器是唯一入口。
