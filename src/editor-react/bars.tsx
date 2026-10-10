@@ -105,8 +105,8 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
     <span {...fold(4)}><Placeholder label={tr('action.exportGraph', 'Export graph')} /></span>
     {/* Saving the TD project takes the main button's look and place (Refactor.75.5, human 2026-10-11): the editor never saves
         it by itself. 儲存 TD 專案接手主要按鈕的樣式與位置（R.75.5，人類）：編輯器不會自己存。 */}
-    <button type="button" {...fold(6, 'primary')} aria-disabled={!session || state?.phase === 'sending' || undefined}
-      onClick={() => { if (session && state?.phase !== 'sending') void session.save(); }}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
+    <button type="button" {...fold(6, 'primary')} aria-disabled={!session || !canSave(state) || undefined}
+      onClick={() => { if (session && canSave(state)) void session.save(); }}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
     {/* No "Apply Shader" (Refactor.75.5, human 2026-10-11): sending is automatic with no delay, so it only ever lit for an
         instant; it comes back with a manual-apply mode, if that is ever made (CURRENT, later releases).
         沒有「套用 Shader」（R.75.5，人類）：送出是自動、零延遲的，它只會亮一下；若哪天做「手動套用模式」再跟著回來（CURRENT 後續版本）。 */}
@@ -216,6 +216,10 @@ export function NetworkBar({ session, prefs, onGlsl }: {
 }
 
 const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflict', 'error'];
+/** Whether TD can save the project now (Refactor.75.7, human 2026-10-11): not while TD is away, conflicting or unsure; while
+ * sending it can — the save waits for the send — so the button no longer greys for an instant at every edit.
+ * TD 現在能不能存專案（R.75.7，人類）：TD 不在、衝突、結果不確定時不行；送出中可以（存檔會等送完），按鈕不再每次修改都灰一下。 */
+const canSave = (state: EditorState | null) => !!state && !['offline', 'uncertain', 'conflict'].includes(state.phase);
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
 const recoveryHelp: Record<Link, Message> = {
@@ -327,7 +331,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       { key: 'import', label: say(tr('action.importGraph', 'Import graph')), disabled: true, title: say(notYet), divider: true, select: () => {} },
       { key: 'export', label: say(tr('action.exportGraph', 'Export graph')), disabled: true, title: say(notYet), select: () => {} },
       { key: 'draft', label: say(tr('toolbar.downloadDraft', 'Download draft')), disabled: !session, select: onDownload },
-      { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || state?.phase === 'sending', divider: true, select: () => void session?.save() },
+      { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || !canSave(state), divider: true, select: () => void session?.save() },
     ]} />
     <button type="button" {...fold(6, 'sync-light tone-' + tone + (busy ? ' busy' : ''))} title={now} aria-label={now} aria-haspopup="dialog"
       aria-expanded={!!status} onClick={event => setStatus(status ? null : event.currentTarget)}>
