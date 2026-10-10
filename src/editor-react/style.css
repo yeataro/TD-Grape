@@ -447,22 +447,25 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    讓它和卡片框線分開（65.3，人類：回到這個，比黑框可愛）。 */
 .node-ghost-mark { position: absolute; z-index: 1; top: 0; right: 0; width: 38px; height: 38px; transform: translate(40%, -45%); pointer-events: auto; }
 /* The ghost itself (Refactor.75.27, human 2026-10-11): body G (rounded zigzag) flowing one way; on a node the eyes blink, on a
-   wire it floats and looks left and right. Every ghost starts at its own place in the round (from its ID, --ghost-delay).
+   wire it floats and looks left and right. Every ghost starts the same share into each of its rounds (from its ID, --ghost-phase), so a longer one is offset by more (R.75.30).
    Animation effects off: it stands still, same shape. 幽靈本身（R.75.27，人類）：G 圓角鋸齒裙擺往一個方向流；節點上眨眼，線上浮動並左右看。
    每隻從自己的位置開始（由 ID 決定）。動畫效果關閉：同樣的形狀靜止。 */
 .ghost-figure, .ghost-figure > svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .ghost-fill { fill: var(--node-ghost-mark); } .ghost-eye { fill: var(--node-ghost-eye); }
-.ghost-hem { animation: ghost-flow 1.2s linear infinite; animation-delay: var(--ghost-delay); }
+.ghost-hem { animation: ghost-flow 1.2s linear infinite; animation-delay: calc(var(--ghost-phase) * -1.2s); }
 .ghost-eyes { transform-box: fill-box; transform-origin: center; }
-.ghost-figure.node .ghost-eyes { animation: ghost-blink 4.8s infinite; animation-delay: var(--ghost-delay); }
-.ghost-figure.wire .ghost-eyes { animation: ghost-look 4.8s ease-in-out infinite; animation-delay: var(--ghost-delay); }
-.ghost-figure.wire .ghost-body { animation: ghost-float 2.4s ease-in-out infinite; animation-delay: var(--ghost-delay); }
+.ghost-figure.node .ghost-eyes { animation: ghost-blink 4.8s infinite; animation-delay: calc(var(--ghost-phase) * -4.8s); }
+.ghost-figure.wire .ghost-eyes { animation: ghost-look 4.8s ease-in-out infinite; animation-delay: calc(var(--ghost-phase) * -4.8s); }
+/* On a wire it floats boldly (R.75.30, human 2026-10-11: on a wire it can float freely, even 32px): the whole ghost moves over
+   --ghost-float, centred on the wire, slowly so it stays calm. 線上的大膽浮動（R.75.30，人類：在線上大膽浮動都可以，甚至 32px）：
+   整隻在 --ghost-float 的範圍內、以線為中心上下浮，放慢才不急。 */
+.ghost-figure.wire { animation: ghost-float 4s ease-in-out infinite; animation-delay: calc(var(--ghost-phase) * -4s); }
 @keyframes ghost-flow { to { transform: translateX(-4px); } }
 @keyframes ghost-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
 @keyframes ghost-look { 0%, 15% { transform: translateX(0); } 22%, 40% { transform: translateX(-1px); } 47%, 65% { transform: translateX(1px); } 72%, 100% { transform: translateX(0); } }
-@keyframes ghost-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.8px); } }
-:root[data-motion="off"] .ghost-figure * { animation: none; }
-@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .ghost-figure * { animation: none; } }
+@keyframes ghost-float { 0%, 100% { transform: translateY(calc(var(--ghost-float) / 2)); } 50% { transform: translateY(calc(var(--ghost-float) / -2)); } }
+:root[data-motion="off"] :is(.ghost-figure, .ghost-figure *) { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] :is(.ghost-figure, .ghost-figure *) { animation: none; } }
 /* On a ghost wire: a ghost at the middle, as big as the node's (R.75.27; R.75.28, human 2026-10-11: 24px was too small), not
    in the way of the wire. Ghost 線中點的幽靈，和節點上的一樣大（R.75.28，人類：24px 太小），不擋線。 */
 .wire-ghost-mark { position: absolute; width: 38px; height: 38px; pointer-events: none; }

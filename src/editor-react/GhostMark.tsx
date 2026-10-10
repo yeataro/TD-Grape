@@ -1,6 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
-import { ghostDelay, roundedHem } from './ghost_motion';
+import { ghostPhase, roundedHem } from './ghost_motion';
 
 // The Ghost mark, alive (Refactor.75.27, human 2026-10-11): on a node the hem flows and the eyes blink; on a wire it also
 // floats and looks left and right. Animation effects off (the gear, or the system's reduce motion), it stands still in the same
@@ -11,7 +11,7 @@ const HEM = roundedHem();
 
 export function GhostMark({ id, on }: { id: string; on: 'node' | 'wire' }) {
   const key = useId().replace(/:/g, '');
-  return <span className={'ghost-figure ' + on} style={{ '--ghost-delay': ghostDelay(id) } as CSSProperties}>
+  return <span className={'ghost-figure ' + on} style={{ '--ghost-phase': ghostPhase(id) } as CSSProperties}>
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <defs>
         <clipPath id={'body' + key}><rect x="6" y="0" width="12" height="24" /></clipPath>

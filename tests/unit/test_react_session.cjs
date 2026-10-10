@@ -1150,11 +1150,11 @@ test('a panel opened from a bar is placed again when that bar or the window chan
 // the hem repeats every 4 units, so sliding it 4 units loops without a jump. 每隻幽靈從自己的位置開始、同一個 ID 永遠一樣；
 // 裙擺每 4 單位重複，滑 4 單位就能無縫循環。
 test('ghosts start at their own place in the round, and the hem loops without a jump', () => {
-  const { ghostDelay, roundedHem, GHOST_ROUND } = load(path.join(root, 'src/editor-react/ghost_motion.ts'));
-  const delays = ['n1', 'n2', 'e-n1-out-n2-in', 'abc'].map(ghostDelay);
-  assert.deepEqual(delays, ['n1', 'n2', 'e-n1-out-n2-in', 'abc'].map(ghostDelay), 'the same ID, the same start');
-  assert.ok(delays.every(d => /^-?\d+ms$/.test(d) && -parseInt(d) >= 0 && -parseInt(d) < GHOST_ROUND), 'within one round');
-  assert.ok(new Set(delays).size > 1, 'different IDs start at different places');
+  const { ghostPhase, roundedHem } = load(path.join(root, 'src/editor-react/ghost_motion.ts'));
+  const ids = ['n1', 'n2', 'e-n1-out-n2-in', 'abc'], phases = ids.map(ghostPhase);
+  assert.deepEqual(phases, ids.map(ghostPhase), 'the same ID, the same start');
+  assert.ok(phases.every(p => p >= 0 && p < 1), 'a share of each round (each animation is offset by it times its own length)');
+  assert.ok(new Set(phases).size > 1, 'different IDs start at different places');
   const corners = [...roundedHem().matchAll(/Q(\d+) ([\d.]+)/g)].map(m => [+m[1], +m[2]]);
   const at = x => corners.find(c => c[0] === x)?.[1];
   for (let x = 6; x <= 22; x += 2) assert.equal(at(x), at(x + 4), `corner at ${x} repeats at ${x + 4}`);

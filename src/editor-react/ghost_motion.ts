@@ -3,9 +3,6 @@
 // Kept apart from React so it can be tested. Ghost 標記的動作（R.75.27，人類）：裙擺是修圓角的鋸齒（G），往一個方向流；
 // 每隻幽靈從一輪中的哪裡開始，由節點或線的 ID 決定，畫面上的幽靈才不會一起動。和 React 分開，才能測試。
 
-/** One round of the ghost's motion, ms: every animation of a ghost is offset by the same share of it. 一輪的長度（毫秒）。 */
-export const GHOST_ROUND = 4800;
-
 /** The hem, in the ghost icon's 24-unit box: the zigzag of the still icon (points 2 apart, between y 18.5 and 20) from x 2 to
  * 30, so it can slide 4 units left and still fill the body; every corner cut back along both edges by `cut` of the edge and
  * joined by a curve through the corner (a design tool's "round corners"). 裙擺：和靜止圖示同樣的鋸齒，從 x 2 畫到 30（往左滑 4 仍蓋滿身體）；
@@ -23,10 +20,11 @@ export function roundedHem(cut = 0.3): string {
   return path + ` L${last[0]} ${last[1]} L30 18.4Z`;
 }
 
-/** Where in its round a ghost starts: the same ID always gives the same place, as a negative CSS delay. 從一輪中的哪裡開始：
- * 同一個 ID 永遠一樣，寫成負的 CSS 延遲。 */
-export function ghostDelay(id: string): string {
+/** Where in its rounds a ghost starts, as a share from 0 to 1: each animation starts that share into its own length, so a
+ * longer one is offset by more (R.75.30, human 2026-10-11). The same ID always gives the same share. 從各自一輪中的哪裡開始，
+ * 寫成 0 到 1 的比例：每個動畫從自己長度的這個比例開始，越長的錯開越多（R.75.30，人類）。同一個 ID 永遠一樣。 */
+export function ghostPhase(id: string): number {
   let hash = 2166136261; // FNV-1a
   for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
-  return -((hash >>> 0) % GHOST_ROUND) + 'ms';
+  return Math.floor((hash >>> 0) / 2 ** 32 * 10000) / 10000;
 }
