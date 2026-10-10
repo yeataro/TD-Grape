@@ -261,8 +261,8 @@ const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 // 有 session 時編輯那一張圖，並提供面板內容（Q47 4：從正在編輯的畫面來）；換哪一張由外殼決定。
 // td: the TD answering now; opened: the TD this graph was opened from (Refactor.52, shown side by side).
 // td：現在回應的 TD；opened：開這張圖時的 TD（並排給人比對）。
-function Workspace({ session, waiting, prefs, layout, editing, text, td, opened }: {
-  session: EditorSession | null; waiting: Waiting; prefs: CanvasPrefs; layout: Layout; editing: ReactNode;
+function Workspace({ session, waiting, prefs, layout, file, target: where, text, td, opened }: {
+  session: EditorSession | null; waiting: Waiting; prefs: CanvasPrefs; layout: Layout; file: ReactNode; target: ReactNode;
   text: (key: string) => string; td: TdIdentity | null; opened: TdIdentity | null;
 }) {
   const state = useSyncExternalStore(session?.subscribe ?? idleSubscribe, session?.snapshot ?? idleSnapshot);
@@ -375,7 +375,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
   // The network is the canvas pane of the layout: one fixed part, never moved or closed (Refactor.68).
   // 網路區是版面裡的畫布那一格：固定、不能移動或關閉。
   const network = <section className="network" aria-label={say(tr('network.label', 'Network'))}>
-        <LocationBar layout={layout}>{editing}</LocationBar>
+        <LocationBar layout={layout} file={file} target={where} />
         <div className="canvas">
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
@@ -491,11 +491,10 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).
         每個階段同一個外框；新的 session 有自己的編輯狀態（草稿依 Grape OP 分開）。 */}
     <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} layout={layout} text={text} td={td} opened={opened}
-      editing={<>
-        {/* The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
-            專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。 */}
-        {td && <span className="project-file" title={say(detailLabel(td, version))}>{td.file}</span>}
-        <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></>} />
+      // The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
+      // 專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。
+      file={td && <span className="project-file" title={say(detailLabel(td, version))}>{td.file}</span>}
+      target={<GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} />} />
     {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} seen={setTd} />}
     {pending && <div className="switch-dialog" role="dialog" aria-label={say(tr('switch.title', 'Switch Grape OP'))}>
       <p>{say(tr('switch.explanation', 'Some changes are not in TD yet. Apply them to TD, or keep a draft in this browser tab before switching (it can be restored when you come back).'))}</p>

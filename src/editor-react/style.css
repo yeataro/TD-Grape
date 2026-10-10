@@ -105,7 +105,11 @@ a { color: var(--accent); }
 .foot-sync-short.appeared { display: inline-flex; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sync-none); }
 .sync-dot.synced { background: var(--sync-synced); } .sync-dot.unsent { background: var(--sync-unsent); } .sync-dot.sending { background: var(--sync-sending); }
-:is(.title-bar, .foot-bar, .network-bar) .folded { display: none; }
+:is(.title-bar, .foot-bar, .network-bar, .location-bar) .folded { display: none; }
+/* The location bar's file and path: they shrink to an ellipsis first, then fold (69.4); the rest keeps its size.
+   網址列的檔名與路徑：先縮成省略號，再收起（69.4）；其他不縮。 */
+.location-part { display: flex; min-width: 0; overflow: hidden; }
+.location-bar > :not(.location-part, .spacer) { flex-shrink: 0; }
 /* The network toolbar's "more" button shows only once a group has folded into it (69.3). 網路區功能列的「更多」只在有一組收進去後出現。 */
 .tool-more:not(.appeared) { display: none; }
 .dropdown-menu .icon { width: 16px; height: 16px; }
@@ -745,7 +749,8 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 /* The location bar's middle: project file, then the Grape OP (Refactor.52). 網址列中間：專案檔名，接著 Grape OP。 */
 .location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: var(--bar-line); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .location-bar .target:hover { border-color: var(--border-control); }
-.location-bar .project-file { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
+.location-bar .project-file { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.location-part:has(> .project-file) { max-width: 30%; }
 .aligned-rows { display: grid; column-gap: 12px; align-items: baseline; }
 .identity-compare { font-size: var(--font-md); line-height: var(--line-md); color: var(--text-secondary); }
 .renew-id { display: flex; align-items: center; gap: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: nowrap; }

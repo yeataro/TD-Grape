@@ -102,16 +102,23 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
  * always there (human 2026-10-10). A side with nothing to show greys its toggle out.
  * 網址列只在網路區上方（人類；舊產品跨整個寬度）：兩端是左右開關，中間是正在編輯的東西。它跟著永遠不會關的畫布，所以開關一直都在
  * （人類 10-10）。那一側沒東西可顯示時開關變灰。 */
-export function LocationBar({ layout, children }: { layout: Layout; children: ReactNode }) {
+export function LocationBar({ layout, file, target }: { layout: Layout; file: ReactNode; target: ReactNode }) {
+  // As it narrows (69.4, human 2026-10-10): the file and then the Grape OP path give way to an ellipsis, and fold away
+  // altogether once even that does not fit (a part shrunk to nothing still kept its gaps and padding); the toggles and the
+  // Layout menu never. 變窄時（人類 10-10）：檔名、再來 Grape OP 路徑先縮成省略號，連那樣都放不下就整個收起（縮到 0 的東西還佔著間距與內距）；
+  // 開關與 Layout 選單永遠不收。
+  const bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
+  const fold = (order: number) => ({ 'data-fold': order, 'data-shrink': '', className: 'location-part' + (folded >= order ? ' folded' : '') });
   const toggle = (side: 'left' | 'right') => {
     const empty = !layout.hasPanels(side);
     return <IconButton icon={side === 'left' ? 'leftPanel' : 'rightPanel'} label={side === 'left' ? tr('layout.leftZone', 'Left panels') : tr('layout.rightZone', 'Right panels')}
       expanded={!empty && !layout.closed[side]} disabled={empty} title={empty ? tr('layout.sideEmpty', 'No panels on this side') : undefined}
       onClick={() => layout.toggleSide(side)} />;
   };
-  return <div className="location-bar">
+  return <div className="location-bar" ref={bar}>
     {toggle('left')}
-    {children}
+    {file && <span {...fold(1)}>{file}</span>}
+    <span {...fold(2)}>{target}</span>
     <span className="spacer" />
     <IconButton icon="titleBar" label={tr('layout.titleBar', 'Title bar')} expanded={layout.titleBar} onClick={layout.toggleTitleBar} />
     <LayoutMenu layout={layout} />
