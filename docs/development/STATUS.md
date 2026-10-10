@@ -58,6 +58,12 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.72 管理器有自己的時鐘**（人類 10-10 決定加獨立時間線；workspace `work/refactor/td-status-and-service-2026-10-10.md` B-1）：
+  - `GrapeManager/local/time`（Time COMP，Independent 開）。處理編輯請求的 `request_pump` 是管理器時間線的每格開始，主時間線暫停時照常跑。
+  - **只放管理器、不放整個 TD_Grape**：TD_Grape 的 Samples（grape、banana、jellybeans）用 `me.time.frame` 播放；整個 TD_Grape 有自己的時鐘的話，使用者暫停時預設圖仍會繼續動，等於插手作品（Q68）。Samples 仍跟主時間線（實測 `/local/time`）。
+  - 由 `install_native_manager.py` 建立（檢查點 `work/refactor/checkpoints/r72-manager-clock`）。TD 回報管理器的 `.time` 很怪（`/sys/local/time`，10-10 拋棄式測試也一樣），但行為正確，以行為為準。
+  - 驗證（主時間線暫停約 25 秒，全程沒恢復）：重新整理編輯器頁面照常開圖；燈號一直是綠的（心跳有回）；刪一個接著的節點 → 套用、TD 換上新程式（`runtimeRevision` 831、GLSL TOP 有重新 cook、沒有錯誤）；Undo → 832。恢復播放後一切照常。Manager 沒有 script error。
+  - 擋不了的仍是：TD 縮小、關視窗、把組件停掉——由 R.71 的心跳與斷線處理。TOE 未存。
 - **Refactor.71 心跳、斷線接燈號、TD 存檔通知、照症狀分的說明**（人類 10-10：TD 早就縮小了，編輯器要到編輯時才發現；TD 存檔時編輯器要知道；「早點知道、成本很低」；人類累了，交給助手判斷影響小的直接做。整理與實測在 workspace `work/refactor/td-status-and-service-2026-10-10.md`；規則記為 design-interview Q69）：
   - **心跳**：頁面看得見時，編輯器經即時連線每 5 秒送一個 `ping`（同時只有一個）；TD 在 `request_pump` 每格開始時由 `live_watch` 回 `pong`，所以 TD 縮小、忙、暫停時連線還在卻不會回（WebSocket 協定內建的 ping 由連線的執行緒回，測不出來）。到下一拍沒回 → 燈號「TD 沒處理」、狀態進入「不在」並開始自動檢查；又回了 → 馬上檢查。切回分頁時馬上問一次；看不到時不問。心跳不寫進訊息紀錄。
   - **斷線接燈號**：即時連線一斷 → 立刻「連不到 TD」；連線回來 → 馬上檢查（`HostSync.lost`／`found`；只從「已同步」或「不在」進來，送出中、衝突、結果不確定各走自己的路）。

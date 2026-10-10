@@ -103,6 +103,15 @@ drain.par.start = False
 drain.par.create = False
 drain.text = "def onFrameStart(frame):\n    parent().ext.GrapeManagerExt.Drain()\n"
 drain.comment = 'Editing requests only. An empty queue does not inspect any Family or Parameter.'
+# The Manager keeps its own clock (Refactor.72, human 2026-10-10): `request_pump` runs at the start of a frame of the Manager's
+# timeline, so pausing the main timeline would stop editing requests (measured 10-10). Only the Manager: TD_Grape's Samples
+# animate with time, and pausing them is the person's work (Q68). 管理器有自己的時鐘：request_pump 在管理器時間線的每格開始時跑，
+# 主時間線一暫停，編輯請求就沒人處理（10-10 實測）。只放管理器：TD_Grape 的 Samples 會隨時間動，暫停它們屬於使用者的作品。
+local = node(manager, baseCOMP, 'local', 1000, -380)
+clock = local.op('time') or local.create(timeCOMP, 'time')
+clock.par.independent = True
+clock.par.play = True
+local.comment = "The Manager's own clock, so editing requests go on while the main timeline is paused."
 
 # Live Uniform values (Uniform D2): watches only the GLSL OPs of Grape OPs with a connected editor; the
 # Manager sets its OP list, and it is off while no editor is connected. 只監看有編輯器連著的 GLSL OP。
