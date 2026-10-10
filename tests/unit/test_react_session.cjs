@@ -1091,6 +1091,24 @@ test('a save TD never took is said plainly, not as the raw reply', async t => {
   assert.deepEqual([last.level, zh(last.message)], ['warning', 'TD 沒有處理這次存檔（TD 當時沒有回應），沒有存檔，之後也不會自動存。']);
 });
 
+// Refactor.71, covered in the audit since R.67 (human 2026-10-11): while the page is not seen (another tab, another app on a
+// phone) the heartbeat does not ask, so it never says "not responding"; seen again, it asks at once.
+// 頁面看不到時（別的分頁、手機切到別的 App）心跳不問，也就不會說「沒有回應」；又看得到時馬上問。
+test('the heartbeat waits while the page is not seen and asks at once when it is seen again', async t => {
+  const { LiveValues } = load(path.join(root, 'src/editor-react/live_values.ts'));
+  let shown;
+  globalThis.document = { hidden: true, addEventListener: (type, run) => { if (type === 'visibilitychange') shown = run; }, removeEventListener() {} };
+  const socket = fakeSocket(), answers = [];
+  const live = new LiveValues(() => socket, () => {}, () => {}, { retry: 60000, nextFrame: run => setTimeout(run, 0),
+    answering: responding => answers.push(responding), beat: 10, patience: 30 });
+  t.after(() => { live.dispose(); delete globalThis.document; });
+  socket.readyState = 1; socket.onopen();
+  await new Promise(resolve => setTimeout(resolve, 60));
+  assert.deepEqual([socket.pings.length, answers], [0, []], 'not seen: not asked, never "not responding"');
+  globalThis.document.hidden = false; shown();
+  assert.deepEqual(socket.pings.map(ping => ping.seq), [1], 'seen again: asked at once');
+});
+
 // Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003
 // reloading, 4004 Grape OP deleted); what the editor only sees afterwards does not replace it; nothing said is "unreachable".
 // R.75：TD 在關閉訊框裡說原因；之後編輯器只看到的症狀不會蓋掉它；沒說就是連不到。
