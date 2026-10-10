@@ -8,6 +8,7 @@ import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { Icon } from './icons';
+import { GhostMark } from './GhostMark';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { modesOf } from './declaration_modes';
@@ -112,7 +113,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   // The ghost mark (Refactor.64.3, human 2026-10-10: option G4): a ghost on the top-right corner, half outside, drawn beside
   // the card so the card's fading does not dim it. Ghost 標記（人類選 G4）：右上角的幽靈、一半在外；畫在卡片旁邊，不被卡片的淡化一起變淡。
   if (data.ghost) return <><span className="node-ghost-mark" role="img" title={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}
-    aria-label={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}><Icon name="ghost" /></span>
+    aria-label={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}><GhostMark id={id} on="node" /></span>
   <article ref={card} className={`grape-node ghost ${selection}`}
     style={{ '--group-color': 'var(--group-ghost)' } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{authored.name || text(data.label)}</strong><small>Ghost</small></div>

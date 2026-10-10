@@ -96,7 +96,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
     const className = !ghost && components?.length === 1 ? 'component-' + components[0] : undefined;
     if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] && old.className === className &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
-    return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1], className,
+    // A ghost wire is drawn by its own type, a ghost at its middle (Refactor.75.27). Ghost 線用自己的類型畫，中點一隻幽靈。
+    return { ...old, id: edge.id, type: ghost ? 'ghost' : undefined, source: saved.from[0], sourceHandle: saved.from[1], className,
       target: saved.to[0], targetHandle: saved.to[1], style, label,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });

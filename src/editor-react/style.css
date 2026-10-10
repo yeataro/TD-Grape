@@ -446,8 +446,25 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    back to this one, cuter than a black outline). Ghost 標記（人類選預覽頁的 G4）：實心幽靈、38px，位置同錯誤圖示；畫布色的描邊
    讓它和卡片框線分開（65.3，人類：回到這個，比黑框可愛）。 */
 .node-ghost-mark { position: absolute; z-index: 1; top: 0; right: 0; width: 38px; height: 38px; transform: translate(40%, -45%); pointer-events: auto; }
-.node-ghost-mark .icon { width: 100%; height: 100%; }
-.node-ghost-mark .icon-solid { fill: var(--node-ghost-mark); fill-rule: evenodd; stroke: var(--node-ghost-edge); stroke-width: 1.6; stroke-linejoin: round; paint-order: stroke; }
+/* The ghost itself (Refactor.75.27, human 2026-10-11): body G (rounded zigzag) flowing one way; on a node the eyes blink, on a
+   wire it floats and looks left and right. Every ghost starts at its own place in the round (from its ID, --ghost-delay).
+   Animation effects off: it stands still, same shape. 幽靈本身（R.75.27，人類）：G 圓角鋸齒裙擺往一個方向流；節點上眨眼，線上浮動並左右看。
+   每隻從自己的位置開始（由 ID 決定）。動畫效果關閉：同樣的形狀靜止。 */
+.ghost-figure, .ghost-figure > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ghost-fill { fill: var(--node-ghost-mark); }
+.ghost-hem { animation: ghost-flow 1.2s linear infinite; animation-delay: var(--ghost-delay); }
+.ghost-eyes { transform-box: fill-box; transform-origin: center; }
+.ghost-figure.node .ghost-eyes { animation: ghost-blink 4.8s infinite; animation-delay: var(--ghost-delay); }
+.ghost-figure.wire .ghost-eyes { animation: ghost-look 4.8s ease-in-out infinite; animation-delay: var(--ghost-delay); }
+.ghost-figure.wire .ghost-body { animation: ghost-float 2.4s ease-in-out infinite; animation-delay: var(--ghost-delay); }
+@keyframes ghost-flow { to { transform: translateX(-4px); } }
+@keyframes ghost-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
+@keyframes ghost-look { 0%, 15% { transform: translateX(0); } 22%, 40% { transform: translateX(-1px); } 47%, 65% { transform: translateX(1px); } 72%, 100% { transform: translateX(0); } }
+@keyframes ghost-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.8px); } }
+:root[data-motion="off"] .ghost-figure * { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .ghost-figure * { animation: none; } }
+/* On a ghost wire: a smaller ghost at the middle, not in the way of the wire (R.75.27). Ghost 線中點的小幽靈，不擋線。 */
+.wire-ghost-mark { position: absolute; width: 24px; height: 24px; pointer-events: none; }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
 .react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }

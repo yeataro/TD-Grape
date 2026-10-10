@@ -1,7 +1,8 @@
 import { StrictMode, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
-  type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
+  type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
+import { GhostEdge } from './GhostMark';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './theme/td.css';
@@ -37,6 +38,8 @@ import { forgetPreferences, readPreference, writePreference } from './preference
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
+// A ghost wire carries a small ghost at its middle (Refactor.75.27); React Flow's own wire otherwise. Ghost 線中點帶一隻小幽靈。
+const edgeTypes: EdgeTypes = { ghost: GhostEdge };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
 // works. No target, or one the project does not have, is a normal state of the shell (Refactor.51).
 // 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。
@@ -168,7 +171,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect}>
-    <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
+    <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}

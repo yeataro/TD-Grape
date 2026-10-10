@@ -1146,6 +1146,20 @@ test('a panel opened from a bar is placed again when that bar or the window chan
   assert.deepEqual([stopped, listeners.size], [true, 0], 'closed: nothing is watched');
 });
 
+// Refactor.75.27 (human 2026-10-11): each ghost starts at its own place in the round, the same one every time for its ID;
+// the hem repeats every 4 units, so sliding it 4 units loops without a jump. 每隻幽靈從自己的位置開始、同一個 ID 永遠一樣；
+// 裙擺每 4 單位重複，滑 4 單位就能無縫循環。
+test('ghosts start at their own place in the round, and the hem loops without a jump', () => {
+  const { ghostDelay, roundedHem, GHOST_ROUND } = load(path.join(root, 'src/editor-react/ghost_motion.ts'));
+  const delays = ['n1', 'n2', 'e-n1-out-n2-in', 'abc'].map(ghostDelay);
+  assert.deepEqual(delays, ['n1', 'n2', 'e-n1-out-n2-in', 'abc'].map(ghostDelay), 'the same ID, the same start');
+  assert.ok(delays.every(d => /^-?\d+ms$/.test(d) && -parseInt(d) >= 0 && -parseInt(d) < GHOST_ROUND), 'within one round');
+  assert.ok(new Set(delays).size > 1, 'different IDs start at different places');
+  const corners = [...roundedHem().matchAll(/Q(\d+) ([\d.]+)/g)].map(m => [+m[1], +m[2]]);
+  const at = x => corners.find(c => c[0] === x)?.[1];
+  for (let x = 6; x <= 22; x += 2) assert.equal(at(x), at(x + 4), `corner at ${x} repeats at ${x + 4}`);
+});
+
 // Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003
 // reloading, 4004 Grape OP deleted); what the editor only sees afterwards does not replace it; nothing said is "unreachable".
 // R.75：TD 在關閉訊框裡說原因；之後編輯器只看到的症狀不會蓋掉它；沒說就是連不到。
