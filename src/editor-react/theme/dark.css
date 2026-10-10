@@ -49,7 +49,7 @@
   --palette-td-bind: #c59cff;
   /* GLSL colours (legacy style.css:480; Refactor.63). GLSL 上色（舊產品）。 */
   --palette-glsl-comment: #9d99ad;
-  --palette-glsl-keyword: #c5a5f3;
+  --palette-glsl-keyword: #d6cb97;   /* was legacy #c5a5f3; beige so it no longer meets the purple links (human 2026-10-10, trial) 原為舊產品淡紫；改米黃，不和紫色連結撞色（人類，試看） */
   --palette-glsl-type: #8dd9c5;
   --palette-glsl-number: #efc58e;
   --palette-glsl-function: #9dcbf5;
@@ -149,12 +149,13 @@
   --glsl-directive: var(--palette-glsl-directive);
   --glsl-string: var(--palette-glsl-string);
   --glsl-builtin: var(--palette-glsl-builtin);
-  /* A name in code that leads somewhere, in the selection green (Refactor.63.4). 程式碼裡可點的名字，用選取綠。 */
-  --code-link: var(--palette-select-green);
+  /* What can be clicked in code: names and TD's errors, in our purple (Refactor.63.6.6; 63.4 used the selection green).
+     程式碼裡能點的東西（名字、TD 的錯誤），用我們的紫色（63.4 用選取綠）。 */
+  --code-link: var(--palette-accent);
   /* A line of code under the pointer or the keyboard (a little lighter), and a line TD reported (human 2026-10-10).
      滑鼠或鍵盤所在的那一行（亮一點點），以及 TD 回報的錯誤行（人類）。 */
   --code-line-hover: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
-  --code-line-error: color-mix(in srgb, var(--palette-error) 22%, transparent);
+  --code-line-error: color-mix(in srgb, var(--palette-error) 32%, transparent);
   /* TD's error mark on a node that wrote a line TD reported (trial, Refactor.63.6.1): the error colour with a dark cross.
      TD 回報的錯誤行由它寫的節點掛的 TD 錯誤標記（試驗）：錯誤色底、深色叉。 */
   --node-error-badge: var(--palette-alarm);

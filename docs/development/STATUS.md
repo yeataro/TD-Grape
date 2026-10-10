@@ -58,6 +58,13 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.63.6.6 GLSL 面板與錯誤卡片的說法、顏色、換行**（人類 10-10，「先做做看」）：
+  - 面板說明改兩行：「TD 沒能編譯這段 GLSL，TD 回報的錯誤行已用紅色標出。」「點錯誤可捲到該行。」（舊句「點一行就會顯示它的位置」不對：點的是錯誤，行只是被標出）。
+  - 能點的東西用我們的紫色（用途色 `--code-link` 改取 `--palette-accent`；63.4 是選取綠）：名稱連結與框裡的錯誤（錯誤原本是一般文字色，人類沒發現能點）。行號維持灰色。
+  - 關鍵字（`layout`、`uniform`、`in`、`out`、`return`…）改米黃（`--palette-glsl-keyword` 深色 `#d6cb97`、淺色 `#756422`，即舊產品字串色；產生的 GLSL 沒有字串），不再和紫色連結撞色。人類提醒：數字是橘色（`#efc58e`），兩者都偏暖、相近，待看過再調。
+  - 換行：框裡 TD 的錯誤訊息超出時換行（`overflow-wrap: anywhere`）；錯誤卡片的說明在句號處分兩行（兩則訊息 `shader.stuckHint`、`shader.stuckCost`）。
+  - 紅色錯誤行底色 22% → 32%。
+  - 驗證：editor 81；TD 實測（Grape_TOP_test 加 Force Compile Error）：兩行說明、錯誤連結紫色 `rgb(179,156,251)` 且在框內換行、名稱連結同紫、關鍵字 `rgb(214,203,151)`、紅行 32%、卡片兩行；Undo 後 TD 回到 17 節點、11 線、無失敗紀錄；分頁設定還原。
 - **Refactor.63.6.5 刪掉被監看的 Grape OP 時，wire_watch 不再報錯**（人類 10-10 稍早截到 wire_watch 紅叉，當時查不到原因）：有編輯器連著的 Grape OP 被刪掉時，TD 的 OP Execute onWireChange 傳進 `None`（實測），`live_watch.wires_changed` 讀 `None.id` 而報 AttributeError；刪除本來就由 `_follow` 處理，所以這裡遇到 `None` 就略過。稍早的紅叉應是當時刪丟棄式測試 COMP 觸發的。同時（人類同意）刪掉 `/TD_Grape/GrapeManager/validation`（R.62.1 後留下的空 COMP，沒有任何參照）與 `/project1/r54_probe`；刪 r54_probe 時重現了這個錯誤。驗證：Python 94（`test_live_watch` 加 `None`）；重裝 Manager 後在 TD 複製 Grape_TOP_test 為 r6365_probe、讓編輯器連上（wire_watch 監看兩個）、刪掉 → 無腳本錯誤、監看清單自動剩一個。TOE 尚未保存這些改動。
 - **Refactor.63.6.4 錯誤卡片多一句說明**（人類 10-10）：編譯失敗的卡片在錯誤行下面多一行灰字——「可以直接編輯修正，或回到上一個可執行的版本。修好前每次修改，TD 都會重試編譯，可能短暫卡頓。」（英文 Fix it by editing, or revert. Until it compiles, TD tries again on each edit and may pause briefly.）內部錯誤不顯示（編輯不一定修得好）。背景：試編失敗與還原在 TD 同一格內做完，畫面看不到棋盤圖（人類實機沒看到閃動；機制為讀程式推得，未逐格實測），代價是 TD 停頓（先前實測失敗約 0.4 秒、成功約 0.06 秒）。驗證：editor 81；TD 已重新載入。
 - **Refactor.63.6.3 中文用語：「跑」改「執行」**（人類 10-10：太口語，要中性的工程用語）：卡住提示「TD 繼續執行第 N 版」、按鈕「回到上一個可執行的版本」、回退後的訊息「回到 TD 正在執行的那一版圖」、GLSL 面板的內部錯誤說明；同步訊息的內部錯誤一句統一成既有的「上次成功的 Shader」。只改繁中，英文不變。驗證：editor 81；TD 已重新載入。

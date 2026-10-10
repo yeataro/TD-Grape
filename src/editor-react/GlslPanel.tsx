@@ -88,8 +88,9 @@ export function GlslPanel({ state }: { state: EditorState }) {
     {failure && <div className={'glsl-failure ' + (errors.length ? 'current' : 'earlier')}>
       <p>{say(failure.kind === 'internal'
         ? tr('glsl.internalError', 'TD-Grape ran into an internal error while applying this Shader; TD keeps running revision {revision}.', { revision: state.stuck?.lastKnownGood?.revision ?? '' })
-        : errors.length ? tr('glsl.compileFailed', 'TD could not compile this GLSL. Click a line to show it.')
+        : errors.length ? tr('glsl.compileFailed', 'TD could not compile this GLSL; the lines TD reported are marked in red.')
           : tr('glsl.compileFailedEarlier', 'TD could not compile an earlier version of this GLSL; it has changed since, so the line numbers below may not match.'))}</p>
+      {failure.kind !== 'internal' && errors.length > 0 && <p>{say(tr('glsl.clickError', 'Click an error to scroll to its line.'))}</p>}
       {errors.length > 0 ? <ul>{errors.map((error, index) => <li key={index}>
         <button type="button" className="glsl-error-link" onClick={() => scrollTo(error.line)}>
           {say(tr('glsl.lineError', 'Line {line}: {message}', { line: error.line, message: error.text }))}</button></li>)}</ul>
