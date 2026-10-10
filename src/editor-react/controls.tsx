@@ -161,6 +161,9 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   // (a language or size switch); the first placing does not slide. 選中的底色從舊選項滑到新選項（R.75.25，人類，照分段控制的慣例）：
   // 選擇立刻生效，只有底色跟上。列的大小變了（換語言、大小）就重新放；第一次放不滑。
   const row = useRef<HTMLDivElement>(null), [thumb, setThumb] = useState<{ x: number; width: number; ready: boolean } | null>(null);
+  // Pressing the chosen one shrinks its background a little until let go (Refactor.75.26, as iOS segmented controls: the press is
+  // felt). 按住已選的那一格時底色微縮，放開恢復（R.75.26，照 iOS 分段控制：按下有感）。
+  const [held, setHeld] = useState(false);
   useLayoutEffect(() => {
     const place = () => {
       const chosen = row.current?.querySelector<HTMLElement>('button[aria-checked="true"]');
@@ -173,8 +176,10 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   }, [value]);
   return <div ref={row} className={'segmented' + (thumb ? ' sliding' : '')} role="radiogroup" aria-label={say(label)}>
     {thumb && <span className={'segmented-thumb' + (thumb.ready ? ' ready' : '')} aria-hidden="true"
-      style={{ width: thumb.width, transform: `translateX(${thumb.x}px)` }} />}
+      style={{ width: thumb.width, transform: `translateX(${thumb.x}px)` + (held ? ' scale(0.95)' : '') }} />}
     {options.map(option => <button key={option.value} type="button" role="radio" aria-checked={option.value === value}
+      onPointerDown={() => setHeld(option.value === value)} onPointerUp={() => setHeld(false)} onPointerLeave={() => setHeld(false)}
+      onPointerCancel={() => setHeld(false)}
       aria-disabled={option.disabled || undefined} title={option.title === undefined ? undefined : say(option.title)}
       onClick={() => { if (!option.disabled) onChange(option.value); }}>{say(option.label)}</button>)}</div>;
 }

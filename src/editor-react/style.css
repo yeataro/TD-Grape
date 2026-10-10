@@ -271,6 +271,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .segmented.sliding button { position: relative; } .segmented.sliding button[aria-checked="true"] { background: none; }
 .segmented-thumb { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: var(--radius-control); background: var(--surface-active); }
 .segmented-thumb.ready { transition: transform var(--control-slide) ease-out, width var(--control-slide) ease-out; }
+/* Pressing another choice dims its words until let go (R.75.26, as iOS). 按住其他選項時字變淡，放開恢復（R.75.26，照 iOS）。 */
+.segmented button:not([aria-checked="true"]):not([aria-disabled="true"]):active { opacity: .6; }
 
 /* The network's toolbar floats over its top edge and never blocks the canvas between its groups.
    網路區功能列浮在上緣，兩組之間不擋畫布。 */
