@@ -147,8 +147,17 @@ class LiveWatch:
                 shader = family.glsl()
                 entry['index'] = self._index(shader, uniforms)
                 text = json.dumps({'type': 'state', 'frame': self.frame(), 'uniforms': uniform_writer.states(shader, uniforms)})
-            except uniform_writer.Refused:
-                continue  # no GLSL OP or a damaged program: nothing to tell yet (D3, open) 沒有 GLSL OP 或程式壞了：還沒有可說的
+            except uniform_writer.Refused as error:
+                # The Grape OP broke while an editor is open (no GLSL OP, a damaged stored program): said once, with the
+                # same words as when the graph is opened, so nobody waits for states that will not come (Refactor.67, D3).
+                # 編輯器開著時 Grape OP 壞了（沒有 GLSL OP、存的程式壞了）：說一次，用和開圖時同樣的話，免得空等不會來的狀態。
+                if entry.get('refused') != str(error):
+                    entry['refused'] = str(error)
+                    said = json.dumps({'type': 'refused', 'frame': self.frame(), 'message': str(error)})
+                    for connection in entry['connections']:
+                        connection.send(said)
+                continue
+            entry['refused'] = None  # readable again: a later break is said again 又讀得到了：之後再壞會再說
             for connection in entry['connections']:
                 connection.send(text)
 

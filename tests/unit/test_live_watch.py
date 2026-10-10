@@ -100,6 +100,32 @@ class LiveWatchTests(unittest.TestCase):
         watch.wires_changed(None)  # a watched Grape OP deleted: TD passes None (Refactor.63.6.5) 被刪掉時 TD 傳 None
         self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120, 'retake': True}])
 
+    def test_a_grape_op_that_breaks_while_watched_is_said_once(self):
+        # Refactor.67 (D3): no GLSL OP or a damaged stored program while an editor is open — the reason goes to the
+        # editor once, not again until it is readable and breaks again. 編輯器開著時 Grape OP 壞了：原因說一次，恢復後再壞才再說。
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        connection.sent.clear()
+        entry = next(iter(watch.watched.values()))
+
+        def broken():
+            raise next_family.Refused('This Grape OP does not contain a native GLSL TOP named shader.')
+        family.glsl = broken
+        for _ in range(2):
+            entry['dirty'] = True
+            watch.flush()
+        self.assertEqual(connection.sent, [{'type': 'refused', 'frame': 120,
+                                            'message': 'This Grape OP does not contain a native GLSL TOP named shader.'}])
+        del family.glsl  # readable again 又讀得到了
+        entry['dirty'] = True
+        watch.flush()
+        self.assertEqual(connection.sent[-1]['type'], 'state')
+        family.glsl = broken
+        entry['dirty'] = True
+        watch.flush()
+        self.assertEqual(connection.sent[-1]['type'], 'refused', 'a later break is said again')
+
     def test_a_renamed_or_deleted_grape_op_is_followed(self):
         # Refactor.62: keyed by the OP's own id; a rename is watched under the new path, a deleted OP is let go.
         # 以 OP 自己的 id 為鍵：改名照新路徑監看，刪掉的放掉。

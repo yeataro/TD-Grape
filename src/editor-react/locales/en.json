@@ -161,6 +161,7 @@
   "limit.openWarning": "Warning: this graph is over the limit and cannot be compiled now; you can trim it and continue: {limits}",
   "limit.reached": "Limit reached; this change was not applied: {limits}",
   "limit.subgraphDefinitions": "subgraph definitions",
+  "live.refused": "TD-Grape can no longer read this Grape OP in TD: {reason}",
   "network.label": "Network",
   "node.errorLine": "TD reported an error on a line this node wrote",
   "node.ghostMark": "Ghost: kept as it is, left out of the shader.",

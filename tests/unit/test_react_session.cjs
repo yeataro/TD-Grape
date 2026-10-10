@@ -993,6 +993,13 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
   assert.equal(session.tdSnapshot()[id][0].value, 0.7);
   assert.equal(seen.length, 2);
   assert.equal(session.snapshot().version, versionBefore, 'TD values never touch the graph or the status line');
+  // Refactor.67 (D3): TD can no longer read the Grape OP — said once as an error from TD, with TD's reason.
+  // TD 讀不到這個 Grape OP 了：以 TD 來源的錯誤說一次，附上原因。
+  socket.onmessage({ data: JSON.stringify({ type: 'refused', frame: 13, message: 'No GLSL TOP named shader. Undo the change in TD.' }) });
+  const refused = session.log.entries().at(-1);
+  assert.deepEqual([refused.level, refused.source, refused.message.code], ['error', 'td', 'live.refused']);
+  assert.equal(zh(refused.message), 'TD-Grape 在 TD 裡讀不到這個 Grape OP 了：No GLSL TOP named shader. Undo the change in TD.');
+  assert.equal(session.snapshot().version, versionBefore, 'a refusal never touches the graph');
   session.previewDeclarationValue(id, 0.9);
   assert.equal(session.tdSnapshot()[id][0].value, 0.9, 'what was just sent shows at once');
   // Disconnected: fields fall back to the graph's values; values are dropped; it reconnects by itself.

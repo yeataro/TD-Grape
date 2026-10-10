@@ -232,6 +232,10 @@ export class Editor {
   };
   private liveMessage(message: LiveMessage) {
     if (message.type === 'inputs') { void this.refreshInputs(message.retake !== false); return; }
+    if (message.type === 'refused') {
+      this.status({ message: tr('live.refused', 'TD-Grape can no longer read this Grape OP in TD: {reason}', { reason: message.message }), level: 'error' }, 'td');
+      return;
+    }
     if (message.type === 'state') { this.setTd(message.uniforms); return; }
     const next: Record<string, UniformStates[string]> = { ...this.td };
     for (const [id, values] of Object.entries(message.values)) {

@@ -14,7 +14,10 @@ export type LiveMessage =
   | { type: 'values'; frame: number; values: Record<string, (number | null)[]> }
   // A Grape OP was rewired in TD (Refactor.60): ask what its inputs have now. TD 上重新接線：去問現在接了什麼。
   // `retake` false after an apply: ask again, no new snapshots (R.61.5). 套用後為 false：再問、不重拍。
-  | { type: 'inputs'; frame: number; retake?: boolean };
+  | { type: 'inputs'; frame: number; retake?: boolean }
+  // The Grape OP broke in TD while this editor is open (Refactor.67, D3): TD-Grape's reason, said once.
+  // 編輯器開著時 Grape OP 在 TD 壞了：TD-Grape 說明原因，說一次。
+  | { type: 'refused'; frame: number; message: string };
 /** The part of a browser WebSocket used here (tests pass a fake). 這裡用到的 WebSocket 介面。 */
 export type LiveSocket = {
   readonly readyState: number; send(text: string): void; close(): void;
@@ -47,7 +50,7 @@ export class LiveValues {
     socket.onmessage = event => {
       let message: LiveMessage;
       try { message = JSON.parse(String(event.data)) as LiveMessage; } catch { return; }
-      if (message.type !== 'state' && message.type !== 'values' && message.type !== 'inputs') return;
+      if (message.type !== 'state' && message.type !== 'values' && message.type !== 'inputs' && message.type !== 'refused') return;
       if (message.type === 'values' && message.frame < this.frame) return; // older than what we have 比手上的舊
       this.frame = Math.max(this.frame, message.frame);
       this.receive(message);

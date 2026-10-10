@@ -161,6 +161,7 @@
   "limit.openWarning": "警告：這張圖超過上限，目前無法產碼；可以刪減後再繼續——{limits}",
   "limit.reached": "已達上限，這次修改沒有套用：{limits}",
   "limit.subgraphDefinitions": "子圖定義",
+  "live.refused": "TD-Grape 在 TD 裡讀不到這個 Grape OP 了：{reason}",
   "network.label": "網路",
   "node.errorLine": "TD 回報的錯誤行是這個節點寫的",
   "node.ghostMark": "Ghost：原樣保留、不參與產碼。",

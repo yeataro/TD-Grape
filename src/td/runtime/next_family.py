@@ -301,7 +301,7 @@ class NextFamily:
         if not (isinstance(runtime, dict) and isinstance(runtime.get('text'), str)
                 and digest(runtime['text']) == runtime.get('sha256')
                 and (runtime.get('document') is None) == (runtime.get('revision') == document.get('revision'))):
-            self._refuse('The stored execution part is changed or damaged.')
+            self._refuse('The stored execution part is changed or damaged. Undo the change in TD to open it again.')
         ident = identity(self.comp)
         if not grape_op_identity.VALID.match(ident):
             self._refuse('This Grape OP has no Grape ID yet.')
@@ -352,7 +352,7 @@ class NextFamily:
         except (ValueError, KeyError, TypeError):
             runtime = None
         if not (isinstance(runtime, dict) and digest(text) == runtime.get('sha256') and isinstance(program, dict)):
-            raise Refused('The stored execution part is changed or damaged.')
+            raise Refused('The stored execution part is changed or damaged. Undo the change in TD to open it again.')
         return runtime['sha256'], program
 
     def running_uniforms(self):
@@ -383,7 +383,7 @@ class NextFamily:
     def _shader(self, comp):
         shader = comp.op('shader')
         if shader is None or shader.type != 'glsl':
-            raise Refused('This Grape OP does not contain a native GLSL TOP.')
+            raise Refused('This Grape OP does not contain a native GLSL TOP named shader. Undo the change in TD (the GLSL TOP was deleted, renamed or replaced).')
         return shader
 
     def live(self, body):
