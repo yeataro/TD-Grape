@@ -92,8 +92,16 @@ export function Popover({ anchor, label, onClose, className, children }: {
   anchor: HTMLElement; label: Message | string; onClose(): void; className?: string; children: ReactNode;
 }) {
   const box = useRef<HTMLDivElement>(null), [place, setPlace] = useState<CSSProperties>({ visibility: 'hidden' });
+  // Placed again whenever its bar or the window changes size (Refactor.75.1, human 2026-10-11: switching the density made the
+  // foot bar taller or shorter and the panel stayed where it was). 所在的列或視窗大小一變就重新放（R.75.1，人類：切換密度時底列
+  // 變高變矮，面板卻留在原地）。
   useLayoutEffect(() => {
-    setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0));
+    const place = () => setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0));
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(anchor.closest('.title-bar, .location-bar, .foot-bar') ?? anchor);
+    addEventListener('resize', place);
+    return () => { observer.disconnect(); removeEventListener('resize', place); };
   }, [anchor]);
   useEffect(() => {
     // A menu opened from inside (a Select's choices) is drawn at the page level, but belongs to the panel: pressing it is not

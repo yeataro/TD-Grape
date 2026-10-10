@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
@@ -360,11 +360,29 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
  * countdown and Retry now, which was the countdown pie) and how to recover; then the state's own record (sync_record.ts),
  * the latest at the bottom. 狀態面板：現在的狀態（燈號的顏色）；TD 不在時，自動重試（倒數與「立即重試」，原本的倒數圓餅）與如何恢復；
  * 下面是狀態自己的紀錄，最新的在最下面。 */
+/** A history list that starts at its latest line; while there is more above, its top fades (Refactor.75.1, human 2026-10-11).
+ * 從最新一行開始顯示的歷史清單；上面還有內容時頂端淡出（R.75.1，人類）。 */
+function useHistoryList(lines: unknown) {
+  const list = useRef<HTMLDivElement>(null), [above, setAbove] = useState(false);
+  useLayoutEffect(() => {
+    const element = list.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+    setAbove(element.scrollTop > 1);
+  }, [lines]);
+  return { ref: list, className: 'log-list' + (above ? ' more-above' : ''), onScroll: (event: UIEvent<HTMLDivElement>) => setAbove(event.currentTarget.scrollTop > 1) };
+}
+
+// The status panel (Refactor.75.1, human 2026-10-11): the state now sits at the bottom, next to the light that opened it
+// (what matters is nearest the entry), the record above it; while the panel is open the state part only grows, so the
+// record does not jump when TD comes back. 狀態面板（R.75.1，人類）：現在的狀態放在下方、貼著打開它的燈號（重要的離入口最近），
+// 紀錄在上方；面板開著時狀態區只長不縮，TD 回來時紀錄不會跳。
 function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
   anchor: HTMLElement; state: EditorState | null; now: string; tone: Tone; onRetry(): void; onClose(): void;
 }) {
-  const list = useRef<HTMLDivElement>(null), [, tick] = useState(0), records = state?.syncRecords ?? [];
-  useLayoutEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [records]);
+  const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records);
+  const box = useRef<HTMLDivElement>(null), [floor, setFloor] = useState(0);
+  useLayoutEffect(() => { const height = box.current?.offsetHeight ?? 0; if (height > floor) setFloor(height); });
   // The countdown moves on by itself. 倒數自己往下走。
   useEffect(() => {
     if (state?.retryAt === undefined) return;
@@ -382,7 +400,12 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
       : tr('status.savedNow', 'TD project: saved r{saved} ({time})', { saved: last.revision, time: clockOf(last.time) });
   const clock = (time: number) => new Date(time).toLocaleTimeString();
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
-    <div className={'status-now tone-' + tone}>
+    {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
+    <div {...list}>{records.map((record, i) => <div key={i}
+      className={'log-entry' + (alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
+      title={record.reason === undefined ? undefined : say(record.reason)}>
+      <time>{clock(record.time)}{record.until === undefined ? '' : '–' + clock(record.until)}</time><span>{say(recordWords(record))}</span></div>)}</div>
+    <div ref={box} className={'status-now tone-' + tone} style={{ minHeight: floor || undefined }}>
       <strong>{now}</strong>
       {reason && <p>{reason}</p>}
       {state && away.includes(state.phase) && <div className="status-retry">
@@ -391,11 +414,6 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
       {saved && <p className="status-saved">{say(saved)}</p>}
       {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp[state.link ?? 'unreachable'])}</p>}
     </div>
-    {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
-    <div ref={list} className="log-list">{records.map((record, i) => <div key={i}
-      className={'log-entry' + (alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
-      title={record.reason === undefined ? undefined : say(record.reason)}>
-      <time>{clock(record.time)}{record.until === undefined ? '' : '–' + clock(record.until)}</time><span>{say(recordWords(record))}</span></div>)}</div>
   </Popover>;
 }
 /** One line of the state's record in words. 狀態紀錄的一行，寫成字。 */
@@ -420,11 +438,10 @@ const HISTORY = 100; // tentative (human 2026-10-09: "within some number of past
 /** The recent reports, opening upward from the foot bar, newest at the bottom, scrollable (human 2026-10-09).
  * 最近的回報紀錄，從底列往上開，最新的在最下面，可捲動（人類）。 */
 function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries: readonly Report[]; onClose(): void }) {
-  const list = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [entries]);
+  const list = useHistoryList(entries);
   const shown = entries.slice(-HISTORY);
   return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history" onClose={onClose}>
-    <div ref={list} className="log-list">{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
+    <div {...list}>{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
       <time>{new Date(entry.time).toLocaleTimeString()}</time><span>{say(entry.message)}</span></div>)
       : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
   </Popover>;

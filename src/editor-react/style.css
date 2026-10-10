@@ -124,7 +124,7 @@ a { color: var(--accent); }
 .foot-bar .sync-light { height: var(--control-height); padding: 0 2px; }
 .log-entry.ok span { color: var(--sync-ok); }
 /* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
-.status-now { display: flex; flex-direction: column; gap: 6px; padding: 4px 6px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+.status-now { display: flex; flex-direction: column; gap: 6px; padding: 10px 6px 4px; margin-top: 6px; border-top: 1px solid var(--border); }
 .status-now p { margin: 0; color: var(--text-secondary); }
 .status-now.tone-alarm > strong { color: var(--sync-alarm); } .status-now.tone-unsent > strong { color: var(--sync-unsent); }
 .status-retry { display: flex; align-items: center; gap: 10px; }
@@ -758,6 +758,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
   background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); }
 .log-history { width: min(640px, calc(100vw - 16px)); }
 .log-list { max-height: 50vh; overflow: auto; }
+/* More lines above: the top fades out (Refactor.75.1). 上面還有：頂端淡出。 */
+.log-list.more-above { -webkit-mask-image: linear-gradient(to bottom, transparent, var(--fade-solid) var(--fade-edge));
+  mask-image: linear-gradient(to bottom, transparent, var(--fade-solid) var(--fade-edge)); }
 .settings-panel { display: flex; flex-direction: column; gap: 10px; width: 280px; padding: 12px; }
 .settings-panel .segmented button { flex: 1; }
 .settings-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }

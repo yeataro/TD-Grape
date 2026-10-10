@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type CSSProperties } from 'react';
 import { say, type Message } from './text';
 
 // A dropdown menu widget (Refactor.51; human 2026-10-09: one dropdown component used as a widget, many places
@@ -26,12 +26,16 @@ export type MenuItem = { key: string; label: ReactNode; checked?: boolean; disab
  * else above; never past the window's --popup-margin. Distances are the theme's.
  * 選單從哪裡打開：從列（標題、網址、底列）打開時離列邊緣 --popup-gap，像網路區功能列一樣浮著（人類）；其他離控制項 --popup-offset。
  * 下面放得下就放下面，否則放上面；不超過視窗邊緣 --popup-margin。距離都由主題決定。 */
-export function popupPlace(anchor: HTMLElement, width: number, height: number) {
+/** Where a popup goes: below its bar when it fits, else above it. Above, it is held by its bottom edge (Refactor.75.1, human
+ * 2026-10-11): a popup that then grows or shrinks keeps the edge next to what opened it, so it does not jump.
+ * 彈出的位置：放得下就在那一列下方，否則在上方。在上方時用下緣固定（R.75.1，人類）：之後變高變矮，靠近開它的那一邊都不動，不會跳。 */
+export function popupPlace(anchor: HTMLElement, width: number, height: number): CSSProperties {
   const size = (name: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0;
   const bar = anchor.closest('.title-bar, .location-bar, .foot-bar'), edge = (bar ?? anchor).getBoundingClientRect();
   const gap = size(bar ? '--popup-gap' : '--popup-offset'), margin = size('--popup-margin'), box = anchor.getBoundingClientRect();
   const left = Math.max(margin, Math.min(box.left, innerWidth - width - margin));
-  return edge.bottom + gap + height <= innerHeight - margin ? { left, top: edge.bottom + gap } : { left, top: Math.max(margin, edge.top - gap - height) };
+  if (edge.bottom + gap + height <= innerHeight - margin) return { left, top: edge.bottom + gap };
+  return edge.top - gap - height >= margin ? { left, bottom: innerHeight - edge.top + gap } : { left, top: margin };
 }
 
 export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
@@ -41,7 +45,7 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
   /** One line instead of, or above, the items (loading, empty, error). 項目之外的一行（載入中、空的、錯誤）。 */
   note?: Message | string;
 }) {
-  const menu = useRef<HTMLDivElement>(null), [place, setPlace] = useState({ left: 0, top: 0 });
+  const menu = useRef<HTMLDivElement>(null), [place, setPlace] = useState<CSSProperties>({ left: 0, top: 0 });
   useLayoutEffect(() => {
     setPlace(popupPlace(anchor, menu.current?.offsetWidth ?? 0, menu.current?.offsetHeight ?? 0));
   }, [anchor, items]);
