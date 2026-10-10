@@ -1,6 +1,5 @@
 {
   "action.about": "About",
-  "action.applyShader": "Apply Shader",
   "action.exportGraph": "Export graph",
   "action.importGraph": "Import graph",
   "action.language": "Language",

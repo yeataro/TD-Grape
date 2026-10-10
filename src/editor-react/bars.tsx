@@ -23,7 +23,6 @@ const noSubscribe = () => () => {};
 /** The status of the graph being edited, or nothing. 正在編輯的圖的狀態，沒有圖時為 null。 */
 const useEditorState = (session: EditorSession | null): EditorState | null =>
   useSyncExternalStore(session?.subscribe ?? noSubscribe, session?.snapshot ?? (() => null));
-const canApply = (state: EditorState | null) => !!state?.dirty && !['sending', 'offline', 'uncertain', 'conflict'].includes(state.phase);
 
 /** How many of a bar's parts to fold away so the rest fits (Refactor.69, human 2026-10-10). Parts are marked `data-fold`
  * (hidden from that count on; 1 folds first) or `data-appear` (shown from that count on: a shorter stand-in for what folded);
@@ -83,9 +82,9 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
 
 /** The title bar, as the legacy editor (human 2026-10-09): mark, name, tagline, version, About; then the common
  * actions. As it narrows, parts fold away in the human's order (2026-10-10): About, the version, the tagline, the language
- * (also in the foot bar's "AA"), import and export, Save, Apply (all in the foot bar's menu); the mark and the name never.
+ * (also in the foot bar's "AA"), import and export, Save (all in the foot bar's menu; Apply Shader was removed in R.75.5); the mark and the name never.
  * 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。變窄時照人類的順序收起：About、版號、副標題、語言（底列 AA 也有）、
- * 匯入與匯出、儲存、套用（都在底列選單裡）；圖標與名稱永遠不收。 */
+ * 匯入與匯出、儲存（都在底列選單裡；套用 Shader 在 R.75.5 拿掉）；圖標與名稱永遠不收。 */
 export function TitleBar({ session, version }: { session: EditorSession | null; version: string }) {
   const state = useEditorState(session), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
   const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
@@ -102,10 +101,13 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
       options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></span>
     <span {...fold(5)}><Placeholder label={tr('action.importGraph', 'Import graph')} /></span>
     <span {...fold(5)}><Placeholder label={tr('action.exportGraph', 'Export graph')} /></span>
-    <button type="button" {...fold(6)} aria-disabled={!session || state?.phase === 'sending' || undefined}
+    {/* Saving the TD project takes the main button's look and place (Refactor.75.5, human 2026-10-11): the editor never saves
+        it by itself. 儲存 TD 專案接手主要按鈕的樣式與位置（R.75.5，人類）：編輯器不會自己存。 */}
+    <button type="button" {...fold(6, 'primary')} aria-disabled={!session || state?.phase === 'sending' || undefined}
       onClick={() => { if (session && state?.phase !== 'sending') void session.save(); }}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
-    <button type="button" {...fold(7, 'primary')} aria-disabled={!canApply(state) || undefined}
-      onClick={() => { if (session && canApply(state)) void session.flush(); }}>{say(tr('action.applyShader', 'Apply Shader'))}</button>
+    {/* No "Apply Shader" (Refactor.75.5, human 2026-10-11): sending is automatic with no delay, so it only ever lit for an
+        instant; it comes back with a manual-apply mode, if that is ever made (CURRENT, later releases).
+        沒有「套用 Shader」（R.75.5，人類）：送出是自動、零延遲的，它只會亮一下；若哪天做「手動套用模式」再跟著回來（CURRENT 後續版本）。 */}
   </header>;
 }
 
@@ -324,7 +326,6 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       { key: 'export', label: say(tr('action.exportGraph', 'Export graph')), disabled: true, title: say(notYet), select: () => {} },
       { key: 'draft', label: say(tr('toolbar.downloadDraft', 'Download draft')), disabled: !session, select: onDownload },
       { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || state?.phase === 'sending', divider: true, select: () => void session?.save() },
-      { key: 'apply', label: say(tr('action.applyShader', 'Apply Shader')), disabled: !canApply(state), select: () => void session?.flush() },
     ]} />
     <button type="button" {...fold(6, 'sync-light tone-' + tone + (busy ? ' busy' : ''))} title={now} aria-label={now} aria-haspopup="dialog"
       aria-expanded={!!status} onClick={event => setStatus(status ? null : event.currentTarget)}>
