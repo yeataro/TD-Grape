@@ -24,6 +24,7 @@ const uniform_presets_1 = require("./uniform_presets");
 const common_sources_1 = require("./common_sources");
 const node_sdk_1 = require("./node_sdk");
 const component_names_1 = require("./component_names");
+const upgrades_1 = require("./upgrades");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -85,7 +86,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades };
 
 },
 "capacity":function(require,module,exports){
@@ -6540,6 +6541,98 @@ exports.uniformPresets = Object.freeze([
         "hint": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames."
     }
 ].map(entry => Object.freeze(entry)));
+
+},
+"upgrades":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.nodeUpgrades = void 0;
+exports.upgradeGraph = upgradeGraph;
+/** Node upgrades (Refactor.65, human 2026-10-10): when a release changes what a graph stores for a node — its type, a
+ * setting's code, or a port's key — one rule here says how the old shape becomes the new one. Rules look at what the
+ * graph holds, never at a version number, so they apply to a graph from any earlier release, and a chain of renames is
+ * followed to its end. Two rules keep that sound: a retired code is never used again, and a change of meaning gets a new
+ * code (then the old one becomes a rule here). Graphs of another format are not upgraded: they belong to the importer
+ * (Q40, Q44). What nothing here covers stays a ghost (Q37).
+ * 節點升級（人類 10-10）：發布後若改了圖裡存的節點寫法（節點種類、設定的代號、接孔），在這裡寫一條「舊的長這樣→換成新的」。
+ * 規則看圖裡存的內容、不看版本號，所以任何舊版存的圖都適用，連續改名也會一路換到底。兩條規則讓它成立：拿掉的代號永不再用；
+ * 意思改了就換新代號（舊代號變成這裡的一條）。別的格式不在這裡升級，交給匯入器（Q40、Q44）。這裡沒寫到的照舊是 Ghost（Q37）。 */
+const model_1 = require("./model");
+const text_1 = require("./text");
+const TD_VALUE = 'sgrape.builtin.td_value';
+/** The rules, oldest first. Never remove one: a graph saved long ago may still need it. 規則，舊的在前；不要刪，很久以前存的圖可能還用得到。 */
+exports.nodeUpgrades = Object.freeze([
+    // Refactor.64: vUV.st folded into vUV, which has U, UV and UVW outputs. vUV.st 併進 vUV（U、UV、UVW 三個輸出）。
+    { id: 'td-value-vuv-st', nodeType: TD_VALUE, params: { entry: 'vUVSt' }, set: { params: { entry: 'vUV' } }, outputs: { out: 'uv' },
+        note: (0, text_1.tr)('upgrade.vUVSt', 'vUV.st became vUV; its wires now leave from the UV output') },
+    { id: 'td-value-vuv-out', nodeType: TD_VALUE, params: { entry: 'vUV' }, outputs: { out: 'uvw' },
+        note: (0, text_1.tr)('upgrade.vUVOut', 'vUV now has U, UV and UVW outputs; its wires now leave from the UVW output') },
+]);
+const matches = (node, rule) => {
+    var _a;
+    return node.nodeType === rule.nodeType
+        && Object.entries((_a = rule.params) !== null && _a !== void 0 ? _a : {}).every(([key, value]) => { var _a; return JSON.stringify((_a = node.params) === null || _a === void 0 ? void 0 : _a[key]) === JSON.stringify(value); });
+};
+/** Apply one rule to one network, in place on a copy; returns the changes. 對一張網路套用一條規則（在複本上改）。 */
+function upgradeNetwork(network, name, rule) {
+    var _a, _b, _c, _d, _e;
+    const changes = [];
+    for (const node of network.nodes) {
+        if (!matches(node, rule))
+            continue;
+        let changed = false, wires = 0;
+        if (((_a = rule.set) === null || _a === void 0 ? void 0 : _a.nodeType) && rule.set.nodeType !== node.nodeType) {
+            node.nodeType = rule.set.nodeType;
+            changed = true;
+        }
+        for (const [key, value] of Object.entries((_c = (_b = rule.set) === null || _b === void 0 ? void 0 : _b.params) !== null && _c !== void 0 ? _c : {}))
+            if (JSON.stringify(node.params[key]) !== JSON.stringify(value)) {
+                node.params[key] = (0, model_1.copy)(value);
+                changed = true;
+            }
+        for (const edge of network.edges) {
+            const out = edge.from[0] === node.id ? (_d = rule.outputs) === null || _d === void 0 ? void 0 : _d[edge.from[1]] : undefined;
+            const into = edge.to[0] === node.id ? (_e = rule.inputs) === null || _e === void 0 ? void 0 : _e[edge.to[1]] : undefined;
+            if (out === undefined && into === undefined)
+                continue;
+            if (out !== undefined)
+                edge.from = [node.id, out];
+            if (into !== undefined)
+                edge.to = [node.id, into];
+            wires++;
+        }
+        if (changed || wires)
+            changes.push({ network: name, node: node.id, rule: rule.id, note: rule.note, wires });
+    }
+    return changes;
+}
+/** Bring a stored graph up to the current node shapes. The input is never changed; a graph of another format (or a
+ * malformed one) comes back as it is, for the importer or the format check. Rules are applied until none matches, so a
+ * chain of renames is followed; a rule table that never settles is a programming error.
+ * 把存著的圖升級成目前的節點寫法。不改輸入；別的格式（或壞掉的）原樣回傳，交給匯入器或格式檢查。規則一直套到沒有可換為止；
+ * 停不下來代表規則表寫錯了。 */
+function upgradeGraph(value, rules = exports.nodeUpgrades) {
+    var _a;
+    if ((0, model_1.formatProblem)(value))
+        return { graph: value, changes: [] };
+    const graph = (0, model_1.copy)(value);
+    const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => [s.id, s.graph])];
+    const changes = [];
+    for (let pass = 0;; pass++) {
+        if (pass > rules.length)
+            throw Error('Node upgrade rules do not settle');
+        let found = 0;
+        for (const rule of rules)
+            for (const [name, network] of networks) {
+                const step = upgradeNetwork(network, name, rule);
+                found += step.length;
+                changes.push(...step);
+            }
+        if (!found)
+            break;
+    }
+    return changes.length ? { graph, changes } : { graph: value, changes: [] };
+}
 
 },
 "value_nodes":function(require,module,exports){

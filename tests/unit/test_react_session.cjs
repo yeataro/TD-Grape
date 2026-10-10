@@ -1281,3 +1281,36 @@ test('going back to the running program in the same tab clears a stuck Shader', 
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
   assert.equal(calls.at(-1).body.runtime, null, 'not stuck: a layout edit sends the graph only, as before');
 });
+
+// Node upgrades (Refactor.65, human 2026-10-10): a graph stored with older node forms opens in the current ones, with a
+// replacement report, and is sent like any edit — the program too, since TD may run the older one.
+// 節點升級：存著舊寫法的圖用目前的寫法打開、附替換報告，照一般編輯送出——程式也送，因為 TD 跑的可能是舊的。
+test('older node forms are upgraded as the graph opens, reported, and sent with the program', async t => {
+  const TD = 'sgrape.builtin.td_value', graph = clone(bootstrap.defaultDocument.graph);
+  graph.stages.pixel.nodes.push({ id: 'rgba', nodeType: 'sgrape.builtin.rgba', params: {}, ui: {} },
+    { id: 'uv3', nodeType: TD, params: { entry: 'vUV' }, ui: {} }, { id: 'st', nodeType: TD, params: { entry: 'vUVSt' }, ui: {} });
+  graph.stages.pixel.edges.push({ id: 'e2', from: ['uv3', 'out'], to: ['rgba', 'rgb'] });
+  const stored = JSON.stringify(graph), sent = [];
+  const fetcher = async (url, options) => {
+    const action = url.split('?')[0].split('/').at(-1), body = options.body && JSON.parse(options.body);
+    if (action === 'apply') sent.push(body);
+    return new Response(JSON.stringify({ state: { document: body.document, revision: body.revision + 1, targetId: target, runtimeRevision: body.revision + 1 } }));
+  };
+  // TD runs this very revision: without the upgrade nothing would be sent. TD 正在跑這一版：沒有升級的話不會送任何東西。
+  const loaded = { state: { document: stored, revision: 4, runtimeRevision: 4, targetId: target }, format: 'grape-next-1', shaderKind: 'top',
+    target: '/test/family', frontendCompiler: { protocol: GrapeTopCompiler.protocol, catalogHash: bootstrap.catalogHash, required: true } };
+  const session = new EditorSession(new HostClient(target, '', fetcher, 20000), bootstrap, loaded, 0, 60000, undefined, '9.9.9 Test');
+  t.after(() => session.dispose());
+  const state = session.snapshot();
+  assert.deepEqual([...state.upgrades.map(c => c.node)].sort(), ['st', 'uv3']);
+  assert.equal(state.dirty, true, 'the upgraded graph waits to be sent');
+  assert.ok(session.log.entries().some(e => e.message.code === 'upgrade.report'), 'the report is in the log');
+  assert.equal(session.graph().stages.pixel.edges.find(e => e.id === 'e2').from[1], 'uvw');
+  await session.flush();
+  assert.equal(sent.length, 1);
+  assert.equal(JSON.parse(sent[0].document).stages.pixel.nodes.find(n => n.id === 'st').params.entry, 'vUV');
+  assert.ok(sent[0].runtime, 'the program goes too: TD compares');
+  session.dismissUpgrades();
+  assert.equal(session.snapshot().upgrades.length, 0, 'the notice is dismissed by the person');
+  assert.equal(session.snapshot().undo, false, 'opening is not an Undo step');
+});

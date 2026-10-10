@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
+import { StrictMode, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
@@ -59,6 +59,29 @@ function StuckNotice({ state, session, onShowGlsl }: { state: EditorState; sessi
     <div className="notice-actions">
       <button onClick={() => onShowGlsl(first?.line)}>{say(tr('shader.showGlsl', 'Show in GLSL'))}</button>
       {lastKnownGood && <button onClick={session.revertToLastGood}>{say(tr('shader.revert', 'Revert to last good'))}</button>}</div>
+  </div>;
+}
+// The replacement report (Refactor.65, human 2026-10-10): nodes the node upgrades changed when the graph was read, each one
+// leading to its node; a floating notice in the general style, dismissed by the person (it is also in the log).
+// 替換報告（人類）：讀圖時被節點升級換掉的節點，每一筆都能帶到那個節點；一般樣式的浮動提示，由人關掉（訊息紀錄也有一份）。
+function UpgradeNotice({ state, session, onGo }: { state: EditorState; session: EditorSession; onGo(id: string): void }) {
+  const text = useContext(TextContext);
+  const labelOf = (id: string) => {
+    const node = state.projection.nodes.find(n => n.id === id);
+    if (!node) return id;
+    const { view, label } = node.data;
+    return view.literalLabel && view.label ? view.label : text(view.label ?? label);
+  };
+  return <div className="floating-notice" role="group" aria-label={say(tr('upgrade.label', 'Updated nodes'))}>
+    <span>{say(tr('upgrade.title', 'This graph had {count} node(s) in an older form. They were updated, and the graph is sent to TD like any edit.',
+      { count: state.upgrades.length }))}</span>
+    <ul className="upgrade-list">{state.upgrades.map(change => <li key={change.network + '/' + change.node + '/' + change.rule}>
+      {change.network === 'pixel'
+        ? <button type="button" className="upgrade-link" onClick={() => onGo(change.node)}>{labelOf(change.node)}</button>
+        : <span title={say(tr('upgrade.inSubgraph', 'Inside a subgraph; open it to see this node.'))}>{change.node}</span>}
+      {' '}<span className="notice-detail">{say(change.note)}{change.wires ? say(tr('upgrade.wires', ' ({count} wire(s) moved with it)', { count: change.wires })) : ''}</span>
+    </li>)}</ul>
+    <div className="notice-actions"><button onClick={session.dismissUpgrades}>{say(tr('upgrade.dismiss', 'OK'))}</button></div>
   </div>;
 }
 function download(value: unknown, name = 'grape-draft.json') {
@@ -227,7 +250,7 @@ function usePrefs(): CanvasPrefs {
 // added to EditorState must be added here too (Refactor.63.3: the GLSL panel read a missing glslMap and the page went blank).
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
-  projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '' };
+  projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [] };
 const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 
 // The editing frame below the title bar: the left zone, the network (location bar, its toolbar, the canvas),
@@ -375,6 +398,8 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
           {/* The Shader stuck after a failed apply (Refactor.63, human 2026-10-10): what TD said, where in the GLSL, and back
               to the program TD still runs. Floating, never in the way of editing. 套用失敗、Shader 卡住：TD 說了什麼、在 GLSL 哪裡、
               回到 TD 仍在跑的那一版。浮動，不擋編輯。 */}
+          {session && state.upgrades.length > 0 && !draft && state.phase !== 'conflict' && <UpgradeNotice state={state} session={session}
+            onGo={id => { session.selectNode(id); frameNodes(flow, [id]); }} />}
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>

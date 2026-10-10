@@ -13,6 +13,7 @@ import type * as tdValueTable from '../core-ts/td_values';
 import type * as presetTable from '../core-ts/uniform_presets';
 import type * as commonTable from '../core-ts/common_sources';
 import type * as componentNames from '../core-ts/component_names';
+import type * as upgrades from '../core-ts/upgrades';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -27,12 +28,14 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   uniformPresets: typeof presetTable.uniformPresets; commonSources: typeof commonTable.commonSources;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
   componentStyle: typeof componentNames.componentStyle;
+  upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
 };
 export type { TdValue } from '../core-ts/td_values';
 export type { NameProblem } from '../core-ts/declarations';
 export type { Declaration } from '../core-ts/model';
 export type { GhostKind } from '../core-ts/ghosts';
 export type { Measure } from '../core-ts/capacity';
+export type { UpgradeChange } from '../core-ts/upgrades';
 export type { StructureProblem } from '../core-ts/structure';
 declare global {
   var GrapeGraph: Core;

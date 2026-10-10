@@ -623,6 +623,11 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .floating-notice.warning { background: var(--surface-notice); border-color: var(--status-warning); }
 /* The Shader stuck after a failed apply (Refactor.63). 套用失敗、Shader 卡住。 */
 .floating-notice.error { border-color: var(--status-error); }
+/* The replacement report's list: each node a link to it (Refactor.65), in the link colour used in code. 替換報告的清單：每個節點都是連結。 */
+.upgrade-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.upgrade-link { padding: 0; border: 0; background: none; font: inherit; color: var(--code-link); cursor: pointer;
+  text-decoration: underline dotted; text-underline-offset: 2px; }
+.upgrade-link:hover { text-decoration-style: solid; }
 .notice-detail { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); overflow-wrap: anywhere; }
 /* Message on top, the comparison table in the middle, actions at the bottom (human 2026-10-09: the long table needs a design).
    上面說明、中間比對表、下面動作（人類：表格較長，要設計）。 */

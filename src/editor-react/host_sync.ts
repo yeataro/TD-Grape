@@ -253,6 +253,13 @@ export class HostSync {
       level: 'info', message: dirty ? tr('sync.reconnectedSending', 'Reconnected; sending your changes.') : tr('sync.reconnected', 'Reconnected.') });
     if (dirty) await this.flush();
   };
+  // The graph was upgraded as it was read (Refactor.65): it is not what TD stores, and its program is not known to be the one
+  // TD runs (an upgraded wire can change it), so the program goes too and TD compares. 讀圖時升級過：和 TD 存的不同，程式也
+  // 不能當成 TD 正在跑的那份（升級的線可能改了它），所以程式照送，由 TD 比對。
+  upgraded() {
+    this.runtimeKey = null;
+    this.changed();
+  }
   // Conflict choice "TD 端": the Editor adopted TD's document; nothing is left to send.
   // 衝突時選「TD 端」：Editor 已採用 TD 的版本，與 TD 相同、不需送出。
   adopt(state: StateResponse['state']) {

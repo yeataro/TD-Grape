@@ -1,0 +1,77 @@
+// Node upgrades (Refactor.65, human 2026-10-10): a stored node in an older form becomes the current one by what the graph
+// holds, not by a version number; wires follow at the end that touches the node; subgraphs too; chains settle; another
+// format is left to the importer. 節點升級：看圖裡存的內容、不看版本號；線跟著改接到節點的那一端；子圖一樣；連續改名會停；別的格式交給匯入器。
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/grape_core.js'),'utf8'),context);
+const G=context.GrapeGraph,compiler=context.GrapeTopCompiler,registry=G.registry;
+const plain=v=>JSON.parse(JSON.stringify(v));
+const bootstrap=JSON.parse(fs.readFileSync(path.join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8'));
+const TD='sgrape.builtin.td_value';
+
+// The default graph with an RGBA node, and the two older UV shapes wired into it (as Grape_TOP1 had them).
+// 預設圖加一個 RGBA 節點，接上兩種舊的 UV 寫法（同 Grape_TOP1 的情況）。
+function oldGraph(){
+  const g=plain(bootstrap.defaultDocument.graph);
+  g.stages.pixel.nodes.push({id:'rgba',nodeType:'sgrape.builtin.rgba',params:{},ui:{}},{id:'len',nodeType:'sgrape.builtin.length',params:{type:'vec2'},ui:{}},
+    {id:'st',nodeType:TD,params:{entry:'vUVSt'},ui:{x:1}},{id:'uv3',nodeType:TD,params:{entry:'vUV'},ui:{x:2}});
+  // vUV.st was a vec2, vUV a vec3: each old wire goes where its type fits. vUV.st 是 vec2、vUV 是 vec3：舊線各接到型別相符的地方。
+  g.stages.pixel.edges.push({id:'e1',from:['st','out'],to:['len','value']},{id:'e2',from:['uv3','out'],to:['rgba','rgb']},
+    {id:'e3',from:['len','out'],to:['rgba','alpha']});
+  return g;
+}
+
+test('older UV nodes become the current vUV and their wires move to the right outputs',()=>{
+  const before=oldGraph(),frozen=JSON.stringify(before);
+  const {graph,changes}=G.upgradeGraph(before);
+  assert.equal(JSON.stringify(before),frozen,'the input is not changed');
+  const node=id=>graph.stages.pixel.nodes.find(n=>n.id===id),edge=id=>graph.stages.pixel.edges.find(e=>e.id===id);
+  assert.equal(node('st').params.entry,'vUV');
+  assert.deepEqual(plain(edge('e1').from),['st','uv']);
+  assert.deepEqual(plain(edge('e2').from),['uv3','uvw']);
+  assert.deepEqual(plain(changes.map(c=>[c.network,c.node,c.rule,c.wires])),[['pixel','st','td-value-vuv-st',1],['pixel','uv3','td-value-vuv-out',1]]);
+  // No ghost is left, and it compiles with both wires real. 沒有 Ghost 留下，兩條線都是真的。
+  const ghosts=G.ghostsOf(new G.GraphDocument(graph,registry).networks.get('pixel'),G.values.policy);
+  assert.equal(ghosts.nodes.size+ghosts.edges.size,0);
+  assert.ok(G.formatProblem(graph)===null);
+});
+
+test('a current graph comes back as it is, the same object, with nothing to report',()=>{
+  const g=plain(bootstrap.defaultDocument.graph);
+  const result=G.upgradeGraph(g);
+  assert.equal(result.graph,g);assert.equal(result.changes.length,0);
+  const done=G.upgradeGraph(oldGraph()).graph;
+  assert.equal(G.upgradeGraph(done).changes.length,0,'an upgraded graph needs nothing more');
+});
+
+test('wires follow at the end that touches the node: inputs too; subgraphs are upgraded as well',()=>{
+  const rules=[{id:'rename-in',nodeType:'sgrape.builtin.rgba',inputs:{alpha:'a'},note:{code:'t',source:'t'}}];
+  // e3 arrives at rgba's alpha in the main graph; f1 at r2's alpha in the subgraph. e3 接到主圖 rgba 的 alpha；f1 接到子圖 r2 的 alpha。
+  const g=oldGraph();g.subgraphs=[{id:'fn1',name:'f',scope:'local',inputs:[],outputs:[],graph:{nodes:[{id:'r2',nodeType:'sgrape.builtin.rgba',params:{},ui:{}},
+    {id:'s2',nodeType:'sgrape.builtin.scalar',params:{type:'float',value:1},ui:{}}],edges:[{id:'f1',from:['s2','out'],to:['r2','alpha']}]}}];
+  const {graph,changes}=G.upgradeGraph(g,rules);
+  assert.deepEqual(plain(graph.stages.pixel.edges.find(e=>e.id==='e3').to),['rgba','a']);
+  assert.deepEqual(plain(graph.subgraphs[0].graph.edges[0].to),['r2','a']);
+  assert.deepEqual(plain(changes.map(c=>c.network)).sort(),['fn1','pixel']);
+});
+
+test('a chain of renames is followed to its end; a table that never settles is refused',()=>{
+  const note={code:'t',source:'t'};
+  const chain=[{id:'a-b',nodeType:TD,params:{entry:'A'},set:{params:{entry:'B'}},note},{id:'b-c',nodeType:TD,params:{entry:'B'},set:{params:{entry:'C'}},note}];
+  const g=plain(bootstrap.defaultDocument.graph);g.stages.pixel.nodes.push({id:'x',nodeType:TD,params:{entry:'A'},ui:{}});
+  assert.equal(G.upgradeGraph(g,chain).graph.stages.pixel.nodes.find(n=>n.id==='x').params.entry,'C');
+  const loop=[{id:'a-b',nodeType:TD,params:{entry:'A'},set:{params:{entry:'B'}},note},{id:'b-a',nodeType:TD,params:{entry:'B'},set:{params:{entry:'A'}},note}];
+  assert.throws(()=>G.upgradeGraph(g,loop),/do not settle/);
+});
+
+test('another format is not upgraded here: it belongs to the importer',()=>{
+  const old={schemaVersion:1,stages:{pixel:{nodes:[{id:'st',definitionUuid:TD,params:{entry:'vUVSt'}}],edges:[]}}};
+  const result=G.upgradeGraph(old);
+  assert.equal(result.graph,old);assert.equal(result.changes.length,0);
+});
+
+test('every rule says what changed for people, and rule ids are unique',()=>{
+  const ids=G.nodeUpgrades.map(r=>r.id);
+  assert.equal(new Set(ids).size,ids.length);
+  for(const r of G.nodeUpgrades)assert.ok(r.note&&r.note.code.startsWith('upgrade.')&&r.note.source,r.id);
+});

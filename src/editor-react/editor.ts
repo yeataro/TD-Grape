@@ -1,5 +1,5 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
-import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
+import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
   type Declaration, type NameProblem, type ObjectValue } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse, type UniformStates } from './host';
@@ -101,12 +101,15 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 // (Refactor.63). glslMap：GLSL 每一行由哪個節點產生（核心的 sourceMap，行號從 1），讓一行能找回它的節點。
 // glslVariables: which node each variable belongs to, so its name in the GLSL is a link to the node (human 2026-10-10).
 // glslVariables：每個變數屬於哪個節點，GLSL 裡的名字就是連到節點的超連結（人類）。
+// upgrades: nodes the node upgrades changed when this graph was read (Refactor.65), for the replacement report; cleared when
+// dismissed. upgrades：讀圖時被節點升級換掉的節點（替換報告用）；關掉就清空。
 // glslDeclarations: which declaration each name written at the top of the GLSL is (Refactor.63.4), so its name selects every
 // node using it. glslDeclarations：GLSL 檔頭寫出的名字是哪個宣告，點名字就選取所有引用它的節點。
 export type GlslLine = { line: number; node: string };
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
+  upgrades: readonly UpgradeChange[];
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
@@ -134,7 +137,7 @@ export class Editor {
     private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler, editorVersion = 'unknown',
     readonly log = new ReportLog()) {
     checkLoaded(host, bootstrap, loaded);
-    const graph = parseDocument(loaded.state.document);
+    const { graph, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document));
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
     this.td = loaded.uniforms ?? {};
@@ -146,7 +149,7 @@ export class Editor {
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
       glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
-      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target,
+      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
       ...this.sources() };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
@@ -154,6 +157,9 @@ export class Editor {
       for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
     };
     this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
+    // Upgraded as it was read: reported, then sent like any edit so TD stores the current form (human 2026-10-10).
+    // 讀圖時升級過：報告，再照一般編輯送出，讓 TD 存成目前的寫法（人類）。
+    if (upgrades.length) { this.reportUpgrades(upgrades); this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
     const over = core.overLimit(graph, core.registry);
@@ -164,6 +170,21 @@ export class Editor {
       'Warning: this graph breaks the structure rules; you can fix it and continue: {problems}', { problems: structureText(broken) }));
     this.ghostTotal = this.reportGhosts(0);
   }
+  /** Read a stored graph in its current node forms (Refactor.65): every way a graph comes in goes through here.
+   * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
+  private upgrade(graph: Graph): Graph {
+    const { graph: current, changes } = core.upgradeGraph(graph);
+    if (changes.length) this.reportUpgrades(changes);
+    return current;
+  }
+  // The replacement report (Refactor.65, human 2026-10-10): a floating notice that names each node and leads to it, and one
+  // log entry. 替換報告（人類）：逐一列出、可點到節點的浮動提示，以及一筆訊息紀錄。
+  private reportUpgrades(changes: readonly UpgradeChange[]) {
+    this.state = { ...this.state, upgrades: changes };
+    this.tell('info', tr('upgrade.report', 'Updated {count} node(s) to their current form: {list}',
+      { count: changes.length, list: changes.map(change => change.note) }));
+  }
+  dismissUpgrades = () => { this.state = { ...this.state, upgrades: [] }; this.publish(); };
   // Ghosts (Q37): said when the graph opens with some, and whenever an edit adds more.
   // Ghost：開圖時有就說；修改讓 Ghost 變多時也說。
   private ghostTotal = 0;
@@ -600,8 +621,9 @@ export class Editor {
       this.commit(projection, redo ? tr('edit.redone', 'Redo') : tr('edit.undone', 'Undo'));
     } catch (error) { this.notice(error); }
   };
-  restoreDraft = (graph: Graph) => {
+  restoreDraft = (saved: Graph) => {
     try {
+      const graph = this.upgrade(saved);
       requireSupported(graph);
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
       const changes = core.changesBetween(before, graph, core.registry);
@@ -637,7 +659,7 @@ export class Editor {
     const good = this.state.stuck?.lastKnownGood;
     if (!good) return;
     try {
-      const graph = parseDocument(good.document);
+      const graph = this.upgrade(parseDocument(good.document));
       requireSupported(graph);
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, graph, core.registry));
@@ -650,7 +672,7 @@ export class Editor {
     if (this.sync.busy || this.state.phase !== 'conflict') return;
     try {
       const result = await this.sync.read();
-      const remote = parseDocument(result.state.document);
+      const stored = parseDocument(result.state.document), remote = this.upgrade(stored);
       requireSupported(remote);
       const before = this.graph(), next = new core.GraphDocument(remote, core.registry);
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, remote, core.registry));
@@ -658,6 +680,7 @@ export class Editor {
       this.sync.blocked = false; // the choice resolves the conflict before the step is recorded
       this.commit(projection, tr('conflict.usedTd', "Switched to TD's version; Undo brings back the editor's changes"));
       this.sync.adopt(result.state); // identical to TD: nothing to send
+      if (remote !== stored) this.sync.upgraded(); // unless it was upgraded as it was read 除非讀的時候升級過
     } catch (error) { this.notice(error); }
   };
   overwrite = async () => {
