@@ -357,11 +357,16 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
         <span className="sync-size" aria-hidden="true">{say(tr('light.revision', 'r{revision}', { revision: '0000' }))}</span>
         <span>{state ? say(tr('light.revision', 'r{revision}', { revision: state.revision })) : '–'}</span></span>
       <span {...fold(1, 'sync-slot sync-word')}>{Object.values(words).map((each, index) => <span key={index} className="sync-size" aria-hidden="true">{say(each)}</span>)}
-        <span className={savedNow ? 'saved' : undefined}>{say(savedNow ? words.saved : word)}</span></span></button>
+        <span key={say(savedNow ? words.saved : word)} className={(savedNow ? 'saved' : '') + (tone === 'alarm' ? '' : ' fade-in')}>
+          {say(savedNow ? words.saved : word)}</span></span></button>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the message history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看訊息歷史。 */}
     <button type="button" className="foot-message" data-shrink="" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
-      disabled={!session} onClick={event => setHistory(history ? null : event.currentTarget)}>{first}{full === first ? '' : ' …'}</button>
+      disabled={!session} onClick={event => setHistory(history ? null : event.currentTarget)}>
+      {/* Routine news fades in; a warning or an error is there at once, so it still catches the eye (Refactor.75.20, human
+          2026-10-11: text that changes often should pull less attention). 例行的消息淡入；警告與錯誤立刻出現，才拉得到注意
+          （R.75.20，人類：頻繁更新的文字要少干擾注意力）。 */}
+      <span key={full} className={state && state.level !== 'info' ? undefined : 'fade-in'}>{first}{full === first ? '' : ' …'}</span></button>
     <span className="spacer" />
     {/* Settings of how editing behaves (legacy gear). Body drag is a real setting here (Q64). 編輯行為的設定（舊產品齒輪）。 */}
     <span {...fold(2)}><PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">

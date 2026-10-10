@@ -130,6 +130,12 @@ a { color: var(--accent); }
 .sync-light.busy .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
 @keyframes sync-pulse { 50% { opacity: .3; } }
 .sync-word { color: var(--text-muted); } .sync-word .saved { color: var(--sync-ok); }
+/* New text that only reports routine news fades in (Refactor.75.20, human 2026-10-11: less pull on the eye); warnings, errors
+   and numbers change at once. Off when the system asks for less motion (design-interview Q70).
+   只報例行消息的新文字淡入（R.75.20，人類：少拉走視線）；警告、錯誤、數字立刻換。系統要求減少動態時不播（Q70）。 */
+.fade-in { animation: text-in var(--text-fade) ease-out; }
+@keyframes text-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
 .foot-bar .sync-light { height: var(--control-height); padding: 0 2px; }
 .log-entry.ok span { color: var(--sync-ok); }
