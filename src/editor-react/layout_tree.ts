@@ -9,12 +9,11 @@
 // width, a pane's height above or below the canvas); in any other split pane they are shares of its length.
 // 大小：含畫布的分割窗格裡，畫布那一格佔剩下的，其他記像素（側邊寬、畫布上下的高）；其他分割窗格裡記比例。
 //
-// This round the tree keeps one shape, ensured by where things may be dropped: the outermost row is
-// [left side?, centre, right side?], the centre is a column [above…, canvas, below…]. Allowing more shapes later
-// only adds places to drop, never a new format. A split pane holding the canvas is never flattened, so the canvas
-// keeps its place in the tree (and on screen) whatever moves around it.
-// 這一輪的樹只有一種長法，由可放置的地方保證：最外層左右分〔左側、中間、右側〕，中間上下分〔上方…、畫布、下方…〕。以後開放
-// 更多排法只是多加放置的地方，不是新格式。含畫布的分割窗格永不攤平，所以畫布在樹裡（和畫面上）的位置不因周圍移動而變。
+// The outermost pane is a row: what lies before the canvas's part is the left side, after it the right side (the side
+// toggles read this). Any arrangement inside is allowed (R.68.4, human 2026-10-10: try everything first, then decide what to
+// limit); which ones people can make is decided only by where things may be dropped (layout.tsx), never by the format.
+// 最外層是左右分：畫布那一格之前是左側、之後是右側（左右開關照這個算）。裡面怎麼排都可以（R.68.4，人類 10-10：先都試過再決定
+// 限制）；人能排出哪些，只由可放置的地方決定（layout.tsx），不由格式決定。
 
 export type Direction = 'row' | 'column';
 export type Side = 'left' | 'right';
@@ -35,7 +34,8 @@ export type PanelDefaults = readonly (readonly [id: string, side: Side, first?: 
 export type Path = readonly number[];
 
 // Sizes in pixels (tentative, human 2026-10-09: to be tuned; a side at least 300, R.53). 像素尺寸（暫定，可調）。
-export const SIDE_WIDTH = 380, SIDE_MIN = 300, SIDE_MAX = 900, PANE_HEIGHT = 240, PANE_MIN = 120, CANVAS_MIN_WIDTH = 320, CANVAS_MIN_HEIGHT = 200;
+export const SIDE_WIDTH = 380, SIDE_MIN = 300, SIDE_MAX = 900, PANE_HEIGHT = 240, PANE_MIN = 120, PANE_MIN_WIDTH = 160,
+  CANVAS_MIN_WIDTH = 320, CANVAS_MIN_HEIGHT = 200;
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export const hasCanvas = (pane: Pane): boolean => pane.kind === 'canvas' || (pane.kind === 'split' && pane.children.some(hasCanvas));
@@ -61,17 +61,18 @@ export function sideOf(root: Pane, index: number): Side | null {
 export const sideHasPanels = (layout: LayoutData, side: Side) => layout.root.kind === 'split'
   && layout.root.children.some((child, index) => sideOf(layout.root, index) === side && shown(child, layout.hidden));
 
-/** Drop empty tab panes, empty splits, and splits of one (unless they hold the canvas). 拿掉空的窗格與只剩一格的分割。 */
-export function tidy(pane: Pane): Pane | null {
+/** Drop empty tab panes and empty splits, and put a split of one part in that part's place; the outermost row stays (the
+ * sides are read from it). 拿掉空的窗格與分割，只剩一格的分割換成那一格；最外層保留（左右側從它算）。 */
+export function tidy(pane: Pane, outermost = true): Pane | null {
   if (pane.kind === 'canvas') return pane;
   if (pane.kind === 'tabs') {
     if (!pane.panels.length) return null;
     return pane.panels.includes(pane.active) ? pane : { ...pane, active: pane.panels[0]! };
   }
   const children: Pane[] = [], sizes: number[] = [];
-  pane.children.forEach((child, index) => { const kept = tidy(child); if (kept) { children.push(kept); sizes.push(pane.sizes[index] ?? 1); } });
+  pane.children.forEach((child, index) => { const kept = tidy(child, false); if (kept) { children.push(kept); sizes.push(pane.sizes[index] ?? 1); } });
   if (!children.length) return null;
-  if (children.length === 1 && !hasCanvas(children[0]!)) return children[0]!;
+  if (children.length === 1 && !outermost) return children[0]!;
   return { ...pane, children, sizes };
 }
 
@@ -81,7 +82,7 @@ export function defaultLayout(panels: PanelDefaults): LayoutData {
     return ids.length ? { kind: 'tabs', panels: ids, active: panels.find(row => row[1] === which && row[2])?.[0] ?? ids[0]! } : null;
   };
   const left = side('left'), right = side('right');
-  const children = [left, { kind: 'split', direction: 'column', children: [{ kind: 'canvas' }], sizes: [1] } as Pane, right].filter((pane): pane is Pane => !!pane);
+  const children = [left, { kind: 'canvas' } as Pane, right].filter((pane): pane is Pane => !!pane);
   // Default as the legacy editor and R.53: the right side closed until the Parameter panel lives there.
   // 預設照舊產品與 R.53：右側收著，等參數面板住進去。
   return { version: 2, titleBar: true, root: { kind: 'split', direction: 'row', children, sizes: children.map(pane => hasCanvas(pane) ? 1 : SIDE_WIDTH) },
@@ -128,14 +129,9 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
     return layout;
   } catch { return fallback; }
 }
-function wellFormed(root: Pane): boolean {
-  if (root.kind !== 'split' || root.direction !== 'row') return false;
-  const centres = root.children.filter(hasCanvas);
-  if (centres.length !== 1) return false;
-  const centre = centres[0]!;
-  return centre.kind === 'split' && centre.direction === 'column' && centre.children.filter(child => child.kind === 'canvas').length === 1
-    && centre.children.every(child => child.kind === 'canvas' || !hasCanvas(child));
-}
+const canvases = (pane: Pane): number => pane.kind === 'canvas' ? 1 : pane.kind === 'split' ? pane.children.reduce((sum, child) => sum + canvases(child), 0) : 0;
+/** An outermost row with the canvas in it exactly once. 最外層左右分、畫布剛好一個。 */
+const wellFormed = (root: Pane) => root.kind === 'split' && root.direction === 'row' && canvases(root) === 1;
 function fromVersion1(value: Record<string, unknown>, fallback: LayoutData): LayoutData {
   type Zone = { open?: boolean; width?: number; groups?: { panels?: unknown[]; active?: unknown; size?: unknown }[] };
   const side = (raw: unknown): { pane: Pane; width: number; open: boolean } | null => {
@@ -170,12 +166,13 @@ export function addToSide(layout: LayoutData, panel: string, side: Side): Layout
   return next;
 }
 
-/** Where a dragged panel goes. tab: into a tab pane at a tab position; beside: a new tab pane above or below a pane (a tab
+/** Where a dragged panel goes. tab: into a tab pane at a tab position; beside: a new tab pane on one edge of a pane (a tab
  * pane or the canvas); side: a tab on that side (made, or opened, if needed; see addToSide).
- * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）上方或下方多一個分頁窗格；side＝那一側的分頁（見 addToSide）。 */
+ * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）的某條邊旁多一個分頁窗格；side＝那一側的分頁（見 addToSide）。 */
+export type Edge = 'top' | 'bottom' | 'left' | 'right';
 export type Drop =
   | { kind: 'tab'; pane: Path; index: number }
-  | { kind: 'beside'; pane: Path; edge: 'top' | 'bottom' }
+  | { kind: 'beside'; pane: Path; edge: Edge }
   | { kind: 'side'; side: Side };
 
 /** Move a panel; the result is tidied. A drop that changes nothing returns the layout as it was.
@@ -201,18 +198,21 @@ export function movePanel(layout: LayoutData, panel: string, drop: Drop): Layout
     if (target === from && from.panels.length === 1) return layout;
     from.panels.splice(from.panels.indexOf(panel), 1);
     const fresh: Pane = { kind: 'tabs', panels: [panel], active: panel };
+    const direction: Direction = drop.edge === 'top' || drop.edge === 'bottom' ? 'column' : 'row', before = drop.edge === 'top' || drop.edge === 'left';
+    const pixels = direction === 'row' ? SIDE_WIDTH : PANE_HEIGHT;
     const parent = at(next.root, drop.pane.slice(0, -1)) as Extract<Pane, { kind: 'split' }> | undefined, place = drop.pane[drop.pane.length - 1]!;
-    if (parent?.direction === 'column') {
-      // Into the column it is in: beside the canvas in pixels, between tab panes by sharing the target's part.
-      // 放進所在的上下分割：在畫布旁記像素；在分頁窗格之間平分目標那一格。
-      const by = hasCanvas(parent) ? PANE_HEIGHT : (parent.sizes[place] ?? 1) / 2;
+    if (parent?.kind === 'split' && parent.direction === direction) {
+      // Into the split it is in, the same way: next to the canvas in pixels, elsewhere by sharing the target's part.
+      // 放進所在、方向相同的分割：在畫布旁記像素；其他地方平分目標那一格。
+      const by = hasCanvas(parent) ? pixels : (parent.sizes[place] ?? 1) / 2;
       if (!hasCanvas(parent)) parent.sizes[place] = by;
-      const index = drop.edge === 'top' ? place : place + 1;
+      const index = before ? place : place + 1;
       parent.children.splice(index, 0, fresh); parent.sizes.splice(index, 0, by);
     } else {
-      // A tab pane that is a whole side: it becomes a column of two. 整個一側的分頁窗格：變成上下兩格。
-      const pair = drop.edge === 'top' ? [fresh, target] : [target, fresh];
-      replace(next, drop.pane, { kind: 'split', direction: 'column', children: pair, sizes: [1, 1] });
+      // Otherwise the target becomes a split of two in that direction (the canvas keeps the rest, the new pane its pixels).
+      // 否則目標變成那個方向的兩格（是畫布的話，畫布佔剩下的、新的一格記像素）。
+      const pair = before ? [fresh, target] : [target, fresh];
+      replace(next, drop.pane, { kind: 'split', direction, children: pair, sizes: pair.map(pane => hasCanvas(target) ? (pane === fresh ? pixels : 1) : 1) });
     }
   }
   next.root = tidy(next.root) ?? layout.root;

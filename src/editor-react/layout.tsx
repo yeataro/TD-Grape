@@ -6,7 +6,7 @@ import { PANELS } from './panels';
 import { readPreference, writePreference } from './preferences';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import * as tree from './layout_tree';
-import type { Drop, LayoutData, Pane, Path, Side } from './layout_tree';
+import type { Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
 
 // The editor's layout on screen (Refactor.53, 68; work/in-place-refactor-design/layout-tree.md): the tree of panes
 // (layout_tree.ts) drawn between the title bar and the foot bar, its handles, moving panels by their tabs, and the Layout
@@ -77,25 +77,36 @@ export function ResizeHandle({ axis, edge = 'lead', label, onStart, onMove }: {
 
 type Drag = (event: ReactPointerEvent, panel: string) => void;
 const DragContext = createContext<MutableRefObject<Drag>>({ current: () => {} });
-type Context = { layout: Layout; panels: Record<string, PanelView>; canvas: ReactNode };
+type Context = { layout: Layout; panels: Record<string, PanelView>; canvas: HTMLElement };
 
-/** The whole layout: the tree, and the marks shown while a panel is moved. 整個版面：窗格樹，以及搬面板時的提示。 */
-export function LayoutView({ layout, panels, canvas }: Context) {
+/** The whole layout: the tree, and the marks shown while a panel is moved. The network is drawn once, into its own
+ * element, which is moved into whichever pane holds the canvas: it is never rebuilt, whatever the layout becomes around it
+ * (R.68.4: the canvas can now sit inside any split). 整個版面：窗格樹，以及搬面板時的提示。網路區只畫一次，畫進自己的元素，
+ * 再把這個元素搬進放畫布的那一格：版面怎麼變都不會重新建立（R.68.4：畫布現在可以在任何分割裡）。 */
+export function LayoutView({ layout, panels, canvas }: { layout: Layout; panels: Record<string, PanelView>; canvas: ReactNode }) {
   const drag = useRef<Drag>(() => {});
+  const host = useMemo(() => Object.assign(document.createElement('div'), { className: 'canvas-host' }), []);
   return <DragContext.Provider value={drag}>
-    <PaneView pane={layout.root} path={[]} context={{ layout, panels, canvas }} />
+    <PaneView pane={layout.root} path={[]} context={{ layout, panels, canvas: host }} />
+    {createPortal(canvas, host)}
     <PanelDrag layout={layout} panels={panels} start={drag} />
   </DragContext.Provider>;
 }
 
 function PaneView({ pane, path, context }: { pane: Pane; path: number[]; context: Context }): ReactNode {
-  if (pane.kind === 'canvas') return context.canvas;
+  if (pane.kind === 'canvas') return <CanvasHole host={context.canvas} />;
   if (pane.kind === 'tabs') return <TabPaneView pane={pane} path={path} context={context} />;
   return <SplitPaneView pane={pane} path={path} context={context} />;
 }
+/** Where the network's element is put. 放網路區元素的地方。 */
+function CanvasHole({ host }: { host: HTMLElement }) {
+  const hole = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { hole.current!.append(host); }, [host]);
+  return <div ref={hole} className="canvas-hole" />;
+}
 
-// A part keeps its identity while its neighbours change: the canvas always, a pane by the panels it holds.
-// 一格在旁邊變動時保持身分：畫布永遠是同一個，窗格以它放的面板認。
+// A part keeps its identity while its neighbours change: the canvas's part always, a pane by the panels it holds.
+// 一格在旁邊變動時保持身分：畫布那一格永遠是同一個，窗格以它放的面板認。
 const keyOf = (pane: Pane) => tree.hasCanvas(pane) ? 'canvas'
   : 'p:' + tree.tabPanes(pane).flatMap(found => found.pane.panels).join(',');
 
@@ -120,7 +131,7 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   };
   const startShare = () => {
     const total = visible.reduce((sum, part) => sum + (pane.sizes[part.index] ?? 1), 0);
-    begin.current = { sizes: [...pane.sizes], total, limit: tree.PANE_MIN / length() * total };
+    begin.current = { sizes: [...pane.sizes], total, limit: (row ? tree.PANE_MIN_WIDTH : tree.PANE_MIN) / length() * total };
   };
   const moveShare = (before: number, after: number, delta: number) => {
     const { sizes: start, total, limit } = begin.current, next = [...start];
@@ -130,6 +141,10 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   };
   const axis = row ? 'x' : 'y';
   const label = row ? tr('layout.resizeZone', 'Resize the panel zone') : tr('layout.resizeGroups', 'Resize the panels above and below');
+  // A part next to the canvas is a panel zone, named by the canvas edge it lies on (its line and shadows); others are plain.
+  // 畫布旁的一格是面板區，以它靠的畫布邊命名（分隔線與陰影）；其他是一般的格子。
+  const zone = (index: number) => !holdsCanvas || index === centre ? 'pane-slot'
+    : 'panel-zone panel-zone-' + (row ? (index < centre ? 'left' : 'right') : (index < centre ? 'top' : 'bottom'));
   return <div ref={element} className={'split split-' + pane.direction + (root ? ' workspace' : '')}>
     {visible.map(({ child, index }, n) => {
       const before = visible[n - 1], after = visible[n + 1];
@@ -141,9 +156,7 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
       const trail = after && holdsCanvas && index < centre && <ResizeHandle axis={axis} edge="trail" label={label}
         onStart={() => startPixels(index)} onMove={delta => movePixels(index, delta)} />;
       const flex: CSSProperties = holdsCanvas ? { flex: index === centre ? '1 1 0' : `0 0 ${pane.sizes[index]}px` } : { flex: `${pane.sizes[index] ?? 1} 1 0` };
-      const side = root ? tree.sideOf(layout.root, index) : null;
-      const zone = side ? 'panel-zone panel-zone-' + side : holdsCanvas && index !== centre ? 'panel-zone panel-zone-' + (index < centre ? 'top' : 'bottom') : 'pane-slot';
-      return <div key={keyOf(child)} className={zone} style={flex} data-pane={[...path, index].join('.')} data-kind={child.kind}>
+      return <div key={keyOf(child)} className={zone(index)} style={flex} data-pane={[...path, index].join('.')} data-kind={child.kind}>
         {lead}<PaneView pane={child} path={[...path, index]} context={context} />{trail}
       </div>;
     })}
@@ -162,38 +175,54 @@ function TabPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 'tab
 }
 
 // Where a panel would go, worked out from what is under the pointer (legacy inspector.js:2314; human 2026-10-10, Resolume
-// Wire): on a tab bar, between two tabs (a line); on a tab pane, its middle joins it as a tab (corner marks), at the place
-// chosen by where the pointer is across the pane (a row of slots in the middle, one per tab it will have; R.68.1, Wire), and
-// its upper or lower part makes a new pane on that edge (a line on the edge, so the lower part of one pane and the upper part
-// of the next mean the same boundary — the "between" target is easy to hit); on the canvas, its top or bottom band makes a
-// pane above or below it, its left or right part — as wide as the side it would make (R.68.1, human: the edge was too hard
-// to hit) — puts the panel on that side when nothing shows there. Nothing else is a target.
-// 放到哪，由游標下方是什麼決定（舊產品；人類 10-10，Resolume Wire）：分頁列上＝兩個分頁之間（直線）；分頁窗格中間＝合併成分頁
-// （角框），位置看游標在窗格寬度的哪一段（中央一排格子，放下後有幾個分頁就幾格；R.68.1，Wire），上段或下段＝在那條邊切出新的一格
-// （邊上一條線，所以上一格的下段和下一格的上段是同一個交界，「中間」好觸發）；畫布的上下帶＝在畫布上方或下方切一格，左右兩塊——
-// 和放下後那一側一樣寬（R.68.1，人類：邊緣太難放）——＝那一側沒東西顯示時放到那一側。其他地方都不是目標。
-// A line is drawn centred on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊的正中，粗細由主題決定。
-const EDGE = .3, BAND = 56;
+// Wire). Everything is allowed for now (R.68.4, human: try it all first, then decide what to limit):
+// - on a tab bar: between two tabs (a line);
+// - on a tab pane: near an edge (its outer 30%, whichever edge is nearest) a new pane on that edge (a line on the edge, so the
+//   part of one pane next to a boundary and the part of the next mean the same boundary: "between" is easy to hit); its
+//   middle joins it as a tab, at the place chosen by where the pointer is across it (slots, one per tab it will have; Wire);
+// - on the canvas: its top or bottom band, a pane above or below it; its left or right part (as wide as a side, R.68.1), a
+//   pane beside it, or, in the outer part when nothing shows on that side, the panel on that side itself, full height
+//   (human: the two must be told apart; the line's length shows which).
+// 放到哪，由游標下方是什麼決定（舊產品；人類 10-10，Resolume Wire）。目前全部開放（R.68.4，人類：先都試過再決定限制）：
+// - 分頁列上：兩個分頁之間（直線）；
+// - 分頁窗格：靠近邊緣（外圍 30%，取最近的那條邊）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
+//   中間＝合併成分頁，位置看游標在寬度的哪一段（格子，放下後有幾個分頁就幾格；Wire）；
+// - 畫布：上下帶＝畫布上方或下方切一格；左右兩塊（和側欄一樣寬，R.68.1）＝畫布旁切一格；那一側沒東西顯示時，靠外的一段＝放到那一側本身、
+//   整個高度（人類：兩者要分得出來；線的長度表示是哪一種）。
+// A line is drawn on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊上，粗細由主題決定。
+const EDGE = .3, BAND = 56, OUTER = 96;
 type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; width?: number; height?: number;
-  /** What dropping here does, written beside the mark (R.68.2, human 2026-10-10); a side line says which side it is on.
-   * 放下會發生什麼，寫在提示旁（人類 10-10）；側邊的線標明是哪一側。 */
+  /** What dropping here does, written beside the mark (R.68.2, human 2026-10-10); an upright line says which edge it is on,
+   * so its words go inside. 放下會發生什麼，寫在提示旁（人類 10-10）；直線標明是哪一條邊，說明寫在內側。 */
   label?: Message; side?: Side;
   /** Joining as a tab: how many tabs the pane will have, and which one this is. 合併成分頁：會有幾個分頁、這是第幾個。 */
   slots?: { count: number; at: number } };
 type Hint = { drop: Drop; mark: Mark; refused?: Message } | null;
-const across = (box: DOMRect, y: number): Mark => ({ kind: 'across', left: box.left, top: y, width: box.width });
-const along = (box: { top: number; height: number }, x: number): Mark => ({ kind: 'along', left: x, top: box.top, height: box.height });
+const across = (box: DOMRect, edge: 'top' | 'bottom'): Mark => ({ kind: 'across', left: box.left, top: edge === 'top' ? box.top : box.bottom, width: box.width });
+const along = (box: DOMRect, side: Side): Mark => ({ kind: 'along', left: side === 'left' ? box.left : box.right, top: box.top, height: box.height, side });
 const noRoom = tr('layout.noRoom', 'Not enough room here for another pane.');
 const newPane = tr('layout.dropPane', 'New pane here'), asTab = tr('layout.dropTab', 'Join as a tab');
-const onSide = { left: tr('layout.dropLeft', 'Put on the left side'), right: tr('layout.dropRight', 'Put on the right side') };
+const onSide = { left: tr('layout.dropLeft', 'Put on the left side, full height'), right: tr('layout.dropRight', 'Put on the right side, full height') };
 const tabOnSide = { left: tr('layout.dropLeftTab', 'Join the left side as a tab'), right: tr('layout.dropRightTab', 'Join the right side as a tab') };
+const showing = (layout: Layout, side: Side) => layout.hasPanels(side) && !layout.closed[side];
+
+/** A new pane on one edge of a pane: next to the canvas it takes pixels from the canvas, elsewhere it halves the pane.
+ * 在某一格的某條邊旁新增一格：在畫布旁從畫布拿像素，其他地方平分那一格。 */
+function beside(layout: Layout, path: number[], edge: Edge, box: DOMRect): Hint {
+  const row = edge === 'left' || edge === 'right', target = tree.at(layout.root, path)!, parent = tree.at(layout.root, path.slice(0, -1));
+  const canvas = document.querySelector('[data-kind="canvas"]')!.getBoundingClientRect();
+  const fromCanvas = tree.hasCanvas(target) || (parent?.kind === 'split' && parent.direction === (row ? 'row' : 'column') && tree.hasCanvas(parent));
+  const fits = fromCanvas ? row ? canvas.width - tree.SIDE_WIDTH >= tree.CANVAS_MIN_WIDTH : canvas.height - tree.PANE_HEIGHT >= tree.CANVAS_MIN_HEIGHT
+    : row ? box.width / 2 >= tree.PANE_MIN_WIDTH : box.height / 2 >= tree.PANE_MIN;
+  const mark = edge === 'left' || edge === 'right' ? along(box, edge) : across(box, edge);
+  return { drop: { kind: 'beside', pane: path, edge }, mark: { ...mark, label: newPane }, refused: fits ? undefined : noRoom };
+}
 
 function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
   const under = document.elementFromPoint(x, y) as HTMLElement | null, slot = under?.closest<HTMLElement>('[data-pane]');
   if (!under || !slot) return null;
   const path = slot.dataset.pane!.split('.').map(Number), pane = tree.at(layout.root, path), box = slot.getBoundingClientRect();
   const source = tree.paneOf(layout.root, panel), own = !!source && source.path.join('.') === path.join('.');
-  const canvas = document.querySelector('[data-kind="canvas"]')?.getBoundingClientRect();
   if (pane?.kind === 'tabs') {
     const bar = under.closest<HTMLElement>('.panel-tabs');
     if (bar && slot.contains(bar)) {
@@ -201,18 +230,12 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
       const next = tabs.find(tab => { const b = tab.getBoundingClientRect(); return x < b.left + b.width / 2; });
       const index = next ? pane.panels.indexOf(next.dataset.panel!) : pane.panels.length, strip = bar.getBoundingClientRect();
       const at = next ? next.getBoundingClientRect().left : tabs.at(-1)!.getBoundingClientRect().right;
-      return { drop: { kind: 'tab', pane: path, index }, mark: along(strip, at) };
+      return { drop: { kind: 'tab', pane: path, index }, mark: { kind: 'along', left: at, top: strip.top, height: strip.height } };
     }
-    const ratio = (y - box.top) / box.height;
-    if (ratio < EDGE || ratio > 1 - EDGE) {
-      if (own && source!.pane.panels.length === 1) return null;
-      const edge = ratio < EDGE ? 'top' : 'bottom', parent = tree.at(layout.root, path.slice(0, -1));
-      // Beside the canvas a new pane takes pixels from the canvas; elsewhere it halves the pane it is dropped on.
-      // 在畫布旁，新的一格從畫布拿像素；其他地方平分被放上的那一格。
-      const fits = parent?.kind === 'split' && parent.direction === 'column' && tree.hasCanvas(parent)
-        ? !canvas || canvas.height - tree.PANE_HEIGHT >= tree.CANVAS_MIN_HEIGHT : box.height / 2 >= tree.PANE_MIN;
-      return { drop: { kind: 'beside', pane: path, edge }, mark: { ...across(box, edge === 'top' ? box.top : box.bottom), label: newPane }, refused: fits ? undefined : noRoom };
-    }
+    const near: [Edge, number][] = [['top', (y - box.top) / box.height], ['bottom', (box.bottom - y) / box.height],
+      ['left', (x - box.left) / box.width], ['right', (box.right - x) / box.width]];
+    const [edge, distance] = near.reduce((closest, item) => item[1] < closest[1] ? item : closest);
+    if (distance < EDGE) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
     // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
     // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
     const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
@@ -222,19 +245,15 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
     return { drop: { kind: 'tab', pane: path, index }, mark: { kind: 'frame', left: box.left, top: box.top, width: box.width, height: box.height, slots: { count, at }, label: asTab } };
   }
   if (pane?.kind === 'canvas') {
-    if (y - box.top < BAND || box.bottom - y < BAND) {
-      const edge = y - box.top < BAND ? 'top' : 'bottom', fits = box.height - tree.PANE_HEIGHT >= tree.CANVAS_MIN_HEIGHT;
-      return { drop: { kind: 'beside', pane: path, edge }, mark: { ...across(box, edge === 'top' ? box.top : box.bottom), label: newPane }, refused: fits ? undefined : noRoom };
-    }
+    if (y - box.top < BAND || box.bottom - y < BAND) return beside(layout, path, y - box.top < BAND ? 'top' : 'bottom', box);
     for (const side of ['left', 'right'] as const) {
-      if (layout.hasPanels(side) && !layout.closed[side]) continue;
-      // What the side will take: its width when it is there but closed, a new side's width otherwise; the part of the canvas
-      // that means "that side" is as wide, but leaves the middle free. 那一側會佔的寬；畫布上代表那一側的範圍一樣寬，但留下中間。
-      const root = layout.root, there = root.kind === 'split' ? root.children.findIndex((_, index) => tree.sideOf(root, index) === side) : -1;
-      const width = root.kind === 'split' && there >= 0 ? root.sizes[there]! : tree.SIDE_WIDTH, reach = Math.min(width, box.width * .4);
-      if (side === 'left' ? x - box.left >= reach : box.right - x >= reach) continue;
-      return { drop: { kind: 'side', side }, mark: { ...along(box, side === 'left' ? box.left : box.right), label: there >= 0 ? tabOnSide[side] : onSide[side], side },
-        refused: box.width - width >= tree.CANVAS_MIN_WIDTH ? undefined : noRoom };
+      const distance = side === 'left' ? x - box.left : box.right - x, reach = Math.min(tree.SIDE_WIDTH, box.width * .4);
+      if (distance >= reach) continue;
+      if (showing(layout, side) || distance >= Math.min(OUTER, reach / 2)) return beside(layout, path, side, box);
+      // The side itself, full height: its line runs the whole layout. 那一側本身、整個高度：線畫滿整個版面。
+      const whole = document.querySelector('.workspace')!.getBoundingClientRect();
+      return { drop: { kind: 'side', side }, mark: { ...along(whole, side), label: layout.hasPanels(side) ? tabOnSide[side] : onSide[side] },
+        refused: box.width - tree.SIDE_WIDTH >= tree.CANVAS_MIN_WIDTH ? undefined : noRoom };
     }
   }
   return null;
