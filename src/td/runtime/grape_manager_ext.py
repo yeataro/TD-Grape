@@ -1,5 +1,6 @@
 """Editing coordinator. Native Families never need this object to render."""
 import json
+import time
 from hashlib import sha256
 
 import numpy as np
@@ -41,7 +42,7 @@ class GrapeManagerExt:
             bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
             applied=self.live.applied, identity=lambda: {'file': project.name, 'folder': project.folder, 'build': app.build, 'version': editor.snapshot.version},
             textures=self.Texture,
-            capture=self.Capture)
+            capture=self.Capture, saved=lambda family: self.SavedState(family.comp))
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -127,10 +128,38 @@ class GrapeManagerExt:
         if self.live:
             self.live.wires_changed(comp)
 
+    def ProjectSaving(self):
+        """Project Pre Save (`save_watch`, Refactor.73): which revision of each Grape OP goes into the file, and when, kept in
+        the Manager's storage so it is saved with the project; the editor shows how far it is behind (human 2026-10-10: the
+        editor never saves the project by itself). A Grape OP TD-Grape cannot read keeps no revision.
+        存檔前：每個 Grape OP 哪一版存進檔案、什麼時候，放在管理器的 storage、跟著專案存；編輯器據此顯示落後多少（人類：
+        編輯器不會自己存專案）。讀不了的 Grape OP 不記版號。"""
+        revisions = {}
+        for comp in self.GrapeOps():
+            try:
+                revisions[self._module('grape_op_identity').identity(comp)] = self.Adapter(comp).state()['revision']
+            except self._module('next_family').Refused:
+                continue
+        self.ownerComp.store('projectSaved', {'time': int(time.time() * 1000), 'revisions': revisions})
+
+    def SavedState(self, comp):
+        """The project's last save as one Grape OP sees it: the revision it saved (None before the first save Refactor.73
+        saw) and when (ms). 專案上次存檔，從一個 Grape OP 看：存了哪一版（R.73 之後第一次存檔前是 None）、什麼時候（毫秒）。"""
+        saved = self.ownerComp.fetch('projectSaved', None, search=False) or {}
+        when = saved.get('time')
+        if when is None:
+            # Not recorded yet: TD's own time of the last save (e.g. 'Sat Oct 10 20:29:50 2026'). 還沒記過：TD 自己的上次存檔時間。
+            try:
+                when = int(time.mktime(time.strptime(project.saveTime, '%a %b %d %H:%M:%S %Y')) * 1000)
+            except (ValueError, TypeError):
+                when = None
+        return {'revision': saved.get('revisions', {}).get(self._module('grape_op_identity').identity(comp)), 'time': when}
+
     def ProjectSaved(self):
-        """Project Post Save (`save_watch`, Refactor.71): connected editors are told. 存檔後：告訴連著的編輯器。"""
+        """Project Post Save (`save_watch`, Refactor.71, 73): connected editors are told, with the revision each one's Grape
+        OP saved. 存檔後：告訴連著的編輯器，附上它的 Grape OP 存的是哪一版。"""
         if self.live:
-            self.live.saved(project.name)
+            self.live.saved(project.name, lambda comp: self.SavedState(comp))
 
     def Diagnostics(self):
         result = self.queue.outcomes() if self.queue else []

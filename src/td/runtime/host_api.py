@@ -57,7 +57,7 @@ class Image:
 
 
 class HostAPI:
-    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None, textures=None, capture=None):
+    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None, textures=None, capture=None, saved=None):
         if bootstrap.get('version') != 1 or bootstrap.get('producer') != 'frontend-modules':
             raise ValueError('The editor module bootstrap is unavailable or incompatible.')
         self.catalog_hash = bootstrap['catalogHash']
@@ -77,6 +77,9 @@ class HostAPI:
         # Reads a TOP small, as (width, height, straight RGBA bytes) (the Manager's preview TOP).
         # 把一個 TOP 縮小讀出像素：(寬, 高, RGBA)（Manager 的預覽 TOP）。
         self.capture = capture
+        # The project's last save as a Grape OP sees it (Refactor.73): with its state, so the editor can say how far it is
+        # behind. 專案上次存檔（從這個 Grape OP 看）：隨現況回覆，編輯器據此說落後多少。
+        self.saved = saved
         self.shared = {}  # shared images read this connection; each made a PNG once 這次連線讀過的公用圖，各只壓一次
 
     def dispatch(self, method, path, body=None):
@@ -124,17 +127,20 @@ class HostAPI:
             return REFUSALS[code], {'error': str(error), 'code': code,
                 'layer': 'manager' if code == 'capability_not_migrated' else 'grape-op', 'operation': action}
 
+    def _saved(self, family):
+        return {'projectSaved': self.saved(family)} if self.saved else {}
+
     def _action(self, family, method, action, body, argument=None):
         # TD only checks the envelope and what it executes; no history, sources or graph reads.
         # TD 只核對信封與自己要執行的東西；不碰歷史、來源或圖的內容。
         if method == 'GET' and action == 'state':
             return {'state': family.state(), 'uniforms': family.uniform_states(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
-                'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}}
+                'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}, **self._saved(family)}
         if method == 'POST' and action == 'apply':
             result = family.apply(body, catalog_hash=self.catalog_hash)
             if self.applied:
                 self.applied(family)
-            return result
+            return {**result, **self._saved(family)} if isinstance(result, dict) else result
         # Uniform values while they change go over the WebSocket since Uniform D2 (Q53), not HTTP.
         # 改變中的 Uniform 值從 D2 起走 WebSocket，不走 HTTP。
         # The person chose "also give this Grape OP a new Grape ID" (Refactor.52, Q63). 使用者勾了換新 ID。
@@ -151,5 +157,5 @@ class HostAPI:
             # 尺寸與格式隨輸入回報（input_sources），只有一處。
             return Image(self.capture(family.input_top(argument)), keep=False)
         if method == 'POST' and action == 'save':
-            return {'saved': self.save_project()}
+            return {'saved': self.save_project(), **self._saved(family)}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

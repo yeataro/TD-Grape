@@ -4,6 +4,7 @@ import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
+import { clockOf } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
@@ -338,6 +339,13 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
   }, [state?.retryAt]);
   const seconds = state?.retryAt === undefined ? 0 : Math.ceil(Math.max(0, state.retryAt - Date.now()) / 1000);
   const reason = state && alarm.includes(state.phase) ? say(state.message).split('\n')[0] : '';
+  // The TD project's last save and how far it is behind (Refactor.73): the editor never saves it by itself.
+  // TD 專案上次存檔與落後多少（R.73）：編輯器不會自己存。
+  const last = state?.saved, behind = last?.revision != null && state ? state.revision - last.revision : null;
+  const saved = !last || last.time == null ? null : last.revision == null
+    ? tr('status.savedAt', 'TD project: last saved {time}', { time: clockOf(last.time) })
+    : behind ? tr('status.savedBehind', 'TD project: saved r{saved} ({time}), {behind} behind', { saved: last.revision, time: clockOf(last.time), behind })
+      : tr('status.savedNow', 'TD project: saved r{saved} ({time})', { saved: last.revision, time: clockOf(last.time) });
   const clock = (time: number) => new Date(time).toLocaleTimeString();
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
     <div className={'status-now tone-' + tone}>
@@ -346,6 +354,7 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
       {state && away.includes(state.phase) && <div className="status-retry">
         <span>{say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}</span>
         <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
+      {saved && <p className="status-saved">{say(saved)}</p>}
       {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp[state.link ?? 'unreachable'])}</p>}
     </div>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}

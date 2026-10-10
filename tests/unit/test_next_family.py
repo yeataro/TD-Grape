@@ -344,6 +344,17 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(api.dispatch('GET', '/api/' + 'b' * 32 + '/state')[1]['td'], td)
         self.assertEqual(api.dispatch('GET', '/api/nothing')[1]['td'], td)
 
+    def test_the_last_save_comes_with_the_state_and_the_save_reply(self):
+        # Refactor.73: which revision the project last saved for this Grape OP, and when, so the editor can say how far it
+        # is behind. 專案上次存了這個 Grape OP 的哪一版、什麼時候，隨現況與存檔回覆帶回。
+        fam = family()[0]
+        api = host_api.HostAPI(bootstrap={'version': 1, 'producer': 'frontend-modules', 'catalogHash': CATALOG},
+            resolve=lambda ident: fam, choices=lambda: {}, save_project=Mock(return_value='x.toe'),
+            saved=lambda f: {'revision': 3, 'time': 1000} if f is fam else None)
+        saved = {'revision': 3, 'time': 1000}
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/state')[1]['projectSaved'], saved)
+        self.assertEqual(api.dispatch('POST', '/api/' + TARGET + '/save', {})[1], {'saved': 'x.toe', 'projectSaved': saved})
+
     def test_new_grape_id_on_request(self):
         # Refactor.52 (Q63): the person chose "also give this Grape OP a new Grape ID". Same as Regenerate ID;
         # graph_meta follows, the graph stays; a damaged Grape OP is refused before anything changes.

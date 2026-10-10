@@ -58,6 +58,11 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.73 套用後說出 TD 專案落後多少**（人類 10-10：用這個編輯器不代表已經存好，還是要手動存；想知道落後多少；版號與時間都放，精簡）：
+  - TD：`save_watch` 多了存檔前（Project Pre Save）→ `GrapeManagerExt.ProjectSaving` 記下每個 Grape OP 存進檔案的版號與時間，放在管理器的 storage（跟著專案存；不動 Grape OP 存的資料）。現況、套用、存檔的回覆與 `saved` 通知都帶 `projectSaved`（這個 Grape OP 存了哪一版、什麼時候）。還沒記過時，時間用 TD 自己的上次存檔時間（`project.saveTime`），版號未知。
+  - 編輯器：套用後底列說「已套用；上次存檔 r833（22:01），落後 1 版」；只知道時間時「已套用；專案尚需保存（上次存檔 20:29）」；存檔時「TD 專案已保存：TD-Grape-dev.98.toe（r833）」。狀態面板多一行「TD 專案：存檔在 r…（時間），落後 N 版」或「已存檔 r…」。時間今天只寫時刻，其他天加日期。
+  - 驗證：editor 97（新：落後幾版、只知道時間、存檔通知更新）、TD 端 Python 66（新：現況與存檔回覆帶 projectSaved）、`check:editor`；裝進 TD（檢查點 `work/refactor/checkpoints/r73-save-lag`）。內建瀏覽器實測：還沒記過時套用 →「已套用；專案尚需保存（上次存檔 20:29）」（正是人類那次存檔）；直接呼叫存檔前／後的處理（沒有真的存 TOE）→「TD 專案已保存：TD-Grape-dev.98.toe（r833）」、面板「TD 專案：已存檔 r833（22:01）」；再拖一個節點 →「已套用；上次存檔 r833（22:01），落後 1 版」。測完已刪掉這筆假的存檔紀錄。
+  - 未驗證：真的在 TD 存檔（存檔前的處理是否在檔案寫入前跑完、`project.saveTime` 是否更新）。TOE 未存。
 - **Refactor.72 管理器有自己的時鐘**（人類 10-10 決定加獨立時間線；workspace `work/refactor/td-status-and-service-2026-10-10.md` B-1）：
   - `GrapeManager/local/time`（Time COMP，Independent 開）。處理編輯請求的 `request_pump` 是管理器時間線的每格開始，主時間線暫停時照常跑。
   - **只放管理器、不放整個 TD_Grape**：TD_Grape 的 Samples（grape、banana、jellybeans）用 `me.time.frame` 播放；整個 TD_Grape 有自己的時鐘的話，使用者暫停時預設圖仍會繼續動，等於插手作品（Q68）。Samples 仍跟主時間線（實測 `/local/time`）。

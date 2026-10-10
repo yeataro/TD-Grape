@@ -18,8 +18,12 @@ export type ComponentState = { mode: 'constant' | 'bind' | 'expression' | 'expor
   value?: number; editable?: boolean; text?: string; source?: string };
 /** By declaration ID, one entry per component. 依宣告 ID，每個分量一筆。 */
 export type UniformStates = Readonly<Record<string, readonly ComponentState[]>>;
+/** The project's last save as this Grape OP sees it (Refactor.73): the revision it saved (null before the first save TD-Grape
+ * saw) and when (ms). 專案上次存檔（從這個 Grape OP 看）：存了哪一版（TD-Grape 看到第一次存檔前是 null）、什麼時候（毫秒）。 */
+export type ProjectSaved = { revision: number | null; time: number | null };
 export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
-  frontendCompiler: { protocol: string; catalogHash: string; required: boolean }; uniforms?: UniformStates; td?: TdIdentity };
+  frontendCompiler: { protocol: string; catalogHash: string; required: boolean }; uniforms?: UniformStates; td?: TdIdentity;
+  projectSaved?: ProjectSaved };
 // A failed host call. `text` is set when the editor itself words the failure (Q34); TD's own
 // replies stay as TD wrote them. 編輯器自己描述的失敗帶 text；TD 回的訊息照原樣。
 export class HostError extends Error {

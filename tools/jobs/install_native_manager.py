@@ -152,11 +152,14 @@ saves.par.framestart = False
 saves.par.frameend = False
 saves.par.start = False
 saves.par.create = False
+saves.par.projectpresave = True
 saves.par.projectpostsave = True
 saves.text = (
-    "# Tells connected editors that the project was saved (Refactor.71). 告訴連著的編輯器專案存檔了。\n"
+    "# Before: which revision of each Grape OP goes into the file (Refactor.73). After: tells connected editors (Refactor.71).\n"
+    "# 存檔前：記下每個 Grape OP 哪一版存進檔案。存檔後：告訴連著的編輯器。\n"
+    "def onProjectPreSave():\n    parent().ext.GrapeManagerExt.ProjectSaving()\n\n"
     "def onProjectPostSave():\n    parent().ext.GrapeManagerExt.ProjectSaved()\n")
-saves.comment = 'Tells connected editors that the project was saved.'
+saves.comment = 'Records which revisions are saved, then tells connected editors that the project was saved.'
 
 # Default-image previews (Refactor.58): one Select TOP that is pointed at an image only while it is read, made no
 # larger than 320 px on its long side on the GPU. 預設圖預覽：一個 Select TOP，只在讀的時候指向那張圖，在 GPU 上把長邊

@@ -202,8 +202,9 @@ class LiveWatchTests(unittest.TestCase):
         watch.drain([('message', connection, json.dumps({'type': 'ping', 'seq': 7})), ('message', stranger, json.dumps({'type': 'ping', 'seq': 1}))])
         self.assertEqual(connection.sent, [{'type': 'pong', 'seq': 7, 'frame': 120}])
         self.assertEqual(stranger.sent, [], 'not linked: no answer')
-        watch.saved('TD-Grape-dev.toe')
-        self.assertEqual(connection.sent[-1], {'type': 'saved', 'frame': 120, 'file': 'TD-Grape-dev.toe'})
+        watch.saved('TD-Grape-dev.toe', lambda comp: {'revision': 7 if comp is family.comp else None, 'time': 1000})
+        self.assertEqual(connection.sent[-1], {'type': 'saved', 'frame': 120, 'file': 'TD-Grape-dev.toe',
+                                               'projectSaved': {'revision': 7, 'time': 1000}})
         self.assertEqual(family.live_calls, [], 'a ping is not a value')
 
 

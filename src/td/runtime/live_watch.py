@@ -233,12 +233,14 @@ class LiveWatch:
         for connection in entry['connections']:
             connection.send(text, replaceable=True)
 
-    def saved(self, file):
-        """The TD project was saved (Project Post Save, Refactor.71): every connected editor is told once, with the file name.
-        TD 專案存檔了：告訴每個連著的編輯器一次，附檔名。"""
-        text = json.dumps({'type': 'saved', 'frame': self.frame(), 'file': file})
-        for connection in list(self.links):
-            connection.send(text)
+    def saved(self, file, saved_state):
+        """The TD project was saved (Project Post Save, Refactor.71): every connected editor is told once, with the file name
+        and what its Grape OP saved (`saved_state(comp)`, Refactor.73). TD 專案存檔了：告訴每個連著的編輯器一次，附檔名與它的
+        Grape OP 存了哪一版。"""
+        for entry in self.watched.values():
+            text = json.dumps({'type': 'saved', 'frame': self.frame(), 'file': file, 'projectSaved': saved_state(entry['family'].comp)})
+            for connection in entry['connections']:
+                connection.send(text)
 
     def close(self):
         for connection in list(self.links):

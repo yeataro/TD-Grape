@@ -1,5 +1,5 @@
 import type { Value } from './core';
-import type { UniformStates } from './host';
+import type { ProjectSaved, UniformStates } from './host';
 
 // Live Uniform values (Uniform C, D2; design-interview Q53, uniform-d.md B): a WebSocket to TD, both ways.
 // - To TD: each Uniform's latest value, at most once per frame; while the socket is not open the value
@@ -26,7 +26,7 @@ export type LiveMessage =
   // 編輯器開著時 Grape OP 在 TD 壞了：TD-Grape 說明原因，說一次。
   | { type: 'refused'; frame: number; message: string }
   // The TD project was just saved (Refactor.71): `file` is its file name. TD 專案剛存檔；file 是檔名。
-  | { type: 'saved'; frame: number; file: string };
+  | { type: 'saved'; frame: number; file: string; projectSaved?: ProjectSaved };
 /** The part of a browser WebSocket used here (tests pass a fake). 這裡用到的 WebSocket 介面。 */
 export type LiveSocket = {
   readonly readyState: number; send(text: string): void; close(): void;

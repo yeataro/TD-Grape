@@ -1,5 +1,5 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
-import { GRAPE_ID, HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood } from './host';
+import { GRAPE_ID, HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood, type ProjectSaved } from './host';
 import { tr, TextError, errorText, type Message } from './text';
 import type { Level } from './reports';
 
@@ -15,8 +15,9 @@ export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' 
 // stuck: the Shader in TD stopped at an earlier program after a failed apply, as TD last said (Refactor.63); gone once a
 // program runs again. stuck：套用失敗後 TD 的 Shader 停在較早的程式（TD 最後說的）；程式再次換上就消失。
 export type ShaderStuck = { failure: ShaderFailure; lastKnownGood?: LastKnownGood };
+// saved: the project's last save as TD reports it (Refactor.73). saved：TD 回報的專案上次存檔。
 export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable';
-  retryAt?: number; retryMs?: number; checking?: boolean; stuck?: ShaderStuck };
+  retryAt?: number; retryMs?: number; checking?: boolean; stuck?: ShaderStuck; saved?: ProjectSaved };
 const stuckOf = (state: StateResponse['state']): ShaderStuck | undefined =>
   state.failure ? { failure: state.failure, ...(state.lastKnownGood ? { lastKnownGood: state.lastKnownGood } : {}) } : undefined;
 // What to tell the person and how serious it is (design-interview Q35); sent once, with the
@@ -30,7 +31,28 @@ type Sent = { document: string; revision: number };
 // in the tr() shape (Uniform D1, Q58, Q60). uniforms：各分量的現況；notices：TD-Grape 給人看的訊息。
 // shaderFailure: 'compile' or 'internal' (TD-Grape's own error), so the message says which (Refactor.63).
 type Applied = { state: StateResponse['state']; shaderError?: string | null; shaderFailure?: 'compile' | 'internal' | null;
-  uniforms?: UniformStates; notices?: Message[] };
+  uniforms?: UniformStates; notices?: Message[]; projectSaved?: ProjectSaved };
+/** A save's time as people read it: the clock today, with the date otherwise. 存檔時間：今天只寫時刻，其他天加日期。 */
+export const clockOf = (time: number, now = Date.now()) => {
+  const at = new Date(time), pad = (n: number) => String(n).padStart(2, '0'), clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
+  return at.toDateString() === new Date(now).toDateString() ? clock : (at.getMonth() + 1) + '/' + at.getDate() + ' ' + clock;
+};
+/** After an apply: the editor never saves the TD project, so it says how far the file is behind (Refactor.73, human
+ * 2026-10-10: short). 套用後：編輯器從不自己存 TD 專案，所以說出檔案落後多少（R.73，人類：精簡）。 */
+export function appliedMessage(revision: number, saved?: ProjectSaved): Message {
+  if (saved?.revision != null && saved.time != null)
+    return tr('sync.appliedBehind', 'Applied; last saved r{saved} ({time}), {behind} behind',
+      { saved: saved.revision, time: clockOf(saved.time), behind: revision - saved.revision });
+  if (saved?.time != null) return tr('sync.appliedSavedAt', 'Applied; the project still needs saving (last saved {time})', { time: clockOf(saved.time) });
+  return tr('sync.applied', 'Applied to TD; the project still needs saving');
+}
+/** What a save says, whoever asked for it (Refactor.71, 73): the file and the revision it holds. 存檔說的話（不論誰要求）：檔名與存了哪一版。 */
+export function savedMessage(file: string | null, status: Pick<SyncStatus, 'dirty' | 'saved'>): Message {
+  if (status.dirty) return tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.');
+  const revision = status.saved?.revision;
+  if (file && revision != null) return tr('save.doneAt', 'TD project saved: {file} (r{revision})', { file, revision });
+  return file ? tr('save.done', 'TD project saved: {file}', { file }) : tr('save.doneUnnamed', 'TD project saved');
+}
 export const FORMAT = 'grape-next-1';
 
 // Two parts (design-interview Q38 2-2): the execution part (GLSL + bindings) is applied by TD as a
@@ -119,7 +141,7 @@ export class HostSync {
     private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
     this.confirm(loaded.state.document);
     this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
-    this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready', stuck: stuckOf(loaded.state) };
+    this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready', stuck: stuckOf(loaded.state), saved: loaded.projectSaved };
   }
   get busy() { return !!this.pending; }
   private set({ message, level, ...patch }: Patch) {
@@ -161,7 +183,8 @@ export class HostSync {
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
         this.confirm(sent.document);
-        let message = tr('sync.applied', 'Applied to TD; the project still needs saving'), level: Level = 'info';
+        const saved = result.projectSaved ?? this.status.saved;
+        let message = appliedMessage(result.state.revision, saved), level: Level = 'info';
         if (runtime && result.shaderError) {
           this.failedKey = key; level = 'error';
           // The summary first: the status line shows one line, the whole TD log on hover (Refactor.38).
@@ -180,7 +203,7 @@ export class HostSync {
           level = 'warning';
           message = tr('sync.savedKnownFailure', 'Graph saved to TD; this program failed to compile in TD before, so TD still runs the last good Shader.');
         }
-        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level, stuck: stuckOf(result.state) });
+        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level, stuck: stuckOf(result.state), saved });
         this.onTd?.(result.uniforms, result.notices ?? []);
       } catch (error) {
         if (this.disposed) return;
@@ -275,7 +298,7 @@ export class HostSync {
     }
     this.blocked = false; this.uncertain = undefined;
     const dirty = this.dirtyNow();
-    this.set({ revision: state.revision, dirty, phase: 'ready', link: undefined, stuck: stuckOf(state),
+    this.set({ revision: state.revision, dirty, phase: 'ready', link: undefined, stuck: stuckOf(state), saved: result.projectSaved ?? this.status.saved,
       level: 'info', message: dirty ? tr('sync.reconnectedSending', 'Reconnected; sending your changes.') : tr('sync.reconnected', 'Reconnected.') });
     if (dirty) await this.flush();
   };
@@ -310,10 +333,10 @@ export class HostSync {
   save = async () => {
     await this.flush();
     if (this.status.dirty || this.blocked) throw new TextError(tr('save.pending', 'Some changes have not been applied yet; resolve the errors first.'));
-    const result = await this.host.call<{ saved: boolean | string }>('save', {});
+    const result = await this.host.call<{ saved: boolean | string; projectSaved?: ProjectSaved }>('save', {});
     if (!result.saved) throw new TextError(tr('save.notConfirmed', "TD did not confirm that the project was saved; the applied graph is only in TD's memory."));
-    if (this.status.dirty) return tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.');
-    return typeof result.saved === 'string' ? tr('save.done', 'TD project saved: {file}', { file: result.saved }) : tr('save.doneUnnamed', 'TD project saved');
+    if (result.projectSaved) this.savedInTd(result.projectSaved);
+    return savedMessage(typeof result.saved === 'string' ? result.saved : null, this.status);
   };
   // "Also give this Grape OP a new Grape ID" (Refactor.52, Q63): only once everything is in TD, so the
   // new ID never leaves changes behind. Returns the new ID; switching to it is the shell's.
@@ -325,5 +348,7 @@ export class HostSync {
     if (!GRAPE_ID.test(result.targetId ?? '')) throw new HostError(replyMismatch);
     return result.targetId!;
   };
+  /** TD says the project was saved (Refactor.73). TD 說專案存檔了。 */
+  savedInTd(saved: ProjectSaved) { if (!this.disposed) this.set({ saved }); }
   dispose() { this.disposed = true; clearTimeout(this.timer); clearTimeout(this.recovery); }
 }

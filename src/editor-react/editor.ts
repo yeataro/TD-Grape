@@ -3,7 +3,7 @@ import { core, compiler, requireSupported, parseDocument, type UpgradeChange, ty
   type Declaration, type NameProblem, type ObjectValue } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse, type UniformStates } from './host';
-import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
+import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
@@ -246,8 +246,8 @@ export class Editor {
     // The project was saved in TD (Refactor.71, human 2026-10-10): said as the editor's own save says it; a save this page asked
     // for is said by its reply. 在 TD 存檔了：和編輯器自己存檔說得一樣；這一頁自己要求的存檔由回覆來說。
     if (message.type === 'saved') {
-      if (!this.saving) this.status({ message: this.state.dirty ? tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.')
-        : tr('save.done', 'TD project saved: {file}', { file: message.file }), level: 'info' }, 'td');
+      if (message.projectSaved) this.sync.savedInTd(message.projectSaved);
+      if (!this.saving) this.status({ message: savedMessage(message.file, this.state), level: 'info' }, 'td');
       return;
     }
     if (message.type === 'state') { this.setTd(message.uniforms); return; }

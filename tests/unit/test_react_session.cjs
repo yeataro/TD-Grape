@@ -1053,6 +1053,33 @@ test('the heartbeat is answered or not; a closed live connection is TD unreachab
   assert.equal(session.log.entries().length, count + 1, 'said once, by the reply');
 });
 
+// Refactor.73 (human 2026-10-10): the editor never saves the TD project, so after an apply it says which revision the file
+// holds and how far it is behind, briefly; a save in TD moves that on. R.73：編輯器不會自己存 TD 專案，套用後簡短說出檔案存的是哪一版、
+// 落後多少；在 TD 存檔後跟著更新。
+test('after an apply the editor says how far the saved project is behind; a save in TD moves it on', async t => {
+  const at = new Date(); at.setHours(20, 29, 0, 0);
+  let projectSaved = { revision: 3, time: at.getTime() };
+  const sockets = [];
+  const { session } = open(t, async (action, body, remote) => {
+    if (action === 'state') return { ...remote.get(), projectSaved };
+    remote.set({ document: body.document, revision: body.revision + 1, targetId: target });
+    return { state: remote.get().state, projectSaved };
+  }, 60000, undefined, () => { const each = fakeSocket(); sockets.push(each); return each; });
+  session.addConstant();
+  await session.flush();
+  assert.equal(zh(session.snapshot().message), '已套用；上次存檔 r3（20:29），落後 2 版');
+  sockets[0].readyState = 1; sockets[0].onopen();
+  projectSaved = { revision: 5, time: at.getTime() };
+  sockets[0].onmessage({ data: JSON.stringify({ type: 'saved', frame: 3, file: 'project.toe', projectSaved }) });
+  assert.equal(zh(session.snapshot().message), 'TD 專案已保存：project.toe（r5）');
+  assert.deepEqual(session.snapshot().saved, projectSaved);
+  // Before TD-Grape saw a save, only the time is known. TD-Grape 看到存檔之前只知道時間。
+  projectSaved = { revision: null, time: at.getTime() };
+  session.addConstant();
+  await session.flush();
+  assert.equal(zh(session.snapshot().message), '已套用；專案尚需保存（上次存檔 20:29）');
+});
+
 // Selection (Refactor.49; design-interview Q33, Q39): Ctrl toggles, Shift only adds, plain replaces
 // (a selected node keeps its group); nodes and wires never together; the primary is the last pressed.
 // 選取：Ctrl 切換、Shift 只加選、一般取代（已選的保留整組）；節點與接線不混選；主要＝最後按下的。

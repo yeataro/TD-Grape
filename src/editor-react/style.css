@@ -123,6 +123,7 @@ a { color: var(--accent); }
 .status-now.tone-alarm > strong { color: var(--sync-alarm); } .status-now.tone-unsent > strong { color: var(--sync-unsent); }
 .status-retry { display: flex; align-items: center; gap: 10px; }
 .status-help { font-size: var(--font-md); line-height: var(--line-md); }
+.status-saved { font-size: var(--font-md); line-height: var(--line-md); }
 :is(.title-bar, .foot-bar, .network-bar, .location-bar) .folded { display: none; }
 /* The location bar's file and path: they shrink to an ellipsis first, then fold (69.4); the rest keeps its size.
    網址列的檔名與路徑：先縮成省略號，再收起（69.4）；其他不縮。 */
