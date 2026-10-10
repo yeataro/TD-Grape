@@ -72,9 +72,11 @@ export const single = (components?: readonly number[]) => components?.length ===
  * carries it whole (e.g. "alpha"). The colours are the theme's, under the component-tint switch (style.css).
  * 接孔標籤；字母就是分量時每個字母各帶自己的分量（例如「RG」），單一分量的接孔整個帶（例如「alpha」）。顏色由主題與分量染色開關決定。 */
 export function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
+  // Every letter that names one component takes the letter slot, so X…W and XY / ZW line up down a column (Refactor.76.8,
+  // 76.12); the letters of a name stay one piece, so a row's gap falls only before its type.
+  // 每個代表一個分量的字母都用字母格，X…W、XY／ZW 上下對齊（R.76.8、76.12）；一個名稱的字母是一整塊，列的間距只落在型別前面。
   if (components?.length === text.length && text.length > 1)
-    return <>{[...text].map((letter, i) => <span key={i} className="component-letter" data-component={components[i]}>{letter}</span>)}</>;
-  // A one-letter name takes the letter slot, so X…W line up down a column (Refactor.76.8). 單一字母的名稱用字母格，X…W 上下對齊（R.76.8）。
+    return <span className="component-letters">{[...text].map((letter, i) => <span key={i} className="component-letter letter-slot" data-component={components[i]}>{letter}</span>)}</span>;
   const one = single(components);
   return one === undefined ? <>{text}</> : <span className={'component-letter' + (text.length === 1 ? ' letter-slot' : '')} data-component={one}>{text}</span>;
 }
