@@ -215,6 +215,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-zone-top { border-bottom: 1px solid var(--border); }
 .panel-zone-bottom { border-top: 1px solid var(--border); }
 .tab-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+/* Two panes side by side or one above the other are divided by the same line as a side and the canvas (R.68.1, human: the
+   boundary did not show). 並排或上下相鄰的兩格之間，用和側欄與畫布之間同樣的線分開（R.68.1，人類：看不出邊界）。 */
+.split-column > .pane-slot + .pane-slot { border-top: 1px solid var(--border); }
+.split-row > .pane-slot + .pane-slot { border-left: 1px solid var(--border); }
 /* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
 .panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); background: var(--surface-canvas); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
@@ -302,6 +306,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .drop-corner.tr { right: 0; top: 0; border-right-width: var(--drop-line); border-top-width: var(--drop-line); }
 .drop-corner.bl { left: 0; bottom: 0; border-left-width: var(--drop-line); border-bottom-width: var(--drop-line); }
 .drop-corner.br { right: 0; bottom: 0; border-right-width: var(--drop-line); border-bottom-width: var(--drop-line); }
+.drop-slots { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; gap: var(--drop-slot-gap); }
+.drop-slot { width: var(--drop-slot); height: var(--drop-slot); border-radius: var(--drop-line); background: var(--surface-control); }
+.drop-slot.at { background: var(--drop-target); }
 .drag-label, .drop-refusal { position: fixed; z-index: 31; pointer-events: none; padding: 4px 10px; border-radius: var(--radius-control);
   font-size: var(--font-sm); line-height: var(--line-sm); white-space: nowrap; }
 .drag-label { border: 1px solid var(--border-control); background: var(--surface-raised); color: var(--text-strong); opacity: .9; }

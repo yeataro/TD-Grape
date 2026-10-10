@@ -162,16 +162,21 @@ function TabPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 'tab
 }
 
 // Where a panel would go, worked out from what is under the pointer (legacy inspector.js:2314; human 2026-10-10, Resolume
-// Wire): on a tab bar, between two tabs (a line); on a tab pane, its middle joins it as a tab (corner marks) and its upper or
-// lower part makes a new pane on that edge (a line on the edge, so the lower part of one pane and the upper part of the next
-// mean the same boundary — the "between" target is easy to hit); on the canvas, its top or bottom band makes a pane above or
-// below it, its left or right band puts the panel on that side when nothing shows there. Nothing else is a target.
+// Wire): on a tab bar, between two tabs (a line); on a tab pane, its middle joins it as a tab (corner marks), at the place
+// chosen by where the pointer is across the pane (a row of slots in the middle, one per tab it will have; R.68.1, Wire), and
+// its upper or lower part makes a new pane on that edge (a line on the edge, so the lower part of one pane and the upper part
+// of the next mean the same boundary — the "between" target is easy to hit); on the canvas, its top or bottom band makes a
+// pane above or below it, its left or right part — as wide as the side it would make (R.68.1, human: the edge was too hard
+// to hit) — puts the panel on that side when nothing shows there. Nothing else is a target.
 // 放到哪，由游標下方是什麼決定（舊產品；人類 10-10，Resolume Wire）：分頁列上＝兩個分頁之間（直線）；分頁窗格中間＝合併成分頁
-// （角框），上段或下段＝在那條邊切出新的一格（邊上一條線，所以上一格的下段和下一格的上段是同一個交界，「中間」好觸發）；畫布的上下帶＝
-// 在畫布上方或下方切一格，左右帶＝那一側沒東西顯示時放到那一側。其他地方都不是目標。
+// （角框），位置看游標在窗格寬度的哪一段（中央一排格子，放下後有幾個分頁就幾格；R.68.1，Wire），上段或下段＝在那條邊切出新的一格
+// （邊上一條線，所以上一格的下段和下一格的上段是同一個交界，「中間」好觸發）；畫布的上下帶＝在畫布上方或下方切一格，左右兩塊——
+// 和放下後那一側一樣寬（R.68.1，人類：邊緣太難放）——＝那一側沒東西顯示時放到那一側。其他地方都不是目標。
 // A line is drawn centred on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊的正中，粗細由主題決定。
 const EDGE = .3, BAND = 56;
-type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; width?: number; height?: number };
+type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; width?: number; height?: number;
+  /** Joining as a tab: how many tabs the pane will have, and which one this is. 合併成分頁：會有幾個分頁、這是第幾個。 */
+  slots?: { count: number; at: number } };
 type Hint = { drop: Drop; mark: Mark; refused?: Message } | null;
 const across = (box: DOMRect, y: number): Mark => ({ kind: 'across', left: box.left, top: y, width: box.width });
 const along = (box: { top: number; height: number }, x: number): Mark => ({ kind: 'along', left: x, top: box.top, height: box.height });
@@ -202,8 +207,13 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
         ? !canvas || canvas.height - tree.PANE_HEIGHT >= tree.CANVAS_MIN_HEIGHT : box.height / 2 >= tree.PANE_MIN;
       return { drop: { kind: 'beside', pane: path, edge }, mark: across(box, edge === 'top' ? box.top : box.bottom), refused: fits ? undefined : noRoom };
     }
-    if (own) return null;
-    return { drop: { kind: 'tab', pane: path, index: pane.panels.length }, mark: { kind: 'frame', left: box.left, top: box.top, width: box.width, height: box.height } };
+    // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
+    // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
+    const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
+    if (!others.length) return null;
+    const count = others.length + 1, at = Math.max(0, Math.min(count - 1, Math.floor((x - box.left) / box.width * count)));
+    const index = at < others.length ? pane.panels.indexOf(others[at]!) : pane.panels.length;
+    return { drop: { kind: 'tab', pane: path, index }, mark: { kind: 'frame', left: box.left, top: box.top, width: box.width, height: box.height, slots: { count, at } } };
   }
   if (pane?.kind === 'canvas') {
     if (y - box.top < BAND || box.bottom - y < BAND) {
@@ -211,11 +221,12 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
       return { drop: { kind: 'beside', pane: path, edge }, mark: across(box, edge === 'top' ? box.top : box.bottom), refused: fits ? undefined : noRoom };
     }
     for (const side of ['left', 'right'] as const) {
-      const near = side === 'left' ? x - box.left < BAND : box.right - x < BAND;
-      if (!near || (layout.hasPanels(side) && !layout.closed[side])) continue;
-      // What the side will take: its width when it is there but closed, a new side's width otherwise. 那一側會佔的寬。
+      if (layout.hasPanels(side) && !layout.closed[side]) continue;
+      // What the side will take: its width when it is there but closed, a new side's width otherwise; the part of the canvas
+      // that means "that side" is as wide, but leaves the middle free. 那一側會佔的寬；畫布上代表那一側的範圍一樣寬，但留下中間。
       const root = layout.root, there = root.kind === 'split' ? root.children.findIndex((_, index) => tree.sideOf(root, index) === side) : -1;
-      const width = root.kind === 'split' && there >= 0 ? root.sizes[there]! : tree.SIDE_WIDTH;
+      const width = root.kind === 'split' && there >= 0 ? root.sizes[there]! : tree.SIDE_WIDTH, reach = Math.min(width, box.width * .4);
+      if (side === 'left' ? x - box.left >= reach : box.right - x >= reach) continue;
       return { drop: { kind: 'side', side }, mark: along(box, side === 'left' ? box.left : box.right),
         refused: box.width - width >= tree.CANVAS_MIN_WIDTH ? undefined : noRoom };
     }
@@ -259,7 +270,9 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
   const mark = drag.hint?.mark;
   return createPortal(<>
     {mark && <div className={'drop-mark ' + mark.kind + (drag.hint!.refused ? ' refused' : '')} style={{ left: mark.left, top: mark.top, width: mark.width, height: mark.height }}>
-      {mark.kind === 'frame' && ['tl', 'tr', 'bl', 'br'].map(corner => <span key={corner} className={'drop-corner ' + corner} />)}</div>}
+      {mark.kind === 'frame' && ['tl', 'tr', 'bl', 'br'].map(corner => <span key={corner} className={'drop-corner ' + corner} />)}
+      {mark.slots && <span className="drop-slots">{Array.from({ length: mark.slots.count }, (_, index) =>
+        <span key={index} className={'drop-slot' + (index === mark.slots!.at ? ' at' : '')} />)}</span>}</div>}
     <div className="drag-label" style={{ left: drag.x + 14, top: drag.y + 10 }}>{say(panels[drag.panel]?.title ?? drag.panel)}</div>
     {drag.hint?.refused && <div className="drop-refusal" style={{ left: drag.x + 14, top: drag.y + 40 }}>{say(drag.hint.refused)}</div>}
   </>, document.body);
