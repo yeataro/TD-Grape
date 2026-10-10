@@ -13,6 +13,16 @@ body { margin: 0; }
    dvh follows the bars and a resized window (an iPad window). 頁面和現在看得到的一樣高（R.73.3，同舊產品的 1dvh）：手機上 100vh
    是瀏覽器列收起時的高度，列出現時底列被壓在下方工具列後面、整頁還能捲（人類 10-10）。dvh 跟著瀏覽器列與視窗大小（iPad 視窗）。 */
 #root { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+/* Only information can be selected (Refactor.75.19, human 2026-10-11; legacy kept only the canvas and drags from it): the
+   interface's own parts cannot, so a press or drag never paints a selection over them; what people read or copy (the GLSL,
+   the logs and status, a notice's text, a node's description) and every field can. One rule and one list: a new part is
+   unselectable without remembering to say so. 只有資訊可以選取（R.75.19，人類；舊產品只關了畫布與拖曳）：介面零件不能選，
+   按或拖不會在上面塗出選取；要讀、要複製的（GLSL、紀錄與狀態、提示的內容、節點的說明）與所有輸入框可以。一條規則加一張清單：
+   新的零件不用記得說就不能選。 */
+body { -webkit-user-select: none; user-select: none; }
+:is(input, textarea, [contenteditable="true"], .glsl-code, .glsl-failure, .glsl-log, .log-list, .status-now, .floating-notice,
+  .create-details, .add-node-details, .tuning-changed) { -webkit-user-select: text; user-select: text; }
+:is(.status-now, .floating-notice, .add-node-details) button { -webkit-user-select: none; user-select: none; }
 /* The page before the editor's code has loaded (index.html): the waiting mark in the middle. 程式載入前的頁面：中央的等待標誌。 */
 .boot-screen { flex: 1; display: grid; place-items: center; }
 .boot-screen .brand-mark { width: var(--loading-mark); height: var(--loading-mark); }
