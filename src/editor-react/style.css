@@ -87,14 +87,16 @@ a { color: var(--accent); }
 /* A text button in the location and foot bars (e.g. Retry connection) has a fill, so it keeps a gap off the bar's edges
    like the title bar's; icon buttons have no fill and keep their size (human 2026-10-09).
    網址列與底列的文字按鈕（例如 Retry connection）有底色，所以和標題列一樣離列的上下邊緣留空隙；圖示按鈕沒有底色，大小不變（人類）。 */
-:is(.location-bar, .foot-bar) button:not(.icon-button) { height: var(--control-height); padding-block: 0; margin-inline: var(--bar-text-gap); }
+/* The sync light and the latest message have no fill, so they take no gap (R.70.5: the light's own "no margin" never won
+   against this rule). 同步燈號與最新訊息沒有底色，不留空隙（R.70.5：燈號自己的「不要外距」一直沒贏過這條）。 */
+:is(.location-bar, .foot-bar) button:not(.icon-button, .sync-light, .foot-message) { height: var(--control-height); padding-block: 0; margin-inline: var(--bar-text-gap); }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
 /* Each piece of the line (tagline, version, About) folds on its own (Refactor.69). 這一行的每一塊（副標題、版號、About）各自收起。 */
 .brand-line > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 /* A part of the title bar folded away as it narrows (bars.tsx useFolding). 標題列變窄時收起的部分。 */
 /* The sync light (Refactor.70.1, human 2026-10-10): a dot in the state's colour, the revision and a short word; the dot pulses
    while something is on its way. 同步燈號：狀態色的圓點、版號、簡短的字；有東西在路上時圓點會閃。 */
-.sync-light { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 0 4px; border: 0; background: none; color: inherit;
+.sync-light { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 0 4px; border: 0; background: none; color: inherit;
   white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sync-light.tone-normal { --tone: var(--sync-ok); } .sync-light.tone-unsent { --tone: var(--sync-unsent); }
 .sync-light.tone-alarm { --tone: var(--sync-alarm); } .sync-light.tone-none { --tone: var(--sync-none); }
@@ -113,7 +115,7 @@ a { color: var(--accent); }
 @keyframes sync-pulse { 50% { opacity: .3; } }
 .sync-word { color: var(--text-muted); }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
-.foot-bar .sync-light { margin-inline: 0; padding: 0 2px; }
+.foot-bar .sync-light { height: var(--control-height); padding: 0 2px; }
 .log-entry.ok span { color: var(--sync-ok); }
 /* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
 .status-now { display: flex; flex-direction: column; gap: 6px; padding: 4px 6px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
@@ -140,6 +142,7 @@ a { color: var(--accent); }
 /* A line of text that opens the history: no padding above or below, so it never makes the bar (and the page) taller
    (human 2026-10-09: the whole page had a scrollbar, 1px). 可以點的一行字：上下不留內距，不會把底列（和整頁）撐高（人類：整頁多了捲軸，差 1px）。 */
 .foot-message { flex: 0 1 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-block: 0;
+  height: var(--control-height); padding-inline: 4px; /* tighter, R.70.5 (human: the gaps were too wide) 排緊一點（人類：間隔太寬） */
   background: none; border-color: transparent; color: var(--message, var(--text)); }
 /* No hover frame on the message (R.70.4, human 2026-10-10: it looked odd). 訊息滑過時不加外框（人類：看起來怪）。 */
 .foot-message:hover { background: none; border-color: transparent; }
