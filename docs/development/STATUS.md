@@ -58,6 +58,11 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.74.1 舊翻譯檔不再送進網頁；只留真的用到的節點文字**（人類 10-10：新畫面的文字都是新寫的，不該在舊檔上改、讓前端整包帶入；把真的用到的抽出來，舊檔當 agent 的參考文件，不是建置時去拆）：
+  - 一次性抽出新編輯器**畫面上真的會顯示**的 40 則英文（來源分類、預設來源名稱、Math／Vector／Convert／Compare 的控制項與「＋ 新增接孔」等）到 `src/editor-react/static/node-texts.json`（1.6 KB，壓縮後 934 B）；前端改讀它。舊的 `locales.json`（1.2 MB、5 種語言、1617 則）移到 `docs/reference/legacy-locales.json`，只當參考、不建置不送出（`docs/reference/README.md`）。
+  - 節點說明（`help.*`，55 則）核心有寫代號，但編輯器還沒有顯示說明的地方（`descriptionKey` 沒人讀），所以不搬；做節點說明時再從參考檔抄。其中 3 個節點（Declaration、Force Compile Error、TD 內建值）的說明舊檔本來就沒有，到時要新寫。
+  - 守門測試 `test_node_texts.cjs`：每則都還被核心用到且有英文；核心用到這幾組的代號都有文字（缺了就說去參考檔抄或新寫）；舊檔不在 static、前端不讀它。
+  - 驗證：editor 100、`check:editor`；建置輸出不再有 `locales.json`；內建瀏覽器：只抓 `node-texts.json`，畫面（含展開的新增節點清單、提示文字）沒有任何代號露出，「Input type」「Common Sources」照常顯示。
 - **Refactor.74 網頁檔壓縮後送出**（人類 10-10：手機用行動網路開頁很久；同意先試壓縮，建置時壓、不在服務啟動或每次請求時壓）：
   - 建置時每個文字檔（html、js、css、json、webmanifest、svg、txt）另產生 `name.gz`（gzip 最高壓縮）。編輯服務讀檔時檢查：壓縮版解開必須和原檔一模一樣，否則拒絕；只有壓縮版時（VFS 只放壓縮版）在記憶體解開，Manager 等其他地方照舊讀原內容。瀏覽器說接受 gzip 就原樣送壓縮版（`Content-Encoding: gzip`、`Vary: Accept-Encoding`），由瀏覽器解開；不接受（或 `q=0`）就送原檔。TD 不做任何壓縮。
   - 打包進 VFS（`UpdateEmbedded`／`Deliver`）時，有壓縮版的檔只放壓縮版：VFS 2455 KB → 629 KB。

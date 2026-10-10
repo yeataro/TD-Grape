@@ -17,7 +17,7 @@
   "icon-48.png": "src/editor-react/static/icons/icon-48.png",
   "icon-512.png": "src/editor-react/static/icons/icon-512.png",
   "icon-64.png": "src/editor-react/static/icons/icon-64.png",
-  "locales.json": "src/editor-react/static/locales.json",
+  "node-texts.json": "src/editor-react/static/node-texts.json",
   "manifest.webmanifest": "src/editor-react/static/manifest.webmanifest",
   "source_catalog.json": "src/library/source_catalog.json",
   "material_presets.json": "src/library/material_presets.json",

@@ -531,12 +531,15 @@ async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
   sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
   // The shell needs no Grape OP to start (Refactor.51). 外殼開啟不需要 Grape OP。
-  const [files, locales, build] = await Promise.all([
+  // Node texts the core names by key (help, source groups, control labels): only the ones in use, in English (Refactor.74.1,
+  // human 2026-10-10; the legacy translation file is a reference in docs/reference, not loaded).
+  // 核心用代號指名的節點文字（說明、來源分類、控制項名稱）：只有用到的、英文（R.74.1，人類；舊翻譯檔放在 docs/reference 當參考，不載入）。
+  const [files, nodeTexts, build] = await Promise.all([
     fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
-    fetch('/locales.json').then(response => response.json()),
+    fetch('/node-texts.json').then(response => response.json()) as Promise<Record<string, string>>,
     fetch('/build-info.json').then(response => response.json()),
   ]);
-  const text = (key: string) => locales.messages?.[key]?.en ?? key;
+  const text = (key: string) => nodeTexts[key] ?? key;
   createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider>
     <Root token={token} bootstrap={files} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }

@@ -2,7 +2,7 @@
 
 自 Refactor.24 起是唯一的編輯器入口；舊入口已移除（Refactor.25）。目前能打開 TOP／pixel 的 52 個常用節點（`supportedDefinitions`）；新增選單由核心決定（`creatableDefinitions`：扣掉已淘汰 `float`／`vec2`／`vec3`／`vec4` 與 Color Output）。不含 Uniform、子圖、Frame。
 
-Grape OP 的 Edit 打開 `/shader/<Grape OP id>/`（`/?target=<id>` 亦可）。頁面是 [index.html](index.html)；靜態檔（文字 `locales.json`、圖示、manifest）在 [static/](static)；核心產物在 [src/generated/](../generated)；產品版本在 [src/version.json](../version.json)。建置把三者都放在網址根目錄。不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
+Grape OP 的 Edit 打開 `/shader/<Grape OP id>/`（`/?target=<id>` 亦可）。頁面是 [index.html](index.html)；靜態檔（節點文字 `node-texts.json`、圖示、manifest；舊翻譯檔只在 [docs/reference](../../docs/reference) 當參考，不送出）在 [static/](static)；核心產物在 [src/generated/](../generated)；產品版本在 [src/version.json](../version.json)。建置把三者都放在網址根目錄。不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
 
 ## 找責任入口
 
