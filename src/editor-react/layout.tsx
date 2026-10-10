@@ -27,7 +27,7 @@ function stored(): LayoutData {
 }
 
 export type Layout = LayoutData & {
-  toggleTitleBar(): void; toggleSide(side: Side): void;
+  toggleTitleBar(): void; toggleSide(side: Side): void; closeSide(side: Side): void;
   /** Whether a side has panels to show (its toggle is greyed out otherwise). 那一側有沒有面板可顯示。 */
   hasPanels(side: Side): boolean;
   /** Bring a panel forward: shown, its tab chosen, its side opened. 把面板叫到前面：顯示、選中、打開所在那一側。 */
@@ -45,6 +45,7 @@ export function useLayout(): Layout {
   return useMemo(() => ({ ...data,
     toggleTitleBar: () => setData(old => ({ ...old, titleBar: !old.titleBar })),
     toggleSide: side => setData(old => ({ ...old, closed: { ...old.closed, [side]: !old.closed[side] } })),
+    closeSide: side => setData(old => old.closed[side] ? old : { ...old, closed: { ...old.closed, [side]: true } }),
     hasPanels: side => tree.sideHasPanels(data, side),
     show: id => setData(old => tree.showPanel(old, id)),
     togglePanel: id => setData(old => old.hidden.includes(id) ? tree.showPanel(old, id) : tree.hidePanel(old, id)),
@@ -139,6 +140,21 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
     const moved = Math.max(limit - a, Math.min(b - limit, share));
     next[before] = a + moved; next[after] = b - moved; layout.resize(path, next);
   };
+  // The outermost row keeps the canvas its minimum whenever the layout or the window changes (layout_tree sideToClose); a
+  // side that was just opened is the one that stays. 最外層在版面或視窗改變時替畫布保住最小寬度；剛打開的那一側留著。
+  const wasOpen = useRef<Record<Side, boolean> | null>(null);
+  useLayoutEffect(() => {
+    if (!root || !element.current) return;
+    const observer = new ResizeObserver(() => {
+      const now = { left: tree.sideOpen(layout, 'left'), right: tree.sideOpen(layout, 'right') }, before = wasOpen.current;
+      wasOpen.current = now;
+      const opened = before ? (['left', 'right'] as const).find(side => now[side] && !before[side]) ?? null : null;
+      const closing = tree.sideToClose(layout, element.current?.clientWidth ?? 0, opened);
+      if (closing) layout.closeSide(closing);
+    });
+    observer.observe(element.current);
+    return () => observer.disconnect();
+  }, [root, layout]);
   const axis = row ? 'x' : 'y';
   const label = row ? tr('layout.resizeZone', 'Resize the panel zone') : tr('layout.resizeGroups', 'Resize the panels above and below');
   // A part next to the canvas is a panel zone, named by the canvas edge it lies on (its line and shadows); others are plain.
@@ -155,7 +171,10 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
         : <ResizeHandle axis={axis} label={label} onStart={startShare} onMove={delta => moveShare(before.index, index, delta)} />);
       const trail = after && holdsCanvas && index < centre && <ResizeHandle axis={axis} edge="trail" label={label}
         onStart={() => startPixels(index)} onMove={delta => movePixels(index, delta)} />;
-      const flex: CSSProperties = holdsCanvas ? { flex: index === centre ? '1 1 0' : `0 0 ${pane.sizes[index]}px` } : { flex: `${pane.sizes[index] ?? 1} 1 0` };
+      // Next to the canvas, parts give way before the canvas goes below its minimum (one side on a narrow screen).
+      // 畫布旁的格子先讓，畫布不會小於最小值（窄畫面上只開一側時）。
+      const flex: CSSProperties = !holdsCanvas ? { flex: `${pane.sizes[index] ?? 1} 1 0` } : index !== centre ? { flex: `0 1 ${pane.sizes[index]}px` }
+        : { flex: '1 0 0', [row ? 'minWidth' : 'minHeight']: row ? tree.CANVAS_MIN_WIDTH : tree.CANVAS_MIN_HEIGHT };
       return <div key={keyOf(child)} className={zone(index)} style={flex} data-pane={[...path, index].join('.')} data-kind={child.kind}>
         {lead}<PaneView pane={child} path={[...path, index]} context={context} />{trail}
       </div>;

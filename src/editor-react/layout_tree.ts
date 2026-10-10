@@ -33,9 +33,10 @@ export type PanelDefaults = readonly (readonly [id: string, side: Side, first?: 
 /** Where a tab pane sits: indices from the root. 窗格的位置：從根往下的索引。 */
 export type Path = readonly number[];
 
-// Sizes in pixels (tentative, human 2026-10-09: to be tuned; a side at least 300, R.53). 像素尺寸（暫定，可調）。
+// Sizes in pixels (tentative, human 2026-10-09: to be tuned; a side at least 300, R.53; the canvas's minimum smaller, R.68.5).
+// 像素尺寸（暫定，可調；一側至少 300；畫布最小值調小，R.68.5）。
 export const SIDE_WIDTH = 380, SIDE_MIN = 300, SIDE_MAX = 900, PANE_HEIGHT = 240, PANE_MIN = 120, PANE_MIN_WIDTH = 160,
-  CANVAS_MIN_WIDTH = 320, CANVAS_MIN_HEIGHT = 200;
+  CANVAS_MIN_WIDTH = 200, CANVAS_MIN_HEIGHT = 160;
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export const hasCanvas = (pane: Pane): boolean => pane.kind === 'canvas' || (pane.kind === 'split' && pane.children.some(hasCanvas));
@@ -60,6 +61,33 @@ export function sideOf(root: Pane, index: number): Side | null {
 /** Whether a side has anything to show (its toggle is greyed out otherwise). 那一側有沒有東西（沒有就讓開關變灰）。 */
 export const sideHasPanels = (layout: LayoutData, side: Side) => layout.root.kind === 'split'
   && layout.root.children.some((child, index) => sideOf(layout.root, index) === side && shown(child, layout.hidden));
+/** Whether a side is on screen: it has panels and is not closed. 那一側在畫面上：有面板、沒收起。 */
+export const sideOpen = (layout: LayoutData, side: Side) => sideHasPanels(layout, side) && !layout.closed[side];
+
+/** How wide the canvas would be in a layout `width` wide, by the sizes kept: on its way down from the outermost row, every
+ * part shown beside it in a row takes its pixels. 版面寬 width 時畫布會有多寬（照記下的大小）：從最外層往下，每個左右分割裡
+ * 畫布旁顯示的格子各拿走它的像素。 */
+export function canvasWidth(layout: LayoutData, width: number): number {
+  let rest = width, pane = layout.root;
+  while (pane.kind === 'split') {
+    const centre = pane.children.findIndex(hasCanvas), split = pane;
+    if (split.direction === 'row') split.children.forEach((child, index) => {
+      const side = split === layout.root ? sideOf(split, index) : null;
+      if (index !== centre && shown(child, layout.hidden) && !(side && layout.closed[side])) rest -= split.sizes[index] ?? 0;
+    });
+    pane = split.children[centre]!;
+  }
+  return rest;
+}
+/** The canvas always keeps its minimum (human 2026-10-10; it holds the side toggles). With both sides open and too little room,
+ * one closes: the one that was already open when the other was just opened (legacy: on a narrow screen, opening the right
+ * closes the left), else the right. With one side open there is nothing to close; it narrows on screen instead.
+ * 畫布永遠保有最小寬度（人類 10-10；左右開關在它上面）。兩側都開、空間不夠時關掉一側：剛打開另一側時，關掉原本開著的那側（舊產品：
+ * 窄畫面上開右邊會關掉左邊），否則關右側。只開一側時沒有可關的，改在畫面上變窄。 */
+export function sideToClose(layout: LayoutData, width: number, opened: Side | null): Side | null {
+  if (canvasWidth(layout, width) >= CANVAS_MIN_WIDTH || !sideOpen(layout, 'left') || !sideOpen(layout, 'right')) return null;
+  return opened === 'right' ? 'left' : 'right';
+}
 
 /** Drop empty tab panes and empty splits, and put a split of one part in that part's place; the outermost row stays (the
  * sides are read from it). 拿掉空的窗格與分割，只剩一格的分割換成那一格；最外層保留（左右側從它算）。 */
