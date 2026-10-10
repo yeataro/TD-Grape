@@ -182,6 +182,8 @@
   --surface-pressed: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 14%);
   --surface-pressed-mode: color-mix(in srgb, var(--palette-ink), var(--palette-select-green) 14%);
   --surface-floating: color-mix(in srgb, var(--surface-zone) 90%, transparent);
+  /* A glass panel lets the canvas show through, blurred (R.75.22). 玻璃面板：透出模糊的畫布。 */
+  --surface-glass: color-mix(in srgb, var(--surface-raised) 72%, transparent);
   /* Scrollbars as the legacy dark theme (style.css:299), on every scroll area (human 2026-10-09).
      捲軸照舊產品深色主題，套到所有捲動區（人類）。 */
   --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-zone));

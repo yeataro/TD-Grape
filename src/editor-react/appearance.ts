@@ -34,9 +34,16 @@ let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : '
 // Component tint (Refactor.59; Q67: one switch for legacy's rgbaComponentTint and vectorComponentTint, on by default).
 // 分量染色（Q67：舊產品兩個開關合成一個，預設開）。
 let componentTint = browser ? readChoice('appearance.componentTint', ['on', 'off'], 'on') === 'on' : true;
-// Motion (Refactor.75.21; design-interview Q70): fades follow the system's "reduce motion" unless this asks for them always.
-// 動態效果（R.75.21；Q70）：淡入跟隨系統的「減少動態效果」，除非這裡選一律播放。
-let motionAlways = browser ? readChoice('appearance.motion', ['system', 'always'], 'system') === 'always' : false;
+// Effects that follow a system setting unless told otherwise (Refactor.75.21, 75.22; design-interview Q70; human 2026-10-11:
+// follow the system, always on or always off): fades follow "reduce motion", the glass "reduce transparency".
+// 跟隨系統設定、也可以指定的效果（R.75.21、75.22；Q70；人類：跟隨系統、一律開、一律關）：淡入跟「減少動態效果」，玻璃跟「減少透明度」。
+export type Follow = 'system' | 'on' | 'off';
+export const follows: readonly { value: Follow; label: Message }[] = [
+  { value: 'system', label: tr('appearance.followSystem', 'Follow the system') }, { value: 'on', label: tr('appearance.alwaysOn', 'Always on') },
+  { value: 'off', label: tr('appearance.alwaysOff', 'Always off') }];
+const effects = { motion: browser ? readChoice<Follow>('appearance.motion', ['system', 'on', 'off'], 'system') : 'system' as Follow,
+  glass: browser ? readChoice<Follow>('appearance.glass', ['system', 'on', 'off'], 'system') : 'system' as Follow };
+export type Effect = keyof typeof effects;
 // Trial switches for shadows (human 2026-10-09 A/B): layered small shadows, the canvas's inner shadow, shadows on source
 // cards. Chosen ones stay and the switches go once decided. 陰影的試驗開關（人類 A/B）：層疊微陰影、畫布內陰影、來源卡片陰影；
 // 決定後留下選中的、拿掉開關。
@@ -54,20 +61,21 @@ function apply() {
   document.documentElement.dataset.size = size;
   document.documentElement.dataset.ports = ports;
   document.documentElement.dataset.componentTint = componentTint ? 'on' : 'off';
-  document.documentElement.dataset.motion = motionAlways ? 'always' : 'system';
+  document.documentElement.dataset.motion = effects.motion;
+  document.documentElement.dataset.glass = effects.glass;
   for (const [key, on] of Object.entries(shadows)) document.documentElement.dataset['shadow' + key[0]!.toUpperCase() + key.slice(1)] = on ? 'on' : 'off';
 }
 apply();
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}/${Number(motionAlways)}/${Object.values(shadows).map(Number).join('')}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}/${effects.motion}/${effects.glass}/${Object.values(shadows).map(Number).join('')}`;
 export const componentTintOn = () => componentTint;
 export function setComponentTint(on: boolean) {
   if (on !== componentTint) { componentTint = on; writePreference('appearance.componentTint', on ? 'on' : 'off'); changed(); }
 }
-export const motionAlwaysOn = () => motionAlways;
-export function setMotionAlways(on: boolean) {
-  if (on !== motionAlways) { motionAlways = on; writePreference('appearance.motion', on ? 'always' : 'system'); changed(); }
+export const effectOf = (effect: Effect) => effects[effect];
+export function setEffect(effect: Effect, next: Follow) {
+  if (effects[effect] !== next) { effects[effect] = next; writePreference('appearance.' + effect, next); changed(); }
 }
 export const shadowOn = (key: ShadowTrial) => shadows[key];
 export function setShadow(key: ShadowTrial, on: boolean) {

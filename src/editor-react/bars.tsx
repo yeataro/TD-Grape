@@ -6,7 +6,7 @@ import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
 import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, motionAlwaysOn, setMotionAlways, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
@@ -379,7 +379,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
       <ComponentTint />
-      <MotionAlways />
+      <Effects />
     </PopoverButton></span>
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
@@ -436,7 +436,7 @@ function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
   const saved = last?.time == null ? null : last.revision == null ? tr('status.lastSavedAt', 'Last saved: {time}', { time: clockOf(last.time) })
     : tr('status.lastSaved', 'Last saved: r{revision} ({time})', { revision: last.revision, time: clockOf(last.time) });
   const clock = clockTime;
-  return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
+  return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel glass" onClose={onClose}>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
     <div {...list}>{records.map((record, i) => <div key={i}
       className={'log-entry' + (record.kind === 'offline' && (record.link === 'deleted' || record.link === 'reloading') ? ' warning'
@@ -491,7 +491,7 @@ const HISTORY = 100; // tentative (human 2026-10-09: "within some number of past
 function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries: readonly Report[]; onClose(): void }) {
   const list = useHistoryList(entries);
   const shown = entries.slice(-HISTORY);
-  return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history" onClose={onClose}>
+  return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history glass" onClose={onClose}>
     <div {...list}>{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
       <time>{clockTime(entry.time)}</time><span>{say(entry.message)}</span></div>)
       : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
@@ -513,12 +513,17 @@ const SettingsRow = ({ label, children }: { label: Message; children: ReactNode 
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
 // Component tint (Refactor.59; Q67): ports, labels and wires of one component take its colour. 分量染色：單一分量的接孔、標籤、接線用分量色。
 
-/** Fades always, whatever the system says about reducing motion (Refactor.75.21, human 2026-10-11; in the gear while it is
- * not yet decided where such settings go). 一律播放淡入，不管系統的減少動態設定（R.75.21，人類；還沒定放哪的設定先放齒輪）。 */
-function MotionAlways() {
+/** Fades and the glass: follow the system, always on or always off (Refactor.75.21, 75.22, human 2026-10-11; in the gear while it
+ * is not yet decided where such settings go). 淡入與玻璃：跟隨系統、一律開、一律關（R.75.21、75.22，人類；還沒定放哪的設定先放齒輪）。 */
+function Effects() {
   useSyncExternalStore(appearanceSubscribe, appearance);
-  return <label className="check"><input type="checkbox" checked={motionAlwaysOn()} onChange={event => setMotionAlways(event.target.checked)} />
-    {say(tr('toolbar.motionAlways', "Always play fades (ignore the system's reduce motion)"))}</label>;
+  const options = follows.map(item => ({ value: item.value, label: say(item.label) }));
+  return <>
+    <SettingsRow label={tr('appearance.fades', 'Fades')}>
+      <Select label={tr('appearance.fades', 'Fades')} value={effectOf('motion')} onChange={next => setEffect('motion', next)} options={options} /></SettingsRow>
+    <SettingsRow label={tr('appearance.glass', 'Glass')}>
+      <Select label={tr('appearance.glass', 'Glass')} value={effectOf('glass')} onChange={next => setEffect('glass', next)} options={options} /></SettingsRow>
+  </>;
 }
 
 function ComponentTint() {

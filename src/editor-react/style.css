@@ -137,8 +137,15 @@ a { color: var(--accent); }
    只報例行消息的新文字淡入（R.75.20，人類：少拉走視線）；警告、錯誤、數字立刻換。系統要求減少動態時不播（Q70）。 */
 .fade-in { animation: text-in var(--text-fade) ease-out; }
 @keyframes text-in { from { opacity: 0; } }
-/* Off when the system asks for less motion, unless the gear says always (R.75.21). 系統要求減少動態時不播，除非齒輪選了一律播放。 */
-@media (prefers-reduced-motion: reduce) { :root:not([data-motion="always"]) .fade-in { animation: none; } }
+/* The gear decides: follow the system's "reduce motion", always on, always off (R.75.21–22). 齒輪決定：跟隨系統、一律開、一律關。 */
+:root[data-motion="off"] .fade-in { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .fade-in { animation: none; } }
+/* Glass, tried on two panels only (Refactor.75.22, human 2026-10-11: the status panel and the message history): the canvas
+   shows through, blurred. Follows the system's "reduce transparency" unless the gear says always on or off.
+   玻璃效果，先試兩個面板（R.75.22，人類：狀態面板與訊息歷史）：透出模糊的畫布。跟隨系統的「減少透明度」，除非齒輪指定一律開或關。 */
+:root:is([data-glass="system"], [data-glass="on"]) .glass { background: var(--surface-glass); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-glass="system"] .glass { background: var(--surface-raised); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
 .foot-bar .sync-light { height: var(--control-height); padding: 0 2px; }
 .log-entry.ok span { color: var(--sync-ok); }

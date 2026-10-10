@@ -27,9 +27,14 @@ test('only preferences.ts uses localStorage', () => {
 // keyframes 只改便宜或只用在小元素上的屬性。
 test('animations stay on the element itself', () => {
   const css = fs.readFileSync(path.join(web, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const rootAnimated = [...css.matchAll(/(^|})\s*([^{}]*)\{([^{}]*)\}/g)]
-    .filter(([, , selector, body]) => /(^|[\s,])(:root|html|body)(?![\w-])/.test(selector) && /(^|;|\s)animation(-name)?\s*:/.test(body))
-    .map(([, , selector]) => selector.trim());
+  // Each rule is read on its own; the closing brace is looked behind, not used up, so no rule is skipped (audit 10-11).
+  // 每條規則各自讀；結尾的大括號只往回看、不吃掉，才不會跳過下一條。
+  const rootAnimated = [...css.matchAll(/(?<=^|})\s*([^{}]*)\{([^{}]*)\}/g)]
+    // What a selector styles is its last part: ":root[data-motion=off] .fade-in" styles .fade-in, not the root (R.75.22).
+    // 選擇器樣式化的是最後一段：「:root[...] .fade-in」改的是 .fade-in，不是根元素。
+    .filter(([, selector, body]) => selector.split(',').some(each => /^(:root|html|body)(?![\w-])/.test(each.trim().split(/[\s>+~]+/).pop()))
+      && /(^|;|\s)animation(-name)?\s*:/.test(body))
+    .map(([, selector]) => selector.trim());
   assert.deepEqual(rootAnimated, [], 'no animation on :root, html or body');
   const allowed = new Set(['transform', 'opacity', 'filter', 'stroke-dashoffset']);
   for (const [, name, body] of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g)) {
