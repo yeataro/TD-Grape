@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { searchChoices, sourceLabel, wireOrder, type AddChoice } from './add_entries';
-import type { Editor as EditorSession, WireEnd } from './editor';
+import type { Editor as EditorSession, WireEnd, WireFit } from './editor';
 import { Icon } from './icons';
 import { say, tr } from './text';
 
@@ -11,11 +11,11 @@ import { say, tr } from './text';
 // 浮動的新增節點：搜尋、清單、說明欄（先佔位）。在叫出的位置打開；從放開的線叫出時只列接得上的、標出接哪個接孔、
 // 常用的排前面。分類欄等人類想好（選項多會擠）。
 export type CreateRequest = { screen: { x: number; y: number }; wire?: { end: WireEnd; type: string } };
-type Match = { choice: AddChoice; port?: { port: string; type: string } };
+type Match = { choice: AddChoice; port?: WireFit };
 
 export function CreateNode({ request, choices, session, onPick, onClose }: {
   request: CreateRequest; choices: readonly AddChoice[]; session: EditorSession;
-  onPick(choice: AddChoice, port?: string): void; onClose(): void;
+  onPick(choice: AddChoice, port?: WireFit): void; onClose(): void;
 }) {
   const box = useRef<HTMLDivElement>(null), [query, setQuery] = useState(''), [index, setIndex] = useState(0);
   const [place, setPlace] = useState({ left: request.screen.x, top: request.screen.y });
@@ -25,7 +25,7 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   const fitting = useMemo((): Match[] => {
     if (!wire) return choices.map(choice => ({ choice }));
     // Measured 2026-10-09: about 90 choices in 13 ms. 實測約 90 個選項 13 ms。
-    return choices.flatMap(choice => { const port = session.portFor(choice.spec, wire.end); return port ? [{ choice, port }] : []; });
+    return choices.flatMap(choice => { const port = session.wireFit(choice.id, choice.spec, wire.end); return port ? [{ choice, port }] : []; });
   }, [choices, wire, session]);
   const matches = useMemo(() => {
     const found = searchChoices(fitting.map(match => match.choice), query).map(choice => fitting.find(match => match.choice === choice)!);
@@ -52,7 +52,7 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       setIndex(at => Math.max(0, Math.min(matches.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1))));
-    } else if (event.key === 'Enter' && active) { event.preventDefault(); onPick(active.choice, active.port?.port); }
+    } else if (event.key === 'Enter' && active) { event.preventDefault(); onPick(active.choice, active.port); }
   };
   const title = wire ? `${wire.type} · ${wire.end.side === 'output' ? '→' : '←'}` : say(tr('create.title', 'Create node'));
   // On a touch screen the search is not focused at once: the keyboard would cover half the screen, and most picks are from the
@@ -68,7 +68,7 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
       <div className="create-list" role="listbox" aria-label={say(tr('create.results', 'Nodes'))}>
         {matches.length ? matches.map((match, i) => <button key={match.choice.id} type="button" role="option" aria-selected={i === index}
           className={'create-entry' + (i === index ? ' create-active' : '')} onMouseEnter={() => setIndex(i)}
-          onClick={() => onPick(match.choice, match.port?.port)}>
+          onClick={() => onPick(match.choice, match.port)}>
           <span className="create-name">{match.choice.label}</span>
           {match.port && <small className="create-port">{match.port.port} · {match.port.type}</small>}
           <small className="create-source">{say(sourceLabel[match.choice.source])}</small></button>)

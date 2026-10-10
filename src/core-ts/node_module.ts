@@ -103,6 +103,12 @@ export interface NodeModule {
   editInput?(node:Node,key:string,value:Value,context:NodeContext):Node;
   /** Local port-layout change for a wire gesture; the graph owns displaced edges. */
   wire?(node:Node,input:string,sourceType:string,context:NodeContext):{node:Node;replaceInputs:readonly string[]};
+  /** The configuration this module prefers when it is created from a dropped wire of this type, among those that take it
+   * (Refactor.77; human 2026-10-11: the module says it, the editor names no node). `side`: the wire's existing end, 'output'
+   * when it comes from an output into the new node. Read once, when the build writes the wire-drop table (wire_drop.ts).
+   * 由這個型別的線拉出新增時，在接得住的設定中模組偏好哪一個（R.77，人類：由模組說，編輯器不認節點）。side：線已有那一端，從輸出拉來時是
+   * 'output'。只在建置寫拉線新增表時讀一次。 */
+  preferFor?(wireType:string,side:'output'|'input'):Configuration|undefined;
   /** The wire into `input` was removed: undo the input-port change that wire made (Q65), e.g. split a component group
    * back. Outputs never change; inputs that still have a wire keep their type.
    * 接進 input 的線被拿掉：還原那條線造成的輸入接孔調整（Q65），例如把分量組分回去。輸出不變；還接著線的輸入型別不變。 */

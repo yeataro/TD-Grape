@@ -27,7 +27,15 @@ export function vectorAssembly(catalog:CatalogRow,inherit:boolean):NodeModule {
     ...layout(n).map(p=>({...input(p.key,p.type),default:p.size===1?components(n)[p.start]:components(n).slice(p.start,p.start+p.size)})),
     output('out',String(n.params.type))
   ];
-  return {catalog,role:'value',inheritsComponentNames:true,supports:n=>values.vectors.includes(String(n.params.type)),ports,
+  // Made from a wire, an assembly is one size bigger than the wire, so there is a component left to fill (legacy
+  // graph_ui.js:2314 kept this in the editor for Combine; here the module says it). Replace takes the whole wire as its value.
+  // 由一條線拉出新增時，組合節點比那條線大一號，才有分量可以補（舊產品寫在編輯器裡、只認 Combine；這裡由模組自己說）。Replace 整條線當值。
+  const preferFor=inherit?undefined:(wireType:string,side:'output'|'input')=>{
+    if(side!=='output'||!values.types.includes(wireType))return undefined;
+    const type=values.shaped(values.family(wireType),Math.min(4,values.count(wireType)+1));
+    return values.vectors.includes(type)?{type}:undefined;
+  };
+  return {catalog,role:'value',inheritsComponentNames:true,...(preferFor?{preferFor}:{}),supports:n=>values.vectors.includes(String(n.params.type)),ports,
     validate:n=>{layout(n);components(n);},
     configure:(n,s)=>{
       if(!('type'in s)||!values.vectors.includes(s.type))throw Error('Invalid assembly output');

@@ -5,6 +5,7 @@ import {copy,type Node} from './model';
 import {resolvePorts,type Registry,type NodeModule,type NodeContext,type Signature} from './node_module';
 import * as values from './values';
 import {identifierRules} from './identifier_rules';
+import {wireDropTable} from './wire_drop';
 
 type Variant={type:string|null;inputs:Record<string,string>;outputs:Record<string,string>};
 
@@ -69,6 +70,8 @@ export function createEditorContract(registry:Registry,target='top'){
       pairs:Object.fromEntries(values.types.map(from=>[from,values.types.filter(to=>values.explicit(from,to))]))},
     vectors:{version:1,types:[...values.vectors],components:'xyzw',
       scalarTypes:Object.fromEntries(values.vectors.map(t=>[t,values.family(t)])),
-      layouts:Object.fromEntries(values.vectors.map(t=>[t,vectorLayouts(t)]))}
+      layouts:Object.fromEntries(values.vectors.map(t=>[t,vectorLayouts(t)]))},
+    // What a wire dropped on the blank canvas can make (Refactor.77). 線放到空白處能新增什麼（R.77）。
+    wireDrop:wireDropTable(registry,[...values.types,...values.opaque],target)
   };
 }

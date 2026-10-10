@@ -2,6 +2,22 @@
 
 > **現行做法（2026-10-08）**：自動測試用 `npm run test:core`、`npm run test:editor` 與 `python tools/dev/run_tests.py`。舊 Python 核心與只測它的測試已於清理第 5 條刪除（design-interview Q48），以下各段中引用 `src/core`、`sgrape_*` 或已刪測試的指令只作歷史紀錄。
 
+## 新增型別或改節點模組後要重跑：拉線新增表的完整稽核（Refactor.77 起）
+
+拉線放到空白處的新增面板查的是建置時寫好的表（`src/core-ts/wire_drop.ts`，寫進 `editor-bootstrap.json` 的 `typeContract.wireDrop`）。以下任一種改動之後要重跑 `npm run build:core`，再跑：
+
+```text
+npm run test:wire-drop
+```
+
+- **什麼時候**：新增型別（矩陣、陣列、更多 sampler、自訂結構等）、新增或改動節點模組（特別是有 `wire` 的、有多種運算元組合的，例如之後的矩陣乘法 mat × vec、vec × mat、mat × mat）、改接線規則（`values.policy`、`wire_planning.ts`）、或改 `preferFor`。
+- **它檢查什麼**：每個新增選項 × 每種數值型別 × 兩個方向，表的答案要和「逐一試每個型別版本」完全一致；表上每一格都實際新增、接線、Undo 一次。
+- **看哪些數字**（會印出來）：
+  - 表的格數與大小（R.77：65 個選項 × 16 型別 × 2 方向、1060 格接得住；58KB，gzip 2.3KB）；
+  - 從 vec4 線打開面板的時間（R.77：查表 1.9ms、只試預設 18.4ms、逐一試 64.9ms）。
+  變大很多時再想辦法（人類 10-11：體積等出現問題再說）。
+- **已知缺口**（不是測試錯誤）：Convert 只列出 float→int 一種設定、Swizzle 沒有列舉遮罩；作品才有的選項（宣告的來源、預設 Uniform、TD 內建值）不在表上、仍在瀏覽器預演。前提：全新節點接不接得住只看節點與線的型別；若哪個模組的接線結果要看圖的內容，這張表就不適用它（design-interview Q37 1-5 補充）。
+
 ## 升級 React Flow（@xyflow/react）後要重測（Refactor.58.2 起）
 
 我們有幾處依賴 React Flow 的內部行為，自動測試抓不到，升級後要在瀏覽器重跑：

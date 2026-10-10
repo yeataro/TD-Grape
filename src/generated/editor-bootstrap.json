@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "3b29062fbaead3d37228582b3eda7d188eea571c76e13ed2ffd00f49ec15fab9",
+  "catalogHash": "0c651607348c290bbedfc30ca01282bd4a9c5e2f88b47b447c3e3331ea1bf750",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -6239,6 +6239,6273 @@
             }
           }
         ]
+      }
+    },
+    "wireDrop": {
+      "sgrape.builtin.abs:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.add:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.all:": {
+        "output": {
+          "bool": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bool"
+          }
+        }
+      },
+      "sgrape.builtin.any:": {
+        "output": {
+          "bool": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bool"
+          }
+        }
+      },
+      "sgrape.builtin.ceil:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.clamp:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.color:": {
+        "output": {},
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.combine:": {
+        "output": {
+          "float": {
+            "port": "x",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "x",
+            "type": "vec2",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec3": {
+            "port": "x",
+            "type": "vec3",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "vec4": {
+            "port": "x",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "x",
+            "type": "int",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec2": {
+            "port": "x",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec3": {
+            "port": "x",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "ivec4": {
+            "port": "x",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "x",
+            "type": "uint",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec2": {
+            "port": "x",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec3": {
+            "port": "x",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "uvec4": {
+            "port": "x",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "x",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec3": {
+            "port": "x",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec4"
+            }
+          },
+          "bvec4": {
+            "port": "x",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.compare:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "int": {
+            "port": "a",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bool"
+          }
+        }
+      },
+      "sgrape.builtin.convert:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "int"
+          },
+          "int": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "int"
+          },
+          "uint": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "int"
+          }
+        }
+      },
+      "sgrape.builtin.cos:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.divide:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.dot:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3"
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec3"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3"
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec3"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3"
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.equal:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "a",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "a",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "a",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "a",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.floor:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.force_compile_error:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.fract:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.greaterThan:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.greaterThanEqual:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.if:": {
+        "output": {
+          "float": {
+            "port": "true",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "true",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "true",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "true",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "true",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "ivec2": {
+            "port": "true",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "true",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "true",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "true",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          },
+          "uvec2": {
+            "port": "true",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "true",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "true",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "condition",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "true",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "true",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "true",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "out",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.isinf:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.isnan:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.length:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.lessThan:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.lessThanEqual:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.math:": {
+        "output": {
+          "float": {
+            "port": "input0",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "input0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "input0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "input0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "input0",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "input0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "input0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "input0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "input0",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "input0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "input0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "input0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.max:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.min:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.mix:": {
+        "output": {
+          "float": {
+            "port": "factor",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "int": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4"
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "int": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.multiply:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "int": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec4"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4"
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "int": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.normalize:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3"
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "vec3"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uint": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "vec3"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float",
+            "configure": {
+              "type": "float"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.not:": {
+        "output": {
+          "bool": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.notEqual:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "a",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "a",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "a",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "a",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.replace:": {
+        "output": {
+          "float": {
+            "port": "x",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "x",
+            "type": "int",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "x",
+            "type": "uint",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.rgba:": {
+        "output": {
+          "float": {
+            "port": "alpha",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "int": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "ivec3": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "uint": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "uvec3": {
+            "port": "rgb",
+            "type": "vec3"
+          }
+        },
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.round:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.router:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "value",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "out",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.scalar:": {
+        "output": {},
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "int": {
+            "port": "out",
+            "type": "int",
+            "configure": {
+              "type": "int"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "uint",
+            "configure": {
+              "type": "uint"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "bool": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bool",
+            "configure": {
+              "type": "bool"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.scalar:float": {
+        "output": {},
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.scalar:int": {
+        "output": {},
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "int"
+          },
+          "int": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "int"
+          },
+          "uint": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "int"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "int"
+          }
+        }
+      },
+      "sgrape.builtin.scalar:uint": {
+        "output": {},
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "uint"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "uint"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "uint"
+          },
+          "vec4": {
+            "port": "out",
+            "type": "uint"
+          },
+          "int": {
+            "port": "out",
+            "type": "uint"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "uint"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "uint"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "uint"
+          },
+          "uint": {
+            "port": "out",
+            "type": "uint"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uint"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uint"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uint"
+          }
+        }
+      },
+      "sgrape.builtin.scalar:bool": {
+        "output": {},
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bool"
+          }
+        }
+      },
+      "sgrape.builtin.sign:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.sin:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.smoothstep:": {
+        "output": {
+          "float": {
+            "port": "edge0",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "edge0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "edge0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "edge0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "edge0",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "edge0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "edge0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "edge0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "edge0",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "edge0",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "edge0",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "edge0",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.split:": {
+        "output": {
+          "float": {
+            "port": "color",
+            "type": "vec4"
+          },
+          "vec4": {
+            "port": "color",
+            "type": "vec4"
+          },
+          "int": {
+            "port": "color",
+            "type": "vec4"
+          },
+          "ivec4": {
+            "port": "color",
+            "type": "vec4"
+          },
+          "uint": {
+            "port": "color",
+            "type": "vec4"
+          },
+          "uvec4": {
+            "port": "color",
+            "type": "vec4"
+          }
+        },
+        "input": {
+          "float": {
+            "port": "r",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "r",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "vec4": {
+            "port": "r",
+            "type": "float"
+          },
+          "int": {
+            "port": "r",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "r",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "ivec4": {
+            "port": "r",
+            "type": "float"
+          },
+          "uint": {
+            "port": "r",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "r",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "rgb",
+            "type": "vec3"
+          },
+          "uvec4": {
+            "port": "r",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.sqrt:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.subtract:": {
+        "output": {
+          "float": {
+            "port": "a",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "a",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "a",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "a",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "a",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "a",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.swizzle:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.texture_sample:": {
+        "output": {
+          "float": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "int": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "uint": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "uv",
+            "type": "vec2"
+          },
+          "sampler2D": {
+            "port": "sampler",
+            "type": "sampler2D"
+          }
+        },
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.trunc:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "out",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "out",
+            "type": "vec2",
+            "configure": {
+              "type": "vec2"
+            }
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "float"
+          },
+          "uint": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "float"
+          }
+        }
+      },
+      "sgrape.builtin.vector:": {
+        "output": {},
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "out",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "out",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        }
+      },
+      "sgrape.builtin.vector:vec2": {
+        "output": {},
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "vec2"
+          }
+        }
+      },
+      "sgrape.builtin.vector:vec3": {
+        "output": {},
+        "input": {
+          "vec3": {
+            "port": "out",
+            "type": "vec3"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "vec3"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "vec3"
+          }
+        }
+      },
+      "sgrape.builtin.vector:vec4": {
+        "output": {},
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "vec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "vec4"
+          }
+        }
+      },
+      "sgrape.builtin.vector:ivec2": {
+        "output": {},
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "ivec2"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "ivec2"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "ivec2"
+          }
+        }
+      },
+      "sgrape.builtin.vector:ivec3": {
+        "output": {},
+        "input": {
+          "vec3": {
+            "port": "out",
+            "type": "ivec3"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "ivec3"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "ivec3"
+          }
+        }
+      },
+      "sgrape.builtin.vector:ivec4": {
+        "output": {},
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "ivec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "ivec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "ivec4"
+          }
+        }
+      },
+      "sgrape.builtin.vector:uvec2": {
+        "output": {},
+        "input": {
+          "vec2": {
+            "port": "out",
+            "type": "uvec2"
+          },
+          "ivec2": {
+            "port": "out",
+            "type": "uvec2"
+          },
+          "uvec2": {
+            "port": "out",
+            "type": "uvec2"
+          }
+        }
+      },
+      "sgrape.builtin.vector:uvec3": {
+        "output": {},
+        "input": {
+          "vec3": {
+            "port": "out",
+            "type": "uvec3"
+          },
+          "ivec3": {
+            "port": "out",
+            "type": "uvec3"
+          },
+          "uvec3": {
+            "port": "out",
+            "type": "uvec3"
+          }
+        }
+      },
+      "sgrape.builtin.vector:uvec4": {
+        "output": {},
+        "input": {
+          "vec4": {
+            "port": "out",
+            "type": "uvec4"
+          },
+          "ivec4": {
+            "port": "out",
+            "type": "uvec4"
+          },
+          "uvec4": {
+            "port": "out",
+            "type": "uvec4"
+          }
+        }
+      },
+      "sgrape.builtin.vector:bvec2": {
+        "output": {},
+        "input": {
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2"
+          }
+        }
+      },
+      "sgrape.builtin.vector:bvec3": {
+        "output": {},
+        "input": {
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3"
+          }
+        }
+      },
+      "sgrape.builtin.vector:bvec4": {
+        "output": {},
+        "input": {
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4"
+          }
+        }
+      },
+      "sgrape.builtin.vector_split:": {
+        "output": {
+          "float": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "vec2": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "vec3": {
+            "port": "value",
+            "type": "vec3",
+            "configure": {
+              "type": "vec3"
+            }
+          },
+          "vec4": {
+            "port": "value",
+            "type": "vec4",
+            "configure": {
+              "type": "vec4"
+            }
+          },
+          "int": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "ivec2": {
+            "port": "value",
+            "type": "ivec2",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec3": {
+            "port": "value",
+            "type": "ivec3",
+            "configure": {
+              "type": "ivec3"
+            }
+          },
+          "ivec4": {
+            "port": "value",
+            "type": "ivec4",
+            "configure": {
+              "type": "ivec4"
+            }
+          },
+          "uint": {
+            "port": "value",
+            "type": "vec2"
+          },
+          "uvec2": {
+            "port": "value",
+            "type": "uvec2",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec3": {
+            "port": "value",
+            "type": "uvec3",
+            "configure": {
+              "type": "uvec3"
+            }
+          },
+          "uvec4": {
+            "port": "value",
+            "type": "uvec4",
+            "configure": {
+              "type": "uvec4"
+            }
+          },
+          "bool": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "value",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "value",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "value",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "float": {
+            "port": "x",
+            "type": "float"
+          },
+          "vec2": {
+            "port": "x",
+            "type": "float"
+          },
+          "vec3": {
+            "port": "x",
+            "type": "float"
+          },
+          "vec4": {
+            "port": "x",
+            "type": "float"
+          },
+          "int": {
+            "port": "x",
+            "type": "int",
+            "configure": {
+              "type": "ivec2"
+            }
+          },
+          "ivec2": {
+            "port": "x",
+            "type": "float"
+          },
+          "ivec3": {
+            "port": "x",
+            "type": "float"
+          },
+          "ivec4": {
+            "port": "x",
+            "type": "float"
+          },
+          "uint": {
+            "port": "x",
+            "type": "uint",
+            "configure": {
+              "type": "uvec2"
+            }
+          },
+          "uvec2": {
+            "port": "x",
+            "type": "float"
+          },
+          "uvec3": {
+            "port": "x",
+            "type": "float"
+          },
+          "uvec4": {
+            "port": "x",
+            "type": "float"
+          },
+          "bool": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec2": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec4": {
+            "port": "x",
+            "type": "bool",
+            "configure": {
+              "type": "bvec2"
+            }
+          }
+        }
       }
     },
     "sources": {

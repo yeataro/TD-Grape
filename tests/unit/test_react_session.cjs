@@ -1351,6 +1351,117 @@ test('a dropped wire lists only what fits, and adding wires it in one step', t =
   assert.deepEqual([...wireOrder('vec3', 'output')].slice(0, 2), ['vector_split', 'split'], 'the legacy order for a vector output');
 });
 
+// Refactor.77 (human 2026-10-11; design-interview Q37 1-5 supplement): a dropped wire is looked up in the table the build wrote
+// with the real rules, so a vector wire lists nodes in the type that takes it (R.54 rehearsed default types only: a vec4 wire
+// listed three nodes). Adding still goes through the real edit, in the table's configuration, one Undo step.
+// 拉線新增查建置時用真正規則寫好的表，向量線也列得出用那個型別建立的節點（R.54 只試預設型別：vec4 只列三個）；新增仍走真正的修改、一步 Undo。
+test('a dropped vector wire lists nodes in the type that takes it, from the build-time table', t => {
+  const { session } = open(t);
+  const { addChoices } = load(path.join(root, 'src/editor-react/add_entries.ts'));
+  const choices = addChoices(session.snapshot().declarations, key => key);
+  session.addNode({ nodeType: 'sgrape.builtin.combine', params: { type: 'vec4' } }, { x: 400, y: 0 });
+  const wide = session.graph().stages.pixel.nodes.at(-1).id, end = { node: wide, port: 'out', side: 'output' };
+  const fits = new Map(choices.map(choice => [choice.key, session.wireFit(choice.id, choice.spec, end)]).filter(([, fit]) => fit));
+  assert.ok(fits.size > 30, 'a vec4 wire lists many nodes (' + fits.size + ')');
+  for (const key of ['add', 'length', 'vector_split', 'swizzle', 'replace']) assert.ok(fits.get(key), key + ' takes a vec4 wire');
+  assert.deepEqual(clone(fits.get('add')), { port: 'a', type: 'vec4', configure: { type: 'vec4' } });
+  const before = clone(session.graph()), add = choices.find(choice => choice.key === 'add'), fit = fits.get('add');
+  session.addNode(add.spec, { x: 0, y: 0 }, { end, port: fit.port, configure: fit.configure });
+  const made = session.graph().stages.pixel.nodes.at(-1);
+  assert.equal(made.params.type, 'vec4', 'made in the type the table chose');
+  assert.ok(session.graph().stages.pixel.edges.some(edge => edge.from[0] === wide && edge.to[0] === made.id && edge.to[1] === 'a'));
+  session.history(false);
+  assert.deepEqual(clone(session.graph()), before, 'one Undo removes the node and its wire');
+  // From a vec2 wire Combine is one size bigger, the wire on x as one group: the module's preference (legacy kept it in the
+  // editor). 由 vec2 線新增的 Combine 大一號、線接 x 成一組：模組自己的偏好（舊產品寫在編輯器）。
+  session.addNode({ nodeType: 'sgrape.builtin.vec2', params: {} }, { x: 0, y: 300 });
+  const pair = session.graph().stages.pixel.nodes.at(-1).id, fromPair = { node: pair, port: 'out', side: 'output' };
+  const combine = choices.find(choice => choice.key === 'combine'), joined = session.wireFit(combine.id, combine.spec, fromPair);
+  assert.deepEqual(clone(joined), { port: 'x', type: 'vec2', configure: { type: 'vec3' } });
+  session.addNode(combine.spec, { x: 0, y: 400 }, { end: fromPair, port: joined.port, configure: joined.configure });
+  const assembly = session.graph().stages.pixel.nodes.at(-1);
+  assert.equal(assembly.params.type, 'vec3');
+  assert.deepEqual(clone(assembly.params.groups), { x: 'vec2' });
+});
+
+// The full wire-drop audit (Refactor.77): only with `npm run test:wire-drop`. Every add-menu entry, every value type, both
+// directions: the table agrees with rehearsing every configuration the old way, and every row really adds and wires. Rerun
+// it, and look at the timings and the table's size, whenever types or node modules change (new types such as matrices,
+// matrix multiply's operand combinations; docs/development/TESTING.md).
+// 拉線新增完整稽核（R.77）：只在 `npm run test:wire-drop` 跑。每個入口、每種型別、兩個方向：表與「逐一試每個設定」的舊做法一致，
+// 表上每一格真的能新增並接上。型別或節點模組改了（例如加矩陣、矩陣乘法的運算元組合）就重跑，並看時間與表的大小。
+test('wire-drop table: full audit against rehearsing every configuration', { skip: process.env.npm_lifecycle_event !== 'test:wire-drop' }, t => {
+  const { session } = open(t);
+  const { addChoices } = load(path.join(root, 'src/editor-react/add_entries.ts'));
+  const table = bootstrap.typeContract.wireDrop, types = bootstrap.typeContract.valueTypes;
+  const choices = addChoices(session.snapshot().declarations, key => key).filter(choice => table[choice.id]);
+  // One Router per type gives an output and an input of that type. 每種型別一個 Router，提供該型別的輸出與輸入。
+  const routers = {};
+  for (const type of types) {
+    session.addNode({ nodeType: 'sgrape.builtin.router', params: {} }, { x: 0, y: 0 });
+    const id = session.graph().stages.pixel.nodes.at(-1).id;
+    if (session.graph().stages.pixel.nodes.at(-1).params.type !== type) session.configure(id, type);
+    routers[type] = id;
+  }
+  class Done extends Error {}
+  // The old way: try the entry as made and in every type, every port, through the network's own planner.
+  // 舊做法：入口原樣與每個型別、每個接孔，用網路自己的規劃逐一試。
+  let serial = 0;
+  const rehearsed = (choice, end) => {
+    let fits = false;
+    try { session.document.change(document => {
+      const net = document.networks.get('pixel'), side = end.side;
+      for (const configure of [undefined, ...types.map(type => ({ type }))]) {
+        const id = 'audit' + serial++;
+        net.insert({ id, nodeType: choice.spec.nodeType, params: structuredClone(choice.spec.params), ui: { x: 0, y: 0 } });
+        try { if (configure) net.node(id).configure(configure); } catch { continue; }
+        const ports = Object.keys(net.node(id).interface[side === 'output' ? 'inputs' : 'outputs']);
+        // A module's `wire` throws for a group that cannot fit; that is "does not fit", as the editor treats it.
+        // 模組的 `wire` 遇到放不下的分量組會拋錯，這就是「接不上」，和編輯器的處理一樣。
+        fits = ports.some(port => { try { return net.plan(GrapeGraph.values.policy, { kind: 'wire', ...(side === 'output'
+          ? { from: { node: end.node, port: end.port }, to: { node: id, port } } : { from: { node: id, port }, to: { node: end.node, port: end.port } }) }).ok; } catch { return false; } });
+        if (fits) break;
+      }
+      throw new Done();
+    }); } catch (error) { if (!(error instanceof Done)) throw error; }
+    return fits;
+  };
+  const disagree = [], failed = [];
+  let rows = 0;
+  for (const type of types) for (const side of ['output', 'input']) {
+    const end = { node: routers[type], port: side === 'output' ? 'out' : 'value', side };
+    for (const choice of choices) {
+      const fit = session.wireFit(choice.id, choice.spec, end), old = rehearsed(choice, end);
+      if (!!fit !== old) disagree.push(choice.key + ' ' + side + ' ' + type + ': table ' + !!fit + ', rehearsed ' + old);
+      if (!fit) continue;
+      rows++;
+      const count = session.graph().stages.pixel.edges.length;
+      try {
+        session.addNode(choice.spec, { x: 0, y: 0 }, { end, port: fit.port, configure: fit.configure });
+        const made = session.graph().stages.pixel.nodes.at(-1).id, edges = session.graph().stages.pixel.edges;
+        const wired = edges.some(edge => side === 'output' ? edge.from[0] === end.node && edge.to[0] === made && edge.to[1] === fit.port
+          : edge.from[0] === made && edge.from[1] === fit.port && edge.to[0] === end.node);
+        if (!wired) failed.push(choice.key + ' ' + side + ' ' + type + ': not wired');
+        session.history(false);
+      } catch (error) { failed.push(choice.key + ' ' + side + ' ' + type + ': ' + error.message); }
+      if (session.graph().stages.pixel.edges.length !== count) failed.push(choice.key + ' ' + side + ' ' + type + ': Undo left edges');
+    }
+  }
+  // Opening Create node from a vec4 wire: the table, R.54's default-only rehearsal, and rehearsing every configuration.
+  // 從 vec4 線打開新增面板：查表、R.54 只試預設、逐一試每個設定。
+  const all = addChoices(session.snapshot().declarations, key => key), end = { node: routers.vec4, port: 'out', side: 'output' };
+  const time = run => { const start = performance.now(); for (let i = 0; i < 5; i++) run(); return (performance.now() - start) / 5; };
+  const lookup = time(() => all.map(choice => session.wireFit(choice.id, choice.spec, end)));
+  const defaults = time(() => all.map(choice => session.portFor(choice.spec, end)));
+  const everything = time(() => choices.map(choice => rehearsed(choice, end)));
+  const bytes = JSON.stringify(table).length, packed = require('node:zlib').gzipSync(JSON.stringify(table)).length;
+  console.log('wire-drop audit: ' + choices.length + ' entries x ' + types.length + ' types x 2 directions, ' + rows + ' rows added and wired');
+  console.log('opening from a vec4 wire: table ' + lookup.toFixed(2) + ' ms, default-only rehearsal ' + defaults.toFixed(1) + ' ms, every configuration ' + everything.toFixed(1) + ' ms');
+  console.log('table size: ' + bytes + ' bytes, ' + packed + ' gzipped');
+  assert.deepEqual(disagree, [], 'the table agrees with rehearsing every configuration');
+  assert.deepEqual(failed, [], 'every row adds and wires, and one Undo takes it back');
+});
+
 // Dragging a wire previews what dropping it changes (Refactor.57): rehearsed with the real edit, never written.
 // 拖線預告放開後會改變什麼：用真正的修改預演，不寫入。
 test('a wire preview names the inputs it merges and the wires it replaces, exactly as the drop does', t => {

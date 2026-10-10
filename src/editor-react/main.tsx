@@ -12,7 +12,7 @@ import { appearanceSubscribe, currentTheme } from './appearance';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
-import { Editor as EditorSession, type EditorState, type WireEnd } from './editor';
+import { Editor as EditorSession, type EditorState, type WireEnd, type WireFit } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
@@ -292,7 +292,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const choices = useMemo(() => addChoices(state.declarations ?? [], text), [state.declarations, text]);
   const [creating, setCreating] = useState<CreateRequest | null>(null);
   const middle = () => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width / 2, y: box.y + box.height / 3 }; };
-  const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string }) =>
+  const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
   const choicesRef = useRef(choices); choicesRef.current = choices;
@@ -437,7 +437,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
-          onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
+          onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     {above && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}

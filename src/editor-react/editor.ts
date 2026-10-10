@@ -26,6 +26,9 @@ export type NewNode = { nodeType: string; params: ObjectValue } | { preset: stri
 // default：TD 現在給沒接線輸入的預設圖（Samples 的 label 或 none），接了線是 null。
 export type InputInfo = { path: string | null; width: number; height: number; format: string; default?: string | null };
 export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
+/** Where a dropped wire goes on a new node, and the configuration to create it in (Refactor.77; core wire_drop.ts).
+ * 線接到新節點的哪裡、用什麼設定建立（R.77）。 */
+export type WireFit = Bootstrap['typeContract']['wireDrop'][string]['output'][string];
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
 // 把新節點放進文件：新增的唯一路徑，也用在丟棄的候選文件上預演。
@@ -431,11 +434,14 @@ export class Editor {
   add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
-  addNode = (spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string }) =>
+  addNode = (spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
     this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
       const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
       if (!wire) return;
-      const { end, port } = wire;
+      const { end, port, configure } = wire;
+      // Made in the configuration the wire-drop table chose (e.g. Add as vec4), in the same step (Refactor.77).
+      // 用拉線新增表選的設定建立（例如 Add 建成 vec4），同一步完成（R.77）。
+      if (configure) net.node(id).configure(configure);
       if (end.side === 'output') net.connect(net.node(end.node).port('output', end.port), net.node(id).port('input', port), core.values.policy);
       else {
         // An input takes one wire: the new one replaces whatever was there. 輸入只接一條：新線取代原本的。
@@ -449,6 +455,18 @@ export class Editor {
       if (made.definition?.inheritsComponentNames && peer.data)
         made.update({ ui: { ...made.data!.ui, componentNames: core.componentStyle(peer.definition, peer.data, net.context) } });
     });
+  /** Where a dropped wire would go on a new node made from this choice (Refactor.77, design-interview Q37 1-5 supplement):
+   * looked up in the table the build wrote with the real rules; choices only the document knows (declared sources,
+   * preset Uniforms, TD values) are still rehearsed below until the same table is made for a document. null: it does not fit.
+   * 線接到由這個選項新增的節點哪裡（R.77，Q37 1-5 補充）：查建置時用真正規則寫好的表；只有作品知道的選項（宣告的來源、預設 Uniform、
+   * TD 內建值）先照下面的方式預演，等之後為作品算同一份表。null＝接不上。 */
+  wireFit = (id: string, spec: NewNode, end: WireEnd): WireFit | null => {
+    const row = this.bootstrap.typeContract.wireDrop[id];
+    if (!row) return this.portFor(spec, end);
+    const net = this.document.networks.get('pixel')!;
+    const type = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
+    return (type && row[end.side][type]) || null;
+  };
   /** Which port of a new node would take this wire, rehearsed on a discarded candidate so the answer follows the
    * same rules as the real edit (Refactor.54; no separate core question). A port of exactly the wire's type comes
    * first. null: it does not fit. 新節點的哪個接孔能接這條線：在丟棄的候選文件上預演，答案與真正的修改同一套規則；
