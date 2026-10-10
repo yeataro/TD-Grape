@@ -51,11 +51,18 @@ export class LiveValues {
   connected = false;
   responding = true;
   /** `responding(false)` when TD stops answering the heartbeat, `true` once it answers again. TD 不回心跳時 false、又回了 true。 */
+  private readonly retry: number;
+  private readonly nextFrame: (run: () => void) => void;
+  private readonly answering: (responding: boolean) => void;
+  private readonly beat: number;
+  /** `answering`: TD answers the heartbeat or stops answering; `retry`, `beat` in ms; `nextFrame` for tests.
+   * answering：TD 回心跳或不回；retry、beat 為毫秒；nextFrame 給測試用。 */
   constructor(private readonly open: (() => LiveSocket) | undefined, private readonly receive: (message: LiveMessage) => void,
-    private readonly linked: (connected: boolean, code?: number) => void, private readonly retry = 2000,
-    private readonly nextFrame: (run: () => void) => void = run => typeof requestAnimationFrame === 'function'
-      ? void requestAnimationFrame(() => run()) : void setTimeout(run, 16),
-    private readonly answering: (responding: boolean) => void = () => {}, private readonly beat = HEARTBEAT) {
+    private readonly linked: (connected: boolean, code?: number) => void,
+    { retry = 2000, beat = HEARTBEAT, answering = () => {}, nextFrame = (run: () => void) => typeof requestAnimationFrame === 'function'
+      ? void requestAnimationFrame(() => run()) : void setTimeout(run, 16) }: {
+      retry?: number; beat?: number; answering?(responding: boolean): void; nextFrame?(run: () => void): void } = {}) {
+    this.retry = retry; this.beat = beat; this.answering = answering; this.nextFrame = nextFrame;
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.shown);
     this.connect();
   }

@@ -1019,7 +1019,7 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
 test('the heartbeat is answered or not; a closed live connection is TD unreachable; a save in TD is told', async t => {
   const { LiveValues } = load(path.join(root, 'src/editor-react/live_values.ts'));
   const socket = fakeSocket(), answers = [];
-  const live = new LiveValues(() => socket, () => {}, () => {}, 60000, run => setTimeout(run, 0), responding => answers.push(responding), 20);
+  const live = new LiveValues(() => socket, () => {}, () => {}, { retry: 60000, nextFrame: run => setTimeout(run, 0), answering: responding => answers.push(responding), beat: 20 });
   t.after(() => live.dispose());
   socket.readyState = 1; socket.onopen();
   assert.deepEqual(socket.pings, [{ type: 'ping', seq: 1 }], 'asked at once');

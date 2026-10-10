@@ -146,8 +146,8 @@ export class Editor {
     this.td = loaded.uniforms ?? {};
     // The live connection also tells, before anything is sent, that TD is gone or not answering (Refactor.71).
     // 即時連線也會在送出之前就說出 TD 不在或沒回應（R.71）。
-    this.live = new LiveValues(host.live, message => this.liveMessage(message), (connected, code) => this.liveLinked(connected, code), undefined, undefined,
-      responding => responding ? this.sync.found() : this.sync.lost('busy'));
+    this.live = new LiveValues(host.live, message => this.liveMessage(message), (connected, code) => this.liveLinked(connected, code),
+      { answering: responding => responding ? this.sync.found() : this.sync.lost('busy') });
     // This device losing its network is the browser's to say (Refactor.75). 這台裝置沒網路由瀏覽器說。
     if (typeof window !== 'undefined') { addEventListener('offline', this.deviceOffline); addEventListener('online', this.deviceOnline); }
     this.uniformValues = this.readUniformValues();
