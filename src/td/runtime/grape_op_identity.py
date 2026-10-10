@@ -7,13 +7,20 @@ A cut-and-paste keeps its ID; a copy gets a new one. Templates never take an ID.
 Grape OP 的身分：唯讀字串參數 Grapeid。TD 本身就是名冊——靠 tag 找到 Grape OP；建立時（開專案、
 載入 .tox、複製、貼上）延後一幀檢查有沒有別的 Grape OP 用同一個 ID，有才換號。剪下貼上保留原號，
 複製的那份換號；範本永遠不取號。
+
+One copy rules in TD (Refactor.67, D6, human 2026-10-10): the Manager's `grape_op_identity`, written from this file; the
+Manager and the editor service read it, and the templates (TOP, later MAT and ISF) are given a copy of it, so no template
+copy is "the" one. A Grape OP runs on the copy it carries and never asks the Manager; a newer copy reaches it only when
+the person updates it. TD 裡算數的是 Manager 的這一份（從本檔寫入）：Manager 與編輯服務讀它，範本（TOP，之後 MAT、ISF）
+拿它的副本，所以沒有哪個範本的副本才算數。Grape OP 用自己帶著的副本、不問 Manager；新的副本只在使用者更新時才給它。
 """
 import re
 import uuid
 
 TAG = 'grapeOP'
 TEMPLATES_TAG = 'grapeTemplates'
-VALID = re.compile(r'[0-9a-f]{32}\Z')
+PATTERN = '[0-9a-f]{32}'  # a Grape ID; also part of the editor's addresses 一個 Grape ID；也用在編輯器的網址
+VALID = re.compile(PATTERN + r'\Z')
 
 
 def grape_op():

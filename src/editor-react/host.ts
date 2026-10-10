@@ -32,6 +32,9 @@ export class HostError extends Error {
 
 // Same-origin requests keep the existing token, timeout and target boundaries.
 // 只搬本輪會使用的 HTTP 行為；逾時不代表寫入沒有發生，交由 session 查核。
+/** A Grape ID as TD's Manager defines it (grape_op_identity.PATTERN, Refactor.67 D6); the editor's one copy of that rule.
+ * Grape ID 的格式（照 TD Manager 的 grape_op_identity.PATTERN）；編輯器裡只寫這一份。 */
+export const GRAPE_ID = /^[0-9a-f]{32}$/;
 export class HostClient {
   readonly root: string;
   /** Opens the live WebSocket (Uniform D2); none outside a page (tests pass their own). 開即時 WebSocket。 */
@@ -41,7 +44,7 @@ export class HostClient {
   constructor(readonly target: string, readonly token: string,
     private readonly request: typeof fetch = (...args) => fetch(...args), private readonly timeout = 20000,
     live?: () => LiveSocket) {
-    if (!/^[a-f0-9]{32}$/.test(target)) throw new TextError(tr('open.badTarget', 'This address does not name a valid Grape OP. Open the editor from a Grape OP in TD.'));
+    if (!GRAPE_ID.test(target)) throw new TextError(tr('open.badTarget', 'This address does not name a valid Grape OP. Open the editor from a Grape OP in TD.'));
     this.root = '/api/' + target + '/';
     this.live = live ?? (typeof WebSocket === 'function' && typeof location === 'object' && location.host
       ? () => new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.root + 'live') as unknown as LiveSocket

@@ -29,8 +29,12 @@ bootstrap = json.loads((root_dir / 'src/generated/editor-bootstrap.json').read_t
 source = lambda name: (root_dir / 'src/td/runtime' / name).read_text(encoding='utf-8')
 digest = lambda text: sha256(text.encode('utf-8')).hexdigest()
 
-TEMPLATES_TAG = 'grapeTemplates'
-GRAPE_OP_TAG = 'grapeOP'
+# The rules for telling Grape OPs apart come from the Manager's copy, the one that rules in TD (Refactor.67, D6): install the
+# Manager first. 認 Grape OP 的規則取自 Manager 那份（TD 裡算數的那份）：先裝 Manager。
+rules_dat = host.op('GrapeManager/grape_op_identity')
+assert rules_dat is not None, 'Install the Manager first (tools/jobs/install_native_manager.py): it holds grape_op_identity.'
+rules = rules_dat.module
+TEMPLATES_TAG, GRAPE_OP_TAG = rules.TEMPLATES_TAG, rules.TAG
 masters.tags.add(TEMPLATES_TAG)
 for name in ('grape_mat',):
     assert masters.op(name) is None, 'Grape MAT is not offered until the MAT round: remove ' + masters.op(name).path
@@ -170,7 +174,7 @@ annotation(top, 'annotate_inputs', 'Inputs: managed by the TOPs list',
 controls = node(top, baseCOMP, 'GrapeControls', -750, 75, 160, 130)
 identity = node(controls, executeDAT, 'identity', 220, -160)
 identity.par.language = 'python'
-identity.text = source('grape_op_identity.py')
+identity.text = rules_dat.text  # a copy of the Manager's, not of the repo file (D6) 複製 Manager 那份，不是直接讀 repo 檔
 identity.par.create = True
 identity.par.start = False
 identity.par.framestart = False

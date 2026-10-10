@@ -116,7 +116,9 @@ def content_type(name):
 # (LiveHub.drain), so TD never waits on a browser. Text frames only (RFC 6455).
 # 即時 Uniform 值：同一個 port 的 WebSocket，檢查與 HTTP 相同。每條連線在自己的執行緒讀寫；
 # TD 的執行緒只排隊要送的文字、取走收到的，不會等瀏覽器。只收送文字訊框。
-LIVE_PATH = re.compile(r'/api/([a-f0-9]{32})/live')
+# The editor service only carries the address; which Grape OP it names is the Manager's to decide (Refactor.67, D6), so
+# only a short, safe token is let through here. 編輯服務只負責傳輸；是哪個 Grape OP 由 Manager 判斷，這裡只放行安全的短字串。
+LIVE_PATH = re.compile(r'/api/([A-Za-z0-9_-]{1,64})/live')
 WEBSOCKET_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 

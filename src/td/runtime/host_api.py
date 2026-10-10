@@ -8,6 +8,7 @@ import struct
 import threading
 import zlib
 from urllib.parse import urlsplit
+import grape_op_identity
 
 
 # What each refusal code replies (Refactor.62). An error without one of these codes is a failure: it leaves dispatch and
@@ -86,7 +87,7 @@ class HostAPI:
 
     def _dispatch(self, method, path, body):
         path = urlsplit(path).path
-        match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)(?:/([A-Za-z0-9_-]{1,64}))?', path)
+        match = re.fullmatch(r'/api/(' + grape_op_identity.PATTERN + r')/([a-z-]+)(?:/([A-Za-z0-9_-]{1,64}))?', path)
         if method == 'GET' and path == '/api/shaders':
             return 200, self.choices()
         shared = re.fullmatch(r'/api/textures/([a-z]+)\.png', path)

@@ -1,5 +1,5 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
-import { HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood } from './host';
+import { GRAPE_ID, HostClient, HostError, type StateResponse, type UniformStates, type ShaderFailure, type LastKnownGood } from './host';
 import { tr, TextError, errorText, type Message } from './text';
 import type { Level } from './reports';
 
@@ -303,7 +303,7 @@ export class HostSync {
     if (this.pending || this.blocked || this.status.dirty)
       throw new TextError(tr('identity.renewPending', 'The Grape ID was not changed: some changes are not in TD yet.'));
     const result = await this.host.call<{ targetId?: string }>('identity', {});
-    if (!/^[a-f0-9]{32}$/.test(result.targetId ?? '')) throw new HostError(replyMismatch);
+    if (!GRAPE_ID.test(result.targetId ?? '')) throw new HostError(replyMismatch);
     return result.targetId!;
   };
   dispose() { this.disposed = true; clearTimeout(this.timer); clearTimeout(this.recovery); }

@@ -61,11 +61,14 @@ modules = {
     'td_text': 'src/td/runtime/td_text.py',  # text for people as code + English + parameters (Q58)
     'live_watch': 'src/td/runtime/live_watch.py',  # live Uniform values over the WebSocket (Refactor.48)
     'editor_launch': 'src/td/runtime/editor_launch.py',  # app-window launch for Open Editor (Q45)
+    # How a Grape OP is told apart; the copy that rules in TD, given to the templates (Refactor.67, D6).
+    # 認 Grape OP 的規則；TD 裡算數的那份，範本拿它的副本。
+    'grape_op_identity': 'src/td/runtime/grape_op_identity.py',
 }
 positions = {
     'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0),
     'next_family': (700, -160), 'editor_launch': (700, -320),
-    'uniform_writer': (485, -160), 'td_text': (485, -320), 'live_watch': (240, -160),
+    'uniform_writer': (485, -160), 'td_text': (485, -320), 'live_watch': (240, -160), 'grape_op_identity': (240, -320),
 }
 for name, source in modules.items():
     text(manager, name, source, *positions[name], 'json' if source.endswith('.json') else 'python')

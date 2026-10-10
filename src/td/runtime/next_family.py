@@ -13,6 +13,7 @@ import re
 import traceback
 import uuid
 
+import grape_op_identity
 import uniform_writer
 from td_text import english
 
@@ -132,10 +133,7 @@ def notify(comp, message):
         pass
 
 
-def identity(comp):
-    """The Grape OP's ID: its read-only Grapeid parameter (Q32)."""
-    par = getattr(comp.par, 'Grapeid', None)
-    return par.eval() if par is not None else ''
+identity = grape_op_identity.identity  # the Grape OP's ID, by the Manager's rule (D6) 依 Manager 的規則讀 Grape ID
 
 
 def read_runtime(text, *, presets=()):
@@ -299,7 +297,7 @@ class NextFamily:
                 and (runtime.get('document') is None) == (runtime.get('revision') == document.get('revision'))):
             self._refuse('The stored execution part is changed or damaged.')
         ident = identity(self.comp)
-        if len(ident) != 32:
+        if not grape_op_identity.VALID.match(ident):
             self._refuse('This Grape OP has no Grape ID yet.')
         if meta.get('targetId') != ident:
             # A new copy, a fresh template or a regenerated ID: the stored ID follows the parameter

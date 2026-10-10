@@ -10,7 +10,7 @@ import './theme/sizes.css';
 import { appearanceSubscribe, currentTheme } from './appearance';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
-import { HostClient, HostError, type StateResponse } from './host';
+import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
 import { Editor as EditorSession, type EditorState, type WireEnd } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
@@ -436,7 +436,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     // "No target" and "wrong target" (human 2026-10-09). 「沒指目標」與「錯指目標」。
     if (!target) { setWaiting({ message: tr('picker.noTarget', 'Choose a Grape OP to edit.') }); return; }
     const wrong = { message: tr('picker.wrongTarget', 'This Grape OP is not in the current project. Choose another one.') };
-    if (!/^[a-f0-9]{32}$/.test(target)) { setWaiting(wrong); return; }
+    if (!GRAPE_ID.test(target)) { setWaiting(wrong); return; }
     setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…'), loading: true });
     const client = new HostClient(target, token);
     client.seen = setTd;

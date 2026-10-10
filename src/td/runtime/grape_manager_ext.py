@@ -5,8 +5,6 @@ from hashlib import sha256
 import numpy as np
 
 
-GRAPE_OP_TAG = 'grapeOP'
-TEMPLATES_TAG = 'grapeTemplates'
 
 
 class GrapeManagerExt:
@@ -17,15 +15,6 @@ class GrapeManagerExt:
         self.editor = None
         self.bootstrap = None
         self.live = None  # LiveWatch while connected (Uniform D2) 連線期間的即時值監看
-
-    @staticmethod
-    def _template(comp):
-        node = comp.parent()
-        while node is not None:
-            if TEMPLATES_TAG in node.tags:
-                return True
-            node = node.parent()
-        return False
 
     def _module(self, name):
         return self.ownerComp.op(name).module
@@ -151,25 +140,26 @@ class GrapeManagerExt:
     def Resolve(self, target_id):
         # TD is the registry (Q32): search by tag on demand, so new copies are found without registering.
         # TD 本身就是名冊：需要時用 tag 搜尋，新複本不必先登記也找得到。
-        matches = [comp for comp in self.GrapeOps() if self._module('next_family').identity(comp) == target_id]
+        matches = [comp for comp in self.GrapeOps() if self._module('grape_op_identity').identity(comp) == target_id]
         if len(matches) > 1:
             raise self._module('next_family').Refused('More than one Grape OP has this Grape ID; nothing was selected or changed. '
                                                       'Review the copies before editing.')
         return self.Adapter(matches[0]) if matches else None
 
     def Register(self, comp):
-        if GRAPE_OP_TAG not in comp.tags or self._template(comp):
+        if self._module('grape_op_identity').TAG not in comp.tags or self._module('grape_op_identity').in_template(comp):
             raise self._module('next_family').Refused('This is not a Grape OP.')
         self.Adapter(comp).state()
-        return self._module('next_family').identity(comp)
+        return self._module('grape_op_identity').identity(comp)
 
     def GrapeOps(self):
         """Every Grape OP in the project now, templates aside: searched when asked, never kept, so copies and deletions are
         always seen (Q32; Refactor.62 dropped a stale registry). 專案現在所有的 Grape OP（範本除外）：要用時才找、不留名冊。"""
-        return [comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
+        return [comp for comp in op('/').findChildren(tags=[self._module('grape_op_identity').TAG])
+                if not self._module('grape_op_identity').in_template(comp)]
 
     def Choices(self):
-        rows = [{'id': self._module('next_family').identity(comp), 'path': comp.path, 'kind': 'top'} for comp in self.GrapeOps()]
+        rows = [{'id': self._module('grape_op_identity').identity(comp), 'path': comp.path, 'kind': 'top'} for comp in self.GrapeOps()]
         return {'shaders': rows}
 
     def Open(self, comp, app=False):
