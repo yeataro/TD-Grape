@@ -254,8 +254,8 @@ class NextFamilyTests(unittest.TestCase):
         # Uniform D1 (Q57, Q58, Q60): rows of Uniforms no longer used go; values change only when they
         # changed in the editor; the reply carries what TD has. 不再用的列拿掉；只寫編輯器改過的值；回覆帶現況。
         gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2}
-        old_clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uTime', 'type': 'float', 'entry': 'time'}  # Refactor.45
-        fam, comp = family(envelope(run=runtime('old glsl', bindings=[old_clock, gain])), write=True)
+        old = {'id': 'u1', 'kind': 'uniform', 'name': 'uTime', 'type': 'float', 'value': 0}
+        fam, comp = family(envelope(run=runtime('old glsl', bindings=[old, gain])), write=True)
         shader = comp.ops['shader']
         shader.seq.vec.numBlocks = 2
         shader.rows['vec'][0]['name'].val, shader.rows['vec'][1]['name'].val = 'uTime', 'uGain'

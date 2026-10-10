@@ -307,6 +307,19 @@ class UniformWriterTests(unittest.TestCase):
         self.assertEqual((row['rgbr'].mode, row['rgbg'].mode, row['alpha'].mode), ('CONSTANT', 'CONSTANT', 'EXPORT'))
         self.assertEqual([n['code'] for n in notices], ['uniform.exportRemains'])
         self.assertEqual(notices[0]['params'], {'uniform': 'uTint', 'parameter': 'color0alpha', 'origin': 'lfo1:chan1'})
+        # Values back to their defaults too (Refactor.67, D4). 數值也回到預設。
+        self.assertEqual([row[s].val for s in ('rgbr', 'rgbg', 'rgbb')], [row[s].default for s in ('rgbr', 'rgbg', 'rgbb')])
+
+    def test_a_cleared_last_row_is_reused_by_the_next_uniform(self):
+        # Refactor.67 (D4): a cleared row keeps no values, so it counts as untouched and no empty row is left behind.
+        # 清空的列不留數值，算沒動過，下一個 Uniform 直接用它，不會留下一列空的。
+        shader = FakeShader()
+        gain = uniform('u1', 'uGain', value=2.0)
+        apply(shader, [gain])
+        apply(shader, [], [gain])
+        offset = uniform('u2', 'uOffset', value=0.5)
+        apply(shader, [offset])
+        self.assertEqual(shader.names('vec'), ['uOffset'])
 
     def test_a_row_deleted_in_td_is_added_again_with_a_notice(self):
         shader = FakeShader()
@@ -338,40 +351,6 @@ class UniformWriterTests(unittest.TestCase):
         uw.live(shader, mix, [0.0, 0.4, 0.0], [0.0, 0.0, 0.0])
         self.assertEqual((row['valuex'].val, row['valuey'].val), (0.7, 0.4))
 
-    def test_the_old_binding_table_is_retired_keeping_what_it_drove(self):
-        # Refactor.44–46 Grape OPs: DAT Export from the `uniforms` table. R.44～46 的綁定表。
-        shader = FakeShader()
-        row = shader.rows['vec'][0]
-        row['name'].export_from(None, 'uAbsTime')
-        row['valuex'].export_from(None, 12.5)
-        cells = [['path', 'parameter', 'value', 'enable'], ['shader', 'vec0name', "'uAbsTime'", '1'],
-                 ['shader', 'vec0valuex', 'absTime.seconds', '1']]
-
-        class Table:
-            numRows, on = 3, True
-
-            @property
-            def export(self):
-                return self.on
-
-            @export.setter
-            def export(self, value):
-                self.on = value
-                for p in (row['name'], row['valuex']):
-                    p.mode = 'CONSTANT'  # Export off: TD lets go 關掉 Export 後 TD 放開
-
-            def __getitem__(self, at):
-                return type('Cell', (), {'val': cells[at[0]][at[1]]})()
-
-            def clear(self):
-                self.cleared = True
-
-        table = Table()
-        comp = type('Comp', (), {'op': lambda self, name: table if name == 'uniforms' else None})()
-        self.assertTrue(uw.retire_export_table(comp, shader))
-        self.assertEqual((row['name'].mode, row['name'].val), ('CONSTANT', 'uAbsTime'))
-        self.assertEqual((row['valuex'].mode, row['valuex'].expr), ('EXPRESSION', 'absTime.seconds'))
-        self.assertTrue(table.cleared)
 
 
 if __name__ == '__main__':

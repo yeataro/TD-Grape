@@ -423,11 +423,9 @@ class NextFamily:
         return ids
 
     def _write_uniforms(self, uniforms, previous):
-        """Uniform rows on the GLSL OP (uniform_writer.py), after the GLSL compiled. Grape OPs from
-        Refactor.44–46 have their binding table's Export turned off first, keeping what it drove.
-        Returns notices for people. GLSL 編譯成功後寫 Uniform 列；R.44～46 的 Grape OP 先關掉綁定表的 Export。"""
+        """Uniform rows on the GLSL OP (uniform_writer.py), after the GLSL compiled. Returns notices for people.
+        GLSL 編譯成功後寫 Uniform 列。"""
         shader = self._shader(self.comp)
-        uniform_writer.retire_export_table(self.comp, shader)
         return uniform_writer.apply(shader, uniforms, previous, self.presets, constant_mode())
 
     def _place_inputs(self, inputs):
@@ -541,9 +539,8 @@ class NextFamily:
             uniforms = uniforms_of(compiled)
             # What the last successful apply sent: values changed since then were changed in the editor
             # (Q57). 上次成功套用時送的：之後變的值就是在編輯器改的。
-            # Refactor.45–46 built-in values count too, so their rows are removed. R.45～46 的內建值也算，好拿掉它們的列。
             previous_uniforms = [entry for entry in json.loads(meta['runtime']['text']).get('bindings') or []
-                                 if entry.get('kind') in ('uniform', 'builtin')]
+                                 if entry.get('kind') == 'uniform']
             uniform_writer.check_rows(self._shader(self.comp), uniforms, previous_uniforms)
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text

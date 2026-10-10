@@ -200,8 +200,10 @@ def _remove_row(shader, page, row, name, notices, constant_mode):
     if seq.numBlocks > 1:
         seq.destroyBlock(row)  # later rows move up with what drives them (tested in TD) 後面的列連同驅動往前移
         return
-    # TD keeps one row: clear the name and what drives it (human 2026-10-09, new behaviour; legacy
-    # kept the drivers). Export cannot be removed from this end. TD 一定留一列：清名字與驅動；Export 動不了。
+    # TD keeps one row: clear the name, what drives it and its values (human 2026-10-09, new behaviour; legacy kept the
+    # drivers; values too since Refactor.67, D4: a row left with values is not untouched, so the next Uniform added a
+    # second row and left this one empty). Export cannot be removed from this end.
+    # TD 一定留一列：清名字、驅動與數值（數值是 R.67 D4：留著數值就不算沒動過，下一個 Uniform 會多加一列、留下這列空的）。Export 動不了。
     name_par = par(shader, page, row, 'name')
     if mode_name(name_par) != 'CONSTANT':
         name_par.mode = constant_mode
@@ -211,7 +213,9 @@ def _remove_row(shader, page, row, name, notices, constant_mode):
         mode = mode_name(p)
         if mode in ('EXPRESSION', 'BIND'):
             p.mode = constant_mode
-        elif mode == 'EXPORT':
+        if mode != 'EXPORT':
+            p.val = p.default
+        else:
             notices.append(tr('uniform.exportRemains',
                               '{uniform} was deleted, but {parameter} of the GLSL OP is still driven by an Export from {origin}; TD-Grape cannot remove that from here.',
                               uniform=name, parameter=p.name, origin=export_source(p)))
@@ -295,29 +299,3 @@ def live(shader, uniform, value, before):
             wrote = write(par(shader, page, row, suffix), component) or wrote
     return wrote
 
-
-def retire_export_table(comp, shader):
-    """Grape OPs from Refactor.44–46 drive the GLSL OP through the binding table's DAT Export. Turn it
-    off once, keeping what it drove: names and numbers become constants, preset expressions become
-    expressions. R.44～46 的 Grape OP 用綁定表 Export 驅動；關掉一次，把它驅動的內容留成常數或 expression。"""
-    table = comp.op('uniforms')
-    if table is None or not getattr(table, 'export', False):
-        return False
-    rows = []
-    for index in range(1, table.numRows):
-        name, text = table[index, 1].val, table[index, 2].val
-        p = getattr(shader.par, name, None)
-        if p is not None:
-            rows.append((p, text, p.eval()))
-    table.export = False
-    for p, text, value in rows:
-        try:
-            float(text)
-            p.val = value
-        except ValueError:
-            if text[:1] in ('"', "'"):
-                p.val = value  # a quoted name 加引號的名字
-            else:
-                p.expr = text  # a preset expression, e.g. absTime.seconds
-    table.clear()
-    return True
