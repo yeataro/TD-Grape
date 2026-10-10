@@ -503,6 +503,7 @@
   "tune.select": "選取",
   "tune.selectionGap": "多選框離節點的距離",
   "tune.selectPrimary": "多選時目前那個亮多少",
+  "tune.wireGhost": "線上幽靈：不透明度",
   "tune.wireWidth": "接線粗細",
   "tune.wireWidthDrag": "接線粗細：拖曳中",
   "tune.wireWidthHover": "接線粗細：滑過",

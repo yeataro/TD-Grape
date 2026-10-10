@@ -24,6 +24,7 @@ export const TUNABLES: readonly Tunable[] = [
   { name: '--tint-layer-glow', label: tr('tune.layerGlow', 'Inner glow strength'), kind: 'percent', min: 0, max: 20, step: 1 },
   { name: '--layer-glow-blur', label: tr('tune.layerGlowBlur', 'Inner glow reach'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--canvas-shadow', label: tr('tune.canvasShadow', 'Canvas inner shadow reach'), kind: 'px', min: 0, max: 60, step: 1 },
+  { name: '--tint-wire-ghost', label: tr('tune.wireGhost', 'Ghost on wires: opacity'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--tint-glow-select', label: tr('tune.glowSelect', 'Glow strength: selection'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--glow-select', label: tr('tune.glowSelectReach', 'Glow reach: selection'), kind: 'px', min: 0, max: 40, step: 1 },
   { name: '--tint-glow-title', label: tr('tune.glowTitle', 'Glow strength: node titles'), kind: 'percent', min: 0, max: 100, step: 1 },

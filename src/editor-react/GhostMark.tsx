@@ -24,7 +24,7 @@ export function GhostMark({ id, on }: { id: string; on: 'node' | 'wire' }) {
           <feMerge><feMergeNode in="edge" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <g className="ghost-body"><g filter={`url(#edge${key})`}><g clipPath={`url(#body${key})`}>
+      <g className="ghost-body"><g className="ghost-shape" filter={`url(#edge${key})`}><g clipPath={`url(#body${key})`}>
         <path className="ghost-fill" d="M6 18.6V10a6 6 0 0 1 12 0v8.6Z" />
         <path className="ghost-fill ghost-hem" d={HEM} />
       </g></g>

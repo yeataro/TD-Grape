@@ -503,6 +503,7 @@
   "tune.select": "Selection",
   "tune.selectionGap": "Multi-selection frame distance",
   "tune.selectPrimary": "Current among several, brighter by",
+  "tune.wireGhost": "Ghost on wires: opacity",
   "tune.wireWidth": "Wire width",
   "tune.wireWidthDrag": "Wire width: being dragged",
   "tune.wireWidthHover": "Wire width: hovered",
