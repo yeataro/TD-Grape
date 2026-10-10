@@ -437,7 +437,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     {above && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}
     <LayoutView layout={layout} panels={panels} canvas={network} />
-    <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
+    <FootBar session={session} waiting={waiting.message} prefs={prefs} project={td?.file} onAppearance={() => layout.show('appearance')} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }
 

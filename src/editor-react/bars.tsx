@@ -290,8 +290,10 @@ function useCalm(state: EditorState | null): EditorState | null {
  * screen. The light opens the status (the state now, what to do when TD is away, the state's own record); the message opens
  * the message history (Refactor.70.1: two separate things). 底列：編輯器所有的提示（人類）。功能表、同步燈號、最新訊息、設定、
  * 全螢幕。燈號打開狀態（現在的狀態、TD 不在時怎麼辦、狀態自己的紀錄）；訊息打開訊息歷史（R.70.1：兩件不同的事）。 */
-export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppearance }: {
-  session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs; onAppearance?(): void;
+export function FootBar({ session, waiting, onDownload, onReset, prefs, project, onAppearance }: {
+  session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs;
+  /** The TD project's file name, as TD last said it (Refactor.75.2). TD 專案的檔名（TD 最後說的）。 */
+  project?: string; onAppearance?(): void;
 }) {
   // The light and the message show the calm state; the status panel, opened on purpose, the state as it is (R.73.2).
   // 燈號與訊息顯示平穩後的狀態；刻意打開的狀態面板顯示當下的狀態。
@@ -351,7 +353,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
-    {status && <StatusPanel anchor={status} state={live} now={now} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
+    {status && <StatusPanel anchor={status} state={live} project={project} now={now} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
   </footer>;
 }
@@ -377,8 +379,8 @@ function useHistoryList(lines: unknown) {
 // (what matters is nearest the entry), the record above it; while the panel is open the state part only grows, so the
 // record does not jump when TD comes back. 狀態面板（R.75.1，人類）：現在的狀態放在下方、貼著打開它的燈號（重要的離入口最近），
 // 紀錄在上方；面板開著時狀態區只長不縮，TD 回來時紀錄不會跳。
-function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
-  anchor: HTMLElement; state: EditorState | null; now: string; tone: Tone; onRetry(): void; onClose(): void;
+function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
+  anchor: HTMLElement; state: EditorState | null; project?: string; now: string; tone: Tone; onRetry(): void; onClose(): void;
 }) {
   const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records);
   const box = useRef<HTMLDivElement>(null), [floor, setFloor] = useState(0);
@@ -394,10 +396,13 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
   // The TD project's last save and how far it is behind (Refactor.73): the editor never saves it by itself.
   // TD 專案上次存檔與落後多少（R.73）：編輯器不會自己存。
   const last = state?.saved, behind = last?.revision != null && state ? state.revision - last.revision : null;
-  const saved = !last || last.time == null ? null : last.revision == null
-    ? tr('status.savedAt', 'TD project: last saved {time}', { time: clockOf(last.time) })
-    : behind ? tr('status.savedBehind', 'TD project: saved r{saved} ({time}), {behind} behind', { saved: last.revision, time: clockOf(last.time), behind })
-      : tr('status.savedNow', 'TD project: saved r{saved} ({time})', { saved: last.revision, time: clockOf(last.time) });
+  // Which file and which Grape OP these are about (Refactor.75.2, human 2026-10-11: the lines need something to refer to).
+  // 這些說的是哪個檔、哪個 Grape OP（R.75.2，人類：要有指涉的對象）。
+  const file = project ?? '—';
+  const saved = !last || last.time == null ? tr('status.projectFile', 'TD project {file}', { file }) : last.revision == null
+    ? tr('status.savedAt', 'TD project {file}: last saved {time}', { file, time: clockOf(last.time) })
+    : behind ? tr('status.savedBehind', 'TD project {file}: saved r{saved} ({time}), {behind} behind', { file, saved: last.revision, time: clockOf(last.time), behind })
+      : tr('status.savedNow', 'TD project {file}: saved r{saved} ({time})', { file, saved: last.revision, time: clockOf(last.time) });
   const clock = (time: number) => new Date(time).toLocaleTimeString();
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
@@ -411,7 +416,8 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
       {state && away.includes(state.phase) && <div className="status-retry">
         <span>{say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}</span>
         <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
-      {saved && <p className="status-saved">{say(saved)}</p>}
+      {state?.targetPath && <p className="status-saved">{say(tr('status.grapeOp', 'Grape OP {path}', { path: state.targetPath }))}</p>}
+      {state && <p className="status-saved">{say(saved)}</p>}
       {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp[state.link ?? 'unreachable'])}</p>}
     </div>
   </Popover>;
