@@ -110,7 +110,9 @@ a { color: var(--accent); }
   animation-name: sync-countdown; animation-timing-function: linear; animation-fill-mode: both; }
 @keyframes sync-countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 25.13; } }
 /* The revision and the word keep their widest width: unseen copies stacked in one cell (R.70.4). 版號與字保持最寬的寬度：看不見的副本疊在同一格。 */
-.sync-slot { display: inline-grid; } .sync-slot > * { grid-area: 1 / 1; } .sync-size { visibility: hidden; }
+/* Left-aligned in its cell (Refactor.73.1): a button centres its text, so a shorter word sat in the middle and the words
+   seemed to jump (human's recording 2026-10-10). 在格子裡靠左（R.73.1）：按鈕會把字置中，短的字跑到中間，看起來一直跳（人類錄影）。 */
+.sync-slot { display: inline-grid; justify-items: start; text-align: start; } .sync-slot > * { grid-area: 1 / 1; } .sync-size { visibility: hidden; }
 .sync-light.busy .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }
 @keyframes sync-pulse { 50% { opacity: .3; } }
 .sync-word { color: var(--text-muted); }
