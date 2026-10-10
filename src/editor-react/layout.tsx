@@ -309,7 +309,8 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
     addEventListener('pointermove', move => {
       if (move.pointerId !== pointer) return;
       if (!(move.buttons & 1)) { finish(false); return; }
-      if (!moving && Math.hypot(move.clientX - x0, move.clientY - y0) < 6) return;
+      // A finger wobbles more than a mouse: a little further before a press becomes a drag. 手指比滑鼠抖：多一點距離才算拖曳。
+      if (!moving && Math.hypot(move.clientX - x0, move.clientY - y0) < (event.pointerType === 'touch' ? 10 : 6)) return;
       move.preventDefault(); move.stopPropagation();
       if (!moving) { moving = true; document.documentElement.classList.add('moving-panel'); }
       hint = hintAt(now.current, panel, move.clientX, move.clientY);

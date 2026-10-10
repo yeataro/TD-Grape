@@ -37,3 +37,13 @@ test('animations stay on the element itself', () => {
     assert.deepEqual(properties.filter(p => !allowed.has(p)), [], `@keyframes ${name} changes only ${[...allowed].join(', ')}`);
   }
 });
+
+// The page shows the waiting mark before the editor's code has loaded (Refactor.68.6); it is written into index.html, so it must
+// stay the same drawing as BrandMark. 程式載入前頁面顯示等待標誌；它寫在 index.html 裡，必須和 BrandMark 是同一份圖。
+test('the page before loading shows the same mark as BrandMark', () => {
+  const circles = text => [...text.matchAll(/<circle [^>]*\/>/g)].map(match => match[0].replace(/\s+/g, ' '));
+  const mark = fs.readFileSync(path.join(web, 'icons.tsx'), 'utf8').match(/export const BrandMark[\s\S]*?<\/svg>/)[0];
+  const page = fs.readFileSync(path.join(web, 'index.html'), 'utf8');
+  assert.deepEqual(circles(page), circles(mark));
+  assert.match(page, /class="brand-mark loading loading-wave" viewBox="0 0 64 64"/, 'the chosen waiting animation');
+});

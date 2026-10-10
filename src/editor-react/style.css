@@ -9,6 +9,9 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 body { margin: 0; }
 #root { height: 100vh; display: flex; flex-direction: column; }
+/* The page before the editor's code has loaded (index.html): the waiting mark in the middle. 程式載入前的頁面：中央的等待標誌。 */
+.boot-screen { flex: 1; display: grid; place-items: center; }
+.boot-screen .brand-mark { width: var(--loading-mark); height: var(--loading-mark); }
 /* Form controls take the page's line height too (browsers give them `normal`, the usual cause of uneven CJK/Latin rows).
    表單控制項也用頁面的行高（瀏覽器預設給它們 normal，是中英文不齊最常見的原因）。 */
 button, input { font: inherit; line-height: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
@@ -299,6 +302,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    顏色是我們的紫色，暫時和把手共用（人類）；放不下時是紅的並寫原因。面板名跟著游標。 */
 /* A tab is also a handle: pressing it never starts selecting text. 分頁也是把手：按下去不會開始選取文字。 */
 .panel-tab, .moving-panel { user-select: none; }
+/* A finger sliding on a tab moves its panel, not the page (R.68.6, human: panels could not be arranged by touch).
+   手指在分頁上滑動是搬面板，不是捲動頁面（R.68.6，人類：觸控沒辦法排列面板）。 */
+.panel-tab { touch-action: none; }
 .moving-panel, .moving-panel * { cursor: grabbing; }
 .drop-mark { position: fixed; z-index: 30; pointer-events: none; }
 .drop-mark:is(.across, .along) { border-radius: var(--drop-line); background: var(--drop-target); }
