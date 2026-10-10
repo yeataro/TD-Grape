@@ -31,8 +31,11 @@ const canApply = (state: EditorState | null) => !!state?.dirty && !['sending', '
  * 一列要收起幾個部分才放得下（R.69，人類 10-10）。部分標 data-fold（從那個數起收起，1 先收）或 data-appear（從那個數起出現：收起的
  * 東西的簡短替身）；每個部分大小固定，所以量它們、取放得下的最少收起數。看不見的部分用它最後一次顯示時的寬度算；標 data-shrink 的
  * 部分先讓、讓到最小寬度（69.1）。展開時要多留一點空間，所以不會在兩個數之間閃。 */
-const SPARE = 8;
-function useFolding(bar: RefObject<HTMLElement | null>): number {
+export const SPARE = 8;
+/** `measured` hears, after each fit, how many parts folded and the width the bar's content takes now with every part shown
+ * at its own size (its natural width when nothing had to give way). measured：每次量完，聽到收了幾個，以及每個部分照自己的
+ * 寬度全部顯示時要多寬（沒有東西需要讓位時，就是它的自然寬度）。 */
+function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: number, full: number) => void): number {
   const [folded, setFolded] = useState(0), widths = useRef(new Map<Element, number>()), now = useRef(0);
   now.current = folded;
   useLayoutEffect(() => {
@@ -60,6 +63,11 @@ function useFolding(bar: RefObject<HTMLElement | null>): number {
       let count = 0;
       while (count < levels && need(count) > element.clientWidth + .5 - (count < now.current ? SPARE : 0)) count++;
       setFolded(count);
+      if (measured) {
+        const full = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap(children[0]!) * (children.length - 1)
+          + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parts.reduce((sum, part) => sum + (showing(part) ? 0 : widths.current.get(part) ?? 0), 0);
+        measured(count, full);
+      }
     };
     fit();
     const observer = new ResizeObserver(fit);
@@ -102,12 +110,24 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
  * always there (human 2026-10-10). A side with nothing to show greys its toggle out.
  * 網址列只在網路區上方（人類；舊產品跨整個寬度）：兩端是左右開關，中間是正在編輯的東西。它跟著永遠不會關的畫布，所以開關一直都在
  * （人類 10-10）。那一側沒東西可顯示時開關變灰。 */
-export function LocationBar({ layout, file, target }: { layout: Layout; file: ReactNode; target: ReactNode }) {
+export function LocationBar({ layout, file, target, onCramped, onWidth }: {
+  layout: Layout; file: ReactNode; target: ReactNode;
+  /** Over the canvas: told when the file or the path would be cut (69.5). 在畫布上方時：檔名或路徑會被截斷時通知（69.5）。 */
+  onCramped?(): void;
+  /** In its own row: told the width its whole content takes (69.5). 獨立一列時：告知全部內容要多寬（69.5）。 */
+  onWidth?(width: number): void;
+}) {
   // As it narrows (69.4, human 2026-10-10): the file and then the Grape OP path give way to an ellipsis, and fold away
   // altogether once even that does not fit (a part shrunk to nothing still kept its gaps and padding); the toggles and the
   // Layout menu never. 變窄時（人類 10-10）：檔名、再來 Grape OP 路徑先縮成省略號，連那樣都放不下就整個收起（縮到 0 的東西還佔著間距與內距）；
   // 開關與 Layout 選單永遠不收。
-  const bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
+  const bar = useRef<HTMLDivElement>(null), folded = useFolding(bar, (count, full) => {
+    // How much the file and the path miss of their whole text (nothing when they show whole). 檔名與路徑比完整文字少了多少（完整顯示時為 0）。
+    const missing = [...bar.current!.querySelectorAll<HTMLElement>('.location-part')]
+      .reduce((sum, part) => sum + (getComputedStyle(part).display === 'none' ? 0 : Math.max(0, (part.firstElementChild?.scrollWidth ?? 0) - part.clientWidth)), 0);
+    if (count > 0 || missing > 1) onCramped?.();
+    onWidth?.(full + missing);
+  });
   const fold = (order: number) => ({ 'data-fold': order, 'data-shrink': '', className: 'location-part' + (folded >= order ? ' folded' : '') });
   const toggle = (side: 'left' | 'right') => {
     const empty = !layout.hasPanels(side);
@@ -136,7 +156,7 @@ export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean
  * then Snap, the selection's actions, box select, and Undo / Redo last (human 2026-10-10); the stages never. In the menu a
  * tool is the same action, a toggle shown ticked. 變窄時整組搬進「更多」選單，照舊產品：先 GLSL，再 Snap、選取的動作、框選，
  * Undo／Redo 最後（人類 10-10）；Stage 永遠不收。選單裡是同樣的動作，開關會打勾。 */
-type Tool = { key: string; icon?: IconName; label: Message; disabled?: boolean; pressed?: boolean; mode?: boolean; danger?: boolean; select(): void };
+type Tool = { key: string; icon?: IconName; label: Message; hint?: Message; disabled?: boolean; pressed?: boolean; mode?: boolean; danger?: boolean; select(): void };
 export function NetworkBar({ session, prefs, onGlsl }: {
   session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
@@ -153,7 +173,8 @@ export function NetworkBar({ session, prefs, onGlsl }: {
       { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), disabled: !nodes.length && !edges.length,
         select: () => void flow.deleteElements({ nodes, edges }) },
       { key: 'frame', icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), disabled: !nodes.length, select: () => frameNodes(flow, nodes.map(node => node.id)) }] },
-    { order: 4, tools: [{ key: 'boxSelect', icon: 'boxSelect', mode: true, label: tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)'),
+    { order: 4, tools: [{ key: 'boxSelect', icon: 'boxSelect', mode: true, label: tr('toolbar.boxSelectName', 'Box select'),
+      hint: tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)'),
       pressed: prefs.boxSelect, select: () => prefs.set({ boxSelect: !prefs.boxSelect }) }] },
     // Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
     // Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。
@@ -164,7 +185,8 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   const more: MenuItem[] = groups.filter(group => folded >= group.order).flatMap((group, index) => group.tools.map((tool, at) => ({
     key: tool.key, divider: index > 0 && at === 0, disabled: tool.disabled, danger: tool.danger,
     ...(tool.pressed === undefined ? {} : { checkbox: true, checked: tool.pressed }),
-    label: <>{tool.icon && <Icon name={tool.icon} />}{say(tool.label)}</>, select: tool.select })));
+    // A toggle shows its tick instead of its icon (legacy). 開關用勾勾代替圖示（照舊產品）。
+    title: tool.hint && say(tool.hint), label: <>{tool.icon && tool.pressed === undefined && <Icon name={tool.icon} />}{say(tool.label)}</>, select: tool.select })));
   return <div className="network-bar" ref={bar}>
     {/* The stages float on the canvas by themselves, with no toolbar box (legacy; human 2026-10-09).
         Stage 切換直接浮在畫布上，沒有工具列外框（照舊產品，人類）。 */}
@@ -177,7 +199,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
     </div>
     <div className="network-bar-group">
       {groups.map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool => tool.icon
-        ? <IconButton key={tool.key} icon={tool.icon} label={tool.label} disabled={tool.disabled} pressed={tool.pressed} mode={tool.mode} danger={tool.danger} onClick={tool.select} />
+        ? <IconButton key={tool.key} icon={tool.icon} label={tool.hint ?? tool.label} disabled={tool.disabled} pressed={tool.pressed} mode={tool.mode} danger={tool.danger} onClick={tool.select} />
         : <button key={tool.key} type="button" onClick={tool.select}>{say(tool.label)}</button>)}</div>)}
       <div data-appear={1} className={'tool-group tool-more' + (folded >= 1 ? ' appeared' : '')}>
         <MenuButton icon="more" label={tr('toolbar.more', 'More tools')} items={more} /></div>

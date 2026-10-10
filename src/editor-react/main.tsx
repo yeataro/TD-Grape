@@ -20,7 +20,7 @@ import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
 import { LayoutView, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput } from './panels';
-import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
+import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, type CanvasPrefs } from './bars';
 import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
@@ -372,10 +372,23 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
   const panels: Record<string, PanelView> = Object.fromEntries(Object.entries(PANELS)
     .map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
+  // The location bar sits over the canvas; when its file or path would be cut there, it moves to a row of its own under the
+  // title bar, as the legacy one always was, and comes back once the canvas can show it whole again, with a little to spare
+  // (R.69.5, human 2026-10-10: try it, by what fits rather than a set width).
+  // 網址列在畫布上方；在那裡檔名或路徑會被截斷時，移到標題列下方獨立一列（舊產品一直是這樣），等畫布又能完整放下它（多留一點）再移回來
+  // （R.69.5，人類 10-10：照放不放得下、不設固定寬度，先試試看）。
+  const [above, setAbove] = useState(false), whole = useRef(0), networkElement = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = networkElement.current;
+    if (!above || !element) return;
+    const observer = new ResizeObserver(() => { if (whole.current > 0 && element.clientWidth >= whole.current + SPARE) setAbove(false); });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [above]);
   // The network is the canvas pane of the layout: one fixed part, never moved or closed (Refactor.68).
   // 網路區是版面裡的畫布那一格：固定、不能移動或關閉。
-  const network = <section className="network" aria-label={say(tr('network.label', 'Network'))}>
-        <LocationBar layout={layout} file={file} target={where} />
+  const network = <section className="network" ref={networkElement} aria-label={say(tr('network.label', 'Network'))}>
+        {!above && <LocationBar layout={layout} file={file} target={where} onCramped={() => { whole.current = 0; setAbove(true); }} />}
         <div className="canvas">
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
@@ -422,6 +435,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
+    {above && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}
     <LayoutView layout={layout} panels={panels} canvas={network} />
     <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
