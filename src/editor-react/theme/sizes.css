@@ -98,6 +98,7 @@
   --bar-text-gap: 4px;  /* extra room each side of a text button in a bar, apart from the icon buttons (human 2026-10-09) 列裡文字按鈕兩側多留的空間，和圖示按鈕分開（人類） */
   --loading-mark: 48px;  /* the waiting mark in the middle of the canvas 畫布中央的等待標誌 */
   --text-fade: 150ms;
+  --control-slide: 150ms;  /* a segmented control's chosen background sliding to the new choice (R.75.25) 分段控制的底色滑到新選項 */
   --glass-blur: 12px;  /* how much a glass panel blurs what is behind it (R.75.22; 12px as the Codex-era one, R.75.23) 玻璃面板把後面模糊多少 */  /* how long routine news takes to fade in (R.75.20) 例行消息淡入的時間 */
   --loading-cycle: 1.2s;  /* one round of the mark's waiting animation (human chose wave) 標誌等待動畫一輪的長度 */
   --popup-offset: 4px;           /* a menu opened from a control sits this far from it 從控制項打開的選單離它的距離 */

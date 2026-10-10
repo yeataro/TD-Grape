@@ -519,8 +519,10 @@ function Effects() {
   useSyncExternalStore(appearanceSubscribe, appearance);
   const options = follows.map(item => ({ value: item.value, label: say(item.label) }));
   return <>
-    <SettingsRow label={tr('appearance.fades', 'Fades')}>
-      <Select label={tr('appearance.fades', 'Fades')} value={effectOf('motion')} onChange={next => setEffect('motion', next)} options={options} /></SettingsRow>
+    {/* Animation effects, named as the system setting (R.75.25, human 2026-10-11): fades, sliding choices, and any animation
+        added later. 動畫效果，和系統設定同名（R.75.25，人類）：淡入、滑動的選取，以及之後加的動畫。 */}
+    <SettingsRow label={tr('appearance.motion', 'Animation effects')}>
+      <Select label={tr('appearance.motion', 'Animation effects')} value={effectOf('motion')} onChange={next => setEffect('motion', next)} options={options} /></SettingsRow>
     <SettingsRow label={tr('appearance.glass', 'Glass')}>
       <Select label={tr('appearance.glass', 'Glass')} value={effectOf('glass')} onChange={next => setEffect('glass', next)} options={options} /></SettingsRow>
   </>;

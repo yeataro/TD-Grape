@@ -156,7 +156,24 @@ export function PopoverButton({ icon, label, className, children }: { icon: Icon
 export function Segmented<T extends string>({ label, value, options, onChange }: {
   label: Message | string; value: T; options: readonly { value: T; label: Message | string; disabled?: boolean; title?: Message | string }[]; onChange(value: T): void;
 }) {
-  return <div className="segmented" role="radiogroup" aria-label={say(label)}>
+  // The chosen one's background slides from the old choice to the new one (Refactor.75.25, human 2026-10-11, as segmented
+  // controls do): the choice takes effect at once, only the background follows. It is placed again when the row changes size
+  // (a language or size switch); the first placing does not slide. 選中的底色從舊選項滑到新選項（R.75.25，人類，照分段控制的慣例）：
+  // 選擇立刻生效，只有底色跟上。列的大小變了（換語言、大小）就重新放；第一次放不滑。
+  const row = useRef<HTMLDivElement>(null), [thumb, setThumb] = useState<{ x: number; width: number; ready: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const chosen = row.current?.querySelector<HTMLElement>('button[aria-checked="true"]');
+      setThumb(was => chosen ? { x: chosen.offsetLeft, width: chosen.offsetWidth, ready: was !== null } : null);
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    if (row.current) observer.observe(row.current);
+    return () => observer.disconnect();
+  }, [value]);
+  return <div ref={row} className={'segmented' + (thumb ? ' sliding' : '')} role="radiogroup" aria-label={say(label)}>
+    {thumb && <span className={'segmented-thumb' + (thumb.ready ? ' ready' : '')} aria-hidden="true"
+      style={{ width: thumb.width, transform: `translateX(${thumb.x}px)` }} />}
     {options.map(option => <button key={option.value} type="button" role="radio" aria-checked={option.value === value}
       aria-disabled={option.disabled || undefined} title={option.title === undefined ? undefined : say(option.title)}
       onClick={() => { if (!option.disabled) onChange(option.value); }}>{say(option.label)}</button>)}</div>;

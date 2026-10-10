@@ -138,8 +138,8 @@ a { color: var(--accent); }
 .fade-in { animation: text-in var(--text-fade) ease-out; }
 @keyframes text-in { from { opacity: 0; } }
 /* The gear decides: follow the system's "reduce motion", always on, always off (R.75.21–22). 齒輪決定：跟隨系統、一律開、一律關。 */
-:root[data-motion="off"] .fade-in { animation: none; }
-@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .fade-in { animation: none; } }
+:root[data-motion="off"] .fade-in { animation: none; } :root[data-motion="off"] .segmented-thumb { transition: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .fade-in { animation: none; } :root[data-motion="system"] .segmented-thumb { transition: none; } }
 /* Glass on every panel and menu opened from a bar, none inside a pane (Refactor.75.22, 75.24, human 2026-10-11): what is behind
    shows through, blurred. Follows the system's "reduce transparency" unless the gear says always on or off.
    玻璃效果：列上打開的面板與選單全部，窗格裡的都不要（R.75.22、75.24，人類）：透出模糊的後方。跟隨系統的「減少透明度」，除非齒輪指定一律開或關。 */
@@ -266,6 +266,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .segmented { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--surface-zone); }
 .segmented button { border: 0; background: none; padding: 4px 10px; color: var(--text-muted); height: auto; }
 .segmented button[aria-checked="true"] { background: var(--surface-active); color: var(--text-active); }
+/* The chosen background as its own piece that slides (R.75.25); the buttons sit above it. 選中的底色是獨立的一塊、會滑動；按鈕在它上面。 */
+.segmented.sliding { position: relative; }
+.segmented.sliding button { position: relative; } .segmented.sliding button[aria-checked="true"] { background: none; }
+.segmented-thumb { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: var(--radius-control); background: var(--surface-active); }
+.segmented-thumb.ready { transition: transform var(--control-slide) ease-out, width var(--control-slide) ease-out; }
 
 /* The network's toolbar floats over its top edge and never blocks the canvas between its groups.
    網路區功能列浮在上緣，兩組之間不擋畫布。 */
