@@ -14,7 +14,10 @@ export type MenuItem = { key: string; label: ReactNode; checked?: boolean; disab
   /** A line before this item, starting a new section. 在這一項前面畫一條線，開始新的一段。 */
   divider?: boolean;
   /** Destroys something: in the error red, as a danger button. 會刪掉東西：用錯誤紅，同危險按鈕。 */
-  danger?: boolean; select(): void };
+  danger?: boolean;
+  /** An on/off item (`checked` is its state): choosing it keeps the menu open, so several can be set (Refactor.68, the
+   * Layout menu's panels). 開關項目（checked＝狀態）：選了選單不關，可以連續設好幾個（Layout 選單的面板）。 */
+  checkbox?: boolean; select(): void };
 
 // Drawn at the page level, so a menu called up inside a zoomed node still lands under its anchor (a fixed
 // position inside a transformed element would follow the transform). 畫在頁面層，從縮放中的節點叫出也落在正確位置。
@@ -52,6 +55,8 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
     return () => { removeEventListener('pointerdown', away, true); removeEventListener('keydown', key); };
   }, [anchor, onClose]);
   useEffect(() => {
+    // Not again while the keyboard is already in the menu (an on/off item changed it). 鍵盤已在選單裡時不再移動（開關項目改了它）。
+    if (menu.current?.contains(document.activeElement)) return;
     (menu.current?.querySelector<HTMLButtonElement>('button[aria-checked="true"]:not([aria-disabled="true"])')
       ?? menu.current?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])'))?.focus();
   }, [items]);
@@ -66,8 +71,9 @@ export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
     style={fit ? { ...place, minWidth: anchor.offsetWidth } : place} onKeyDown={move}>
     {note && <p className="hint">{say(note)}</p>}
     {items.map(item => <Fragment key={item.key}>{item.divider && <hr />}
-      <button role={item.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.checked === undefined ? undefined : item.checked}
+      <button role={item.checkbox ? 'menuitemcheckbox' : item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+        aria-checked={item.checked === undefined ? undefined : item.checked}
         aria-disabled={item.disabled || undefined} title={item.title} className={item.danger ? 'danger' : undefined}
-        onClick={() => { if (item.disabled) return; onClose(); item.select(); }}>{item.label}</button></Fragment>)}
+        onClick={() => { if (item.disabled) return; if (!item.checkbox) onClose(); item.select(); }}>{item.label}</button></Fragment>)}
   </div>, document.body);
 }

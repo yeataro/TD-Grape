@@ -110,7 +110,7 @@ a { color: var(--accent); }
 .foot-bar .recovery-help { position: relative; flex-shrink: 0; } .foot-bar .recovery-help summary { white-space: nowrap; }
 .foot-bar .recovery-help p { position: absolute; bottom: calc(100% + 8px); left: 0; width: 420px; margin: 0;
   padding: 10px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); color: var(--text); }
-.workspace { display: flex; flex: 1; min-height: 0; }
+.workspace { flex: 1; }
 .network { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .canvas { position: relative; flex: 1; min-height: 0; }
 /* The network sits sunk in, an inner shadow round its edge (human 2026-10-09 note; new, the legacy editor had none). Above
@@ -203,13 +203,18 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border: 0; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); font-variant-numeric: tabular-nums; }
 .zoom-readout:hover, .zoom-readout[aria-expanded="true"] { color: var(--text); background: var(--surface-control-hover); }
 
-/* Panel zones and handles (layout.tsx). 面板區與把手。 */
-.panel-zone { position: relative; display: flex; flex-shrink: 0; min-height: 0; background: var(--surface-zone); }
+/* The layout (layout.tsx, Refactor.68): split panes lay their parts in a row or a column; a part next to the canvas is a
+   panel zone (the sides, and panes above or below the canvas); a tab pane fills its part. Sizes come from the layout.
+   版面：分割窗格把各格排成一列或一行；畫布旁的一格是面板區（左右兩側、畫布上下的窗格）；分頁窗格填滿它那一格。大小由版面給。 */
+.split { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.split-row { flex-direction: row; } .split-column { flex-direction: column; }
+.pane-slot { position: relative; display: flex; min-width: 0; min-height: 0; }
+.panel-zone { position: relative; display: flex; min-width: 0; min-height: 0; background: var(--surface-zone); }
 .panel-zone-left { border-right: 1px solid var(--border); }
 .panel-zone-right { border-left: 1px solid var(--border); }
-.panel-zone-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
-.panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
-.panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.panel-zone-top { border-bottom: 1px solid var(--border); }
+.panel-zone-bottom { border-top: 1px solid var(--border); }
+.tab-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 /* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
 .panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); background: var(--surface-canvas); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
@@ -276,10 +281,31 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .resize-handle:hover::after, .resize-handle:active::after { background: var(--accent); }
 .resize-x { top: 0; bottom: 0; width: var(--handle-grab); cursor: col-resize; }
 .resize-x::after { top: 0; bottom: 0; left: calc(50% - var(--handle-line)); width: calc(var(--handle-line) * 2); }
-.panel-zone-left > .resize-x { right: calc(var(--handle-grab) / -2); }
-.panel-zone-right > .resize-x { left: calc(var(--handle-grab) / -2); }
-.resize-y { left: 0; right: 0; top: calc(var(--handle-grab) / -2); height: var(--handle-grab); cursor: row-resize; }
+.resize-y { left: 0; right: 0; height: var(--handle-grab); cursor: row-resize; }
 .resize-y::after { left: 0; right: 0; top: calc(50% - var(--handle-line)); height: calc(var(--handle-line) * 2); }
+/* On the leading (left, top) or trailing (right, bottom) edge of the part it belongs to. 在所屬那一格的前緣（左、上）或後緣（右、下）。 */
+.resize-x.lead { left: calc(var(--handle-grab) / -2); } .resize-x.trail { right: calc(var(--handle-grab) / -2); }
+.resize-y.lead { top: calc(var(--handle-grab) / -2); } .resize-y.trail { bottom: calc(var(--handle-grab) / -2); }
+/* Moving a panel (Refactor.68; human 2026-10-10, Resolume Wire): corner marks on a pane it would join as a tab, a line where a
+   new pane would be cut or a tab would go; in our purple, shared with the handles for now (human), red with the reason where
+   it cannot go. The panel's name follows the pointer. 搬面板：要合併成分頁的窗格四角亮角框；會切出新窗格或插入分頁的地方一條線；
+   顏色是我們的紫色，暫時和把手共用（人類）；放不下時是紅的並寫原因。面板名跟著游標。 */
+/* A tab is also a handle: pressing it never starts selecting text. 分頁也是把手：按下去不會開始選取文字。 */
+.panel-tab, .moving-panel { user-select: none; }
+.moving-panel, .moving-panel * { cursor: grabbing; }
+.drop-mark { position: fixed; z-index: 30; pointer-events: none; }
+.drop-mark:is(.across, .along) { border-radius: var(--drop-line); background: var(--drop-target); }
+.drop-mark.across { height: var(--drop-line); translate: 0 -50%; } .drop-mark.along { width: var(--drop-line); translate: -50% 0; }
+.drop-mark.refused { background: var(--drop-refused); }
+.drop-corner { position: absolute; width: var(--drop-corner); height: var(--drop-corner); border: 0 solid var(--drop-target); }
+.drop-corner.tl { left: 0; top: 0; border-left-width: var(--drop-line); border-top-width: var(--drop-line); }
+.drop-corner.tr { right: 0; top: 0; border-right-width: var(--drop-line); border-top-width: var(--drop-line); }
+.drop-corner.bl { left: 0; bottom: 0; border-left-width: var(--drop-line); border-bottom-width: var(--drop-line); }
+.drop-corner.br { right: 0; bottom: 0; border-right-width: var(--drop-line); border-bottom-width: var(--drop-line); }
+.drag-label, .drop-refusal { position: fixed; z-index: 31; pointer-events: none; padding: 4px 10px; border-radius: var(--radius-control);
+  font-size: var(--font-sm); line-height: var(--line-sm); white-space: nowrap; }
+.drag-label { border: 1px solid var(--border-control); background: var(--surface-raised); color: var(--text-strong); opacity: .9; }
+.drop-refusal { background: var(--surface-raised); color: var(--drop-refused); border: 1px solid var(--drop-refused); }
 
 /* React Flow hides the browser's focus outline only on its selectable nodes (its style.css:450); ours are not
    (selection is the editor's, Refactor.49), so the square outline showed around the round card. Selection has its own frames.
@@ -645,7 +671,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .dropdown-menu button:hover, .dropdown-menu button:focus-visible { background: var(--surface-control-hover); }
 /* The check sits in its own fixed column, like a table, so the text always lines up (human 2026-10-09).
    勾勾放在固定寬度的一欄，像表格一樣，文字一定對齊。 */
-.dropdown-menu button[role="menuitemradio"]::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
+.dropdown-menu button:is([role="menuitemradio"], [role="menuitemcheckbox"])::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
 .dropdown-menu .hint { margin: 4px 8px; }
 .dropdown-menu button.danger { color: var(--status-error); }
 .dropdown-menu button.danger:hover, .dropdown-menu button.danger:focus-visible { background: color-mix(in srgb, var(--status-error) 14%, transparent); }

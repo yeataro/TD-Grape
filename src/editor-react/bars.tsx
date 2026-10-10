@@ -4,7 +4,7 @@ import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
-import type { Layout } from './layout';
+import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
 import { frameNodes } from './viewport';
@@ -44,20 +44,25 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
   </header>;
 }
 
-/** The location bar, over the network only (human 2026-10-09; the legacy one spanned the whole width): the zone
- * toggles at its ends, what is being edited in between. 網址列只在網路區上方（人類；舊產品跨整個寬度）：兩端是面板區開關，
- * 中間是正在編輯的東西。 */
-export function LocationBar({ layout, rightEmpty, children }: { layout: Layout; rightEmpty: boolean; children: ReactNode }) {
+/** The location bar, over the network only (human 2026-10-09; the legacy one spanned the whole width): the side
+ * toggles at its ends, what is being edited in between. It belongs to the canvas, which is never closed, so they are
+ * always there (human 2026-10-10). A side with nothing to show greys its toggle out.
+ * 網址列只在網路區上方（人類；舊產品跨整個寬度）：兩端是左右開關，中間是正在編輯的東西。它跟著永遠不會關的畫布，所以開關一直都在
+ * （人類 10-10）。那一側沒東西可顯示時開關變灰。 */
+export function LocationBar({ layout, children }: { layout: Layout; children: ReactNode }) {
+  const toggle = (side: 'left' | 'right') => {
+    const empty = !layout.hasPanels(side);
+    return <IconButton icon={side === 'left' ? 'leftPanel' : 'rightPanel'} label={side === 'left' ? tr('layout.leftZone', 'Left panels') : tr('layout.rightZone', 'Right panels')}
+      expanded={!empty && !layout.closed[side]} disabled={empty} title={empty ? tr('layout.sideEmpty', 'No panels on this side') : undefined}
+      onClick={() => layout.toggleSide(side)} />;
+  };
   return <div className="location-bar">
-    <IconButton icon="leftPanel" label={tr('layout.leftZone', 'Left panels')} expanded={layout.left.open} onClick={() => layout.toggleZone('left')} />
+    {toggle('left')}
     {children}
     <span className="spacer" />
     <IconButton icon="titleBar" label={tr('layout.titleBar', 'Title bar')} expanded={layout.titleBar} onClick={layout.toggleTitleBar} />
-    <Placeholder label={tr('layout.menu', 'Layout')} />
-    {/* No panel lives on the right yet (the Parameter panel comes later): a placeholder until then.
-        右邊還沒有面板（參數面板之後才有），先是佔位。 */}
-    <IconButton icon="rightPanel" label={tr('layout.rightZone', 'Right panels')} expanded={!rightEmpty && layout.right.open}
-      disabled={rightEmpty} title={rightEmpty ? tr('layout.rightEmpty', 'No panels here yet') : undefined} onClick={() => layout.toggleZone('right')} />
+    <LayoutMenu layout={layout} />
+    {toggle('right')}
   </div>;
 }
 

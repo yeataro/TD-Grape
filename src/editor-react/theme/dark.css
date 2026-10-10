@@ -219,6 +219,10 @@
   --text-on-accent: color-mix(in srgb, var(--palette-shadow) 85%, transparent);
   --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 55%);
   --accent: var(--palette-accent);
+  /* Where a moved panel would go, and where it cannot (Refactor.68): the handles' purple for now (human 2026-10-10), the alarm red.
+     搬面板時會放在哪、以及放不下的地方：暫時和把手同一個紫色（人類 10-10），放不下用警示紅。 */
+  --drop-target: var(--accent);
+  --drop-refused: var(--palette-alarm);
   --accent-fill: var(--palette-accent);
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
   --pressed: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);

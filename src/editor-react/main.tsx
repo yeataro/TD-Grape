@@ -18,7 +18,7 @@ import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
-import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
+import { LayoutView, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
 import { NodeCard } from './NodeCard';
@@ -230,8 +230,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
 // Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
-// Panels and zones are the layout's (layout.tsx, Refactor.53).
-// 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與面板區歸版面管（layout.tsx）。
+// Panels and panes are the layout's (layout.tsx, Refactor.53, 68).
+// 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與窗格歸版面管（layout.tsx）。
 // Body drag and canvas damping are kept in this browser (Q64; preferences.ts); Snap and box select last for the page.
 // Damping and error-node marks start off while they are trials. Body 拖曳與畫布阻尼記在這個瀏覽器；試驗期間阻尼與錯誤節點標記預設關。
 function usePrefs(): CanvasPrefs {
@@ -253,11 +253,11 @@ const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'read
   projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [] };
 const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 
-// The editing frame below the title bar: the left zone, the network (location bar, its toolbar, the canvas),
-// the right zone and the foot bar; the same layout whether a graph is open, loading or missing (human
+// The editing frame below the title bar: the layout's panes around the network (location bar, its toolbar, the canvas;
+// the canvas pane of the layout, Refactor.68) and the foot bar; the same layout whether a graph is open, loading or missing (human
 // 2026-10-09: the layout must not jump while loading). With a session it edits that one graph and gives the
 // panels their content (Q47 4: from the view being edited); the shell above decides which graph.
-// 標題列以下的編輯外框：左區、網路區（網址列、功能列、畫布）、右區、底列；有圖、載入中、沒有圖都同一個版面。
+// 標題列以下的編輯外框：版面的窗格圍著網路區（網址列、功能列、畫布；版面裡的畫布那一格）、底列；有圖、載入中、沒有圖都同一個版面。
 // 有 session 時編輯那一張圖，並提供面板內容（Q47 4：從正在編輯的畫面來）；換哪一張由外殼決定。
 // td: the TD answering now; opened: the TD this graph was opened from (Refactor.52, shown side by side).
 // td：現在回應的 TD；opened：開這張圖時的 TD（並排給人比對）。
@@ -356,11 +356,10 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
   const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
   const panels: Record<string, PanelView> = Object.fromEntries(Object.entries(PANELS)
     .map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
-  return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
-    <div className="workspace">
-      <PanelZone side="left" layout={layout} panels={panels} />
-      <section className="network" aria-label={say(tr('network.label', 'Network'))}>
-        <LocationBar layout={layout} rightEmpty={!layout.right.groups.length}>{editing}</LocationBar>
+  // The network is the canvas pane of the layout: one fixed part, never moved or closed (Refactor.68).
+  // 網路區是版面裡的畫布那一格：固定、不能移動或關閉。
+  const network = <section className="network" aria-label={say(tr('network.label', 'Network'))}>
+        <LocationBar layout={layout}>{editing}</LocationBar>
         <div className="canvas">
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
@@ -405,9 +404,9 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
           </div></div>
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
-      </section>
-      <PanelZone side="right" layout={layout} panels={panels} />
-    </div>
+      </section>;
+  return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
+    <LayoutView layout={layout} panels={panels} canvas={network} />
     <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }

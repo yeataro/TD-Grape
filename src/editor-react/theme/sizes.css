@@ -79,6 +79,9 @@
   --radius-popup: 10px;
   --handle-line: 1px;
   --handle-grab: 9px;
+  /* The marks shown while a panel is moved (Refactor.68): line width and corner length. 搬面板時提示的線寬與角框長。 */
+  --drop-line: 3px;
+  --drop-corner: 18px;
   --float-gap: 8px;
   --popup-gap: var(--float-gap); /* a menu opened from a bar keeps this off the bar's edge (human 2026-10-09: like the toolbar's gap) 從列打開的選單離列邊緣的距離（人類：同功能列的間距） */
   --bar-text-gap: 4px;  /* extra room each side of a text button in a bar, apart from the icon buttons (human 2026-10-09) 列裡文字按鈕兩側多留的空間，和圖示按鈕分開（人類） */
