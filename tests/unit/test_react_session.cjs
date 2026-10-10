@@ -1109,6 +1109,43 @@ test('the heartbeat waits while the page is not seen and asks at once when it is
   assert.deepEqual(socket.pings.map(ping => ping.seq), [1], 'seen again: asked at once');
 });
 
+// Refactor.73.2, covered in the audit since R.67 (human 2026-10-11): a result shows at once; "on its way" only once it has
+// lasted 0.1 s, and then as the latest state; sending itself is not touched. 結果立刻顯示；「途中」持續 0.1 秒才顯示，而且是最新的狀態。
+test('the foot bar shows "on its way" only once it has lasted, and never over a newer result', async t => {
+  const { CalmGate } = load(path.join(root, 'src/editor-react/calm.ts'));
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  let changes = 0;
+  const gate = new CalmGate('applied', state => state.startsWith('sending'), () => changes++, 30);
+  t.after(() => gate.dispose());
+  gate.feed('sending 1');
+  assert.deepEqual([gate.view('sending 1'), changes], ['applied', 0], 'a send that ends at once is never shown');
+  gate.feed('applied 2');
+  assert.deepEqual([gate.shown, changes], ['applied 2', 1], 'a result shows at once');
+  await wait(45);
+  assert.equal(gate.shown, 'applied 2', 'the earlier "on its way" did not come back over the newer result');
+  gate.feed('sending 3'); await wait(15); gate.feed('sending 4');
+  assert.equal(gate.shown, 'applied 2', 'not yet lasted');
+  await wait(30);
+  assert.equal(gate.shown, 'sending 4', 'lasted: shown, as the latest state');
+  gate.feed('sending 5');
+  assert.equal(gate.shown, 'sending 5', 'already on its way: more of it at once');
+});
+
+// Refactor.75.1, covered in the audit since R.67 (human 2026-10-11): a panel is placed at once, and again when its bar (not
+// just the button) or the window changes size; closing it stops that. 面板馬上放一次；所在的列（不只是按鈕）或視窗大小一變就再放；關掉就停。
+test('a panel opened from a bar is placed again when that bar or the window changes size', () => {
+  const { followBar } = load(path.join(root, 'src/editor-react/follow_bar.ts'));
+  const bar = { name: 'foot-bar' }, anchor = { closest: selector => selector.includes('.foot-bar') ? bar : null };
+  let placed = 0, watched, changed, stopped = false;
+  const listeners = new Map(), win = { addEventListener: (type, run) => listeners.set(type, run), removeEventListener: type => listeners.delete(type) };
+  const stop = followBar(anchor, () => placed++, (target, run) => { watched = target; changed = run; return () => { stopped = true; }; }, win);
+  assert.deepEqual([placed, watched], [1, bar], 'placed at once; the bar is what is watched');
+  changed(); listeners.get('resize')();
+  assert.equal(placed, 3, 'the bar or the window changed size: placed again');
+  stop();
+  assert.deepEqual([stopped, listeners.size], [true, 0], 'closed: nothing is watched');
+});
+
 // Refactor.75 (human 2026-10-10): TD says why it closed the live connection (4001 TD closed, 4002 service stopped, 4003
 // reloading, 4004 Grape OP deleted); what the editor only sees afterwards does not replace it; nothing said is "unreachable".
 // R.75：TD 在關閉訊框裡說原因；之後編輯器只看到的症狀不會蓋掉它；沒說就是連不到。

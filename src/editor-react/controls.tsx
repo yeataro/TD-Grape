@@ -4,6 +4,7 @@ import { DropdownMenu, popupPlace, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
 import { readPreference, writePreference } from './preferences';
+import { followBar } from './follow_bar';
 
 // Shared controls of the editor frame (Refactor.53; human 2026-10-09: clean structure, colours and parts all
 // reusable). Bars, zones and panels build from these; their look lives in style.css under the same names and
@@ -95,14 +96,7 @@ export function Popover({ anchor, label, onClose, className, children }: {
   // Placed again whenever its bar or the window changes size (Refactor.75.1, human 2026-10-11: switching the density made the
   // foot bar taller or shorter and the panel stayed where it was). 所在的列或視窗大小一變就重新放（R.75.1，人類：切換密度時底列
   // 變高變矮，面板卻留在原地）。
-  useLayoutEffect(() => {
-    const place = () => setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0));
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(anchor.closest('.title-bar, .location-bar, .foot-bar') ?? anchor);
-    addEventListener('resize', place);
-    return () => { observer.disconnect(); removeEventListener('resize', place); };
-  }, [anchor]);
+  useLayoutEffect(() => followBar(anchor, () => setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0))), [anchor]);
   useEffect(() => {
     // A menu opened from inside (a Select's choices) is drawn at the page level, but belongs to the panel: pressing it is not
     // pressing outside, and Esc closes that menu first (Refactor.69: choosing a language in the "AA" panel closed the panel

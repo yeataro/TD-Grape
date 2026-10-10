@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
@@ -11,6 +11,7 @@ import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
 import { frameNodes } from './viewport';
+import { CalmGate } from './calm';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
 // bar over the network, the network's own toolbar and the foot bar. Each is a row of the shared controls
@@ -290,9 +291,6 @@ function LightDot({ state }: { state: EditorState | null }) {
       style={{ animationDuration: left + 'ms', animationDelay: (left - (state.retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>;
 }
 
-/** How long the foot bar keeps showing the last result before it says something is on its way (Refactor.73.2, human
- * 2026-10-10: 0.1 s). 底列在說「正在途中」之前，先維持上一個結果多久（R.73.2，人類：0.1 秒）。 */
-const CALM_MS = 100;
 const passing = (state: EditorState | null) => !!state && (state.phase === 'sending' || (state.phase === 'ready' && state.dirty));
 /** What the foot bar shows (Refactor.73.2, human 2026-10-10: the bar jumped at every edit, three states within ~20 ms). Sending
  * is not delayed; only the showing is. A result (applied, an error, TD away) shows at once; "on its way" (not sent yet,
@@ -300,15 +298,11 @@ const passing = (state: EditorState | null) => !!state && (state.phase === 'send
  * 底列顯示什麼（R.73.2，人類：每次修改底列都在約 20 ms 內跳三個狀態）。送出不延後，只有顯示延後。結果（已套用、錯誤、
  * TD 不在）立刻顯示；「途中」（還沒送、送出中）要過了 CALM_MS 仍是如此才顯示，而且那時讀的是最新的狀態，所以不會蓋掉較新的結果。 */
 function useCalm(state: EditorState | null): EditorState | null {
-  const [shown, setShown] = useState(state), latest = useRef(state), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  latest.current = state;
-  useEffect(() => {
-    if (!passing(state)) { clearTimeout(timer.current); timer.current = undefined; setShown(state); return; }
-    if (passing(shown)) { setShown(state); return; } // already showing "on its way" 已經在顯示途中
-    if (timer.current === undefined) timer.current = setTimeout(() => { timer.current = undefined; setShown(latest.current); }, CALM_MS);
-  }, [state, shown]);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return !passing(state) || passing(shown) ? state : shown;
+  const [, changed] = useReducer((n: number) => n + 1, 0), gate = useRef<CalmGate<EditorState | null> | null>(null);
+  gate.current ??= new CalmGate(state, passing, changed);
+  useEffect(() => { gate.current!.feed(state); }, [state]);
+  useEffect(() => () => gate.current!.dispose(), []);
+  return gate.current.view(state);
 }
 
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync light, the latest message, settings, full

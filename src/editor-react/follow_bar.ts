@@ -1,0 +1,19 @@
+// A panel opened from a bar stays put against that bar (Refactor.75.1, human 2026-10-11: switching the density made the foot
+// bar taller or shorter and the panel stayed where it was): it is placed at once, and again whenever its bar or the window
+// changes size. Kept apart from React so it can be tested (audit since R.67, human 2026-10-11).
+// 從列上打開的面板貼著那一列（R.75.1，人類：切換密度時底列變高變矮，面板卻留在原地）：馬上放一次，所在的列或視窗大小一變
+// 就重新放。和 React 分開，才能測試。
+
+/** Watches one element's size; returns how to stop. 監看一個元素的大小；回傳停止的方法。 */
+export type Watch = (target: Element, changed: () => void) => () => void;
+const watchSize: Watch = (target, changed) => { const observer = new ResizeObserver(changed); observer.observe(target); return () => observer.disconnect(); };
+type Window = Pick<typeof globalThis, 'addEventListener' | 'removeEventListener'>;
+
+/** Places now and whenever the anchor's bar (or the anchor, when it is in none) or the window changes size; returns how to
+ * stop. 現在放一次，之後所在的列（不在列裡就是它自己）或視窗大小一變就再放；回傳停止的方法。 */
+export function followBar(anchor: Element, place: () => void, watch: Watch = watchSize, win: Window = globalThis) {
+  place();
+  const stop = watch(anchor.closest('.title-bar, .location-bar, .foot-bar') ?? anchor, place);
+  win.addEventListener('resize', place);
+  return () => { stop(); win.removeEventListener('resize', place); };
+}
