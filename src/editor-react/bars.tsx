@@ -256,6 +256,27 @@ function LightDot({ state }: { state: EditorState | null }) {
       style={{ animationDuration: left + 'ms', animationDelay: (left - (state.retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>;
 }
 
+/** How long the foot bar keeps showing the last result before it says something is on its way (Refactor.73.2, human
+ * 2026-10-10: 0.1 s). 底列在說「正在途中」之前，先維持上一個結果多久（R.73.2，人類：0.1 秒）。 */
+export const CALM_MS = 100;
+const passing = (state: EditorState | null) => !!state && (state.phase === 'sending' || (state.phase === 'ready' && state.dirty));
+/** What the foot bar shows (Refactor.73.2, human 2026-10-10: the bar jumped at every edit, three states within ~20 ms). Sending
+ * is not delayed; only the showing is. A result (applied, an error, TD away) shows at once; "on its way" (not sent yet,
+ * sending) shows only if it is still so after CALM_MS, read then from the latest state, so it never covers a newer result.
+ * 底列顯示什麼（R.73.2，人類：每次修改底列都在約 20 ms 內跳三個狀態）。送出不延後，只有顯示延後。結果（已套用、錯誤、
+ * TD 不在）立刻顯示；「途中」（還沒送、送出中）要過了 CALM_MS 仍是如此才顯示，而且那時讀的是最新的狀態，所以不會蓋掉較新的結果。 */
+function useCalm(state: EditorState | null): EditorState | null {
+  const [shown, setShown] = useState(state), latest = useRef(state), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  latest.current = state;
+  useEffect(() => {
+    if (!passing(state)) { clearTimeout(timer.current); timer.current = undefined; setShown(state); return; }
+    if (passing(shown)) { setShown(state); return; } // already showing "on its way" 已經在顯示途中
+    if (timer.current === undefined) timer.current = setTimeout(() => { timer.current = undefined; setShown(latest.current); }, CALM_MS);
+  }, [state, shown]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return !passing(state) || passing(shown) ? state : shown;
+}
+
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync light, the latest message, settings, full
  * screen. The light opens the status (the state now, what to do when TD is away, the state's own record); the message opens
  * the message history (Refactor.70.1: two separate things). 底列：編輯器所有的提示（人類）。功能表、同步燈號、最新訊息、設定、
@@ -263,7 +284,9 @@ function LightDot({ state }: { state: EditorState | null }) {
 export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppearance }: {
   session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs; onAppearance?(): void;
 }) {
-  const state = useEditorState(session), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
+  // The light and the message show the calm state; the status panel, opened on purpose, the state as it is (R.73.2).
+  // 燈號與訊息顯示平穩後的狀態；刻意打開的狀態面板顯示當下的狀態。
+  const live = useEditorState(session), state = useCalm(live), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
   // As it narrows (human 2026-10-10): the latest message gives way first, down to its "…"; then the light's word folds; the
   // icons basically stay, but if they must, they fold from the left; the light (dot and revision), which matters more, folds
   // after them; the ⋮ menu never. 變窄時（人類 10-10）：最新訊息先讓，讓到剩「…」；接著燈號的字收起；圖示原則上留著，非收不可時從左邊收；
@@ -317,7 +340,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppear
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
-    {status && <StatusPanel anchor={status} state={state} now={now} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
+    {status && <StatusPanel anchor={status} state={live} now={now} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
   </footer>;
 }
