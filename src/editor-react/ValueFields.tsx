@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { core, type Value } from './core';
 import type { ComponentState } from './host';
 import { NumberField } from './NumberField';
@@ -70,7 +70,16 @@ export const componentColor = (i: number) => `var(--component-${'xyzw'[i]})`;
 export const colorHex = (list: readonly unknown[]) =>
   '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption }: {
+/** Values laid out in the Parameter panel's columns (Refactor.76.2, human 2026-10-11: as TD's parameter dialog, names flush
+ * right and fields flush left, with the type between): the name, the type, the fields side by side, the expand triangle;
+ * expanded, the fields move to lines of their own under it, its letter as the name and no type (the line above says it). Each
+ * line is a row of the container's grid. The same widget and gestures as on a card; only the arrangement differs.
+ * 參數面板的欄位排法（R.76.2，人類：照 TD 參數視窗，名稱靠右、欄位靠左，中間多一欄型別）：名稱、型別、並排的欄位、展開三角形；
+ * 展開時欄位移到下面、每個分量自己一行，分量字母當名稱、不寫型別（上一行寫了）。每一行是容器格線的一列。和卡片同一個 widget、同樣的手勢，
+ * 只有排法不同。 */
+export const ValueColumns = createContext(false);
+
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption, typeText }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
@@ -82,7 +91,10 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   defaults?: Value;
   /** The leading text; left out, "Color" or the type. 開頭文字；沒給就是 Color 或型別。 */
   caption?: ReactNode;
+  /** In columns, what the type column says; left out, the type. 欄位排法裡型別欄寫什麼；沒給就是型別。 */
+  typeText?: ReactNode;
 }) {
+  const columns = useContext(ValueColumns);
   const count = core.values.count(type), family = core.values.family(type);
   // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
   // 展開只在這一頁、不存檔（要不要存進圖待人類決定）。
@@ -143,34 +155,53 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
         setPresets(true);
       }}>
       {caption ?? (color ? say(tr('value.color', 'Color')) : type)}</span>;
+  // One component's box; `letter`: its letter inside the box (side by side), or not (a line of its own names it).
+  // 一個分量的框；letter：字母寫在框裡（並排時），或不寫（自己一行時由那一行的名稱寫）。
+  const field = (item: unknown, i: number, letter: boolean) => {
+    const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
+    const change = (next: Value) => commit(withComponent(next));
+    const mode = modes?.[i], bound = mode?.mode === 'bind';
+    return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
+      {letter && count > 1 && <span className="component component-letter" data-component={i}>{names[i]}</span>}
+      {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
+        : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
+        : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
+        onChange={next => change(next === 'true')} /> :
+        <NumberField label={`${label} ${i}`} value={Number(item) + shift} integer={integer} unsigned={family === 'uint'} commit={change}
+          defaultValue={defaults === undefined ? undefined : Number(Array.isArray(defaults) ? defaults[i] : defaults)}
+          preview={preview && (next => preview(withComponent(next)))} />}
+    </label>;
+  };
+  const expand = count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+    aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
+    <Icon name="chevronDown" /></button>;
+  const popups = <>{presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} onClose={() => setPresets(false)}
+      items={choices.map(choice => ({ key: choice.key, label: choice.label, checked: choice.checked, select: () => commit(choice.value) }))} />}
+    {group.view}</>;
+  if (columns) return <>
+    <div className="value-line">
+      {leading}<span className="value-type">{typeText ?? type}</span>
+      {!expanded && <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
+        <div className="value-fields" style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>}
+      {expand}
+    </div>
+    {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
+      <span className="value-caption"><span className="component-letter" data-component={i}>{names[i]}</span></span>
+      <div className="value-group nodrag nopan">{field(item, i, false)}</div>
+    </div>)}
+    {swatch && <div className="value-line">{swatch}</div>}
+    {popups}
+  </>;
   return <div className="value-row">
     {leading}
     <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
-    {count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
-      aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
-      <Icon name="chevronDown" /></button>}
+    {expand}
     <div className="value-fields" style={{ '--components': count } as CSSProperties}>
-      {list.map((item, i) => {
-        const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
-        const change = (next: Value) => commit(withComponent(next));
-        const mode = modes?.[i], bound = mode?.mode === 'bind';
-        return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
-          {count > 1 && <span className="component component-letter" data-component={i}>{names[i]}</span>}
-          {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
-            : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
-            : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
-            onChange={next => change(next === 'true')} /> :
-            <NumberField label={`${label} ${i}`} value={Number(item) + shift} integer={integer} unsigned={family === 'uint'} commit={change}
-              defaultValue={defaults === undefined ? undefined : Number(Array.isArray(defaults) ? defaults[i] : defaults)}
-              preview={preview && (next => preview(withComponent(next)))} />}
-        </label>;
-      })}
+      {list.map((item, i) => field(item, i, true))}
       {expanded && swatch}
     </div>
     </div>
     {!expanded && swatch}
-    {presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} onClose={() => setPresets(false)}
-      items={choices.map(choice => ({ key: choice.key, label: choice.label, checked: choice.checked, select: () => commit(choice.value) }))} />}
-    {group.view}
+    {popups}
   </div>;
 }

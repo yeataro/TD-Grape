@@ -4,9 +4,9 @@ import type { EditorState } from './editor';
 import type { FlowNode } from './projection';
 import { tr, say } from './text';
 import { Select } from './controls';
-import { ValueFields } from './ValueFields';
+import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext } from './contexts';
-import { Control, DeclarationValue, PortLabel, listed, single } from './NodeCard';
+import { Control, DeclarationValue, PortLabel, listed, single, sourceKinds } from './NodeCard';
 
 // The Parameter panel (Refactor.76, human 2026-10-11; work/refactor/parameter-panel-scope-2026-10-11.md): the current node,
 // drawn like a node card from the same declarations — the head in the node's group colour with its type and its name; every
@@ -56,17 +56,23 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
     const label = from?.data.authored.name ? core.shownName(from.data.authored.name) : from ? text(from.data.view.label ?? from.data.label) : edge.source;
     return label + ' · ' + edge.sourceHandle;
   };
+  // A node standing for a shared source says which kind (Uniform, Global, TOP Input) where others say their type, as its card
+  // does (human 2026-10-11: "Shared Source" alone said nothing). 代表共用來源的節點在類型的位置寫是哪一種（Uniform、Global、TOP
+  // Input），同它的卡片（人類：只寫 Shared Source 什麼都沒說）。
+  const kind = data.declaration && sourceKinds[data.declaration.kind];
   return <article className={`grape-node params-card${data.ghost ? ' ghost' : ''}`}
     style={{ '--group-color': `var(--group-${data.ghost ? 'ghost' : data.colorGroup})` } as CSSProperties}>
     <div className="node-title params-title">
-      <strong>{text(data.label)}</strong>
-      {/* A node standing for a shared source shows that source's name instead of its own (legacy inspector.js:858).
-          代表共用來源的節點顯示來源的名字，不是自己的（照舊產品）。 */}
+      <strong>{kind ? say(kind) : text(data.label)}</strong>
+      {/* A node standing for a shared source shows that source's name instead of its own, with its type (legacy
+          inspector.js:858). 代表共用來源的節點顯示來源的名字（不是自己的）與型別（照舊產品）。 */}
       {core.takesName(core.registry, authored.nodeType)
         ? <NodeName id={id} name={authored.name ?? ''} />
-        : <span className="params-source">{view.literalLabel ? view.label : text(view.label ?? data.label)}</span>}
+        : <span className="params-source">{view.literalLabel ? view.label : text(view.label ?? data.label)} <small>{data.outputs[0]?.type}</small></span>}
     </div>
-    {!data.ghost && <div className="node-body">
+    {/* One grid for the whole body, as TD's parameter dialog (Refactor.76.2): names flush right | types | fields; every row
+        lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：名稱靠右｜型別｜欄位；每一列都和其他列對齊。 */}
+    {!data.ghost && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
       {!view.typeLocked && (view.selector
         ? <label className="control-field"><span>{say(tr('params.operationType', 'Operation type'))}</span>
           <Select label={`${id} type`} value={view.selector.value} onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /></label>
@@ -76,24 +82,25 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => {
-        const source = sourceOf(port.key), label = <><PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key}
-          components={view.components?.inputs?.[port.key]} /> <small>{port.type}</small></>;
+        const source = sourceOf(port.key), label = <PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key}
+          components={view.components?.inputs?.[port.key]} />;
+        const head = <><span className="value-caption">{label}</span><span className="value-type">{port.type}</span></>;
         // The whole row takes a wire dragged from a node's output (Refactor.76.1); the socket shows where, filled when wired.
         // 整列都接得住從節點輸出拉來的線（R.76.1）；接孔標出位置，接了線就實心。
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
           data-component={single(view.components?.inputs?.[port.key])} data-panel-port={port.key} data-node={id}>
           <span className="params-port" data-connected={source !== undefined} aria-hidden="true" />
-          {source !== undefined ? <><span>{label}</span><span className="params-wired">{source}</span>
-            <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></>
-            : port.fallback !== undefined ? <><span>{label}</span><code className="port-fallback">{port.fallback}</code></>
+          {source !== undefined ? <>{head}<span className="params-wired"><span>{source}</span>
+            <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></span></>
+            : port.fallback !== undefined ? <>{head}<code className="port-fallback">{port.fallback}</code></>
             : core.values.types.includes(port.type) ? <ValueFields label={`${id} ${port.key}`} type={port.type} defaults={port.default} caption={label}
               value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />
-            : <span>{label}</span>}
+            : head}
         </div>;
       })}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
-    </div>}
+    </ValueColumns.Provider></div>}
     <NodeNote id={id} note={typeof authored.comment === 'string' ? authored.comment : ''} />
   </article>;
 }

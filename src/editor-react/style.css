@@ -757,24 +757,52 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    節點裡的控制項也是一個輸入輸出區塊的高度，框和數值框一樣高（同一個節奏，像表格）。 */
 .control-field { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); }
 /* The Parameter panel draws the current node like its card (Refactor.76): the same title bar and rows, filling the panel, no
-   shadow; whether it keeps the outline is tried as we go (human 2026-10-11). 參數面板把目前的節點畫得像它的卡片（R.76）：同樣的標題列與列，
-   填滿面板、沒有陰影；外框要不要邊走邊試（人類）。 */
-.params-card { width: 100%; min-width: 0; max-width: none; box-shadow: none; }
+   shadow; whether it keeps the outline is tried as we go (human 2026-10-11). Its own, smaller set of content sizes, about 85%
+   of a node's, as the Sources panel has its own (human 2026-10-11); text keeps the 10px floor. Value boxes may shrink to
+   nothing: the panel is as wide as it is, and nothing in it runs past its edge (human: things ran out of their frames).
+   參數面板把目前的節點畫得像它的卡片（R.76）：同樣的標題列與列，填滿面板、沒有陰影；外框要不要邊走邊試（人類）。內容尺寸自己一組，
+   約節點的 85%，同共用來源面板（人類）；字最小 10px。數值框可以縮到沒有：面板多寬就多寬，裡面什麼都不超出邊（人類：到處出框）。 */
+.params-card { width: 100%; min-width: 0; max-width: none; box-shadow: none;
+  --io-row: 30px; --io-field: 26px; --io-field-min: 0px; --field-pad: 5px 8px; --button-pad: 5px 8px; --port-size: 11px; --params-pad: 12px;
+  --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 11px; --line-md: 16px; --font-base: 11px; --line-base: 16px;
+  font-size: var(--font-md); line-height: var(--line-md); }
+.params-title { padding: 8px var(--params-pad); }
 .params-title > strong { flex: none; }
-.params-name { flex: 1; min-width: 0; height: var(--control-height); padding-block: 0; }
+.params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; }
 .params-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
-.params-card .control-field > span { flex: 0 0 auto; color: var(--text-secondary); }
-.params-wired { flex: 1; min-width: 0; height: var(--io-row); display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.params-card .port-row > button { align-self: center; flex: none; }
+/* The body is one grid, as TD's parameter dialog (Refactor.76.2, human 2026-10-11): names flush right | types flush left |
+   fields | the expand triangle. Every row (an input, a value's line, a control) is a subgrid across all four, so all of them
+   line up; a name too long is cut short. Controls, wired inputs and swatches leave the type column empty and run to the edge.
+   本體是一張格線，照 TD 參數視窗（R.76.2，人類）：名稱靠右｜型別靠左｜欄位｜展開三角形。每一列（輸入、值的每一行、控制項）都是橫跨
+   四欄的 subgrid，所以全部對齊；名稱太長就截斷。控制項、接了線的輸入、色塊不寫型別、一直到邊。 */
+.params-grid { display: grid; grid-template-columns: fit-content(40%) max-content minmax(0, 1fr) max-content; column-gap: 8px;
+  padding-inline: var(--params-pad); }
+.params-grid > :is(.port-row, .value-line, .control-field, .hint, button), .params-grid > .control-row > .control-field, .params-grid > .port-row > .value-line {
+  grid-column: 1 / -1; margin: 0; }
+.params-grid :is(.port-row, .value-line, .control-field) { display: grid; grid-template-columns: subgrid; padding: 0; min-height: var(--io-row); }
+.params-grid > .control-row { display: contents; }
+.params-grid :is(.value-caption, .control-field > span) { grid-column: 1; display: block; min-width: 0; height: var(--io-row); line-height: var(--io-row);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
+.params-grid .value-type { grid-column: 2; height: var(--io-row); line-height: var(--io-row); white-space: nowrap;
+  font-size: var(--font-xs); color: var(--port-color, var(--text-muted)); }
+.params-grid .value-group { grid-column: 3; display: block; }
+.params-grid .value-expand { grid-column: 4; margin-block: var(--io-inset); }
+.params-grid :is(.control-field > .select-button, .params-wired, .port-fallback, .value-swatch), .params-grid > button { grid-column: 3 / -1; min-width: 0; }
+.params-grid .control-field > .select-button { align-self: center; }
+.params-grid > button { height: var(--io-field); margin-block: var(--io-inset); }
+.params-grid > .hint { padding-block: var(--io-inset); }
+.params-wired { height: var(--io-row); display: flex; align-items: center; gap: 8px; color: var(--text); }
+.params-wired > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.params-wired > button { flex: none; height: var(--io-field); padding: 0 8px; }
 /* An input's socket in the panel (Refactor.76.1): drop a wire from a node's output on the row; as the canvas's ports, filled
-   when wired, ringed while the pointer is over the row. 面板裡輸入的接孔（R.76.1）：把節點輸出拉來的線放在這一列；和畫布的接孔一樣，
-   接了線就實心，游標在這列上時加一圈。 */
-.params-card .port-row { padding-left: 8px; }
-.params-card .port-row > .params-port { flex: none; align-self: center; width: var(--port-size); height: var(--port-size); margin-left: -2px; border-radius: 50%;
+   when wired, ringed while the pointer is over the row. It sits in the card's left padding, on the row's first line.
+   面板裡輸入的接孔（R.76.1）：把節點輸出拉來的線放在這一列；和畫布的接孔一樣，接了線就實心，游標在這列上時加一圈。放在卡片左內距、這一列第一行。 */
+.params-card .port-row > .params-port { position: absolute; left: calc(var(--port-size) / -2 - var(--params-pad) / 2); top: calc((var(--io-row) - var(--port-size)) / 2);
+  width: var(--port-size); height: var(--port-size); border-radius: 50%;
   box-sizing: border-box; border: var(--port-ring) solid var(--port-color); background: var(--surface-port); }
 .params-card .port-row > .params-port[data-connected="true"] { background: var(--port-color); }
 .params-card .port-row:hover > .params-port { box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent); }
-.params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 12px; border-top: 1px solid var(--border-node); }
+.params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; border-top: 1px solid var(--border-node); }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
 .control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
