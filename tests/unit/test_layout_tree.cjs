@@ -56,12 +56,12 @@ test('panes above and below the canvas take pixels; the canvas keeps its place i
   assert.equal(shape(layout.root), 'row(column(canvas, addNode|sources), glsl|appearance)', 'a column holding only the canvas is never flattened');
 });
 
-test('a side: made when empty, opened when closed, appended to otherwise; its toggles read the tree', () => {
+test('a side: made when empty, opened when closed, joined as a tab otherwise; its toggles read the tree', () => {
   let layout = tree.movePanel(fresh(), 'appearance', { kind: 'side', side: 'left' });
-  assert.equal(shape(layout.root), 'row(column(sources|addNode|glsl, appearance), column(canvas))');
+  assert.equal(shape(layout.root), 'row(sources|addNode|glsl|appearance, column(canvas))', 'a tab by default (human 2026-10-10)');
   assert.equal(tree.sideHasPanels(layout, 'right'), false, 'the right toggle greys out');
   layout = tree.movePanel(layout, 'glsl', { kind: 'side', side: 'right' });
-  assert.equal(shape(layout.root), 'row(column(sources|addNode, appearance), column(canvas), glsl)');
+  assert.equal(shape(layout.root), 'row(sources|addNode|appearance, column(canvas), glsl)');
   assert.equal(layout.closed.right, false, 'moving a panel to a closed side opens it');
   layout = { ...layout, closed: { left: true, right: false } };
   assert.equal(tree.sideOf(layout.root, 0), 'left'); assert.equal(tree.sideOf(layout.root, 1), null); assert.equal(tree.sideOf(layout.root, 2), 'right');
@@ -84,9 +84,9 @@ test('a stored layout: R.53 carried over, unknown panels dropped, new ones added
   const v1 = { version: 1, titleBar: false, left: { open: false, width: 450, groups: [{ panels: ['sources', 'gone'], active: 'sources', size: 2 }, { panels: ['glsl'], active: 'glsl', size: 1 }] },
     right: { open: false, width: 380, groups: [] } };
   let layout = tree.readLayout(v1, panels);
-  assert.equal(shape(layout.root), 'row(column(sources, glsl, addNode), column(canvas), appearance)');
+  assert.equal(shape(layout.root), 'row(column(sources|addNode, glsl), column(canvas), appearance)', 'a new panel joins its side as a tab');
   assert.deepEqual(plain(layout.root.sizes), [450, 1, tree.SIDE_WIDTH]);
-  assert.deepEqual(plain(layout.root.children[0].sizes), [2, 1, 1.5]);
+  assert.deepEqual(plain(layout.root.children[0].sizes), [2, 1]);
   assert.equal(layout.titleBar, false); assert.equal(layout.closed.left, true);
   const saved = plain(layout);
   assert.deepEqual(plain(tree.readLayout(saved, panels)), saved, 'a version 2 layout reads back the same');

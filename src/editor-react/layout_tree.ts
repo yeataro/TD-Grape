@@ -155,26 +155,24 @@ function fromVersion1(value: Record<string, unknown>, fallback: LayoutData): Lay
     hidden: [], closed: { left: left ? !left.open : false, right: right ? !right.open : true } };
 }
 
-/** Put a panel at the end of a side: a new tab pane below what is there, or the side itself when it has nothing.
- * 把面板放到某一側最下面：在現有的下面多一個分頁窗格；那一側沒有東西就建立它。 */
+/** Put a panel on a side: as the last tab of the side's first tab pane (human 2026-10-10: joining a side, a tab by
+ * default, not a new pane; R.53 put new panels there too), or the side itself when it has nothing.
+ * 把面板放到某一側：成為那一側第一個分頁窗格的最後一個分頁（人類 10-10：加入一側預設是分頁、不是切新格；R.53 新面板也放那裡）；
+ * 那一側沒有東西就建立它。 */
 export function addToSide(layout: LayoutData, panel: string, side: Side): LayoutData {
   const next = copy(layout), root = next.root as Extract<Pane, { kind: 'split' }>;
-  const fresh: Pane = { kind: 'tabs', panels: [panel], active: panel };
   const centre = root.children.findIndex(hasCanvas);
   const index = side === 'left' ? centre - 1 : centre + 1, existing = sideOf(root, index) === side ? root.children[index] : undefined;
-  if (!existing) {
-    root.children.splice(side === 'left' ? centre : centre + 1, 0, fresh);
-    root.sizes.splice(side === 'left' ? centre : centre + 1, 0, SIDE_WIDTH);
-  } else if (existing.kind === 'split' && existing.direction === 'column') {
-    existing.children.push(fresh); existing.sizes.push(average(existing.sizes));
-  } else root.children[index] = { kind: 'split', direction: 'column', children: [existing, fresh], sizes: [1, 1] };
+  const first = existing && tabPanes(existing)[0]?.pane;
+  if (first) { first.panels.push(panel); first.active = panel; return next; }
+  root.children.splice(side === 'left' ? centre : centre + 1, 0, { kind: 'tabs', panels: [panel], active: panel });
+  root.sizes.splice(side === 'left' ? centre : centre + 1, 0, SIDE_WIDTH);
   return next;
 }
-const average = (sizes: readonly number[]) => sizes.length ? sizes.reduce((a, b) => a + b, 0) / sizes.length : 1;
 
 /** Where a dragged panel goes. tab: into a tab pane at a tab position; beside: a new tab pane above or below a pane (a tab
- * pane or the canvas); side: the end of a side (made, or opened, if needed).
- * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）上方或下方多一個分頁窗格；side＝某一側最下面。 */
+ * pane or the canvas); side: a tab on that side (made, or opened, if needed; see addToSide).
+ * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）上方或下方多一個分頁窗格；side＝那一側的分頁（見 addToSide）。 */
 export type Drop =
   | { kind: 'tab'; pane: Path; index: number }
   | { kind: 'beside'; pane: Path; edge: 'top' | 'bottom' }
