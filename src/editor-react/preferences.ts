@@ -8,11 +8,13 @@ const PREFIX = 'grape.';
 
 // Where each one was kept before (Refactor.58.1); read once, moved under the prefix, so nobody loses a setting.
 // 以前各自存在哪裡；讀到一次就搬到新名字，設定不會不見。
-const before = (name: string) => ({
+const formerNames: Record<string, string> = {
   language: 'sgrapeLanguage', layout: 'grape-react-layout', 'canvas.bodyDrag': 'grape-react-body-drag',
   'appearance.style': 'grape-react-style', 'appearance.mode': 'grape-react-mode',
   'appearance.size': 'grape-react-size', 'appearance.ports': 'grape-react-ports',
-} as Record<string, string>)[name] ?? (name.startsWith('fold.') ? 'grape-fold-' + name.slice(5) : undefined);
+};
+const before = (name: string) => formerNames[name] ?? (name.startsWith('fold.') ? 'grape-fold-' + name.slice(5) : undefined);
+const isFormer = (key: string) => Object.values(formerNames).includes(key) || key.startsWith('grape-fold-');
 
 // Names nothing reads any more, forgotten once so nobody mistakes them for live settings (human 2026-10-09: left to the
 // agent). grape-react-theme was replaced by appearance.mode; sgrapeSourcesPanel by the layout; the two tune.* values by
@@ -37,6 +39,23 @@ export function readPreference(name: string): string | null {
 export function readChoice<T extends string>(name: string, allowed: readonly T[], fallback: T): T {
   const value = readPreference(name) as T | null;
   return value !== null && allowed.includes(value) ? value : fallback;
+}
+
+/** Forget every preference, under the prefix or a former name (Reset browser settings, Refactor.69; legacy app.js:954):
+ * all or none — if one cannot be removed, the ones removed are put back and the error is passed on.
+ * 忘掉所有偏好，含前綴下的與舊名字的（重設瀏覽器設定；照舊產品）：全部或都不——有一個刪不掉就把刪過的放回去，錯誤往外丟。 */
+export function forgetPreferences() {
+  const kept: [string, string][] = [];
+  try {
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index)!;
+      if (key.startsWith(PREFIX) || isFormer(key)) kept.push([key, localStorage.getItem(key)!]);
+    }
+    for (const [key] of kept) localStorage.removeItem(key);
+  } catch (error) {
+    try { for (const [key, value] of kept) localStorage.setItem(key, value); } catch { /* storage may be blocked */ }
+    throw error;
+  }
 }
 
 /** Keep a preference; null forgets it. 記下偏好；null 表示忘掉。 */

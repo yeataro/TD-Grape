@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
@@ -22,24 +22,67 @@ const useEditorState = (session: EditorSession | null): EditorState | null =>
   useSyncExternalStore(session?.subscribe ?? noSubscribe, session?.snapshot ?? (() => null));
 const canApply = (state: EditorState | null) => !!state?.dirty && !['sending', 'offline', 'uncertain', 'conflict'].includes(state.phase);
 
+/** How many of a bar's parts to fold away so the rest fits (Refactor.69, human 2026-10-10): parts are marked `data-fold`,
+ * 1 folding first; each keeps its own size, so the bar measures them and folds the fewest it can. A folded part counts with
+ * the width it had when it last showed. 一列要收起幾個部分才放得下：部分標 data-fold，1 先收；每個部分大小固定，所以量它們、
+ * 收最少的。收起的部分用它最後一次顯示時的寬度算。 */
+function useFolding(bar: RefObject<HTMLElement | null>): number {
+  const [folded, setFolded] = useState(0), widths = useRef(new Map<Element, number>());
+  useLayoutEffect(() => {
+    const element = bar.current;
+    if (!element) return;
+    const showing = (part: Element) => getComputedStyle(part).display !== 'none';
+    const outer = (part: Element) => { const style = getComputedStyle(part); return part.getBoundingClientRect().width + parseFloat(style.marginLeft) + parseFloat(style.marginRight); };
+    const gap = (part: Element) => parseFloat(getComputedStyle(part.parentElement!).columnGap) || 0;
+    const fit = () => {
+      const parts = [...element.querySelectorAll<HTMLElement>('[data-fold]')];
+      for (const part of parts) if (showing(part)) widths.current.set(part, outer(part) + gap(part));
+      // What the bar needs now, plus the folded parts put back. 現在需要的寬，再加回收起的部分。
+      const children = [...element.children].filter(child => showing(child) && !child.classList.contains('spacer'));
+      const style = getComputedStyle(element);
+      let need = children.reduce((sum, child) => sum + outer(child), 0) + gap(children[0]!) * (children.length - 1)
+        + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      for (const part of parts) if (!showing(part)) need += widths.current.get(part) ?? 0;
+      const levels = Math.max(0, ...parts.map(part => Number(part.dataset.fold)));
+      let count = 0;
+      while (need > element.clientWidth + .5 && count < levels) {
+        count++;
+        for (const part of parts) if (Number(part.dataset.fold) === count) need -= widths.current.get(part) ?? 0;
+      }
+      setFolded(count);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    return () => observer.disconnect();
+  });
+  return folded;
+}
+
 /** The title bar, as the legacy editor (human 2026-10-09): mark, name, tagline, version, About; then the common
- * actions. 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。 */
+ * actions. As it narrows, parts fold away in the human's order (2026-10-10): About, the version, the tagline, the language
+ * (also in the foot bar's "AA"), import and export, Save, Apply (all in the foot bar's menu); the mark and the name never.
+ * 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。變窄時照人類的順序收起：About、版號、副標題、語言（底列 AA 也有）、
+ * 匯入與匯出、儲存、套用（都在底列選單裡）；圖標與名稱永遠不收。 */
 export function TitleBar({ session, version }: { session: EditorSession | null; version: string }) {
-  const state = useEditorState(session);
-  return <header className="title-bar">
+  const state = useEditorState(session), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
+  const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
+  return <header className="title-bar" ref={bar}>
     <BrandMark /><strong className="brand-name">TD-Grape</strong>
-    <small className="brand-line">{say(tr('editor.tagline', 'A Shader Editor for TouchDesigner'))}<span aria-hidden="true">·</span>{version}
-      <span aria-hidden="true">·</span><Placeholder label={tr('action.about', 'About')} className="link-button" /></small>
+    <small className="brand-line">
+      <span {...fold(3)}>{say(tr('editor.tagline', 'A Shader Editor for TouchDesigner'))}</span>
+      <span {...fold(2)}><span aria-hidden="true">·</span>{version}</span>
+      <span {...fold(1)}><span aria-hidden="true">·</span><Placeholder label={tr('action.about', 'About')} className="link-button" /></span></small>
     <span className="spacer" />
     {/* Switches in place, keeping the work and its history (legacy). Same key as the legacy editor.
         當場切換，作品與歷史都保留（照舊產品）。鍵與舊產品相同。 */}
-    <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
-      options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} />
-    <Placeholder label={tr('action.importGraph', 'Import graph')} />
-    <Placeholder label={tr('action.exportGraph', 'Export graph')} />
-    <button type="button" aria-disabled={!session || state?.phase === 'sending' || undefined}
+    <span {...fold(4)}><Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
+      options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></span>
+    <span {...fold(5)}><Placeholder label={tr('action.importGraph', 'Import graph')} /></span>
+    <span {...fold(5)}><Placeholder label={tr('action.exportGraph', 'Export graph')} /></span>
+    <button type="button" {...fold(6)} aria-disabled={!session || state?.phase === 'sending' || undefined}
       onClick={() => { if (session && state?.phase !== 'sending') void session.save(); }}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
-    <button type="button" className="primary" aria-disabled={!canApply(state) || undefined}
+    <button type="button" {...fold(7, 'primary')} aria-disabled={!canApply(state) || undefined}
       onClick={() => { if (session && canApply(state)) void session.flush(); }}>{say(tr('action.applyShader', 'Apply Shader'))}</button>
   </header>;
 }
@@ -120,7 +163,9 @@ const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, chec
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync state, the latest message
  * (its history above it), what to do when TD is away, full screen. 底列：編輯器所有的提示（人類）。功能表、同步狀態、
  * 最新訊息（點開往上看歷史）、TD 不在時能做的事、全螢幕。 */
-export function FootBar({ session, waiting, onDownload, prefs, onAppearance }: { session: EditorSession | null; waiting: Message | string; onDownload(): void; prefs: CanvasPrefs; onAppearance?(): void }) {
+export function FootBar({ session, waiting, onDownload, onReset, prefs, onAppearance }: {
+  session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs; onAppearance?(): void;
+}) {
   const state = useEditorState(session), fullscreen = useFullscreen();
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [history, setHistory] = useState<HTMLElement | null>(null);
@@ -137,7 +182,7 @@ export function FootBar({ session, waiting, onDownload, prefs, onAppearance }: {
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
       { key: 'reload', label: say(tr('foot.reloadPage', 'Reload editor page')), select: () => location.reload() },
       { key: 'reloadTd', label: say(tr('foot.reloadApplied', 'Reload applied graph')), disabled: true, title: say(notYet), select: () => {} },
-      { key: 'reset', label: say(tr('foot.resetSettings', 'Reset browser settings…')), disabled: true, title: say(notYet), select: () => {} },
+      { key: 'reset', label: say(tr('foot.resetSettings', 'Reset browser settings…')), select: onReset },
       { key: 'import', label: say(tr('action.importGraph', 'Import graph')), disabled: true, title: say(notYet), divider: true, select: () => {} },
       { key: 'export', label: say(tr('action.exportGraph', 'Export graph')), disabled: true, title: say(notYet), select: () => {} },
       { key: 'draft', label: say(tr('toolbar.downloadDraft', 'Download draft')), disabled: !session, select: onDownload },

@@ -33,7 +33,7 @@ import { sourceNow, draftRow, nowRow, tdRow, detailLabel, tabTitle, type TdIdent
 import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
-import { readPreference, writePreference } from './preferences';
+import { forgetPreferences, readPreference, writePreference } from './preferences';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
@@ -311,9 +311,25 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       else sessionStorage.removeItem(draftKey);
     } catch { session.notice(new TextError(tr('draft.storageFailed', 'The browser cannot keep a draft; use Download draft to keep unsent changes.'))); }
   }, [state.version, state.dirty, session, draft, draftKey, target]);
+  // Reset browser settings (Refactor.69; reset-settings.md, human 2026-10-10: reload afterwards, language too), as the legacy
+  // editor (app.js:944): finish the value being typed first; ask; keep unsent changes as a draft (stop if the browser cannot);
+  // forget every preference (all or none); reload. Drafts and anything in TD are not preferences and stay.
+  // 重設瀏覽器設定（人類 10-10：之後重新整理、語言也重設），照舊產品：先完成正在輸入的值；確認；未送出的修改先存成草稿（存不了就停）；
+  // 忘掉所有偏好（全部或都不）；重新整理。草稿與 TD 那邊的東西不是偏好，留著。
+  const resetting = useRef(false);
+  const resetSettings = () => {
+    const tell = (message: Message) => session?.notice(new TextError(message));
+    if ((document.activeElement as HTMLElement | null)?.matches('input, textarea')) { tell(tr('reset.finishFirst', 'Finish the value you are typing first, then reset.')); return; }
+    if (!confirm(say(tr('reset.confirm', 'Reset every TD-Grape setting kept in this browser to the default: appearance, layout, language and canvas behaviour. The page then reloads: changes not yet in TD are kept as a draft first; the Undo history and the message log are cleared. Continue?')))) return;
+    try { if (session?.snapshot().dirty && !draft) sessionStorage.setItem(draftKey, JSON.stringify({ target, graph: session.graph(), source: sourceNow(tdNow.current) })); }
+    catch { tell(tr('reset.noDraft', 'Nothing was reset: the browser cannot keep a draft of the unsent changes. Use Download draft first.')); return; }
+    try { forgetPreferences(); } catch { tell(tr('reset.failed', 'Nothing was reset: the browser did not let TD-Grape remove its settings.')); return; }
+    resetting.current = true;
+    location.reload();
+  };
   useEffect(() => {
     if (!session) return;
-    const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty) { event.preventDefault(); event.returnValue = ''; } };
+    const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty && !resetting.current) { event.preventDefault(); event.returnValue = ''; } };
     const keys = (event: KeyboardEvent) => {
       const element = event.target as HTMLElement;
       if (element.closest('input,select,textarea,[contenteditable="true"]')) return;
@@ -407,7 +423,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     <LayoutView layout={layout} panels={panels} canvas={network} />
-    <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
+    <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }
 

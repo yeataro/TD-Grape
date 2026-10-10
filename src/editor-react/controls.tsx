@@ -96,8 +96,16 @@ export function Popover({ anchor, label, onClose, className, children }: {
     setPlace(popupPlace(anchor, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0));
   }, [anchor]);
   useEffect(() => {
-    const away = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose(); };
-    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    // A menu opened from inside (a Select's choices) is drawn at the page level, but belongs to the panel: pressing it is not
+    // pressing outside, and Esc closes that menu first (Refactor.69: choosing a language in the "AA" panel closed the panel
+    // before the choice arrived). 從面板裡打開的選單畫在頁面層，但屬於這個面板：按它不算按外面；Esc 先關那個選單（R.69：在 AA
+    // 面板選語言，面板先關掉、選擇沒送到）。
+    const menu = () => document.querySelector('.dropdown-menu');
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!box.current?.contains(target) && !anchor.contains(target) && !menu()?.contains(target)) onClose();
+    };
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape' && !menu()) onClose(); };
     addEventListener('pointerdown', away, true); addEventListener('keydown', key);
     return () => { removeEventListener('pointerdown', away, true); removeEventListener('keydown', key); };
   }, [anchor, onClose]);

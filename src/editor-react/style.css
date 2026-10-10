@@ -96,6 +96,10 @@ a { color: var(--accent); }
 .retry-pie .brand-mark { width: var(--icon-size); height: var(--icon-size); }
 @keyframes retry-countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 25.13; } }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
+/* Each piece of the line (tagline, version, About) folds on its own (Refactor.69). 這一行的每一塊（副標題、版號、About）各自收起。 */
+.brand-line > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* A part of the title bar folded away as it narrows (bars.tsx useFolding). 標題列變窄時收起的部分。 */
+.title-bar .folded { display: none; }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); font-size: var(--bar-font); line-height: var(--bar-line); }
 .foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }
 .foot-bar.error, .foot-bar.conflict, .foot-bar.uncertain { --message: var(--status-error); }
