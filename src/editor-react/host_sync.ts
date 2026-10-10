@@ -60,12 +60,14 @@ export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: Stat
 export async function resetToDefault(host: HostClient, bootstrap: Bootstrap, editorVersion: string) {
   const loaded = await host.call<StateResponse>('state');
   checkLoaded(host, bootstrap, { ...loaded, state: { ...loaded.state, targetId: undefined } });
-  const sent = { document: serializeDocument(bootstrap.defaultDocument.graph), revision: loaded.state.revision };
+  const sent = { document: serializeDocument({ ...bootstrap.defaultDocument.graph, savedBy: editorVersion }), revision: loaded.state.revision };
   const compiled = compiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode);
   const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled, editorVersion));
   if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
 }
 
+/** A document's text without `savedBy`: what decides whether two documents differ (Refactor.66). 去掉 savedBy 的內容。 */
+const bodyOf = (text: string) => { try { const { savedBy: _, ...rest } = JSON.parse(text) as Graph; return JSON.stringify(rest); } catch { return text; } };
 const replyMismatch = tr('sync.replyMismatch', "TD's reply does not match what was sent.");
 export const conflictMessage = tr('sync.conflict', 'The graph in TD seems to have been changed. Choose which version to use.');
 const offlineMessage = {
@@ -96,7 +98,12 @@ export class HostSync {
   private recovery?: ReturnType<typeof setTimeout>;
   private pending?: Promise<void>;
   private disposed = false;
-  private confirmed: string; // document text TD has acknowledged
+  private confirmed = ""; // document text TD has acknowledged
+  private confirmedBody = ''; // the same without savedBy, for telling whether anything is left to send
+  // Which editor saved the graph is written as it is sent (Refactor.66); whether something is left to send ignores it, so
+  // opening a graph another version saved is not an edit. 送出時寫上是哪一版存的；判斷有沒有東西要送時不看它，打開別版存的圖不算修改。
+  private stamp = (graph: Graph) => serializeDocument({ ...graph, savedBy: this.editorVersion });
+  private confirm(text: string) { this.confirmed = text; this.confirmedBody = bodyOf(text); }
   private runtimeKey: string | null; // fingerprint of the program TD runs; null when unknown
   private failedKey: string | null = null; // fingerprint of a program TD could not compile
   private uncertain?: Sent;
@@ -107,7 +114,7 @@ export class HostSync {
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
     private readonly source: () => Delivery, private readonly report: (status: SyncStatus, said?: Said) => void,
     private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
-    this.confirmed = loaded.state.document;
+    this.confirm(loaded.state.document);
     this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
     this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready', stuck: stuckOf(loaded.state) };
   }
@@ -116,7 +123,7 @@ export class HostSync {
     this.status = { ...this.status, ...patch };
     if (!this.disposed) this.report(this.status, message ? { message, level } : undefined);
   }
-  private dirtyNow = () => serializeDocument(this.source().graph) !== this.confirmed;
+  private dirtyNow = () => bodyOf(serializeDocument(this.source().graph)) !== this.confirmedBody;
 
   // The Editor has a newer document. Sending is serialized; a late acknowledgement only advances
   // the revision and the newest document is sent next (latest wins, design-interview Q38 2-1-a).
@@ -135,7 +142,7 @@ export class HostSync {
   };
   private async deliver() {
     while (this.status.dirty && !this.disposed && !this.blocked) {
-      const { graph, key, compiled } = this.source(), sent = { document: serializeDocument(graph), revision: this.status.revision };
+      const { graph, key, compiled } = this.source(), sent = { document: this.stamp(graph), revision: this.status.revision };
       // Same fingerprint as the running program: send the document only, so TD skips GPU work
       // (layout-only edits, design-interview Q31/Q38). 指紋與 TD 正在跑的相同：只送圖，TD 不做 GPU 驗證。
       // A program TD already failed to compile is not sent again until it changes.
@@ -150,7 +157,7 @@ export class HostSync {
         const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime, this.editorVersion));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
-        this.confirmed = sent.document;
+        this.confirm(sent.document);
         let message = tr('sync.applied', 'Applied to TD; the project still needs saving'), level: Level = 'info';
         if (runtime && result.shaderError) {
           this.failedKey = key; level = 'error';
@@ -243,7 +250,7 @@ export class HostSync {
     }
     this.onTd?.(result.uniforms, []);
     const state = result.state, sent = this.uncertain;
-    if (sent && state.revision === sent.revision + 1 && state.document === sent.document) this.confirmed = sent.document;
+    if (sent && state.revision === sent.revision + 1 && state.document === sent.document) this.confirm(sent.document);
     else if (state.revision !== this.status.revision || state.document !== this.confirmed) {
       this.blocked = true; this.set({ phase: 'conflict', link: undefined, message: conflictMessage, level: 'warning' }); return;
     }
@@ -264,7 +271,7 @@ export class HostSync {
   // 衝突時選「TD 端」：Editor 已採用 TD 的版本，與 TD 相同、不需送出。
   adopt(state: StateResponse['state']) {
     clearTimeout(this.timer);
-    this.confirmed = state.document; this.blocked = false; this.uncertain = undefined; this.failedKey = null;
+    this.confirm(state.document); this.blocked = false; this.uncertain = undefined; this.failedKey = null;
     this.runtimeKey = state.runtimeRevision === state.revision ? this.source().key : null;
     this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined, stuck: stuckOf(state) });
   }
@@ -273,7 +280,7 @@ export class HostSync {
   // 衝突時選「編輯端」：以最新 revision 為基準重送草稿，照常產碼／驗證；期間再變仍擋。
   overwrite = async () => {
     const result = await this.read();
-    this.confirmed = result.state.document; this.blocked = false; this.uncertain = undefined;
+    this.confirm(result.state.document); this.blocked = false; this.uncertain = undefined;
     this.runtimeKey = null; this.failedKey = null; // TD's program was written elsewhere; send ours
     const dirty = this.dirtyNow();
     this.set({ revision: result.state.revision, dirty, phase: 'ready', stuck: stuckOf(result.state),

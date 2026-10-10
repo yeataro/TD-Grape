@@ -41,6 +41,8 @@ function fixture() {
 // New-editor protocol (design-interview Q38, Q40): TD holds the document as opaque text.
 const doc = state => JSON.parse(state.document);
 const withDoc = (state, edit) => { const graph = doc(state); edit(graph); state.document = JSON.stringify(graph); return state; };
+// What TD receives: the editor's graph with the editor that saved it (Refactor.66). TD 收到的：編輯器的圖，加上是哪一版存的。
+const saved = graph => ({ ...clone(graph), savedBy: '9.9.9 Test' });
 function open(t, request, retry = 60000, generator, live) {
   let remote = { document: JSON.stringify(fixture()), revision: 4, targetId: target };
   const calls = [];
@@ -236,7 +238,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
   const draft = clone(session.graph());
   await session.overwrite();
   assert.deepEqual(calls.map(c => c.action), ['apply', 'state', 'apply']); assert.equal(calls[2].body.revision, 5);
-  assert.deepEqual(doc(loaded().state), draft); assert.equal(loaded().state.revision, 6);
+  assert.deepEqual(doc(loaded().state), saved(draft)); assert.equal(loaded().state.revision, 6);
   assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 6);
 });
 
@@ -247,7 +249,7 @@ test('migration convenience: an unopenable test graph can be reset to the defaul
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
   assert.deepEqual(JSON.parse(calls[1].body.runtime), clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
-  assert.deepEqual(doc(loaded().state), bootstrap.defaultDocument.graph); assert.equal(loaded().state.revision, 5);
+  assert.deepEqual(doc(loaded().state), saved(bootstrap.defaultDocument.graph)); assert.equal(loaded().state.revision, 5);
 });
 
 test('migration convenience: reset still conflicts on a stale revision and leaves TD unchanged', async t => {
@@ -276,7 +278,7 @@ test('failed code generation still saves the document; TD keeps the last known g
   generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
   await session.flush();
   assert.equal(calls.length, 1); assert.equal(calls[0].body.runtime, null);
-  assert.deepEqual(JSON.parse(calls[0].body.document), clone(session.graph()));
+  assert.deepEqual(JSON.parse(calls[0].body.document), saved(session.graph()));
   assert.equal(session.snapshot().dirty, false); assert.match(zh(session.snapshot().message), /產碼失敗/);
   generator.fail = false; session.history(false); await session.flush();
   assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
@@ -468,7 +470,7 @@ test('TD not responding: editing continues, nothing replays, recovery resends au
   await until(() => session.snapshot().phase === 'ready' && !session.snapshot().dirty);
   assert.equal(applies.length, 1); assert.equal(applies[0].revision, 4);
   assert.equal(loaded().state.revision, 5);
-  assert.deepEqual(doc(loaded().state), clone(session.graph()));
+  assert.deepEqual(doc(loaded().state), saved(session.graph()));
 });
 
 test('TD changed while away: conflict; TD side is adopted and one Undo recalls the editor version', async t => {
@@ -492,7 +494,7 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
   session.history(false);
   assert.deepEqual(clone(session.graph()), draft, 'one Undo recalls the editor version');
   await session.flush();
-  assert.deepEqual(doc(loaded().state), draft); assert.equal(loaded().state.revision, 6);
+  assert.deepEqual(doc(loaded().state), saved(draft)); assert.equal(loaded().state.revision, 6);
 });
 
 // Every node the React entry offers: add it, reach Color Output through a short chain of other
@@ -1250,7 +1252,7 @@ test('TD compile errors are read for their lines; a stuck Shader can go back to 
   assert.equal(JSON.stringify(session.graph()), good, 'back to the graph TD runs');
   assert.equal(session.snapshot().undo, true, 'one Undo step');
   await session.flush();
-  assert.equal(sent.at(-1).document, JSON.stringify(session.graph()), 'delivered as any edit');
+  assert.deepEqual(JSON.parse(sent.at(-1).document), saved(session.graph()), 'delivered as any edit');
   assert.equal(session.snapshot().stuck, undefined, 'TD runs a program again: no longer stuck');
 });
 
@@ -1313,4 +1315,24 @@ test('older node forms are upgraded as the graph opens, reported, and sent with 
   session.dismissUpgrades();
   assert.equal(session.snapshot().upgrades.length, 0, 'the notice is dismissed by the person');
   assert.equal(session.snapshot().undo, false, 'opening is not an Undo step');
+});
+
+// Which editor saved the graph (Refactor.66, human 2026-10-10): only the fact of the last save, written as the graph is sent;
+// opening a graph another version saved is not an edit, and the code fingerprint ignores it.
+// 最後是哪一版存的：只記最後一次存的事實，送出時寫上；打開別版存的圖不算修改，產碼指紋也不看它。
+test('savedBy names the editor of the last save; opening a graph another editor saved sends nothing', async t => {
+  const { session, calls, loaded } = open(t, async (action, body, remote) => {
+    if (action === 'state') return remote.get();
+    const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+  });
+  // Rebuilt on a stored graph that an older editor saved. 以舊版存的圖重開。
+  const stored = loaded(); withDoc(stored.state, graph => { graph.savedBy = '0.8.276 Refactor.60'; });
+  const reopened = new EditorSession(session.host, bootstrap, stored, 0, 60000, undefined, '9.9.9 Test');
+  t.after(() => reopened.dispose());
+  assert.equal(reopened.snapshot().dirty, false, 'opening is not an edit');
+  await reopened.flush(); assert.equal(calls.filter(c => c.action === 'apply').length, 0);
+  assert.equal(GrapeTopCompiler.key(reopened.graph()), GrapeTopCompiler.key({ ...clone(reopened.graph()), savedBy: 'other' }), 'not in the fingerprint');
+  reopened.transact('edit', net => setValue(net, 'a', 3)); await reopened.flush();
+  assert.equal(JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.document).savedBy, '9.9.9 Test', 'only the last save is named');
+  assert.equal(reopened.snapshot().dirty, false);
 });

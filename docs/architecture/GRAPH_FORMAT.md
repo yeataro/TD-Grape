@@ -38,6 +38,7 @@
 | 圖 | `subgraphs` | 子圖定義：`id`、`name`、`scope`（`local`／`library`／`personal`）、`origin`（來自哪裡）、`descriptionKey`、`stages`、`targets`、`inputs`、`outputs`、`graph`。 |
 | 圖 | `structDefinitions` | 自訂 struct。 |
 | 圖／子圖 | `description`、`comment`、`userVersion` | 選填。說明（對應 ISF `DESCRIPTION`）、筆記、作者自訂版本字串（對應 ISF `VSN`）。 |
+| 圖 | `savedBy` | 選填（Refactor.66）。最後一次存這張圖的編輯器版本（如 `0.8.276 Refactor.66`），每次送出時由編輯器寫上、只記最後一次的事實，不留歷史。只是資訊：節點升級不看它；判斷「有沒有東西要送」時不看它（打開別版存的圖不算修改）；不在產碼指紋裡。 |
 | 網路 | `nodes`、`edges`、`ui` | `ui` 為畫面資料（如 `groups`）。 |
 | 節點 | `id`、`nodeType`、`params` | 必有。`nodeType` 是節點種類代號（如 `sgrape.builtin.add`）。 |
 | 節點 | `name`、`inputValues`、`comment`、`ui` | `name` 產碼時當 GLSL 名稱；`comment` 產成 GLSL 註解；`ui` 只放長什麼樣子（位置、`componentNames` 等）。 |
@@ -49,7 +50,7 @@
 
 - **格式識別**（`formatProblem`）：`format` 不是 `grape-graph` → 不是新格式（舊圖交給匯入器）；`version` 比目前新 → 不寫回、提示更新 Grape；缺 `target`／`declarations`／`stages`、節點缺 `id`／`nodeType`、接線缺 `id` → 資料不完整。編輯器對前兩種以外的情況才提供「換成預設圖」（遷移期便利）。
 - **不認得的資料原樣保留、程式不讀**（Ghost 原則，ADR 0004、Q37）：不認得的欄位、`extensions`、不認得的節點種類都跟著存回去。讀檔程式永遠不刪資料。
-- 產碼指紋不含 `ui`、`comment`、接線 `id`／`ui`、`description`／`userVersion`：這些不影響產出的程式。
+- 產碼指紋不含 `ui`、`comment`、接線 `id`／`ui`、`description`／`userVersion`／`savedBy`：這些不影響產出的程式。
 
 ## 舊格式（schemaVersion 1）→ grape-graph 1 對照表
 

@@ -18,8 +18,11 @@ export interface SubgraphData {id:string;name:string;scope:string;origin?:Object
    * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
   stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;
   description?:string;comment?:string;userVersion?:string;extensions?:ObjectValue}
+/** `savedBy` (Refactor.66, human 2026-10-10): which editor last saved the graph, written when the graph is sent, for people
+ * and for explaining ghosts later; information only — node upgrades never read it (upgrades.ts).
+ * savedBy：最後是哪一版編輯器存的，送出時寫上；只是資訊，節點升級不看它。 */
 export interface Graph {format:string;version:number;target:string;declarations:Declaration[];subgraphs?:SubgraphData[];structDefinitions?:unknown[];stages:Record<string,NetworkData>;
-  description?:string;comment?:string;userVersion?:string;extensions?:ObjectValue}
+  description?:string;comment?:string;userVersion?:string;savedBy?:string;extensions?:ObjectValue}
 export function object(v:Value|undefined):ObjectValue|undefined {return v!==null&&typeof v==='object'&&!Array.isArray(v)?v:undefined;}
 /** Own JSON values at mutation boundaries; callers never retain editable state. */
 export function copy<T>(value:T):T {return JSON.parse(JSON.stringify(value)) as T;}

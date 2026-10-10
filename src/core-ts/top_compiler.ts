@@ -170,7 +170,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
 /** Code-generation fingerprint (design-interview Q38 2-1): everything the generated program
  * depends on, minus authored layout and notes. Node `ui` and `comment` only add layout and GLSL
  * comment lines (comments.ts), so by the human's rule B they are outside the chain; edge ids and
- * edge `ui` (Link／Wire style) never reach GLSL, nor do description／comment／userVersion (Q44).
+ * edge `ui` (Link／Wire style) never reach GLSL, nor do description／comment／userVersion (Q44) or savedBy (Refactor.66).
  * Equal keys must mean the same program apart from comment lines; tests/unit/test_codegen_key.cjs
  * checks this on random edit sequences.
  * 產碼指紋：產出的程式所依賴的一切，扣掉版面與註記。節點 ui、comment 只帶來版面與 GLSL 註解（規則 B，不在鏈路）；
@@ -179,7 +179,7 @@ export function codegenKey(g:Graph):string {
   const network=(data:{nodes?:unknown[];edges?:unknown[];[key:string]:unknown}|undefined)=>data&&{...data,
     nodes:(data.nodes||[]).map(n=>({...(n as object),ui:undefined,comment:undefined})),
     edges:(data.edges||[]).map(e=>({...(e as object),id:undefined,ui:undefined}))};
-  return JSON.stringify({...g,description:undefined,comment:undefined,userVersion:undefined,
+  return JSON.stringify({...g,description:undefined,comment:undefined,userVersion:undefined,savedBy:undefined,
     stages:Object.fromEntries(Object.entries(g.stages||{}).map(([k,v])=>[k,network(v as never)])),
     subgraphs:(g.subgraphs||[]).map(f=>({...f,description:undefined,comment:undefined,userVersion:undefined,graph:network(f.graph as never)}))});
 }
