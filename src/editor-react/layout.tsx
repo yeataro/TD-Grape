@@ -241,7 +241,7 @@ function beside(layout: Layout, path: number[], edge: Edge, box: DOMRect): Hint 
   return { drop: { kind: 'beside', pane: path, edge }, mark: { ...mark, label: newPane }, refused: fits ? undefined : noRoom };
 }
 
-function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
+function hintAt(layout: Layout, panel: string, x: number, y: number, edgeWidth: number): Hint {
   const under = document.elementFromPoint(x, y) as HTMLElement | null, slot = under?.closest<HTMLElement>('[data-pane]');
   if (!under || !slot) return null;
   const path = slot.dataset.pane!.split('.').map(Number), pane = tree.at(layout.root, path), box = slot.getBoundingClientRect();
@@ -257,7 +257,7 @@ function hintAt(layout: Layout, panel: string, x: number, y: number): Hint {
     }
     const near: [Edge, number][] = [['top', y - box.top], ['bottom', box.bottom - y], ['left', x - box.left], ['right', box.right - x]];
     const [edge, distance] = near.reduce((closest, item) => item[1] < closest[1] ? item : closest);
-    if (distance < edgeWidth()) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
+    if (distance < edgeWidth) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
     // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
     // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
     const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
@@ -300,7 +300,9 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
     if (event.button !== 0) return;
     const x0 = event.clientX, y0 = event.clientY, pointer = event.pointerId, controller = new AbortController();
     const options = { capture: true, signal: controller.signal };
+    // The theme's edge width, read once per drag, not on every move. 主題的邊寬，每次拖曳讀一次，不是每次移動都讀。
     let moving = false, hint: Hint = null;
+    const edge = edgeWidth();
     const finish = (accept: boolean) => {
       controller.abort(); document.documentElement.classList.remove('moving-panel'); setDrag(null);
       if (!moving) return;
@@ -316,7 +318,7 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
       if (!moving && Math.hypot(move.clientX - x0, move.clientY - y0) < (event.pointerType === 'touch' ? 10 : 6)) return;
       move.preventDefault(); move.stopPropagation();
       if (!moving) { moving = true; document.documentElement.classList.add('moving-panel'); }
-      hint = hintAt(now.current, panel, move.clientX, move.clientY);
+      hint = hintAt(now.current, panel, move.clientX, move.clientY, edge);
       setDrag({ panel, x: move.clientX, y: move.clientY, hint });
     }, options);
     addEventListener('pointerup', up => { if (up.pointerId === pointer) finish(true); }, options);
