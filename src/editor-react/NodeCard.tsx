@@ -91,6 +91,10 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const preview = useContext(BoxPreviewContext);
   // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
   const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
+  // The rows a dropped wire would merge into one, the input it lands on among them, shown as one band in the wire's colour
+  // (Refactor.76.16, as the legacy editor marked them; human 2026-10-11: one band, no frame per row).
+  // 放開後會併成一列的那幾列（含落點那列），畫成線色的一整條（R.76.16，舊產品也標出它們；人類：一整條、不要每列框線）。
+  const band = merging.length ? new Set([mergePreview!.port, ...merging]) : null;
   const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
   const errorLine = useContext(ErrorNodesContext)?.has(id) ?? false;
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
@@ -174,7 +178,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
         const label = <PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key} components={view.components?.inputs?.[port.key]} />;
-        return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
+        const inBand = band?.has(port.key);
+        return <div className="port-row input-row" key={port.key} data-merge-band={inBand || undefined}
+          style={{ '--port-color': typeColor(port.type), ...(inBand ? { '--merge-color': typeColor(mergePreview!.type) } : {}) } as CSSProperties}
           data-component={single(view.components?.inputs?.[port.key])}>
         <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={wired}
           data-merging={merging.includes(port.key) || undefined} />

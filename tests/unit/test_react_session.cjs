@@ -1364,7 +1364,7 @@ test('a wire preview names the inputs it merges and the wires it replaces, exact
   const before = clone(session.graph()), intoY = before.stages.pixel.edges.find(edge => edge.to[0] === join && edge.to[1] === 'y').id;
   const drop = { source: wide, sourceHandle: 'out', target: join, targetHandle: 'x' };
   const preview = session.wirePreview(drop);
-  assert.deepEqual(clone(preview), { node: join, merged: ['y', 'z'], replaced: [intoY] });
+  assert.deepEqual(clone(preview), { node: join, port: 'x', type: 'vec3', merged: ['y', 'z'], replaced: [intoY] });
   assert.deepEqual(clone(session.graph()), before, 'a preview never changes the graph');
   session.connect(drop);
   const after = session.graph().stages.pixel;

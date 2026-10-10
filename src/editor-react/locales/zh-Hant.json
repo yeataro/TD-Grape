@@ -498,6 +498,7 @@
   "tune.layerGlowBlur": "內光暈範圍",
   "tune.layerOffset": "層疊陰影偏移",
   "tune.layerShadow": "層疊陰影濃度",
+  "tune.mergeBand": "拖線會合併的列：濃度",
   "tune.nodeBorder": "節點外框線與標題線",
   "tune.reset": "還原成主題的值",
   "tune.select": "選取",

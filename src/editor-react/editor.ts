@@ -129,6 +129,9 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
 // Code generation no longer waits for delivery, so it keeps working while TD is away (Q28).
 // 編輯協調者：把編輯交給核心、保管目前的作品／Undo／編輯狀態、每次修改完成即產碼，再交給 HostSync。
 // 產碼不再等送出，TD 不在時照樣更新。
+/** What dropping a wire on an input would change (Refactor.57, 76.16). 線放在某個輸入上會改變什麼。 */
+export type WirePreview = { node: string; port: string; type: string; merged: string[]; replaced: string[] };
+
 export class Editor {
   private document: GraphDocument;
   private state: EditorState;
@@ -531,19 +534,22 @@ export class Editor {
    * their ports pay for it): the target's inputs it would merge away (a component group) and the wires it would
    * replace. Rehearsed with the real edit on a discarded candidate, so the preview is what happens. null: no change
    * to show, or it does not fit. 線放在這裡會改變什麼：目標節點會被併掉的輸入、會被換掉的線。用真正的修改在丟棄的候選上
-   * 預演，預告就是實際結果。只有接線會改變接孔的節點（模組有 wire）才預演；null＝沒有要預告的或接不上。 */
-  wirePreview = (c: Connection): { node: string; merged: string[]; replaced: string[] } | null => {
+   * 預演，預告就是實際結果。只有接線會改變接孔的節點（模組有 wire）才預演；null＝沒有要預告的或接不上。
+   * Also the input it lands on and the wire's type, so the rows that merge can be shown as one band in the wire's colour
+   * (Refactor.76.16). 也帶上落在哪個輸入與線的型別，會合併的列才能畫成線色的一整條（R.76.16）。 */
+  wirePreview = (c: Connection): WirePreview | null => {
     if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle) return null;
     const net = this.document.networks.get('pixel')!;
     if (!net.node(c.target).definition?.wire) return null;
     const inputs = Object.keys(net.node(c.target).interface.inputs), edges = net.data.edges.map(edge => edge.id);
-    let found: { node: string; merged: string[]; replaced: string[] } | null = null;
+    const type = net.node(c.source).interface.outputs[c.sourceHandle]?.type ?? '';
+    let found: WirePreview | null = null;
     try {
       this.document.change(candidate => {
         const after = candidate.networks.get('pixel')!;
         wire(after, c);
         const kept = new Set(Object.keys(after.node(c.target).interface.inputs)), still = new Set(after.data.edges.map(edge => edge.id));
-        found = { node: c.target, merged: inputs.filter(key => !kept.has(key)), replaced: edges.filter(id => !still.has(id)) };
+        found = { node: c.target, port: c.targetHandle!, type, merged: inputs.filter(key => !kept.has(key)), replaced: edges.filter(id => !still.has(id)) };
         throw new Rehearsed();
       });
     } catch (error) { if (!(error instanceof Rehearsed)) return null; }

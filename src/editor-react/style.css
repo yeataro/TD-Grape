@@ -683,6 +683,10 @@ span.image-label:hover { background: var(--image-label); }
 :where(:root[data-shadow-port-glow="on"]) .react-flow__handle[data-connected="true"]::after { box-shadow: 0 0 var(--glow-ports) color-mix(in srgb, var(--port-color) var(--tint-glow-ports), transparent); }
 /* An input a dragged wire would merge away turns solid in its type colour (Refactor.57). 拖線會併掉的輸入：型別色實心。 */
 .react-flow__handle[data-merging="true"]::after { background: var(--port-color); }
+/* The rows that would merge, the one landed on among them, as one band in the dragged wire's colour: no frame, no seam
+   between rows (Refactor.76.16, human 2026-10-11: the legacy frame on every row was ugly). 會合併的那幾列（含落點那列）
+   畫成拖曳中那條線顏色的一整條：沒有框線、列與列之間沒有縫（R.76.16，人類：舊產品每列一個框很醜）。 */
+.port-row[data-merge-band] { background: color-mix(in srgb, var(--merge-color) var(--tint-merge-band), transparent); }
 /* Highlights, a separate thing from the wired state above (human 2026-10-09: 55.20's "solid" was about being wired; the
    highlights are wanted). Under the pointer, and the port a wire is being dragged from (React Flow marks it connectingfrom):
    a light lilac centre and a soft ring, as the legacy hover (style.css:88). Where the dragged wire will land (connectingto,

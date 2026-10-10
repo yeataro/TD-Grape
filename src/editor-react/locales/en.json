@@ -498,6 +498,7 @@
   "tune.layerGlowBlur": "Inner glow reach",
   "tune.layerOffset": "Layered shadow offset",
   "tune.layerShadow": "Layered shadow strength",
+  "tune.mergeBand": "Rows a wire would merge",
   "tune.nodeBorder": "Node outline and title line",
   "tune.reset": "Back to the theme",
   "tune.select": "Selection",
