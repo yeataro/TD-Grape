@@ -459,7 +459,8 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* On a wire it floats boldly (R.75.30, human 2026-10-11: on a wire it can float freely, even 32px): the whole ghost moves over
    --ghost-float, centred on the wire, slowly so it stays calm. 線上的大膽浮動（R.75.30，人類：在線上大膽浮動都可以，甚至 32px）：
    整隻在 --ghost-float 的範圍內、以線為中心上下浮，放慢才不急。 */
-.ghost-figure.wire { animation: ghost-float 4s ease-in-out infinite; animation-delay: calc(var(--ghost-phase) * -4s); }
+/* 8 s a round (R.75.31, human 2026-10-11: over that distance 4 s looked twice too fast). 一趟 8 秒（R.75.31，人類：這麼長的距離 4 秒看起來快了一倍）。 */
+.ghost-figure.wire { animation: ghost-float 8s ease-in-out infinite; animation-delay: calc(var(--ghost-phase) * -8s); }
 @keyframes ghost-flow { to { transform: translateX(-4px); } }
 @keyframes ghost-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
 @keyframes ghost-look { 0%, 15% { transform: translateX(0); } 22%, 40% { transform: translateX(-1px); } 47%, 65% { transform: translateX(1px); } 72%, 100% { transform: translateX(0); } }
