@@ -164,6 +164,7 @@
   "layout.sideEmpty": "這一側沒有面板",
   "layout.titleBar": "標題列",
   "light.applied": "圖已套用",
+  "light.checking": "檢查連線中…",
   "light.conflict": "版本衝突",
   "light.none": "沒有開圖",
   "light.offline": "連不到 TD",

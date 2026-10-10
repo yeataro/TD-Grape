@@ -222,7 +222,9 @@ type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
 const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
   if (!state) return { tone: 'none', busy: false, word: tr('light.none', 'No graph') };
   const busy = state.phase === 'sending' || !!state.checking;
-  const word = state.phase === 'offline' ? tr('light.offline', 'TD unreachable') : state.phase === 'uncertain' ? tr('light.uncertain', 'Unsure')
+  // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
+  // 檢查連線中直接寫在列上，圓點同時閃，看得出在工作（R.70.2，人類）。
+  const word = state.checking ? tr('light.checking', 'Checking the connection…') : state.phase === 'offline' ? tr('light.offline', 'TD unreachable') : state.phase === 'uncertain' ? tr('light.uncertain', 'Unsure')
     : state.phase === 'conflict' ? tr('light.conflict', 'Conflict') : state.phase === 'error' ? tr('light.stopped', 'Stopped')
     : state.phase === 'sending' ? tr('light.sending', 'Sending') : state.dirty ? tr('light.unsent', 'Graph not sent') : tr('light.applied', 'Graph applied');
   return { tone: alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy, word };
@@ -314,7 +316,9 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
         <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
       {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp)}</p>}
     </div>
-    <div ref={list} className="log-list">{records.map((record, i) => <div key={i} className={'log-entry' + (alarm.includes(record.kind) ? ' error' : '')}
+    {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
+    <div ref={list} className="log-list">{records.map((record, i) => <div key={i}
+      className={'log-entry' + (alarm.includes(record.kind) ? ' error' : record.kind === 'opened' || record.kind === 'recovered' ? ' ok' : '')}
       title={record.reason === undefined ? undefined : say(record.reason)}>
       <time>{clock(record.time)}{record.until === undefined ? '' : '–' + clock(record.until)}</time><span>{say(recordWords(record))}</span></div>)}</div>
   </Popover>;

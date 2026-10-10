@@ -104,6 +104,7 @@ a { color: var(--accent); }
 .sync-word { color: var(--text-muted); }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
 .foot-bar .sync-light { margin-inline: 0; padding: 0 2px; }
+.log-entry.ok span { color: var(--sync-ok); }
 /* The status panel: the state now, then the history. 狀態面板：現在的狀態，接著是歷史。 */
 .status-now { display: flex; flex-direction: column; gap: 6px; padding: 4px 6px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
 .status-now p { margin: 0; color: var(--text-secondary); }
