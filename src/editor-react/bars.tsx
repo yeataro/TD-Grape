@@ -81,10 +81,12 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
 }
 
 /** The title bar, as the legacy editor (human 2026-10-09): mark, name, tagline, version, About; then the common
- * actions. As it narrows, parts fold away in the human's order (2026-10-10): About, the version, the tagline, the language
- * (also in the foot bar's "AA"), import and export, Save (all in the foot bar's menu; Apply Shader was removed in R.75.5); the mark and the name never.
- * 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。變窄時照人類的順序收起：About、版號、副標題、語言（底列 AA 也有）、
- * 匯入與匯出、儲存（都在底列選單裡；套用 Shader 在 R.75.5 拿掉）；圖標與名稱永遠不收。 */
+ * actions. As it narrows, parts fold away in the human's order (2026-10-10; R.75.6 swapped import/export and the language,
+ * human 2026-10-11: on a phone the short language select was hidden behind the long import/export): About, the version, the
+ * tagline, import and export (in the foot bar's menu), the language (also in the foot bar's "AA"), Save (also in the menu;
+ * Apply Shader was removed in R.75.5); the mark and the name never.
+ * 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。變窄時照人類的順序收起：About、版號、副標題、匯入與匯出（底列選單裡有）、
+ * 語言（底列 AA 也有）、儲存（選單裡也有；套用 Shader 在 R.75.5 拿掉）；圖標與名稱永遠不收（R.75.6 對調匯入匯出與語言，人類：手機上短的語言被長的匯入匯出拖著藏起來）。 */
 export function TitleBar({ session, version }: { session: EditorSession | null; version: string }) {
   const state = useEditorState(session), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
   const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
@@ -97,10 +99,10 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
     <span className="spacer" />
     {/* Switches in place, keeping the work and its history (legacy). Same key as the legacy editor.
         當場切換，作品與歷史都保留（照舊產品）。鍵與舊產品相同。 */}
-    <span {...fold(4)}><Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
+    <span {...fold(5)}><Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
       options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></span>
-    <span {...fold(5)}><Placeholder label={tr('action.importGraph', 'Import graph')} /></span>
-    <span {...fold(5)}><Placeholder label={tr('action.exportGraph', 'Export graph')} /></span>
+    <span {...fold(4)}><Placeholder label={tr('action.importGraph', 'Import graph')} /></span>
+    <span {...fold(4)}><Placeholder label={tr('action.exportGraph', 'Export graph')} /></span>
     {/* Saving the TD project takes the main button's look and place (Refactor.75.5, human 2026-10-11): the editor never saves
         it by itself. 儲存 TD 專案接手主要按鈕的樣式與位置（R.75.5，人類）：編輯器不會自己存。 */}
     <button type="button" {...fold(6, 'primary')} aria-disabled={!session || state?.phase === 'sending' || undefined}
