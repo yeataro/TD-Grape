@@ -23,15 +23,15 @@ export function GhostMark({ id, on }: { id: string; on: 'node' | 'wire' }) {
           <feComposite in2="grown" operator="in" result="edge" />
           <feMerge><feMergeNode in="edge" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
-        <mask id={'eyes' + key} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-          <rect x="0" y="0" width="24" height="24" fill="white" />
-          <g className="ghost-eyes"><circle cx="10" cy="10" r="1.3" fill="black" /><circle cx="14" cy="10" r="1.3" fill="black" /></g>
-        </mask>
       </defs>
-      <g className="ghost-body" mask={`url(#eyes${key})`}><g filter={`url(#edge${key})`}><g clipPath={`url(#body${key})`}>
+      <g className="ghost-body"><g filter={`url(#edge${key})`}><g clipPath={`url(#body${key})`}>
         <path className="ghost-fill" d="M6 18.6V10a6 6 0 0 1 12 0v8.6Z" />
         <path className="ghost-fill ghost-hem" d={HEM} />
-      </g></g></g>
+      </g></g>
+        {/* Solid dark eyes, whatever is behind (Refactor.75.29, human 2026-10-11: the eyes should be black; cut-outs showed
+            the node or the canvas). 實心的深色眼睛，不管後面是什麼（R.75.29，人類：眼睛要是黑的；挖空會透出節點或畫布）。 */}
+        <g className="ghost-eyes"><circle className="ghost-eye" cx="10" cy="10" r="1.3" /><circle className="ghost-eye" cx="14" cy="10" r="1.3" /></g>
+      </g>
     </svg>
   </span>;
 }

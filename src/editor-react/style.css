@@ -451,7 +451,7 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    Animation effects off: it stands still, same shape. 幽靈本身（R.75.27，人類）：G 圓角鋸齒裙擺往一個方向流；節點上眨眼，線上浮動並左右看。
    每隻從自己的位置開始（由 ID 決定）。動畫效果關閉：同樣的形狀靜止。 */
 .ghost-figure, .ghost-figure > svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ghost-fill { fill: var(--node-ghost-mark); }
+.ghost-fill { fill: var(--node-ghost-mark); } .ghost-eye { fill: var(--node-ghost-eye); }
 .ghost-hem { animation: ghost-flow 1.2s linear infinite; animation-delay: var(--ghost-delay); }
 .ghost-eyes { transform-box: fill-box; transform-origin: center; }
 .ghost-figure.node .ghost-eyes { animation: ghost-blink 4.8s infinite; animation-delay: var(--ghost-delay); }

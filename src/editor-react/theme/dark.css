@@ -165,6 +165,7 @@
   /* The ghost mark: bright like a title, edged in the canvas colour (Refactor.64.3, back in 65.3). Ghost 標記：同標題的亮色，畫布色描邊。 */
   --node-ghost-mark: var(--text-strong);
   --node-ghost-edge: var(--surface-canvas);
+  --node-ghost-eye: var(--palette-shadow);  /* the ghost's eyes, solid dark (R.75.29) 幽靈的眼睛，實心深色 */
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
   --surface-app: var(--palette-ink);
