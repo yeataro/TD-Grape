@@ -109,7 +109,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   }, [id, updateInternals]);
   // Ghost (Q37 1-1): kept as stored, shown with the ports its wires use, no controls, not compiled.
   // Ghost：原樣保留，只畫它的線用到的接孔，沒有控制項，不參與產碼。
-  if (data.ghost) return <article ref={card} className={`grape-node ghost ${selection}`}
+  // The ghost mark (Refactor.64.3, human 2026-10-10: option G4): a ghost on the top-right corner, half outside, drawn beside
+  // the card so the card's fading does not dim it. Ghost 標記（人類選 G4）：右上角的幽靈、一半在外；畫在卡片旁邊，不被卡片的淡化一起變淡。
+  if (data.ghost) return <><span className="node-ghost-mark" role="img" title={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}
+    aria-label={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}><Icon name="ghost" /></span>
+  <article ref={card} className={`grape-node ghost ${selection}`}
     style={{ '--group-color': 'var(--group-ghost)' } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{authored.name || text(data.label)}</strong><small>Ghost</small></div>
     <div className="node-body node-drag-surface">
@@ -132,7 +136,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         <Handle type="source" position={Position.Right} id={port.key} isConnectable={false} aria-label={`${id} output ${port.key}`} data-connected="true" />
       </div>)}
     </div>
-  </article>;
+  </article></>;
   // A start node (GLOSSARY: no inputs at all, e.g. source references, TD values, value nodes; later spec constants) shows
   // its outputs first, so it reads from the top down (human 2026-10-09). Judged from the ports, never from the node kind.
   // 起點節點（用語表：沒有任何輸入，例如來源引用、TD 內建值、值節點；之後的 Spec 常量）輸出放最上面，由上往下讀（人類）。

@@ -296,6 +296,12 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .node-error-badge { position: absolute; z-index: 1; top: 0; right: 0; width: 30px; height: 30px; transform: translate(40%, -40%); }
 .node-error-badge .icon { width: 100%; height: 100%; stroke: var(--node-error-mark); stroke-width: 2.5; }
 .node-error-badge .icon-badge { fill: var(--node-error-badge); }
+/* The ghost mark (Refactor.64.3, human 2026-10-10: option G4 of work/refactor/ghost-marker-preview.html): a solid ghost, 38px, on the
+   top-right corner like the error mark; an edge in the canvas colour keeps it apart from the card's outline.
+   Ghost 標記（人類選預覽頁的 G4）：實心幽靈、38px，位置同錯誤圖示；畫布色的描邊讓它和卡片框線分開。 */
+.node-ghost-mark { position: absolute; z-index: 1; top: 0; right: 0; width: 38px; height: 38px; transform: translate(40%, -45%); pointer-events: auto; }
+.node-ghost-mark .icon { width: 100%; height: 100%; }
+.node-ghost-mark .icon-solid { fill: var(--node-ghost-mark); fill-rule: evenodd; stroke: var(--node-ghost-edge); stroke-width: 1.6; stroke-linejoin: round; paint-order: stroke; }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
 .react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }

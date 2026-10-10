@@ -163,6 +163,7 @@
   "limit.subgraphDefinitions": "subgraph definitions",
   "network.label": "Network",
   "node.errorLine": "TD reported an error on a line this node wrote",
+  "node.ghostMark": "Ghost: kept as it is, left out of the shader.",
   "number.help": "Drag sideways to change (Shift finer, Ctrl coarser). Click to type. Right button: common values. Middle button, Alt+right button or holding still: the value ladder — move up and down to pick a step, then past its left or right edge to change the value. Release to apply, Esc to cancel. Keyboard: Alt+L, arrow keys, Enter.",
   "number.notFinite": "Enter a finite number",
   "number.presetDefault": "{value} (default)",

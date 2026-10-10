@@ -28,6 +28,8 @@ const paths = {
   // TD's error mark: a filled circle with a cross (Refactor.63.6.1, human 2026-10-10: as TD marks an OP in error).
   // TD 的錯誤標記：實心圓加叉（人類：照 TD 標出錯 OP 的樣子）。
   errorBadge: <><circle cx="12" cy="12" r="10" className="icon-badge" /><path d="m8 8 8 8M16 8l-8 8" /></>,
+  // A ghost, solid with its eyes cut out (Refactor.64.3, human 2026-10-10: the ghost mark). 幽靈：實心、眼睛挖空（人類：Ghost 標記）。
+  ghost: <path className="icon-solid" d="M6 20V10a6 6 0 0 1 12 0v10l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5Z M8.7 10a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0Z M12.7 10a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0Z" />,
 } satisfies Record<string, ReactNode>;
 export type IconName = keyof typeof paths;
 

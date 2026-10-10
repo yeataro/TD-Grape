@@ -160,6 +160,9 @@
      TD 回報的錯誤行由它寫的節點掛的 TD 錯誤標記（試驗）：錯誤色底、深色叉。 */
   --node-error-badge: var(--palette-alarm);
   --node-error-mark: var(--palette-shadow);
+  /* The ghost mark: bright like a title, edged in the canvas colour (Refactor.64.3). Ghost 標記：同標題的亮色，畫布色描邊。 */
+  --node-ghost-mark: var(--text-strong);
+  --node-ghost-edge: var(--surface-canvas);
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
   --surface-app: var(--palette-ink);
