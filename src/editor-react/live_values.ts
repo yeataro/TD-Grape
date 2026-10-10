@@ -8,14 +8,15 @@ import type { ProjectSaved, UniformStates } from './host';
 //   frame, tagged with TD's frame; a bundle older than the last one taken is dropped.
 // - Reconnects by itself; whether it is connected is the editor's own business (not TD's).
 // - Heartbeat (Refactor.71, human 2026-10-10: TD had been minimized long before the editor showed it): while the page is
-//   seen, a `ping` every few seconds, one at a time; TD's own thread answers `pong` at the start of a frame, so a TD that is
+//   seen, a `ping` every second, one at a time; TD's own thread answers `pong` at the start of a frame, so a TD that is
 //   minimized, busy or paused does not answer although the connection stays open (the protocol's own ping is answered by
-//   the connection's thread and would not tell). No answer by the next beat: TD is not responding.
+//   the connection's thread and would not tell). No answer for 3 s: TD is not responding; the late answer says it is back
+//   (Refactor.75.13, human 2026-10-11: asking often finds out sooner; waiting 3 s lets TD's ordinary 1–2 s hitches pass).
 // 即時 Uniform 值：與 TD 之間的 WebSocket。送出：每個 Uniform 每格最多一次、只送最新；沒連上就丟掉（一般送出會跟上）。
 // 收到：連上時與模式改變時的 state、每個 TD 影格一包的 values（比手上舊的就丟掉）。自己重連；連線狀態由編輯器自己判斷。
-// 心跳（R.71，人類：TD 早就縮小了，編輯器很晚才顯示）：頁面看得見時每幾秒一個 ping、同時只有一個；由 TD 自己的執行緒在
+// 心跳（R.71，人類：TD 早就縮小了，編輯器很晚才顯示）：頁面看得見時每秒一個 ping、同時只有一個；由 TD 自己的執行緒在
 // 每格開始時回 pong，所以 TD 縮小、忙、暫停時連線雖然還開著卻不會回（協定自己的 ping 由連線的執行緒回，測不出來）。
-// 到下一拍還沒回：TD 沒處理。
+// 3 秒沒回：TD 沒有回應；晚到的回答＝回來了（R.75.13，人類：常問發現得快；等 3 秒讓 TD 平常 1–2 秒的小卡頓過去）。
 export type LiveMessage =
   | { type: 'state'; frame: number; uniforms: UniformStates }
   | { type: 'values'; frame: number; values: Record<string, (number | null)[]> }
@@ -34,7 +35,7 @@ export type LiveSocket = {
   onmessage: ((event: { data: unknown }) => void) | null;
 };
 const OPEN = 1;
-export const HEARTBEAT = 5000;
+export const HEARTBEAT = 1000, PATIENCE = 3000;
 const seen = () => typeof document === 'undefined' || !document.hidden;
 
 export class LiveValues {
@@ -47,6 +48,7 @@ export class LiveValues {
   private disposed = false;
   private beatTimer?: ReturnType<typeof setTimeout>;
   private asked?: number; // the ping not answered yet 還沒回的 ping
+  private askedAt = 0;
   private beats = 0;
   connected = false;
   responding = true;
@@ -55,14 +57,16 @@ export class LiveValues {
   private readonly nextFrame: (run: () => void) => void;
   private readonly answering: (responding: boolean) => void;
   private readonly beat: number;
-  /** `answering`: TD answers the heartbeat or stops answering; `retry`, `beat` in ms; `nextFrame` for tests.
-   * answering：TD 回心跳或不回；retry、beat 為毫秒；nextFrame 給測試用。 */
+  private readonly patience: number;
+  /** `answering`: TD answers the heartbeat or stops answering; `retry`, `beat` (how often to ask), `patience` (how long
+   * without an answer is "not responding") in ms; `nextFrame` for tests.
+   * answering：TD 回心跳或不回；retry、beat（多久問一次）、patience（多久沒回算沒有回應）為毫秒；nextFrame 給測試用。 */
   constructor(private readonly open: (() => LiveSocket) | undefined, private readonly receive: (message: LiveMessage) => void,
     private readonly linked: (connected: boolean, code?: number) => void,
-    { retry = 2000, beat = HEARTBEAT, answering = () => {}, nextFrame = (run: () => void) => typeof requestAnimationFrame === 'function'
+    { retry = 2000, beat = HEARTBEAT, patience = PATIENCE, answering = () => {}, nextFrame = (run: () => void) => typeof requestAnimationFrame === 'function'
       ? void requestAnimationFrame(() => run()) : void setTimeout(run, 16) }: {
-      retry?: number; beat?: number; answering?(responding: boolean): void; nextFrame?(run: () => void): void } = {}) {
-    this.retry = retry; this.beat = beat; this.answering = answering; this.nextFrame = nextFrame;
+      retry?: number; beat?: number; patience?: number; answering?(responding: boolean): void; nextFrame?(run: () => void): void } = {}) {
+    this.retry = retry; this.beat = beat; this.patience = patience; this.answering = answering; this.nextFrame = nextFrame;
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.shown);
     this.connect();
   }
@@ -73,8 +77,10 @@ export class LiveValues {
     const socket = this.socket;
     if (this.disposed || socket?.readyState !== OPEN) return;
     if (!seen()) { this.asked = undefined; return; } // not asked while unseen 看不到時不問
-    if (this.asked !== undefined) this.answered(false); // the last one got no answer 上一個沒回
-    else { this.asked = ++this.beats; socket.send(JSON.stringify({ type: 'ping', seq: this.asked })); }
+    // Still waiting: not responding once it has waited long enough; its late answer says TD is back.
+    // 還在等：等夠久就算沒有回應；它晚到的回答＝TD 回來了。
+    if (this.asked !== undefined) { if (Date.now() - this.askedAt >= this.patience) this.answered(false); }
+    else { this.asked = ++this.beats; this.askedAt = Date.now(); socket.send(JSON.stringify({ type: 'ping', seq: this.asked })); }
     this.beatTimer = setTimeout(this.heartbeat, this.beat);
   };
   private answered(responding: boolean) {

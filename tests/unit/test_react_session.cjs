@@ -1019,12 +1019,14 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
 test('the heartbeat is answered or not; a closed live connection is TD unreachable; a save in TD is told', async t => {
   const { LiveValues } = load(path.join(root, 'src/editor-react/live_values.ts'));
   const socket = fakeSocket(), answers = [];
-  const live = new LiveValues(() => socket, () => {}, () => {}, { retry: 60000, nextFrame: run => setTimeout(run, 0), answering: responding => answers.push(responding), beat: 20 });
+  const live = new LiveValues(() => socket, () => {}, () => {}, { retry: 60000, nextFrame: run => setTimeout(run, 0), answering: responding => answers.push(responding), beat: 20, patience: 70 });
   t.after(() => live.dispose());
   socket.readyState = 1; socket.onopen();
   assert.deepEqual(socket.pings, [{ type: 'ping', seq: 1 }], 'asked at once');
-  await new Promise(resolve => setTimeout(resolve, 30));
-  assert.deepEqual(answers, [false], 'no answer by the next beat: not responding');
+  await new Promise(resolve => setTimeout(resolve, 45));
+  assert.deepEqual(answers, [], 'asked again and again, but not yet waited long enough (R.75.13)');
+  await new Promise(resolve => setTimeout(resolve, 60));
+  assert.deepEqual(answers, [false], 'no answer for long enough: not responding');
   assert.equal(socket.pings.length, 1, 'never two at a time');
   socket.onmessage({ data: JSON.stringify({ type: 'pong', seq: 1, frame: 5 }) });
   assert.deepEqual(answers, [false, true], 'answered again');
@@ -1052,6 +1054,22 @@ test('the heartbeat is answered or not; a closed live connection is TD unreachab
   saving = () => live2.onmessage?.({ data: JSON.stringify({ type: 'saved', frame: 10, file: 'test.toe' }) });
   await session.save();
   assert.deepEqual(session.log.entries().slice(count).map(entry => zh(entry.message)), ['保存 TD 專案…', 'TD 專案已保存：test.toe']);
+});
+
+// Refactor.75.13 (human 2026-10-11: people press again and again): until the reply, pressing again asks for nothing.
+// 回覆之前再按，不會再要求一次。
+test('a save waits for its reply; pressing again meanwhile asks for nothing', async t => {
+  let answer, saves = 0;
+  const { session } = open(t, async (action, body, remote) => {
+    if (action !== 'save') return remote.get();
+    saves++; await new Promise(resolve => { answer = resolve; }); return { saved: 'test.toe' };
+  });
+  const first = session.save();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(session.snapshot().saving, true);
+  await session.save(); await session.save();
+  answer(); await first;
+  assert.deepEqual([saves, session.snapshot().saving], [1, false]);
 });
 
 // Refactor.75.12 (human 2026-10-11: a big project can take more than 10 s to save): the service stops waiting, TD goes on.

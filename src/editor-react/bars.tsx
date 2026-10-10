@@ -218,8 +218,11 @@ export function NetworkBar({ session, prefs, onGlsl }: {
 const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflict', 'error'];
 /** Whether TD can save the project now (Refactor.75.7, human 2026-10-11): not while TD is away, conflicting or unsure; while
  * sending it can — the save waits for the send — so the button no longer greys for an instant at every edit.
- * TD 現在能不能存專案（R.75.7，人類）：TD 不在、衝突、結果不確定時不行；送出中可以（存檔會等送完），按鈕不再每次修改都灰一下。 */
-const canSave = (state: EditorState | null) => !!state && !['offline', 'uncertain', 'conflict'].includes(state.phase);
+ * TD 現在能不能存專案（R.75.7，人類）：TD 不在、衝突、結果不確定時不行；送出中可以（存檔會等送完），按鈕不再每次修改都灰一下。
+ * Nor while this page's save has no answer yet (Refactor.75.13, human: people press again and again); a long save goes on
+ * greyed by the heartbeat (TD not responding). 這一頁的存檔還沒回覆時也不行（R.75.13，人類：使用者會一直按）；存很久時接著由
+ * 心跳（TD 沒有回應）讓它繼續灰著。 */
+const canSave = (state: EditorState | null) => !!state && !state.saving && !['offline', 'uncertain', 'conflict'].includes(state.phase);
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
 const recoveryHelp: Record<Link, Message> = {

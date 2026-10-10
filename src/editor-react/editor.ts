@@ -111,6 +111,9 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
   message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   upgrades: readonly UpgradeChange[];
+  /** A save this page asked for has no answer yet (Refactor.75.13): the button waits, so pressing again does not ask
+   * again. 這一頁要求的存檔還沒有回覆：按鈕等著，再按不會再要求一次。 */
+  saving?: boolean;
   /** The sync state's own short record (Refactor.70.1, sync_record.ts). 同步狀態自己的短紀錄。 */
   syncRecords: readonly SyncRecord[];
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
@@ -721,12 +724,13 @@ export class Editor {
    * waits (10 s): TD has started, and says so when it is done. 要求時一行、TD 說存好時一行；回覆只在出問題時說話
    * （R.75.12，人類：有事就留訊息，因果使用者自己知道）。大專案可能存得比服務等的 10 秒久：TD 已開始，存好時會說。 */
   save = async () => {
-    this.tell('info', tr('save.saving', 'Saving the TD project…'));
+    if (this.state.saving) return;
+    this.status({ saving: true, message: tr('save.saving', 'Saving the TD project…'), level: 'info' });
     try { await this.sync.save(); } catch (error) {
       if (error instanceof HostError && error.code === 'application_outcome_unknown')
         this.warn(tr('save.noAnswer', 'TD started saving but has not answered yet; it will say so when the project is saved.'));
       else this.notice(error);
-    }
+    } finally { if (!this.disposed) this.status({ saving: false }); }
   };
   /** A new Grape ID for this Grape OP in TD (Refactor.52); null when it was not changed. 換新 Grape ID。 */
   renewId = async () => {
