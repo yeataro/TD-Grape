@@ -403,6 +403,7 @@
   "toolbar.errorNodes": "Mark nodes on TD error lines (trial)",
   "toolbar.frameGlide": "Frame transition (F)",
   "toolbar.glsl": "GLSL",
+  "toolbar.more": "More tools",
   "toolbar.redo": "Redo",
   "toolbar.saveProject": "Save TD project",
   "toolbar.snap": "Snap",

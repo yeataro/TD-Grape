@@ -105,7 +105,10 @@ a { color: var(--accent); }
 .foot-sync-short.appeared { display: inline-flex; }
 .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sync-none); }
 .sync-dot.synced { background: var(--sync-synced); } .sync-dot.unsent { background: var(--sync-unsent); } .sync-dot.sending { background: var(--sync-sending); }
-:is(.title-bar, .foot-bar) .folded { display: none; }
+:is(.title-bar, .foot-bar, .network-bar) .folded { display: none; }
+/* The network toolbar's "more" button shows only once a group has folded into it (69.3). 網路區功能列的「更多」只在有一組收進去後出現。 */
+.tool-more:not(.appeared) { display: none; }
+.dropdown-menu .icon { width: 16px; height: 16px; }
 /* The foot bar's icons keep their size; only the latest message gives way, down to its "…" (69.1). 底列圖示不縮；只有最新訊息讓，讓到剩「…」。 */
 .foot-bar > :not(.foot-message, .spacer) { flex-shrink: 0; }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); font-size: var(--bar-font); line-height: var(--bar-line); }

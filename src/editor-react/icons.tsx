@@ -19,6 +19,8 @@ const paths = {
   menu: <><circle cx="12" cy="5" r="1.6" className="icon-dot" /><circle cx="12" cy="12" r="1.6" className="icon-dot" /><circle cx="12" cy="19" r="1.6" className="icon-dot" /></>,
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,
   chevronDown: <path d="m7 10 5 5 5-5" />,
+  // More tools, folded into a menu (legacy #graphmore, selection_ui.js:525). 收進選單的其他工具（舊產品 #graphmore）。
+  more: <path d="M3 5h16M3 10h16M3 15h8m3 3 4 4 4-4" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
   // Snap as Blender's magnet (human 2026-10-09); the settings gear from the legacy foot bar. 磁鐵（Blender）、齒輪（舊產品）。
   snap: <path d="M5 4v7a7 7 0 0 0 14 0V4h-4v7a3 3 0 0 1-6 0V4Z M5 8h4m6 0h4" />,

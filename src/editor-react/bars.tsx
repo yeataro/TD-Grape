@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
-import { BrandMark } from './icons';
+import { BrandMark, Icon, type IconName } from './icons';
+import type { MenuItem } from './DropdownMenu';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
 import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
@@ -123,14 +124,41 @@ export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean
 /** The network's own toolbar, floating over its top edge (human 2026-10-09): stages on the left; on the right
  * history, the selection's actions (until the floating selection toolbar exists), box select, canvas
  * preferences and the GLSL panel. Only what exists is shown. 網路區自己的功能列，浮在上緣：左邊 Stage；右邊歷史、
- * 選取的動作（浮動選取工具列做好之前放這裡）、框選、畫布偏好、GLSL 面板。只放現在有的。 */
+ * 選取的動作（浮動選取工具列做好之前放這裡）、框選、畫布偏好、GLSL 面板。只放現在有的。
+ * As it narrows, whole groups move into a "more" menu, as the legacy toolbar did (legacy selection_ui.js:463): GLSL first,
+ * then Snap, the selection's actions, box select, and Undo / Redo last (human 2026-10-10); the stages never. In the menu a
+ * tool is the same action, a toggle shown ticked. 變窄時整組搬進「更多」選單，照舊產品：先 GLSL，再 Snap、選取的動作、框選，
+ * Undo／Redo 最後（人類 10-10）；Stage 永遠不收。選單裡是同樣的動作，開關會打勾。 */
+type Tool = { key: string; icon?: IconName; label: Message; disabled?: boolean; pressed?: boolean; mode?: boolean; danger?: boolean; select(): void };
 export function NetworkBar({ session, prefs, onGlsl }: {
   session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
-  const state = useEditorState(session), flow = useReactFlow();
+  const state = useEditorState(session), flow = useReactFlow(), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
   const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
   const stages = session?.stageNames() ?? [];
-  return <div className="network-bar">
+  // Left to right as shown; `order` is when the group folds (1 first). 由左到右照顯示；order＝這組第幾個收（1 先收）。
+  const groups: { order: number; tools: Tool[] }[] = [
+    { order: 5, tools: [
+      { key: 'undo', icon: 'undo', label: tr('toolbar.undo', 'Undo'), disabled: !state?.undo, select: () => session!.history(false) },
+      { key: 'redo', icon: 'redo', label: tr('toolbar.redo', 'Redo'), disabled: !state?.redo, select: () => session!.history(true) }] },
+    // React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。
+    { order: 3, tools: [
+      { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), disabled: !nodes.length && !edges.length,
+        select: () => void flow.deleteElements({ nodes, edges }) },
+      { key: 'frame', icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), disabled: !nodes.length, select: () => frameNodes(flow, nodes.map(node => node.id)) }] },
+    { order: 4, tools: [{ key: 'boxSelect', icon: 'boxSelect', mode: true, label: tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)'),
+      pressed: prefs.boxSelect, select: () => prefs.set({ boxSelect: !prefs.boxSelect }) }] },
+    // Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
+    // Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。
+    { order: 2, tools: [{ key: 'snap', icon: 'snap', label: tr('toolbar.snap', 'Snap'), pressed: prefs.snap, select: () => prefs.set({ snap: !prefs.snap }) }] },
+    { order: 1, tools: [{ key: 'glsl', label: tr('toolbar.glsl', 'GLSL'), select: onGlsl }] },
+  ];
+  const fold = (order: number) => ({ 'data-fold': order, className: 'tool-group' + (folded >= order ? ' folded' : '') });
+  const more: MenuItem[] = groups.filter(group => folded >= group.order).flatMap((group, index) => group.tools.map((tool, at) => ({
+    key: tool.key, divider: index > 0 && at === 0, disabled: tool.disabled, danger: tool.danger,
+    ...(tool.pressed === undefined ? {} : { checkbox: true, checked: tool.pressed }),
+    label: <>{tool.icon && <Icon name={tool.icon} />}{say(tool.label)}</>, select: tool.select })));
+  return <div className="network-bar" ref={bar}>
     {/* The stages float on the canvas by themselves, with no toolbar box (legacy; human 2026-10-09).
         Stage 切換直接浮在畫布上，沒有工具列外框（照舊產品，人類）。 */}
     <div className="network-bar-stages">
@@ -141,27 +169,11 @@ export function NetworkBar({ session, prefs, onGlsl }: {
           disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
     </div>
     <div className="network-bar-group">
-      <ToolGroup>
-        <IconButton icon="undo" label={tr('toolbar.undo', 'Undo')} disabled={!state?.undo} onClick={() => session!.history(false)} />
-        <IconButton icon="redo" label={tr('toolbar.redo', 'Redo')} disabled={!state?.redo} onClick={() => session!.history(true)} />
-      </ToolGroup>
-      <ToolGroup>
-        {/* React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。 */}
-        <IconButton icon="delete" danger label={tr('selection.delete', 'Delete selected')} disabled={!nodes.length && !edges.length}
-          onClick={() => void flow.deleteElements({ nodes, edges })} />
-        <IconButton icon="fitSelection" label={tr('selection.fit', 'Frame selected')} disabled={!nodes.length}
-          onClick={() => frameNodes(flow, nodes.map(node => node.id))} />
-      </ToolGroup>
-      <ToolGroup>
-        <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')} mode
-          pressed={prefs.boxSelect} onClick={() => prefs.set({ boxSelect: !prefs.boxSelect })} />
-      </ToolGroup>
-      {/* Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
-          Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。 */}
-      <ToolGroup>
-        <IconButton icon="snap" label={tr('toolbar.snap', 'Snap')} pressed={prefs.snap} onClick={() => prefs.set({ snap: !prefs.snap })} />
-      </ToolGroup>
-      <ToolGroup><button type="button" onClick={onGlsl}>{say(tr('toolbar.glsl', 'GLSL'))}</button></ToolGroup>
+      {groups.map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool => tool.icon
+        ? <IconButton key={tool.key} icon={tool.icon} label={tool.label} disabled={tool.disabled} pressed={tool.pressed} mode={tool.mode} danger={tool.danger} onClick={tool.select} />
+        : <button key={tool.key} type="button" onClick={tool.select}>{say(tool.label)}</button>)}</div>)}
+      <div data-appear={1} className={'tool-group tool-more' + (folded >= 1 ? ' appeared' : '')}>
+        <MenuButton icon="more" label={tr('toolbar.more', 'More tools')} items={more} /></div>
     </div>
   </div>;
 }
