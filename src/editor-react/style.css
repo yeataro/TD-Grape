@@ -684,9 +684,14 @@ span.image-label:hover { background: var(--image-label); }
 /* An input a dragged wire would merge away turns solid in its type colour (Refactor.57). 拖線會併掉的輸入：型別色實心。 */
 .react-flow__handle[data-merging="true"]::after { background: var(--port-color); }
 /* The rows that would merge, the one landed on among them, as one band in the dragged wire's colour: no frame, no seam
-   between rows (Refactor.76.16, human 2026-10-11: the legacy frame on every row was ugly). 會合併的那幾列（含落點那列）
-   畫成拖曳中那條線顏色的一整條：沒有框線、列與列之間沒有縫（R.76.16，人類：舊產品每列一個框很醜）。 */
-.port-row[data-merge-band] { background: color-mix(in srgb, var(--merge-color) var(--tint-merge-band), transparent); }
+   between rows (Refactor.76.16, human 2026-10-11: the legacy frame on every row was ugly). A layer over the row, not under
+   it, so the value boxes light up too (76.17, human: under them it was not bright enough); added to what is below (ADD) on a
+   dark theme, laid over it on a light one (--merge-band-blend). A pseudo-element: nothing for React, never in the pointer's way.
+   會合併的那幾列（含落點那列）畫成拖曳中那條線顏色的一整條：沒有框線、列與列之間沒有縫（R.76.16，人類：舊產品每列一個框很醜）。
+   疊在列的上面而不是底下，數值框也一起亮（76.17，人類：在底下不夠亮）；深色主題用加亮（ADD），淺色主題一般疊色（--merge-band-blend）。
+   用偽元素：React 不用管，也不擋滑鼠。 */
+.port-row[data-merge-band]::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: color-mix(in srgb, var(--merge-color) var(--tint-merge-band), transparent); mix-blend-mode: var(--merge-band-blend); }
 /* Highlights, a separate thing from the wired state above (human 2026-10-09: 55.20's "solid" was about being wired; the
    highlights are wanted). Under the pointer, and the port a wire is being dragged from (React Flow marks it connectingfrom):
    a light lilac centre and a soft ring, as the legacy hover (style.css:88). Where the dragged wire will land (connectingto,

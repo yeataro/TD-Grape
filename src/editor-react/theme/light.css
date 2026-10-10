@@ -77,6 +77,7 @@
   --tint-layer-glow: 2%;
   --tint-name-field: 5%;
   --tint-merge-band: 18%;
+  --merge-band-blend: normal;   /* adding light to a light ground shows nothing 淺色底再加亮看不出來 */
   --tint-wire-ghost: 80%;
   --tint-wire-ready: 13%;   /* legacy light --wire-ready-glow #65488f22 */
   --text-alpha-strong: 78%;
