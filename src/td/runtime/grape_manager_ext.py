@@ -127,6 +127,11 @@ class GrapeManagerExt:
         if self.live:
             self.live.wires_changed(comp)
 
+    def ProjectSaved(self):
+        """Project Post Save (`save_watch`, Refactor.71): connected editors are told. 存檔後：告訴連著的編輯器。"""
+        if self.live:
+            self.live.saved(project.name)
+
     def Diagnostics(self):
         result = self.queue.outcomes() if self.queue else []
         self._status('Ready' if self.queue else 'Disconnected', recent=result)

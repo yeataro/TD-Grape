@@ -192,6 +192,20 @@ class LiveWatchTests(unittest.TestCase):
         self.assertEqual(len(connection.sent), count + 2)
         self.assertEqual(connection.sent[-1], {'type': 'inputs', 'frame': 120, 'retake': False})
 
+    def test_the_heartbeat_is_answered_on_tds_thread_and_a_save_is_told(self):
+        # Refactor.71: a ping is answered while draining (TD's own thread, start of a frame), only for a linked connection;
+        # a project save is told to every connected editor once. 心跳在 drain 時回（TD 自己的執行緒），只回已連上的；存檔告訴每個編輯器一次。
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection, stranger = Connection(), Connection(target='x' * 32)
+        watch.drain([('open', connection, None)])
+        connection.sent.clear()
+        watch.drain([('message', connection, json.dumps({'type': 'ping', 'seq': 7})), ('message', stranger, json.dumps({'type': 'ping', 'seq': 1}))])
+        self.assertEqual(connection.sent, [{'type': 'pong', 'seq': 7, 'frame': 120}])
+        self.assertEqual(stranger.sent, [], 'not linked: no answer')
+        watch.saved('TD-Grape-dev.toe')
+        self.assertEqual(connection.sent[-1], {'type': 'saved', 'frame': 120, 'file': 'TD-Grape-dev.toe'})
+        self.assertEqual(family.live_calls, [], 'a ping is not a value')
+
 
 if __name__ == '__main__':
     unittest.main()

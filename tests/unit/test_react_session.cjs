@@ -462,7 +462,7 @@ test('TD not responding: editing continues, nothing replays, recovery resends au
   }, 20);
   session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
   assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'busy');
-  assert.match(zh(session.snapshot().message), /TD 沒有回應（可能最小化）/);
+  assert.match(zh(session.snapshot().message), /TD 還開著，但沒在處理請求/);
   session.transact('more', net => setValue(net, 'b', 6));
   assert.equal(valueOf(session, 'b'), 6, 'editing is not blocked while TD is away');
   await session.flush(); assert.equal(applies.length, 0, 'no write while offline');
@@ -950,7 +950,8 @@ test('TD states arrive on open and with each reply; notices go to the log as TD-
 // touches the graph or Undo. Uniform C：值一改就送到 TD；拖曳中不改圖、不進 Undo。
 // A stand-in for the browser WebSocket (Uniform D2). 代替瀏覽器 WebSocket。
 function fakeSocket() {
-  return { readyState: 0, sent: [], send(text) { this.sent.push(JSON.parse(text)); },
+  // Heartbeat pings are kept apart (Refactor.71). 心跳的 ping 另外放。
+  return { readyState: 0, sent: [], pings: [], send(text) { const message = JSON.parse(text); (message.type === 'ping' ? this.pings : this.sent).push(message); },
     close() { this.readyState = 3; this.onclose?.(); }, onopen: null, onclose: null, onerror: null, onmessage: null };
 }
 const nextFrame = () => new Promise(resolve => setTimeout(resolve, 30));
@@ -1009,6 +1010,47 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
   session.previewDeclarationValue(id, 0.3);
   await nextFrame();
   assert.equal(socket.sent.length, sent);
+});
+
+// Refactor.71 (human 2026-10-10: TD had been minimized long before the editor showed it): the live connection tells before
+// anything is sent. Closed = TD unreachable; no answer to the heartbeat = TD not responding; either way a check brings it back.
+// A save in TD is told; a save this page asked for is said once, by its reply.
+// R.71：即時連線在送出之前就會說。斷了＝連不到 TD；心跳沒回＝TD 沒處理；檢查後恢復。TD 存檔會告訴編輯器；這一頁自己要求的存檔只說一次。
+test('the heartbeat is answered or not; a closed live connection is TD unreachable; a save in TD is told', async t => {
+  const { LiveValues } = load(path.join(root, 'src/editor-react/live_values.ts'));
+  const socket = fakeSocket(), answers = [];
+  const live = new LiveValues(() => socket, () => {}, () => {}, 60000, run => setTimeout(run, 0), responding => answers.push(responding), 20);
+  t.after(() => live.dispose());
+  socket.readyState = 1; socket.onopen();
+  assert.deepEqual(socket.pings, [{ type: 'ping', seq: 1 }], 'asked at once');
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.deepEqual(answers, [false], 'no answer by the next beat: not responding');
+  assert.equal(socket.pings.length, 1, 'never two at a time');
+  socket.onmessage({ data: JSON.stringify({ type: 'pong', seq: 1, frame: 5 }) });
+  assert.deepEqual(answers, [false, true], 'answered again');
+
+  const sockets = [];
+  let saving;
+  const { session } = open(t, async (action, body, remote) => {
+    if (action === 'save') { saving?.(); return { saved: 'test.toe' }; }
+    return action === 'state' ? remote.get() : { state: (remote.set({ document: body.document, revision: body.revision + 1, targetId: target }), remote.get().state) };
+  }, 60000, undefined, () => { const each = fakeSocket(); sockets.push(each); return each; });
+  const ws = sockets[0];
+  ws.readyState = 1; ws.onopen();
+  ws.readyState = 3; ws.onclose();
+  assert.deepEqual([session.snapshot().phase, session.snapshot().link], ['offline', 'unreachable']);
+  await session.check();
+  assert.equal(session.snapshot().phase, 'ready', 'a check brings it back');
+  // A save in TD: said as the editor's own save says it. 在 TD 存檔：和編輯器自己存檔說得一樣。
+  const live2 = sockets.at(-1);
+  live2.onmessage?.({ data: JSON.stringify({ type: 'saved', frame: 9, file: 'project.toe' }) });
+  const told = session.log.entries().at(-1);
+  assert.deepEqual([told.source, told.message.code, zh(told.message)], ['td', 'save.done', 'TD 專案已保存：project.toe']);
+  // A save this page asked for: the event that comes during it is not said again. 這一頁要求的存檔：期間來的通知不再說一次。
+  const count = session.log.entries().length;
+  saving = () => live2.onmessage?.({ data: JSON.stringify({ type: 'saved', frame: 10, file: 'test.toe' }) });
+  await session.save();
+  assert.equal(session.log.entries().length, count + 1, 'said once, by the reply');
 });
 
 // Selection (Refactor.49; design-interview Q33, Q39): Ctrl toggles, Shift only adds, plain replaces

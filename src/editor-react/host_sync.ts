@@ -70,9 +70,12 @@ export async function resetToDefault(host: HostClient, bootstrap: Bootstrap, edi
 const bodyOf = (text: string) => { try { const { savedBy: _, ...rest } = JSON.parse(text) as Graph; return JSON.stringify(rest); } catch { return text; } };
 const replyMismatch = tr('sync.replyMismatch', "TD's reply does not match what was sent.");
 export const conflictMessage = tr('sync.conflict', 'The graph in TD seems to have been changed. Choose which version to use.');
+// The two things the editor can tell apart (Refactor.71): TD is running but its own thread does not handle anything, or TD
+// cannot be reached at all; why, only TD could say. 編輯器分得出的兩種：TD 還開著但自己的執行緒沒在處理、或完全連不到；
+// 為什麼，只有 TD 自己說得出來。
 const offlineMessage = {
-  busy: tr('sync.offlineBusy', 'TD is not responding (it may be minimized). Your changes stay in the browser and are sent when TD is back.'),
-  unreachable: tr('sync.offlineUnreachable', 'Cannot reach TD (it may be stuck or closed, or the network is down). Your changes stay in the browser and are sent once connected.'),
+  busy: tr('sync.offlineBusy', 'TD is running but not handling requests. Your changes stay in the browser and are sent when TD is back.'),
+  unreachable: tr('sync.offlineUnreachable', 'Cannot reach TD (it may be closed or crashed, or the network is down). Your changes stay in the browser and are sent once connected.'),
 };
 // The page and TD-Grape in TD come from different builds (usually TD-Grape was updated). Not a conflict: no
 // version choice helps; reloading keeps unsent changes as a draft (Refactor.52). 不是衝突：重新整理即可，修改留成草稿。
@@ -201,6 +204,22 @@ export class HostSync {
           : failure.phase === 'uncertain' ? tr('sync.uncertain', 'Delivery result unknown; automatic sending stopped while checking the version with TD. {reason}', { reason })
           : tr('sync.rejected', 'TD-Grape refused: {reason}', { reason }) });
     this.recover();
+  }
+  /** The live connection noticed before anything was sent (Refactor.71): it closed (`unreachable`) or TD stopped answering the
+   * heartbeat (`busy`). Only from "in sync" or "away"; a send on its way, a conflict or an unsure result keep their own path.
+   * 即時連線在送出之前就發現了：斷了（unreachable）或 TD 不回心跳（busy）。只從「已同步」或「不在」進來；送出中、衝突、
+   * 結果不確定各走自己的路。 */
+  lost(link: 'busy' | 'unreachable') {
+    if (this.disposed || this.pending || !['ready', 'offline'].includes(this.status.phase)) return;
+    if (this.status.phase === 'offline' && this.status.link === link) return;
+    this.blocked = true;
+    this.set({ phase: 'offline', link, message: offlineMessage[link], level: 'warning' });
+    this.recover();
+  }
+  /** The live connection is back, or TD answers again: check now instead of waiting for the countdown. 連線回來或 TD 又回應：
+   * 馬上檢查，不等倒數。 */
+  found() {
+    if (this.status.phase === 'offline') void this.checkNow();
   }
   // Only while disconnected or unsure, only when the page is visible, never overlapping.
   // 只在未連線或結果不明期間、頁面可見時重試，且不重疊；平常不輪詢，TD 端不增加工作。

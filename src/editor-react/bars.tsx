@@ -211,7 +211,12 @@ export function NetworkBar({ session, prefs, onGlsl }: {
 }
 
 const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflict', 'error'];
-const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, check that TD is still open (restore its window if minimized), global cooking is on, and TD is not busy with a long task; on a remote device, check the network. After TD restarts, open the editor again from the Grape OP.');
+// How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
+// and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
+const recoveryHelp = {
+  busy: tr('status.recoveryBusy', "TD is still running but is not handling requests. It may be minimized, busy with a long task, paused (its timeline or global cooking), or TD-Grape's component may be stopped. On the computer running TD: restore its window, wait for the task, press play or turn cooking back on."),
+  unreachable: tr('status.recoveryUnreachable', 'TD cannot be reached at all. It may have been closed or crashed, or the network is down. Check that TD is still open; after TD restarts, open the editor again from the Grape OP. On a remote device, check the network.'),
+};
 
 /** The sync light (Refactor.70, 70.1; human 2026-10-10): a dot, the revision and a short word. The dot's colour is the state —
  * green when the graph is in TD, yellow for changes not yet sent, red when TD cannot be reached, answered unclearly, conflicts
@@ -225,6 +230,7 @@ type Tone = 'normal' | 'unsent' | 'alarm' | 'none';
 const words = {
   none: tr('light.none', 'No graph'), applied: tr('light.applied', 'Graph applied'), unsent: tr('light.unsent', 'Graph not sent'),
   sending: tr('light.sending', 'Sending'), checking: tr('light.checking', 'Checking…'), offline: tr('light.offline', 'TD unreachable'),
+  busy: tr('light.busy', 'TD not responding'),
   uncertain: tr('light.uncertain', 'Unsure'), conflict: tr('light.conflict', 'Conflict'), stopped: tr('light.stopped', 'Stopped'),
 };
 const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
@@ -232,7 +238,8 @@ const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: 
   const busy = state.phase === 'sending' || !!state.checking;
   // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
   // 檢查連線中直接寫在列上，圓點同時閃，看得出在工作（R.70.2，人類）。
-  const word = state.checking ? words.checking : state.phase === 'offline' ? words.offline : state.phase === 'uncertain' ? words.uncertain
+  const word = state.checking ? words.checking : state.phase === 'offline' ? (state.link === 'busy' ? words.busy : words.offline)
+    : state.phase === 'uncertain' ? words.uncertain
     : state.phase === 'conflict' ? words.conflict : state.phase === 'error' ? words.stopped
     : state.phase === 'sending' ? words.sending : state.dirty ? words.unsent : words.applied;
   return { tone: alarm.includes(state.phase) ? 'alarm' : state.dirty ? 'unsent' : 'normal', busy, word };
@@ -339,7 +346,7 @@ function StatusPanel({ anchor, state, now, tone, onRetry, onClose }: {
       {state && away.includes(state.phase) && <div className="status-retry">
         <span>{say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}</span>
         <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button></div>}
-      {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp)}</p>}
+      {state?.phase === 'offline' && <p className="status-help"><strong>{say(tr('status.howToRecover', 'How to recover'))}</strong> {say(recoveryHelp[state.link ?? 'unreachable'])}</p>}
     </div>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
     <div ref={list} className="log-list">{records.map((record, i) => <div key={i}

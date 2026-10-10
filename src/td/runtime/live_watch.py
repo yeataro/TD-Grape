@@ -45,6 +45,11 @@ class LiveWatch:
                     continue
                 if isinstance(message, dict) and message.get('type') == 'value':
                     latest[(connection, message.get('id'))] = message
+                elif isinstance(message, dict) and message.get('type') == 'ping':
+                    # The heartbeat (Refactor.71): answered here, on TD's own thread at the start of a frame, so a TD that is
+                    # minimized, busy or paused does not answer. 心跳：在這裡、TD 自己的執行緒每格開始時回，所以 TD 縮小、忙、
+                    # 暫停時不會回。
+                    connection.send(json.dumps({'type': 'pong', 'seq': message.get('seq'), 'frame': self.frame()}))
         for (connection, _), message in latest.items():
             entry = self.watched.get(self.links.get(connection))
             if entry is None:
@@ -227,6 +232,13 @@ class LiveWatch:
         text = json.dumps({'type': 'inputs', 'frame': self.frame(), 'retake': retake})
         for connection in entry['connections']:
             connection.send(text, replaceable=True)
+
+    def saved(self, file):
+        """The TD project was saved (Project Post Save, Refactor.71): every connected editor is told once, with the file name.
+        TD 專案存檔了：告訴每個連著的編輯器一次，附檔名。"""
+        text = json.dumps({'type': 'saved', 'frame': self.frame(), 'file': file})
+        for connection in list(self.links):
+            connection.send(text)
 
     def close(self):
         for connection in list(self.links):

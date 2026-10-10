@@ -136,6 +136,18 @@ wires.text = (
     "# Input wiring of Grape OPs with a connected editor (Refactor.60): see live_watch. 有編輯器連著的 Grape OP 的接線，見 live_watch。\n"
     "def onWireChange(changeOp):\n    parent().ext.GrapeManagerExt.LiveWiresChanged(changeOp)\n")
 wires.comment = 'Input wiring. Watches nothing while no editor is connected.'
+# The project was saved (Refactor.71, human 2026-10-10): connected editors are told, so "the project still needs saving" does
+# not stay up after a save in TD. 專案存檔了：告訴連著的編輯器，在 TD 存檔後「專案尚需保存」不會一直掛著。
+saves = node(manager, executeDAT, 'save_watch', 1000, -620)
+saves.par.framestart = False
+saves.par.frameend = False
+saves.par.start = False
+saves.par.create = False
+saves.par.projectpostsave = True
+saves.text = (
+    "# Tells connected editors that the project was saved (Refactor.71). 告訴連著的編輯器專案存檔了。\n"
+    "def onProjectPostSave():\n    parent().ext.GrapeManagerExt.ProjectSaved()\n")
+saves.comment = 'Tells connected editors that the project was saved.'
 
 # Default-image previews (Refactor.58): one Select TOP that is pointed at an image only while it is read, made no
 # larger than 320 px on its long side on the GPU. 預設圖預覽：一個 Select TOP，只在讀的時候指向那張圖，在 GPU 上把長邊

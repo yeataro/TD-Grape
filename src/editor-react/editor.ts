@@ -144,7 +144,10 @@ export class Editor {
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
     this.td = loaded.uniforms ?? {};
-    this.live = new LiveValues(host.live, message => this.liveMessage(message), connected => this.liveLinked(connected));
+    // The live connection also tells, before anything is sent, that TD is gone or not answering (Refactor.71).
+    // 即時連線也會在送出之前就說出 TD 不在或沒回應（R.71）。
+    this.live = new LiveValues(host.live, message => this.liveMessage(message), connected => this.liveLinked(connected), undefined, undefined,
+      responding => responding ? this.sync.found() : this.sync.lost('busy'));
     this.uniformValues = this.readUniformValues();
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
@@ -240,6 +243,13 @@ export class Editor {
       this.status({ message: tr('live.refused', 'TD-Grape can no longer read this Grape OP in TD: {reason}', { reason: message.message }), level: 'error' }, 'td');
       return;
     }
+    // The project was saved in TD (Refactor.71, human 2026-10-10): said as the editor's own save says it; a save this page asked
+    // for is said by its reply. 在 TD 存檔了：和編輯器自己存檔說得一樣；這一頁自己要求的存檔由回覆來說。
+    if (message.type === 'saved') {
+      if (!this.saving) this.status({ message: this.state.dirty ? tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.')
+        : tr('save.done', 'TD project saved: {file}', { file: message.file }), level: 'info' }, 'td');
+      return;
+    }
     if (message.type === 'state') { this.setTd(message.uniforms); return; }
     const next: Record<string, UniformStates[string]> = { ...this.td };
     for (const [id, values] of Object.entries(message.values)) {
@@ -254,7 +264,8 @@ export class Editor {
   // Connected again: rewiring while away sent no word, so the inputs are asked once if they were asked before (R.61.1).
   // 重新連上：斷線期間的接線改變沒有通知，之前問過輸入的話就再問一次。
   private liveLinked(connected: boolean) {
-    if (connected) { if (this.inputs) void this.refreshInputs(); return; }
+    if (connected) { this.sync.found(); if (this.inputs) void this.refreshInputs(); return; }
+    this.sync.lost('unreachable');
     const withoutValue = ({ value: _, ...rest }: UniformStates[string][number]) => rest;
     this.setTd(Object.fromEntries(Object.entries(this.td).map(([id, states]) => [id, states.map(withoutValue)])));
   }
@@ -695,8 +706,10 @@ export class Editor {
     if (this.sync.busy || this.state.phase !== 'conflict') return;
     try { await this.sync.overwrite(); } catch (error) { this.notice(error); }
   };
+  private saving = false;
   save = async () => {
-    try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); }
+    this.saving = true;
+    try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); } finally { this.saving = false; }
   };
   /** A new Grape ID for this Grape OP in TD (Refactor.52); null when it was not changed. 換新 Grape ID。 */
   renewId = async () => {
