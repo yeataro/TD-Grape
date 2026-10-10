@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { core, typeColor, type Value } from './core';
 import type { ComponentState } from './host';
-import { NumberField } from './NumberField';
+import { NumberField, holdMs } from './NumberField';
 import { useValueLadder } from './useValueLadder';
 import { Select } from './controls';
 import { Icon } from './icons';
@@ -141,18 +141,44 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       label: choice.isDefault ? say(tr('number.presetDefault', '{value} (default)', { value: String(choice.value) })) : String(choice.value) }));
   if (own && shared === undefined) choices.unshift({ key: 'default', value: own, checked: list.every((item, i) => Number(item) === own[i]),
     label: say(tr('number.presetDefault', '{value} (default)', { value: `(${own.join(', ')})` })) });
-  // In columns, a left click on the name or the type also opens or closes the components (TD; human 2026-10-11).
-  // 欄位排法裡，左鍵點名稱或型別也會展開／收起分量（照 TD；人類）。
-  const toggle = columns && count > 1 ? () => setExpanded(open => !open) : undefined;
-  const leading = <span ref={head} className="value-caption nodrag nopan" onClick={toggle} data-toggle={toggle ? '' : undefined}
-      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
-      onPointerDown={event => {
-        if (!groupable || !(event.button === 1 || (event.button === 2 && event.altKey))) return;
+  // The left button on the leading text (the name and the type), as on a value box (human 2026-10-11): a click opens or closes
+  // the components, on a card as in the panel (TD; the left button did nothing there); holding still opens the whole-value
+  // ladder; moving away does neither. 開頭文字（名稱與型別）上的左鍵，和數值框一樣（人類）：點一下展開／收起分量，卡片和面板都一樣
+  // （照 TD；那裡左鍵本來沒有作用）；按住不動打開整組的梯尺；移開就都不做。
+  const toggle = count > 1 ? () => setExpanded(open => !open) : undefined;
+  const hold = useRef<{ x: number; y: number; id: number; timer: number } | null>(null);
+  const letGo = () => { if (hold.current) { clearTimeout(hold.current.timer); hold.current = null; } };
+  useEffect(() => letGo, []);
+  const press = {
+    onPointerDown: (event: ReactPointerEvent<HTMLSpanElement>) => {
+      if (groupable && (event.button === 1 || (event.button === 2 && event.altKey))) {
         event.preventDefault(); event.stopPropagation();
         group.begin(event.clientX, event.clientY, 0, { id: event.pointerId, button: event.button, mask: event.button === 1 ? 4 : 2 });
         if (group.gesture.current) event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onMouseDown={event => { if (event.button === 1) event.preventDefault(); }}
+        return;
+      }
+      if (event.button !== 0 || event.altKey || event.metaKey || (!toggle && !groupable)) return;
+      event.preventDefault(); event.stopPropagation();
+      const target = event.currentTarget, { clientX: x, clientY: y, pointerId: id } = event;
+      target.setPointerCapture(id);
+      hold.current = { x, y, id, timer: window.setTimeout(() => {
+        hold.current = null;
+        if (groupable) { group.begin(x, y, 0, { id, button: 0, mask: 1 }); if (group.gesture.current) target.setPointerCapture(id); }
+      }, holdMs) };
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLSpanElement>) => {
+      const held = hold.current;
+      if (held && event.pointerId === held.id && Math.hypot(event.clientX - held.x, event.clientY - held.y) > 8) letGo();
+    },
+    onPointerUp: (event: ReactPointerEvent<HTMLSpanElement>) => {
+      const held = hold.current; if (!held || event.pointerId !== held.id) return;
+      letGo(); toggle?.();
+    },
+    onPointerCancel: letGo,
+    onMouseDown: (event: ReactMouseEvent<HTMLSpanElement>) => { if (event.button === 1) event.preventDefault(); },
+  };
+  const leading = <span ref={head} className="value-caption nodrag nopan" data-toggle={toggle ? '' : undefined} {...press}
+      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
       onContextMenu={event => {
         event.preventDefault();
         if (!groupable || event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) return;
@@ -166,7 +192,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     const change = (next: Value) => commit(withComponent(next));
     const mode = modes?.[i], bound = mode?.mode === 'bind';
     return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
-      {letter && count > 1 && <span className="component component-letter" data-component={i}>{names[i]}</span>}
+      {letter && count > 1 && <span className="component component-letter letter-slot" data-component={i}>{names[i]}</span>}
       {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
         : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
         : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
@@ -184,12 +210,12 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     {group.view}</>;
   if (columns) return <>
     <div className="value-line">
-      {expand}{leading}<span className="value-type" onClick={toggle} data-toggle={toggle ? '' : undefined}>{typeText ?? type}</span>
+      {expand}{leading}<span className="value-type nodrag nopan" data-toggle={toggle ? '' : undefined} {...press}>{typeText ?? type}</span>
       <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
         <div className="value-fields" style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>
     </div>
     {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
-      <span className="value-caption"><span className="component-letter" data-component={i}>{names[i]}</span></span>
+      <span className="value-caption"><span className="component-letter letter-slot" data-component={i}>{names[i]}</span></span>
       <span className="value-type" style={{ '--port-color': typeColor(family) } as CSSProperties}>{family}</span>
       <div className="value-group nodrag nopan">{field(item, i, false)}</div>
     </div>)}

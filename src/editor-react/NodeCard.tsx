@@ -74,8 +74,9 @@ export const single = (components?: readonly number[]) => components?.length ===
 export function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
   if (components?.length === text.length && text.length > 1)
     return <>{[...text].map((letter, i) => <span key={i} className="component-letter" data-component={components[i]}>{letter}</span>)}</>;
+  // A one-letter name takes the letter slot, so X…W line up down a column (Refactor.76.8). 單一字母的名稱用字母格，X…W 上下對齊（R.76.8）。
   const one = single(components);
-  return one === undefined ? <>{text}</> : <span className="component-letter" data-component={one}>{text}</span>;
+  return one === undefined ? <>{text}</> : <span className={'component-letter' + (text.length === 1 ? ' letter-slot' : '')} data-component={one}>{text}</span>;
 }
 
 export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {

@@ -12,6 +12,9 @@ import { tr, say } from './text';
 // drag changes it; a click without dragging starts typing, a double click selects all; holding still opens the value
 // ladder; the right button lists common values and the default. 數值框的 slider 行為（照舊產品）：填色表示值；左鍵拖改值；
 // 點一下沒拖就開始打字、雙擊全選；按住不動打開數值梯尺；右鍵列出常用值與預設值。
+/** How long a still left press waits before it opens the value ladder. 左鍵按住不動多久打開數值梯尺。 */
+export const holdMs = 450;
+
 export function NumberField({ value, label, integer = false, unsigned = false, commit, preview, defaultValue }: {
   value: number; label: string; integer?: boolean; unsigned?: boolean;
   commit: (value: number) => void; preview?: (value: number) => void;
@@ -63,7 +66,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       // Held still: the value ladder, steered with the same button. 按住不動：數值梯尺，用同一個鍵操作。
       press.current = null;
       if (canScrub) { openLadder(x, y, { id, button: 0, mask: 1 }); if (ladder.gesture.current) target.setPointerCapture(id); }
-    }, 450) };
+    }, holdMs) };
   }
 
   function endScrub(accept: boolean) {

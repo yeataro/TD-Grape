@@ -59,6 +59,7 @@
   --source-strip: 10px; /* the colour strip at a source card's left 來源卡片左邊的色條 */
   --source-fade: 8px;   /* a source card's right padding, where overflow fades out (as its top and bottom) 來源卡片右內距，溢出在這裡淡出（同上下） */
   --expand-width: 16px; /* an open/close triangle 展開三角形的寬 */
+  --letter-slot: 1.1em; /* a one-letter component name (X, W…) is this wide whatever the letter, so a column of them lines up (Refactor.76.8) 單一字母的分量名（X、W…）不論哪個字母都這麼寬，一排排下來才對齊 */
   --checker: 12px;      /* one tile (2x2 squares) of a transparency checkerboard 透明棋盤格一個單元（2x2 格） */
   --source-name-min: 8em; /* the narrowest a source's name gets; its type shrinks first 來源名稱最窄寬度；型別先縮 */
   /* how far each outer glow reaches (trials; legacy cool styles) 各外光暈的範圍（試驗；舊產品 cool 風格） */

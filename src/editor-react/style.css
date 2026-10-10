@@ -736,7 +736,11 @@ span.image-label:hover { background: var(--image-label); }
 /* A box's own default width (about 20 characters for a browser input) never widens the node; only --io-field-min does.
    框自己的預設寬度（瀏覽器輸入框約 20 字）不撐寬節點；只有 --io-field-min 算數。 */
 .value-field { position: relative; display: block; min-width: 0; contain: inline-size; }
-.value-field > .component { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
+/* A one-letter component name sits centred in a slot of its own width, the same for every letter (Refactor.76.8, human
+   2026-10-11: W is wider than X, so its gap to the digits and its edge in a column were off). One rule, no letter is special.
+   單一字母的分量名放在固定寬的格子裡置中，每個字母一樣（R.76.8，人類：W 比 X 寬，離數字太近、一排下來邊緣也不齊）。一條規則，沒有哪個字母特別。 */
+.letter-slot { display: inline-block; width: var(--letter-slot); text-align: center; }
+.value-field > .component { position: absolute; left: 4px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
   font-size: var(--font-xs); line-height: var(--line-xs); color: var(--field-label); }
 .value-field input, .value-field .select-button, .value-field .td-driven { width: 100%; min-width: 0; height: var(--io-field); padding: 0 6px; border: 0;
   font-variant-numeric: tabular-nums; }
@@ -786,7 +790,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-grid .value-type { grid-column: 3; height: var(--io-row); line-height: var(--io-row); white-space: nowrap;
   font-size: var(--font-xs); color: var(--port-color, var(--text-muted)); }
 .params-grid .value-group { grid-column: 4; display: block; }
-.params-grid [data-toggle] { cursor: pointer; }
+.value-caption[data-toggle], .params-grid [data-toggle] { cursor: pointer; }
 .params-grid .value-expand { grid-column: 1; margin-block: var(--io-inset); }
 .params-grid :is(.params-wired, .port-fallback, .value-swatch), .params-grid > button { grid-column: 4; min-width: 0; }
 /* A menu has no type, so it starts in the type column, right after its name (human 2026-10-11: no empty cell).
