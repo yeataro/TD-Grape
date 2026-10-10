@@ -401,7 +401,7 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
   const file = project ?? '—';
   const saved = !last || last.time == null ? tr('status.projectFile', 'TD project {file}', { file }) : last.revision == null
     ? tr('status.savedAt', 'TD project {file}: last saved {time}', { file, time: clockOf(last.time) })
-    : behind ? tr('status.savedBehind', 'TD project {file}: saved r{saved} ({time}), {behind} behind', { file, saved: last.revision, time: clockOf(last.time), behind })
+    : behind ? tr('status.savedBehind', 'TD project {file}: saved r{saved} ({time}), {behind} not saved', { file, saved: last.revision, time: clockOf(last.time), behind })
       : tr('status.savedNow', 'TD project {file}: saved r{saved} ({time})', { file, saved: last.revision, time: clockOf(last.time) });
   const clock = (time: number) => new Date(time).toLocaleTimeString();
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>

@@ -48,7 +48,7 @@ export const clockOf = (time: number, now = Date.now()) => {
  * 2026-10-10: short). 套用後：編輯器從不自己存 TD 專案，所以說出檔案落後多少（R.73，人類：精簡）。 */
 export function appliedMessage(revision: number, saved?: ProjectSaved): Message {
   if (saved?.revision != null && saved.time != null)
-    return tr('sync.appliedBehind', 'Applied; last saved r{saved} ({time}), {behind} behind',
+    return tr('sync.appliedBehind', 'Applied; last saved r{saved} ({time}), {behind} not saved',
       { saved: saved.revision, time: clockOf(saved.time), behind: revision - saved.revision });
   if (saved?.time != null) return tr('sync.appliedSavedAt', 'Applied; the project still needs saving (last saved {time})', { time: clockOf(saved.time) });
   return tr('sync.applied', 'Applied to TD; the project still needs saving');

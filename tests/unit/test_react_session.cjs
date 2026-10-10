@@ -1093,7 +1093,7 @@ test('after an apply the editor says how far the saved project is behind; a save
   }, 60000, undefined, () => { const each = fakeSocket(); sockets.push(each); return each; });
   session.addConstant();
   await session.flush();
-  assert.equal(zh(session.snapshot().message), '已套用；上次存檔 r3（20:29），落後 2 版');
+  assert.equal(zh(session.snapshot().message), '已套用；上次存檔 r3（20:29），有 2 版未存');
   sockets[0].readyState = 1; sockets[0].onopen();
   projectSaved = { revision: 5, time: at.getTime() };
   sockets[0].onmessage({ data: JSON.stringify({ type: 'saved', frame: 3, file: 'project.toe', projectSaved }) });
