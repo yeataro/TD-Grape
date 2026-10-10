@@ -129,6 +129,8 @@ a { color: var(--accent); }
 .status-now.tone-alarm .status-head > strong { color: var(--sync-alarm); } .status-now.tone-unsent .status-head > strong { color: var(--sync-unsent); }
 /* The countdown pie, the cause, and Retry now on the right (R.75.4, human: the pie at the far left). 倒數圓餅、原因，右邊「立即重試」（人類：圓餅放最左邊）。 */
 .status-head { display: flex; align-items: center; gap: 8px; } .status-head > strong { flex: 1; min-width: 0; }
+/* Saved or not, after the revision (R.75.15, human): saved green, not saved yellow. 版號後的已存檔／未存檔：綠、黃。 */
+.status-mark.saved { color: var(--sync-ok); } .status-mark.unsaved { color: var(--sync-unsent); }
 .status-now.tone-normal { --tone: var(--sync-ok); } .status-now.tone-unsent { --tone: var(--sync-unsent); }
 .status-now.tone-alarm { --tone: var(--sync-alarm); } .status-now.tone-none { --tone: var(--sync-none); }
 .status-pie { display: inline-flex; } .status-pie.checking .sync-dot { animation: sync-pulse var(--loading-cycle) ease-in-out infinite; }

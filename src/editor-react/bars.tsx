@@ -222,6 +222,12 @@ const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflic
  * Nor while this page's save has no answer yet (Refactor.75.13, human: people press again and again); a long save goes on
  * greyed by the heartbeat (TD not responding). 這一頁的存檔還沒回覆時也不行（R.75.13，人類：使用者會一直按）；存很久時接著由
  * 心跳（TD 沒有回應）讓它繼續灰著。 */
+/** Whether the TD project holds this revision (Refactor.75.15, human 2026-10-11): saved green, not saved yellow; unknown
+ * (TD-Grape has not seen this project saved) says nothing. Both revisions are TD's own. TD 專案存的是不是這一版（R.75.15，人類）：
+ * 已存檔綠、未存檔黃；不知道（TD-Grape 還沒看過這個專案存檔）就不說。兩個版號都是 TD 說的。 */
+const savedMark = (state: EditorState | null): 'saved' | 'unsaved' | null =>
+  state?.saved?.revision == null ? null : state.saved.revision >= state.revision ? 'saved' : 'unsaved';
+const savedMarks = { saved: tr('status.markSaved', 'saved'), unsaved: tr('status.markUnsaved', 'not saved') };
 const canSave = (state: EditorState | null) => !!state && !state.saving && !['offline', 'uncertain', 'conflict'].includes(state.phase);
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
@@ -320,15 +326,14 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
   const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [status, setStatus] = useState<HTMLElement | null>(null), [history, setHistory] = useState<HTMLElement | null>(null);
-  const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? tr('status.sending', 'Sending to TD')
-    : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD');
   const { tone, busy, word } = lightOf(state);
-  // While something is wrong, the status line says what the light says, not "Synced" (Refactor.75).
-  // 有狀況時，狀態那一行和燈號說的一樣，不是「已同步」（R.75）。
-  // The status line says the cause, never "checking": checking is shown by the pulsing dot beside Retry (R.75.4).
-  // 狀態那一行說原因、不說「檢查中」：檢查中由「立即重試」旁閃動的圓點表示（R.75.4）。
-  const cause = alarm.includes(state?.phase ?? '') ? lightOf(state && { ...state, checking: false }).word : sync;
-  const now = state ? say(tr('status.line', '{state} · revision {revision}', { state: cause, revision: state.revision })) : say(sync);
+  // The status line says what the light says, in every state (R.75; Refactor.75.15, human 2026-10-11: one set of words, not a
+  // second one for the panel), and never "checking": that is the pulsing dot beside Retry (R.75.4).
+  // 狀態那一行一律和燈號說的一樣（R.75；R.75.15，人類：一套說法，面板不另一套），也不說「檢查中」：那是「立即重試」旁閃動的圓點（R.75.4）。
+  const cause = state ? lightOf({ ...state, checking: false }).word : tr('status.noGraph', 'No graph open');
+  const mark = savedMark(state);
+  const line = state ? say(tr('status.line', '{state} · revision {revision}', { state: cause, revision: state.revision })) : say(cause);
+  const now = line + (mark ? ' · ' + say(savedMarks[mark]) : '');
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -370,7 +375,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
-    {status && <StatusPanel anchor={status} state={live} project={project} now={now} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
+    {status && <StatusPanel anchor={status} state={live} project={project} line={line} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
   </footer>;
 }
@@ -396,10 +401,10 @@ function useHistoryList(lines: unknown) {
 // (what matters is nearest the entry), the record above it; while the panel is open the state part only grows, so the
 // record does not jump when TD comes back. 狀態面板（R.75.1，人類）：現在的狀態放在下方、貼著打開它的燈號（重要的離入口最近），
 // 紀錄在上方；面板開著時狀態區只長不縮，TD 回來時紀錄不會跳。
-function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
-  anchor: HTMLElement; state: EditorState | null; project?: string; now: string; tone: Tone; onRetry(): void; onClose(): void;
+function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
+  anchor: HTMLElement; state: EditorState | null; project?: string; line: string; tone: Tone; onRetry(): void; onClose(): void;
 }) {
-  const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records);
+  const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records), mark = savedMark(state);
   const box = useRef<HTMLDivElement>(null), [floor, setFloor] = useState(0);
   useLayoutEffect(() => { const height = box.current?.offsetHeight ?? 0; if (height > floor) setFloor(height); });
   // Back to normal, it fits its content again (Refactor.75.9, human 2026-10-11): only while TD is away does it not shrink.
@@ -440,7 +445,7 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
         {state && away.includes(state.phase) && <span className={'status-pie' + (state.checking ? ' checking' : '')}
           title={say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}>
           <LightDot state={state} /></span>}
-        <strong>{now}</strong>
+        <strong>{line}{mark && <> · <span className={'status-mark ' + mark}>{say(savedMarks[mark])}</span></>}</strong>
         {state && away.includes(state.phase) && <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button>}
       </div>
       {/* Away, the recovery text says it; other trouble (a conflict, a refusal) keeps TD's own words. 不在時由如何恢復說；
