@@ -42,8 +42,14 @@ function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition)
   if ('preset' in spec) {
     const declaration = presetDeclaration(document, spec.preset);
     net.insert({ id, nodeType: 'sgrape.builtin.declaration', params: { declarationId: declaration.id }, ui: { ...position } });
-  } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position } });
+  } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position }, ...nameFor(net, spec.nodeType) });
   return id;
+}
+/** A new node's name, by the one naming rule (Refactor.76): Split_1, Split_2…; none for a node standing for a shared source.
+ * 新節點的名稱，照同一套命名規則（R.76）：Split_1、Split_2…；代表共用來源的節點沒有。 */
+function nameFor(net: Network, nodeType: string): { name?: string } {
+  if (!core.takesName(core.registry, nodeType)) return {};
+  return { name: core.newNodeName(String(core.registry.get(nodeType)!.catalog.definition.label), core.namesIn(net.data)) };
 }
 class Rehearsed extends Error {}
 function wire(net: Network, c: Connection | FlowEdge) {
@@ -143,7 +149,7 @@ export class Editor {
     private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler, editorVersion = 'unknown',
     readonly log = new ReportLog()) {
     checkLoaded(host, bootstrap, loaded);
-    const { graph, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document));
+    const { graph, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document), core.nodeUpgrades, core.registry);
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
     this.td = loaded.uniforms ?? {};
@@ -185,7 +191,8 @@ export class Editor {
   /** Read a stored graph in its current node forms (Refactor.65): every way a graph comes in goes through here.
    * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
   private upgrade(graph: Graph): Graph {
-    const { graph: current, changes } = core.upgradeGraph(graph);
+    // With the registry: nodes made before names were given get one (Refactor.76). 帶 registry：給名字之前做的節點補上名字（R.76）。
+    const { graph: current, changes } = core.upgradeGraph(graph, core.nodeUpgrades, core.registry);
     if (changes.length) this.reportUpgrades(changes);
     return current;
   }
@@ -395,6 +402,27 @@ export class Editor {
     net.node(id).setInput(key, value);
   });
   configure = (id: string, type: string) => this.transact(tr('edit.typeChanged', 'Type updated'), net => net.node(id).configure({ type }));
+  /** Rename a node from what was typed (Refactor.76, human 2026-10-11): spaces become underscores; a taken name moves up to the
+   * next free number, as a new node or a copy would (one rule, as TD); a name GLSL cannot use is refused and said. One Undo step.
+   * 依輸入改名（R.76，人類）：空白變底線；撞名時往上加到沒人用的號碼，和新增、複製同一套（照 TD）；GLSL 用不了的名稱拒絕並說明。一步 Undo。 */
+  rename = (id: string, typed: string) => {
+    const name = core.storedName(typed), current = this.document.networks.get('pixel')!.node(id).data?.name;
+    if (!name || name === current) return;
+    if (!core.validNodeName(name, this.bootstrap.typeContract.glslCode.reservedNames)) {
+      this.warn(tr('name.invalid', 'A node name starts with a letter, cannot start with gl_, TD or sg_, and cannot be a GLSL word: {name}', { name: core.shownName(name) }));
+      return;
+    }
+    this.transact(tr('edit.renamed', 'Node renamed'), net => {
+      const taken = core.namesIn(net.data);
+      if (current !== undefined) taken.delete(current);
+      net.node(id).update({ name: core.freeName(name, taken) });
+    });
+  };
+  /** A node's note (Refactor.76; the graph's `comment`). 節點的註記（R.76；圖裡的 comment）。 */
+  setNote = (id: string, text: string) => {
+    if ((this.document.networks.get('pixel')!.node(id).data?.comment ?? '') === text) return;
+    this.transact(tr('edit.noteChanged', 'Note updated'), net => net.node(id).update({ comment: text }));
+  };
   // `params` come from the menu entry the module declared (Q37 1-5); the graph does not record the entry.
   // params 來自模組宣告的入口；圖不記錄來自哪個入口。
   add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);

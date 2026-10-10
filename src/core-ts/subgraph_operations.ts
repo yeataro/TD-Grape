@@ -1,3 +1,4 @@
+import { freeName } from './node_names';
 import { copy, type Node, type SubgraphData, type InterfacePort, type ObjectValue, type Value, type NetworkData } from './model';
 import type { GraphDocument, Network } from './graph';
 import { CORE_CONFIG } from './config';
@@ -149,8 +150,9 @@ export function groupSubgraph(network:Network,selection:ReadonlySet<string>,opti
   const x = Math.min(...chosen.map(n => coordinate(n,'x'))),y = Math.min(...chosen.map(n => coordinate(n,'y')));
   const nodes:Node[] = chosen.map(n => ({...copy(n),ui:{...copy(n.ui || {}),x:coordinate(n,'x')-x+288,y:coordinate(n,'y')-y+144}}));
   const boundary = (role:'input'|'output',id:string,ui:ObjectValue) => {
-    const n = authored(structural(graph,role),id,ui),base = role === 'input' ? 'Input' : 'Output';
-    n.name=base;let suffix=0;while(nodes.some(v => v.name === n.name))n.name=base+'_'+ ++suffix;
+    // Named by the one naming rule, from _1 (Refactor.76). 照同一套命名規則，從 _1 開始（R.76）。
+    const n = authored(structural(graph,role),id,ui);
+    n.name=freeName((role === 'input' ? 'Input' : 'Output')+'_1',new Set(nodes.flatMap(v => v.name === undefined ? [] : [v.name])));
     nodes.push(n);
   };
   boundary('input',inputId,{x:24,y:144});

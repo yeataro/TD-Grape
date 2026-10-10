@@ -146,7 +146,7 @@ export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<R
 export function declarationNode(catalog:CatalogRow):NodeModule {
   const target=(n:Node,c:NodeContext)=>c.declaration(String(n.params.declarationId));
   const kindOf=(n:Node,c:NodeContext)=>{const d=target(n,c);return d&&declarationKinds.get(d.kind);};
-  return {catalog,role:'value',referencedDeclaration:n=>String(n.params.declarationId),
+  return {catalog,role:'value',unnamed:true,referencedDeclaration:n=>String(n.params.declarationId),
     // A colour Uniform names its components R/G/B/A (legacy graph_ui.js:1228). 顏色 Uniform 的分量叫 R/G/B/A（照舊產品）。
     componentNames:(n,c)=>target(n,c)?.color===true?'rgba':'xyzw',
     supports:(n,c)=>!c.owner&&(!target(n,c)||!!kindOf(n,c)?.types.includes(target(n,c)!.type)),
@@ -189,7 +189,7 @@ export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!
   &&valueTypes.includes(entry.type)&&!entry.expression.includes('{')&&(entry.outputs??[]).every(o=>valueTypes.includes(o.type));
 export function tdValueNode(catalog:CatalogRow):NodeModule {
   const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
-  return {catalog,role:'value',colorGroup:'runtime',
+  return {catalog,role:'value',colorGroup:'runtime',unnamed:true,
     // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
     componentNames:n=>uvEntries.has(String(n.params.entry))?'uv':'xyzw',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),

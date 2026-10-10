@@ -34,6 +34,8 @@ test('vec3 becomes (r, g, b, 1)',()=>{
 });
 test('vec4 and graphs stored before this change generate exactly what they did',()=>{
   const g=plain(bootstrap.defaultDocument.graph);
+  // Stored before nodes had names (Refactor.76): no name, so the symbol is the ID. 給名字之前存的：沒有名字，變數用 ID。
+  for(const n of g.stages.pixel.nodes)delete n.name;
   assert.equal(outputType(g),undefined);
   assert.match(colorLine(g),/^    vec4 sg_color = sg_n_color;$/);
   // An old float wire into the vec4 input keeps its old conversion. 舊的 float 接線照舊轉換。

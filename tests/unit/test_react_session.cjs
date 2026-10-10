@@ -30,7 +30,8 @@ const zh = message => localize(message, 'zh-Hant');
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
 const target = '1'.repeat(32);
-const makeNode = (id, key) => ({ id, nodeType: 'sgrape.builtin.' + key,
+// Named as every node now is (Refactor.76), so opening the fixture upgrades nothing. 和現在每個節點一樣有名字（R.76），開圖不會升級。
+const makeNode = (id, key) => ({ id, nodeType: 'sgrape.builtin.' + key, name: GrapeGraph.validNodeName(id) ? id : id + '_1',
   params: clone(GrapeGraph.registry.get('sgrape.builtin.' + key).catalog.definition.defaults), ui: { x: 10, y: 10 } });
 function fixture() {
   const graph = clone(bootstrap.defaultDocument.graph);
@@ -332,7 +333,8 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   const known = loaded(); withDoc(known.state, graph => {
     graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.subgraph_input', params: {} }];
   });
-  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /subgraph_input 節點（nu）/.test(zh(errorText(error))));
+  // Named as it opened (Refactor.76), so the message gives its name too. 開圖時補了名字（R.76），訊息也寫出名字。
+  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /subgraph_input 節點.*（nu）/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
   assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));
@@ -1525,7 +1527,7 @@ test('going back to the running program in the same tab clears a stuck Shader', 
 // 節點升級：存著舊寫法的圖用目前的寫法打開、附替換報告，照一般編輯送出——程式也送，因為 TD 跑的可能是舊的。
 test('older node forms are upgraded as the graph opens, reported, and sent with the program', async t => {
   const TD = 'sgrape.builtin.td_value', graph = clone(bootstrap.defaultDocument.graph);
-  graph.stages.pixel.nodes.push({ id: 'rgba', nodeType: 'sgrape.builtin.rgba', params: {}, ui: {} },
+  graph.stages.pixel.nodes.push({ id: 'rgba', nodeType: 'sgrape.builtin.rgba', name: 'rgba', params: {}, ui: {} },
     { id: 'uv3', nodeType: TD, params: { entry: 'vUV' }, ui: {} }, { id: 'st', nodeType: TD, params: { entry: 'vUVSt' }, ui: {} });
   graph.stages.pixel.edges.push({ id: 'e2', from: ['uv3', 'out'], to: ['rgba', 'rgb'] });
   const stored = JSON.stringify(graph), sent = [];
@@ -1571,4 +1573,29 @@ test('savedBy names the editor of the last save; opening a graph another editor 
   reopened.transact('edit', net => setValue(net, 'a', 3)); await reopened.flush();
   assert.equal(JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.document).savedBy, '9.9.9 Test', 'only the last save is named');
   assert.equal(reopened.snapshot().dirty, false);
+});
+
+// Refactor.76 (human 2026-10-11): a new node is named by the one rule; a rename turns spaces into underscores and moves a
+// taken name up; a name GLSL cannot use is refused and said; each is one Undo step. A node's note is its comment.
+// 新節點照同一套規則取名；改名時空白變底線、撞名往上加；GLSL 用不了的名稱拒絕並說明；各是一步 Undo。節點的註記就是它的 comment。
+test('new nodes are named Float_1, Float_2; a rename moves a taken name up; a bad one is refused; notes are kept', t => {
+  const { session } = open(t);
+  const nodes = () => session.graph().stages.pixel.nodes;
+  session.add('sgrape.builtin.float', { x: 0, y: 0 }); session.add('sgrape.builtin.float', { x: 0, y: 0 });
+  const [first, second] = nodes().slice(-2);
+  assert.deepEqual([first.name, second.name], ['Float_1', 'Float_2']);
+  const nameOf = node => nodes().find(n => n.id === node.id).name;
+  session.rename(first.id, 'Float 2');
+  assert.equal(nameOf(first), 'Float_3', 'Float_2 is taken: the number moves up to the next free one');
+  session.rename(second.id, 'Float 1');
+  assert.equal(nameOf(second), 'Float_1', 'free again once the first moved');
+  session.rename(second.id, 'Glow Pass');
+  assert.equal(nameOf(second), 'Glow_Pass');
+  session.rename(second.id, 'gl Thing');
+  assert.equal(nameOf(second), 'Glow_Pass', 'refused');
+  assert.equal(session.log.entries().at(-1).message.code, 'name.invalid');
+  session.history(false);
+  assert.equal(nameOf(second), 'Float_1', 'one Undo step per rename');
+  session.setNote(first.id, 'keeps the base colour');
+  assert.equal(nodes().find(n => n.id === first.id).comment, 'keeps the base colour');
 });

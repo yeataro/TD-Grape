@@ -53,10 +53,11 @@ import {commonSources} from './common_sources';
 import {usableTdValue} from './node_sdk';
 import {componentStyle} from './component_names';
 import {upgradeGraph,nodeUpgrades} from './upgrades';
+import {validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesIn,takesName,NAME_LIMIT} from './node_names';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,subgraphStages,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,upgradeGraph,nodeUpgrades};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,subgraphStages,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesIn,takesName,NAME_LIMIT};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -90,7 +91,12 @@ const implementationHash=createHash('sha256').update(bundled).digest('hex');
 const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[{id:'input1',kind:'topInput',name:'input1',type:'sampler2D',defaultTexture:'grape'}],subgraphs:[],structDefinitions:[],stages:{pixel:{
   nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,nodeType:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
   edges:[{id:'color_output',from:['color','out'],to:['pixel_out','color']}]}}};
-const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph)};
+// Its nodes are named as any new node is (Refactor.76). 預設圖的節點和新節點一樣取名（R.76）。
+{const taken=new Set();for(const n of defaultGraph.stages.pixel.nodes){const d=context.GrapeGraph.registry.get(n.nodeType);
+  if(!d.unnamed){n.name=context.GrapeGraph.newNodeName(String(d.catalog.definition.label),taken);taken.add(n.name);}}}
+// Compiled with the editor's identifier rules, as the editor compiles it (names are checked against them).
+// 用編輯器的識別字規則編譯，和編輯器一樣（名稱要照它檢查）。
+const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph,context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top').glslCode)};
 // Native source labels are cold host metadata, independent of Python graph compilation.
 const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
 const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));

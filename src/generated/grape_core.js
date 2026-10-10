@@ -25,6 +25,7 @@ const common_sources_1 = require("./common_sources");
 const node_sdk_1 = require("./node_sdk");
 const component_names_1 = require("./component_names");
 const upgrades_1 = require("./upgrades");
+const node_names_1 = require("./node_names");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -86,7 +87,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT };
 
 },
 "capacity":function(require,module,exports){
@@ -1637,6 +1638,90 @@ function resolvePorts(module, node, context) {
 }
 
 },
+"node_names":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.takesName = exports.namesIn = exports.shownName = exports.storedName = exports.typedName = exports.NAME_LIMIT = void 0;
+exports.validNodeName = validNodeName;
+exports.freeName = freeName;
+exports.newNodeName = newNodeName;
+exports.nameMissing = nameMissing;
+/** Node names (Refactor.76, human 2026-10-11; design-interview Q47 supplement 6). A node's name is also its GLSL name
+ * (`sg_n_<name>`), so it is an identifier: letters, digits and underscores, a letter first. People see underscores as spaces
+ * and type spaces for them. Every naming — a new node, a copy, a paste, a rename that meets a taken name — goes through one
+ * rule, as TD does: the number after the last underscore goes up to the next free one; with none, `_1` is added, and a new
+ * node starts at `_1` (Split_1, Split_2; a type ending in a digit: Vector_2_1). Nodes that stand for a shared source take no
+ * name of their own (they show the source's). Only the legacy editor's logic is followed, not its code.
+ * 節點名稱（R.76，人類；Q47 補充 6）：名稱也是 GLSL 名（sg_n_<名稱>），所以是識別字：英數底線、字母開頭。給人看時底線顯示成空白，
+ * 輸入的空白存成底線。新增、複製、貼上、改名撞名都走同一套（照 TD）：最後一個底線後的數字往上加到沒人用的；沒有就加 _1；
+ * 新節點從 _1 開始（Split_1、Split_2；類型名結尾是數字的：Vector_2_1）。代表共用來源的節點不取自己的名字（顯示來源的名字）。
+ * 只照舊產品的邏輯，不用它的程式。 */
+const identifier_rules_1 = require("./identifier_rules");
+const text_1 = require("./text");
+/** The longest name. 名稱最長幾個字。 */
+exports.NAME_LIMIT = 48;
+const RESERVED_START = /^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/;
+/** Whether a name can stand in GLSL and is not GLSL's or TD's own. 能不能當 GLSL 名、又不是 GLSL 或 TD 自己的。 */
+function validNodeName(name, reserved = identifier_rules_1.identifierRules.reservedNames) {
+    return /^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) && !name.includes('__') && !RESERVED_START.test(name) && !reserved.includes(name);
+}
+/** What a name field keeps while typing: letters, digits, spaces and underscores; nothing else gets in (legacy).
+ * 輸入時留下的字：英數、空白、底線，其他打不進去（照舊產品）。 */
+const typedName = (text) => text.replace(/[^A-Za-z0-9 _]/g, '').slice(0, exports.NAME_LIMIT);
+exports.typedName = typedName;
+/** The name to store for what was typed: spaces become underscores. 輸入的要存成什麼：空白變底線。 */
+const storedName = (text) => (0, exports.typedName)(text).trim().replace(/[ _]*( +)[ _]*/g, '_').slice(0, exports.NAME_LIMIT);
+exports.storedName = storedName;
+/** How a name is shown to people: underscores as spaces. 給人看的樣子：底線顯示成空白。 */
+const shownName = (name) => name.replace(/_/g, ' ');
+exports.shownName = shownName;
+/** The candidate itself when it is free; otherwise the number after its last underscore goes up to the next free one
+ * (`_1` added when there is none). 沒人用就用它；否則最後一個底線後的數字往上加到沒人用的（沒有就加 _1）。 */
+function freeName(candidate, taken) {
+    if (!taken.has(candidate))
+        return candidate;
+    const numbered = /^(.*)_(\d+)$/.exec(candidate);
+    const base = (numbered ? numbered[1] : candidate).replace(/_+$/, '') || 'Node';
+    for (let n = numbered ? Number(numbered[2]) + 1 : 1;; n++) {
+        const suffix = '_' + n, name = base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+        if (!taken.has(name))
+            return name;
+    }
+}
+/** A new node's name, from its type's label: Split_1, then Split_2… A label that cannot make a valid name gives Node_1.
+ * 新節點的名稱，由類型名而來：Split_1、Split_2…；類型名做不出合法名稱時用 Node_1。 */
+function newNodeName(label, taken) {
+    const base = label.replace(/[^A-Za-z0-9 _]/g, '').trim().replace(/[ _]+/g, '_').replace(/_+$/, '').slice(0, exports.NAME_LIMIT - 3);
+    return freeName(validNodeName(base + '_1') ? base + '_1' : 'Node_1', taken);
+}
+/** The names already used in one network. 一張網路裡已用的名稱。 */
+const namesIn = (network) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));
+exports.namesIn = namesIn;
+/** Whether a node of this type takes a name (not one standing for a shared source; unknown types are left as stored).
+ * 這種節點要不要名字（代表共用來源的不要；不認得的類型照原樣）。 */
+const takesName = (registry, nodeType) => { const module = registry.get(nodeType); return !!module && !module.unnamed; };
+exports.takesName = takesName;
+/** Name every node that should have a name and has none, in place (opening a graph made before names were given,
+ * Refactor.76). 把該有名字卻沒有的節點補上名字（在傳入的圖上改；給名字之前做的圖，R.76）。 */
+function nameMissing(graph, registry) {
+    var _a;
+    const named = [];
+    const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => [s.id, s.graph])];
+    for (const [network, data] of networks) {
+        const taken = (0, exports.namesIn)(data);
+        for (const node of data.nodes) {
+            if (node.name !== undefined || !(0, exports.takesName)(registry, node.nodeType))
+                continue;
+            const name = newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
+            node.name = name;
+            taken.add(name);
+            named.push({ network, node: node.id, name, note: (0, text_1.tr)('upgrade.named', 'Given the name {name}', { name: (0, exports.shownName)(name) }) });
+        }
+    }
+    return named;
+}
+
+},
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1860,7 +1945,7 @@ function numericCall(catalog, options = {}) {
 function declarationNode(catalog) {
     const target = (n, c) => c.declaration(String(n.params.declarationId));
     const kindOf = (n, c) => { const d = target(n, c); return d && declarations_1.declarationKinds.get(d.kind); };
-    return { catalog, role: 'value', referencedDeclaration: n => String(n.params.declarationId),
+    return { catalog, role: 'value', unnamed: true, referencedDeclaration: n => String(n.params.declarationId),
         // A colour Uniform names its components R/G/B/A (legacy graph_ui.js:1228). 顏色 Uniform 的分量叫 R/G/B/A（照舊產品）。
         componentNames: (n, c) => { var _a; return ((_a = target(n, c)) === null || _a === void 0 ? void 0 : _a.color) === true ? 'rgba' : 'xyzw'; },
         supports: (n, c) => { var _a; return !c.owner && (!target(n, c) || !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.types.includes(target(n, c).type))); },
@@ -1923,7 +2008,7 @@ const usableTdValue = (entry, target) => {
 exports.usableTdValue = usableTdValue;
 function tdValueNode(catalog) {
     const entryOf = (n) => tdValueTable.get(String(n.params.entry));
-    return { catalog, role: 'value', colorGroup: 'runtime',
+    return { catalog, role: 'value', colorGroup: 'runtime', unnamed: true,
         // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
         componentNames: n => uvEntries.has(String(n.params.entry)) ? 'uv' : 'xyzw',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
@@ -5295,6 +5380,7 @@ const subgraph_interface_1 = require("./subgraph_interface");
 const subgraph_stages_1 = require("./subgraph_stages");
 const values_1 = require("./values");
 const numeric_1 = require("./numeric");
+const node_names_1 = require("./node_names");
 const relay = {
     catalog: {
         definition: { key: 'subgraph_relay', definitionUuid: 'grape.internal.subgraph_relay', label: 'Subgraph value', inputs: {}, outputs: {}, stages: ['pixel'], defaults: {}, descriptionKey: '' },
@@ -5395,7 +5481,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                         if (!identity.test(node.id) || maps.has(node.id))
                             throw Error('Invalid or duplicate node ID');
                         if (node.name !== undefined) {
-                            if (!identifiers || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(node.name) || node.name.includes('__') || /^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(node.name) || identifiers.reservedNames.includes(node.name) || names.has(node.name))
+                            if (!identifiers || !(0, node_names_1.validNodeName)(node.name, identifiers.reservedNames) || names.has(node.name))
                                 throw Error('Invalid or duplicate node name');
                             names.add(node.name);
                         }
@@ -5742,6 +5828,7 @@ exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
 exports.groupSubgraph = groupSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
+const node_names_1 = require("./node_names");
 const model_1 = require("./model");
 const config_1 = require("./config");
 const scope_references_1 = require("./scope_references");
@@ -5904,11 +5991,9 @@ function groupSubgraph(network, selection, options) {
     const x = Math.min(...chosen.map(n => coordinate(n, 'x'))), y = Math.min(...chosen.map(n => coordinate(n, 'y')));
     const nodes = chosen.map(n => ({ ...(0, model_1.copy)(n), ui: { ...(0, model_1.copy)(n.ui || {}), x: coordinate(n, 'x') - x + 288, y: coordinate(n, 'y') - y + 144 } }));
     const boundary = (role, id, ui) => {
-        const n = authored(structural(graph, role), id, ui), base = role === 'input' ? 'Input' : 'Output';
-        n.name = base;
-        let suffix = 0;
-        while (nodes.some(v => v.name === n.name))
-            n.name = base + '_' + ++suffix;
+        // Named by the one naming rule, from _1 (Refactor.76). 照同一套命名規則，從 _1 開始（R.76）。
+        const n = authored(structural(graph, role), id, ui);
+        n.name = (0, node_names_1.freeName)((role === 'input' ? 'Input' : 'Output') + '_1', new Set(nodes.flatMap(v => v.name === undefined ? [] : [v.name])));
         nodes.push(n);
     };
     boundary('input', inputId, { x: 24, y: 144 });
@@ -6222,6 +6307,8 @@ const values_1 = require("./values");
 const comments_1 = require("./comments");
 const ghosts_1 = require("./ghosts");
 const declarations_1 = require("./declarations");
+const node_names_1 = require("./node_names");
+const identifier_rules_1 = require("./identifier_rules");
 class CompilationError extends Error {
     constructor(message, node) {
         super(message);
@@ -6303,7 +6390,7 @@ function createFlatCompiler(registry, limits) {
                 if (ghosts.nodes.has(n.id))
                     continue;
                 if (n.name !== undefined) {
-                    if (!identifiers || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(n.name) || n.name.includes('__') || /^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(n.name) || identifiers.reservedNames.includes(n.name) || authoredNames.has(n.name))
+                    if (!identifiers || !(0, node_names_1.validNodeName)(n.name, identifiers.reservedNames) || authoredNames.has(n.name))
                         throw Error('Invalid or duplicate node name');
                     authoredNames.add(n.name);
                 }
@@ -6482,7 +6569,9 @@ function createCompiler(registry, config = config_1.CORE_CONFIG) {
     const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, { nodes: config.expandedNodes, edges: config.expandedEdges, bytes: config.documentBytes }), config);
     return Object.freeze({ protocol: exports.protocol, key: codegenKey,
         supports: (g) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
-        compile: (g, identifiers) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
+        // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).
+        // 沒給就用核心自己的識別字規則（R.76：現在每個節點都有名字，名字一律照它檢查）。
+        compile: (g, identifiers = identifier_rules_1.identifierRules) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
     });
 }
 
@@ -6558,6 +6647,7 @@ exports.upgradeGraph = upgradeGraph;
  * 規則看圖裡存的內容、不看版本號，所以任何舊版存的圖都適用，連續改名也會一路換到底。兩條規則讓它成立：拿掉的代號永不再用；
  * 意思改了就換新代號（舊代號變成這裡的一條）。別的格式不在這裡升級，交給匯入器（Q40、Q44）。這裡沒寫到的照舊是 Ghost（Q37）。 */
 const model_1 = require("./model");
+const node_names_1 = require("./node_names");
 const text_1 = require("./text");
 const TD_VALUE = 'sgrape.builtin.td_value';
 /** The rules, oldest first. Never remove one: a graph saved long ago may still need it. 規則，舊的在前；不要刪，很久以前存的圖可能還用得到。 */
@@ -6611,7 +6701,10 @@ function upgradeNetwork(network, name, rule) {
  * chain of renames is followed; a rule table that never settles is a programming error.
  * 把存著的圖升級成目前的節點寫法。不改輸入；別的格式（或壞掉的）原樣回傳，交給匯入器或格式檢查。規則一直套到沒有可換為止；
  * 停不下來代表規則表寫錯了。 */
-function upgradeGraph(value, rules = exports.nodeUpgrades) {
+// With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
+// before names were given get them once, said like any upgrade). 有 registry 時，也替該有名字卻沒有的節點補名（R.76，人類：
+// 給名字之前做的圖補一次，和其他升級一樣會說）。
+function upgradeGraph(value, rules = exports.nodeUpgrades, registry) {
     var _a;
     if ((0, model_1.formatProblem)(value))
         return { graph: value, changes: [] };
@@ -6631,6 +6724,9 @@ function upgradeGraph(value, rules = exports.nodeUpgrades) {
         if (!found)
             break;
     }
+    if (registry)
+        for (const named of (0, node_names_1.nameMissing)(graph, registry))
+            changes.push({ network: named.network, node: named.node, rule: 'node-name', note: named.note, wires: 0 });
     return changes.length ? { graph, changes } : { graph: value, changes: [] };
 }
 

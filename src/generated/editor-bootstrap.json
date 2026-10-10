@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "70e0477cd94f1e903a0de3fd89d370aaf37be9eebb39691fb10f481125977160",
+  "catalogHash": "3b29062fbaead3d37228582b3eda7d188eea571c76e13ed2ffd00f49ec15fab9",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -35,7 +35,8 @@
               "ui": {
                 "x": 80,
                 "y": 120
-              }
+              },
+              "name": "Color_RGBA_1"
             },
             {
               "id": "pixel_out",
@@ -44,7 +45,8 @@
               "ui": {
                 "x": 440,
                 "y": 120
-              }
+              },
+              "name": "Color_Output_1"
             }
           ],
           "edges": [
@@ -65,7 +67,7 @@
     },
     "compiled": {
       "vertex": "",
-      "pixel": "layout(location=0) out vec4 fragColor;\nvoid main() {\n    vec2 sg_uv = vUV.st;\n    vec4 sg_n_color = vec4(0.55, 0.28, 0.9, 1.0);\n    vec4 sg_color = sg_n_color;\n    fragColor = TDOutputSwizzle(sg_color);\n}\n",
+      "pixel": "layout(location=0) out vec4 fragColor;\nvoid main() {\n    vec2 sg_uv = vUV.st;\n    vec4 sg_n_Color_RGBA_1 = vec4(0.55, 0.28, 0.9, 1.0);\n    vec4 sg_color = sg_n_Color_RGBA_1;\n    fragColor = TDOutputSwizzle(sg_color);\n}\n",
       "bindings": [
         {
           "id": "input1",
@@ -97,7 +99,7 @@
           }
         ],
         "variables": {
-          "sg_n_color": "color",
+          "sg_n_Color_RGBA_1": "color",
           "sg_color": "pixel_out",
           "fragColor": "pixel_out"
         },
@@ -106,8 +108,8 @@
       "stages": {
         "pixel": {
           "lines": [
-            "    vec4 sg_n_color = vec4(0.55, 0.28, 0.9, 1.0);",
-            "    vec4 sg_color = sg_n_color;",
+            "    vec4 sg_n_Color_RGBA_1 = vec4(0.55, 0.28, 0.9, 1.0);",
+            "    vec4 sg_color = sg_n_Color_RGBA_1;",
             "    fragColor = TDOutputSwizzle(sg_color);"
           ],
           "ports": {

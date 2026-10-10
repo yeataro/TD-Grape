@@ -14,6 +14,7 @@ import type * as presetTable from '../core-ts/uniform_presets';
 import type * as commonTable from '../core-ts/common_sources';
 import type * as componentNames from '../core-ts/component_names';
 import type * as upgrades from '../core-ts/upgrades';
+import type * as nodeNames from '../core-ts/node_names';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -29,7 +30,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
   componentStyle: typeof componentNames.componentStyle;
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
-};
+} & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>;
 export type { TdValue } from '../core-ts/td_values';
 export type { NameProblem } from '../core-ts/declarations';
 export type { Declaration } from '../core-ts/model';

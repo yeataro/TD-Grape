@@ -8,6 +8,8 @@
  * 規則看圖裡存的內容、不看版本號，所以任何舊版存的圖都適用，連續改名也會一路換到底。兩條規則讓它成立：拿掉的代號永不再用；
  * 意思改了就換新代號（舊代號變成這裡的一條）。別的格式不在這裡升級，交給匯入器（Q40、Q44）。這裡沒寫到的照舊是 Ghost（Q37）。 */
 import { copy, formatProblem, type Graph, type NetworkData, type Node, type Value } from './model';
+import { nameMissing } from './node_names';
+import type { Registry } from './node_module';
 import { tr, type Message } from './text';
 
 /** One rule: which stored nodes it matches, what they become, and how their ports are renamed (wires follow, at the end
@@ -68,7 +70,10 @@ function upgradeNetwork(network: NetworkData, name: string, rule: NodeUpgrade): 
  * chain of renames is followed; a rule table that never settles is a programming error.
  * 把存著的圖升級成目前的節點寫法。不改輸入；別的格式（或壞掉的）原樣回傳，交給匯入器或格式檢查。規則一直套到沒有可換為止；
  * 停不下來代表規則表寫錯了。 */
-export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeUpgrades): UpgradeResult {
+// With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
+// before names were given get them once, said like any upgrade). 有 registry 時，也替該有名字卻沒有的節點補名（R.76，人類：
+// 給名字之前做的圖補一次，和其他升級一樣會說）。
+export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeUpgrades, registry?: Registry): UpgradeResult {
   if (formatProblem(value)) return { graph: value, changes: [] };
   const graph = copy(value);
   const networks: [string, NetworkData][] = [...Object.entries(graph.stages), ...(graph.subgraphs ?? []).map(s => [s.id, s.graph] as [string, NetworkData])];
@@ -82,5 +87,7 @@ export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeU
     }
     if (!found) break;
   }
+  if (registry) for (const named of nameMissing(graph, registry))
+    changes.push({ network: named.network, node: named.node, rule: 'node-name', note: named.note, wires: 0 });
   return changes.length ? { graph, changes } : { graph: value, changes: [] };
 }

@@ -9,6 +9,8 @@ import type {Registry} from './node_module';
 import {appendNodeComments} from './comments';
 import {ghostsOf} from './ghosts';
 import {declarationKinds} from './declarations';
+import {validNodeName} from './node_names';
+import {identifierRules} from './identifier_rules';
 export type {Graph,Node,Declaration} from './model';
 export interface IdentifierRules {reservedNames:readonly string[]}
 export class CompilationError extends Error {
@@ -64,7 +66,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       errorNode=n.id;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(n.id)||nodes.has(n.id))throw Error('Invalid or duplicate node ID');
       if(ghosts.nodes.has(n.id))continue;
-      if(n.name!==undefined){if(!identifiers||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(n.name)||n.name.includes('__')||/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(n.name)||identifiers.reservedNames.includes(n.name)||authoredNames.has(n.name))throw Error('Invalid or duplicate node name');authoredNames.add(n.name);}
+      if(n.name!==undefined){if(!identifiers||!validNodeName(n.name,identifiers.reservedNames)||authoredNames.has(n.name))throw Error('Invalid or duplicate node name');authoredNames.add(n.name);}
       const d=registry.get(n.nodeType)!,symbol=n.name||n.id;
       if(d.role!=='output'){if(symbols.has(symbol))throw Error('Duplicate output symbol');symbols.add(symbol);}nodes.set(n.id,n);
       if(n.inputValues!==undefined&&!object(n.inputValues))throw Error('Invalid input default values');
@@ -189,6 +191,8 @@ export function createCompiler(registry:Registry,config:CoreConfig=CORE_CONFIG){
   const subgraphs=createSubgraphCompiler(registry,r=>createFlatCompiler(r,{nodes:config.expandedNodes,edges:config.expandedEdges,bytes:config.documentBytes}),config);
   return Object.freeze({protocol,key:codegenKey,
     supports:(g:Graph)=>g.subgraphs?.length?subgraphs.supports(g):flat.supports(g),
-    compile:(g:Graph,identifiers?:IdentifierRules)=>g.subgraphs?.length?subgraphs.compile(g,identifiers):flat.compile(g,identifiers)
+    // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).
+    // 沒給就用核心自己的識別字規則（R.76：現在每個節點都有名字，名字一律照它檢查）。
+    compile:(g:Graph,identifiers:IdentifierRules=identifierRules)=>g.subgraphs?.length?subgraphs.compile(g,identifiers):flat.compile(g,identifiers)
   });
 }

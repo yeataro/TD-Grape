@@ -75,3 +75,40 @@ test('every rule says what changed for people, and rule ids are unique',()=>{
   assert.equal(new Set(ids).size,ids.length);
   for(const r of G.nodeUpgrades)assert.ok(r.note&&r.note.code.startsWith('upgrade.')&&r.note.source,r.id);
 });
+
+// Node names (Refactor.76, human 2026-10-11): one rule for new nodes, copies, pastes and renames that meet a taken name, as
+// TD does — the number after the last underscore goes up; with none, _1 is added; a new node starts at _1. Underscores are
+// shown as spaces and typed as spaces. 節點名稱（R.76，人類）：新增、複製、貼上、改名撞名同一套（照 TD）——最後底線後的數字往上加；
+// 沒有就加 _1；新節點從 _1 開始。底線顯示成空白、輸入空白存成底線。
+test('one naming rule: a new node starts at _1, a taken name moves up, a type ending in a digit keeps its own',()=>{
+  assert.equal(G.newNodeName('Split',new Set()),'Split_1');
+  assert.equal(G.newNodeName('Split',new Set(['Split_1','Split_2'])),'Split_3');
+  assert.equal(G.newNodeName('Vector 2',new Set(['Vector_2_1'])),'Vector_2_2');
+  assert.equal(G.newNodeName('TD Built-in',new Set()),'Node_1','a label that cannot make a GLSL name');
+  assert.equal(G.freeName('Normalize_1',new Set(['Normalize_1'])),'Normalize_2');
+  assert.equal(G.freeName('Glow',new Set(['Glow','Glow_1'])),'Glow_2');
+  assert.equal(G.freeName('Glow_',new Set(['Glow_'])),'Glow_1','never two underscores in a row');
+  assert.equal(G.freeName('Free',new Set(['Other'])),'Free');
+  assert.equal(G.typedName('Glow 中文 Pass!_2'),'Glow  Pass_2','only letters, digits, spaces and underscores get in');
+  assert.equal(G.storedName('  Glow  Pass  '),'Glow_Pass');
+  assert.equal(G.shownName('Glow_Pass_2'),'Glow Pass 2');
+  assert.ok(G.validNodeName('Split_1')&&!G.validNodeName('1st')&&!G.validNodeName('gl_x')&&!G.validNodeName('TD_x')&&!G.validNodeName('output'));
+});
+
+test('a graph made before names were given is named once as it opens; sources and unknown types are left alone',()=>{
+  const g=plain(bootstrap.defaultDocument.graph);
+  for(const n of g.stages.pixel.nodes)delete n.name;
+  const float=plain(registry.get('sgrape.builtin.float').catalog.definition.defaults);
+  g.stages.pixel.nodes.push({id:'a',nodeType:'sgrape.builtin.float',params:plain(float),ui:{}},{id:'b',nodeType:'sgrape.builtin.float',name:'Float_1',params:plain(float),ui:{}},
+    {id:'uv',nodeType:TD,params:{entry:'vUV'},ui:{}},{id:'what',nodeType:'vendor.future.node',params:{},ui:{}});
+  const {graph,changes}=G.upgradeGraph(g,G.nodeUpgrades,registry);
+  const names=Object.fromEntries(graph.stages.pixel.nodes.map(n=>[n.id,n.name]));
+  assert.equal(names.a,'Float_2','the next free number, around the name already there');
+  assert.equal(names.b,'Float_1');
+  assert.equal(names.uv,undefined,'a TD value stands for a source: no name of its own');
+  assert.equal(names.what,undefined,'an unknown type is kept as stored');
+  assert.deepEqual(plain(changes.filter(c=>c.rule==='node-name').map(c=>c.node).sort()),['a','color','pixel_out']);
+  assert.equal(G.upgradeGraph(graph,G.nodeUpgrades,registry).changes.length,0,'named once');
+  assert.ok(compiler.compile(graph).pixel.includes('sg_n_Color_RGBA_1'),'the name is the GLSL name');
+  assert.equal(G.upgradeGraph(g).changes.filter(c=>c.rule==='node-name').length,0,'without the registry, names are not touched');
+});

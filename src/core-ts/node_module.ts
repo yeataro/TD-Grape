@@ -79,6 +79,9 @@ export interface NodeModule {
   referencedGraph?(node:Node):string;
   /** The declaration this node refers to (the reference node, Q45). 引用的宣告。 */
   referencedDeclaration?(node:Node):string;
+  /** Stands for a shared source and shows its name, so takes no name of its own (Refactor.76; legacy functions_ui.js:141).
+   * 代表共用來源、顯示來源的名字，所以不取自己的名字（R.76；照舊產品）。 */
+  readonly unnamed?:boolean;
   /** Display-only colour group when it cannot be derived from the role (Q42); the core never reads it. */
   readonly colorGroup?:string;
   /** The component names it shows when the node stores none (Refactor.59; component_names.ts). Left out: X/Y/Z/W.

@@ -7,6 +7,7 @@ import { numericInterface, requireSubgraph } from './subgraph_interface';
 import { subgraphStages } from './subgraph_stages';
 import { types, type } from './values';
 import { types as bindingTypes } from './numeric';
+import { validNodeName } from './node_names';
 
 interface Location {node:string;stage:string;trail:string[];subgraphId?:string}
 interface Compiled {
@@ -93,7 +94,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
           try {
             if(!identity.test(node.id)||maps.has(node.id))throw Error('Invalid or duplicate node ID');
             if(node.name!==undefined){
-              if(!identifiers||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(node.name)||node.name.includes('__')||/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(node.name)||identifiers.reservedNames.includes(node.name)||names.has(node.name))throw Error('Invalid or duplicate node name');
+              if(!identifiers||!validNodeName(node.name,identifiers.reservedNames)||names.has(node.name))throw Error('Invalid or duplicate node name');
               names.add(node.name);
             }
             const module=moduleOf(node)!;
