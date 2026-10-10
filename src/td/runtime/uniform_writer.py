@@ -123,7 +123,7 @@ def _leaving(uniforms, previous):
     即將拿掉或改名的列（頁、名字）：不算擋路。"""
     now = {u['id']: u for u in uniforms}
     return {(page_of(old), old['name']) for old in previous
-            if old['id'] not in now or now[old['id']]['name'] != old['name'] or page_of(now[old['id']]) != page_of(old)}
+            if old['id'] not in now or now[old['id']]['name'] != old['name']}
 
 
 def _taken_over(shader, uniforms, previous):
@@ -131,7 +131,7 @@ def _taken_over(shader, uniforms, previous):
     is taken over and the Uniform's own row goes (human 2026-10-09). 改名成同頁 TD 上已有的列：接手它，原本的列拿掉。"""
     before, leaving = {u['id']: u for u in previous}, _leaving(uniforms, previous)
     return {u['id'] for u in uniforms if u['id'] in before and before[u['id']]['name'] != u['name']
-            and page_of(before[u['id']]) == page_of(u) and (page_of(u), u['name']) not in leaving
+            and (page_of(u), u['name']) not in leaving
             and find_row(shader, page_of(u), u['name']) is not None}
 
 
@@ -139,10 +139,20 @@ def check_rows(shader, uniforms, previous):
     """Refuse before anything changes (Refactor.47, 48.2):
     - a row to rename has its name driven in TD (legacy did the same);
     - a Uniform taking a name for the first time finds that name on the other page (Colors vs Vectors:
-      two rows of one name would fight over one uniform; human 2026-10-09).
+      two rows of one name would fight over one uniform; human 2026-10-09);
+    - a Uniform moves between Colors and Vectors: a colour is chosen when the Uniform is added and never changes
+      (Q59), so the editor never sends this; only a hand-edited graph could, and it is refused rather than half
+      handled (Refactor.67, D10: the moving branches are gone).
     A row of that name on its own page is taken over instead (see apply).
-    動手前先拒絕：要改名的列名字被 TD 驅動；第一次用這個名字、卻在另一頁已有同名的列。同一頁有同名的列則接手（見 apply）。"""
+    動手前先拒絕：要改名的列名字被 TD 驅動；第一次用這個名字、卻在另一頁已有同名的列；Uniform 在顏色頁與向量頁之間換頁——
+    顏色在新增時決定、之後不變（Q59），編輯器不會送這種東西，只有手改的圖會，直接拒絕、不做半套處理（D10：換頁的分支拿掉了）。
+    同一頁有同名的列則接手（見 apply）。"""
     before, leaving = {u['id']: u for u in previous}, _leaving(uniforms, previous)
+    for uniform in uniforms:
+        old = before.get(uniform['id'])
+        if old is not None and page_of(old) != page_of(uniform):
+            raise Refused('Uniform ' + uniform['name'] + ' cannot move between the Colors and Vectors pages: whether it is a '
+                          'colour is chosen when it is added. Add a new Uniform instead.')
     taken = _taken_over(shader, uniforms, previous)
     for uniform in uniforms:
         page, old, name = page_of(uniform), before.get(uniform['id']), uniform['name']
@@ -161,9 +171,10 @@ def check_rows(shader, uniforms, previous):
 
 
 def _renames(old, uniform):
-    """The Uniform keeps its ID and page but has a new name: its row is renamed (unless another row is taken over).
-    The one rule for checking and applying (Refactor.62). 同 ID、同頁、換了名字：改它那一列的名字。檢查與套用共用這一條。"""
-    return old is not None and old['name'] != uniform['name'] and page_of(old) == page_of(uniform)
+    """The Uniform keeps its ID (and so its page, check_rows) but has a new name: its row is renamed (unless another row is
+    taken over). The one rule for checking and applying (Refactor.62). 同 ID（因此同頁，見 check_rows）、換了名字：改它那一列的名字。
+    檢查與套用共用這一條。"""
+    return old is not None and old['name'] != uniform['name']
 
 
 def _pristine_only_row(shader, page):
@@ -218,8 +229,7 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
     now = {u['id']: u for u in uniforms}
     taken = _taken_over(shader, uniforms, previous)
     for page in PAGES:
-        gone = [old for ident, old in before.items() if page_of(old) == page
-                and (ident not in now or page_of(now[ident]) != page or ident in taken)]
+        gone = [old for ident, old in before.items() if page_of(old) == page and (ident not in now or ident in taken)]
         found = [(find_row(shader, page, old['name']), old['name']) for old in gone]
         # Highest row first, so the rows still to remove keep their positions. 由下往上刪，其餘的位置不變。
         for row, name in sorted((f for f in found if f[0] is not None), key=lambda f: f[0], reverse=True):
@@ -260,7 +270,7 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
                               '{uniform} uses the row already on the GLSL OP; its values and what drives them are kept.',
                               uniform=uniform['name']))
             continue
-        if page_of(old) != page or values_of(old) == values_of(uniform):
+        if values_of(old) == values_of(uniform):
             continue  # a value not changed in the editor: TD keeps its own 不是在編輯器改的值：TD 留著自己的
         for suffix, value, was in zip(suffixes, values_of(uniform), values_of(old) + [None] * 4):
             if value != was:

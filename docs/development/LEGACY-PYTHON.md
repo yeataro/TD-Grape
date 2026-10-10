@@ -61,7 +61,7 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 
 | OP | 內容 | 判定 |
 | --- | --- | --- |
-| `GrapeEditor` | `editor_service*.py`、`editor_folder_callbacks.py` 5 份，皆與 repo 一致 | 常駐 |
+| `GrapeEditor` | `editor_service*.py` 4 份，皆與 repo 一致（`editor_folder_callbacks.py` 與 `folder1` 在 Refactor.67 拿掉：沒人用的打包路徑，D9） | 常駐 |
 | `GrapeManager` | 見上節 | 已整理 |
 | `remote_panel` | 13 份與 [src/remote_panel](../../src/remote_panel) 一致；另 107 個 DAT 為 TD 內建元件（annotation、cameraViewport 等）的內部程式，非本專案 | 常駐 |
 | `masters`（`grape_top`） | Grape OP 範本，TD 選單（TDFam）複製的來源；帶預設圖與 GLSL，由 [install_grape_templates.py](../../tools/jobs/install_grape_templates.py) 產生 | 常駐（Refactor.32 換成新格式；Grape MAT 等 MAT 那一輪） |

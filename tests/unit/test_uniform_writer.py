@@ -246,6 +246,17 @@ class UniformWriterTests(unittest.TestCase):
             uw.check_rows(shader, [dict(other, name='uFoo')], [other])
         uw.check_rows(shader, [other], [other])  # unchanged Uniforms are not checked again 沒變的不再檢查
 
+    def test_a_uniform_moving_between_colors_and_vectors_is_refused_before_anything_changes(self):
+        # Refactor.67 (D10): a colour is chosen when the Uniform is added (Q59); only a hand-edited graph could move it.
+        # 顏色在新增時決定；只有手改的圖會換頁，動手前就拒絕。
+        shader = FakeShader()
+        plain = uniform('u1', 'uTint', 'vec4', [1.0, 0.5, 0.0, 1.0])
+        apply(shader, [plain])
+        before = (shader.names('vec'), shader.names('color'))
+        with self.assertRaisesRegex(ValueError, 'cannot move between the Colors and Vectors pages'):
+            uw.check_rows(shader, [dict(plain, color=True)], [plain])
+        self.assertEqual((shader.names('vec'), shader.names('color')), before)
+
     def test_renaming_into_a_row_made_in_td_takes_it_over(self):
         # A new Uniform has its own row at once (uniform1), so a person reaches a TD row's name by renaming.
         # 新 Uniform 立刻有自己的列，所以要用 TD 上那列的名字只能改名。

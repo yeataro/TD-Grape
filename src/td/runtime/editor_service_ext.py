@@ -188,6 +188,7 @@ class EditorServiceExt:
             ui.viewFile(self.ownerComp.par.Localurl.eval())
 
     def onInitTD(self):
+        # One of three start moments; see editor_service_lifecycle.py (D10). 三個啟動時機之一，見 editor_service_lifecycle.py。
         if self.ownerComp.par.Active.eval():
             self.Start()
 

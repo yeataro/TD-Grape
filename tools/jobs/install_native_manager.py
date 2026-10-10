@@ -151,6 +151,10 @@ text(editor, 'editor_service', 'src/td/runtime/editor_service.py', editor.op('ed
 ext_dat = editor.op('EditorServiceExt')
 assert ext_dat is not None, 'Unexpected Editor Service extension layout'
 ext_dat.text = (root / 'src/td/runtime/editor_service_ext.py').read_text(encoding='utf-8')
+# The start hooks come from the repo too (Refactor.67), so the TD copy cannot drift. 啟動掛勾也從 repo 寫入，TD 裡那份不會走樣。
+lifecycle = editor.op('service_lifecycle')
+assert lifecycle is not None and lifecycle.OPType == 'executeDAT', 'Unexpected Editor Service lifecycle layout'
+lifecycle.text = (root / 'src/td/runtime/editor_service_lifecycle.py').read_text(encoding='utf-8')
 if getattr(editor.par, 'Manager', None) is None:
     editor.customPages[0].appendCOMP('Manager')
 editor.par.Manager.expr = "parent.GrapeHost.op('GrapeManager')"

@@ -1,6 +1,5 @@
 {
   "editor_launch.py": "src/td/runtime/editor_launch.py",
-  "editor_folder_callbacks.py": "src/td/runtime/editor_folder_callbacks.py",
   "editor_service.py": "src/td/runtime/editor_service.py",
   "editor_service_ext.py": "src/td/runtime/editor_service_ext.py",
   "editor_service_callbacks.py": "src/td/runtime/editor_service_callbacks.py",
