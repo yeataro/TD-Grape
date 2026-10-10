@@ -225,9 +225,13 @@ const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflic
 /** Whether the TD project holds this revision (Refactor.75.15, human 2026-10-11): saved green, not saved yellow; unknown
  * (TD-Grape has not seen this project saved) says nothing. Both revisions are TD's own. TD 專案存的是不是這一版（R.75.15，人類）：
  * 已存檔綠、未存檔黃；不知道（TD-Grape 還沒看過這個專案存檔）就不說。兩個版號都是 TD 說的。 */
-const savedMark = (state: EditorState | null): 'saved' | 'unsaved' | null =>
-  state?.saved?.revision == null ? null : state.saved.revision >= state.revision ? 'saved' : 'unsaved';
-const savedMarks = { saved: tr('status.markSaved', 'saved'), unsaved: tr('status.markUnsaved', 'not saved') };
+const savedMark = (state: EditorState | null): { kind: 'saved' | 'unsaved'; word: Message } | null => {
+  const saved = state?.saved?.revision;
+  if (state == null || saved == null) return null;
+  // How many revisions the file is behind (R.75.16, human). 檔案落後幾版（R.75.16，人類）。
+  return saved >= state.revision ? { kind: 'saved', word: tr('status.markSaved', 'saved') }
+    : { kind: 'unsaved', word: tr('status.markUnsaved', 'not saved ({count})', { count: state.revision - saved }) };
+};
 const canSave = (state: EditorState | null) => !!state && !state.saving && !['offline', 'uncertain', 'conflict'].includes(state.phase);
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
@@ -333,7 +337,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
   const cause = state ? lightOf({ ...state, checking: false }).word : tr('status.noGraph', 'No graph open');
   const mark = savedMark(state);
   const line = state ? say(tr('status.line', '{state} · revision {revision}', { state: cause, revision: state.revision })) : say(cause);
-  const now = line + (mark ? ' · ' + say(savedMarks[mark]) : '');
+  const now = line + (mark ? ' · ' + say(mark.word) : '');
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer ref={bar} className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -419,16 +423,13 @@ function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
   }, [state?.retryAt]);
   const seconds = state?.retryAt === undefined ? 0 : Math.ceil(Math.max(0, state.retryAt - Date.now()) / 1000);
   const reason = state && alarm.includes(state.phase) ? say(state.message).split('\n')[0] : '';
-  // The TD project's last save and how far it is behind (Refactor.73): the editor never saves it by itself.
-  // TD 專案上次存檔與落後多少（R.73）：編輯器不會自己存。
-  const last = state?.saved, behind = last?.revision != null && state ? state.revision - last.revision : null;
-  // Which file and which Grape OP these are about (Refactor.75.2, human 2026-10-11: the lines need something to refer to).
-  // 這些說的是哪個檔、哪個 Grape OP（R.75.2，人類：要有指涉的對象）。
-  const file = project ?? '—';
-  const saved = !last || last.time == null ? tr('status.projectFile', 'TD project {file}', { file }) : last.revision == null
-    ? tr('status.savedAt', 'TD project {file}: last saved {time}', { file, time: clockOf(last.time) })
-    : behind ? tr('status.savedBehind', 'TD project {file}: saved r{saved} ({time}), {behind} not saved', { file, saved: last.revision, time: clockOf(last.time), behind })
-      : tr('status.savedNow', 'TD project {file}: saved r{saved} ({time})', { file, saved: last.revision, time: clockOf(last.time) });
+  // Which file and which Grape OP (Refactor.75.2), and the last save (R.73), said briefly (R.75.16, human 2026-10-11:
+  // "file : OP path", then "Last saved: r873 (08:06)"; how far behind is on the line above). The editor never saves by itself.
+  // 哪個檔、哪個 Grape OP（R.75.2）與上次儲存（R.73），精簡（R.75.16，人類：「檔名 : OP 路徑」，下一行「上次儲存：r873（08:06）」；
+  // 落後幾版在上面那行）。編輯器不會自己存。
+  const last = state?.saved, where = [project, state?.targetPath].filter(Boolean).join(' : ');
+  const saved = last?.time == null ? null : last.revision == null ? tr('status.lastSavedAt', 'Last saved: {time}', { time: clockOf(last.time) })
+    : tr('status.lastSaved', 'Last saved: r{revision} ({time})', { revision: last.revision, time: clockOf(last.time) });
   const clock = clockTime;
   return <Popover anchor={anchor} label={tr('foot.status', 'Status')} className="log-history status-panel" onClose={onClose}>
     {/* Being in touch with TD (opened, back again) is green, trouble red (R.70.2, human). 連上 TD（打開、重新連上）是綠，異常是紅（人類）。 */}
@@ -445,7 +446,7 @@ function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
         {state && away.includes(state.phase) && <span className={'status-pie' + (state.checking ? ' checking' : '')}
           title={say(state.checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryIn', 'Trying again by itself in {seconds} s', { seconds }))}>
           <LightDot state={state} /></span>}
-        <strong>{line}{mark && <> · <span className={'status-mark ' + mark}>{say(savedMarks[mark])}</span></>}</strong>
+        <strong>{line}{mark && <> · <span className={'status-mark ' + mark.kind}>{say(mark.word)}</span></>}</strong>
         {state && away.includes(state.phase) && <button type="button" disabled={!!state.checking} onClick={onRetry}>{say(tr('status.retry', 'Retry now'))}</button>}
       </div>
       {/* Away, the recovery text says it; other trouble (a conflict, a refusal) keeps TD's own words. 不在時由如何恢復說；
@@ -455,8 +456,8 @@ function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
         <span className="status-help-title">{say(tr('status.howToRecover', 'How to recover'))}</span>
         <p>{say(recoveryHelp[state.link ?? 'unreachable'])}</p></div>}
       <div className="status-where">
-        {state?.targetPath && <p>{say(tr('status.grapeOp', 'Grape OP {path}', { path: state.targetPath }))}</p>}
-        {state && <p>{say(saved)}</p>}
+        {where && <p>{where}</p>}
+        {saved && <p>{say(saved)}</p>}
       </div>
     </div>
   </Popover>;

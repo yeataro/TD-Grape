@@ -25,7 +25,7 @@ const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
 // Messages are data worded at display time (Q34); tests read them the way a zh-Hant page shows them.
-const { localize, errorText, chooseLanguage, tr } = load(path.join(root, 'src/editor-react/text.ts'));
+const { localize, errorText, chooseLanguage, tr, clockOf } = load(path.join(root, 'src/editor-react/text.ts'));
 const zh = message => localize(message, 'zh-Hant');
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -1134,6 +1134,14 @@ test('a reason TD gives while a send is on its way is kept when the send fails',
   sockets[0].readyState = 3; sockets[0].onclose({ code: 4002, reason: 'service-stopped' });
   fail(); await sending;
   assert.deepEqual([session.snapshot().phase, session.snapshot().link], ['offline', 'stopped']);
+});
+
+// Refactor.75.16 (human 2026-10-11: the time "as the case needs"): today the time, this year the day, before that the year.
+// 存檔時間看狀況：今天只寫時間、今年加月日、更早再加年。
+test('a save time says only as much as it needs', () => {
+  const now = new Date(2026, 9, 11, 9, 0).getTime();
+  assert.deepEqual([new Date(2026, 9, 11, 8, 6), new Date(2026, 7, 8, 8, 6), new Date(2025, 7, 8, 8, 6)].map(at => clockOf(at.getTime(), now)),
+    ['08:06', '8/8 08:06', '2025/8/8 08:06']);
 });
 
 // Refactor.73 (human 2026-10-10): the editor never saves the TD project, so after an apply it says which revision the file

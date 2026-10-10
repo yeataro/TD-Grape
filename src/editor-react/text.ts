@@ -63,10 +63,13 @@ export const clockTime = (time: number | Date) => {
   const at = new Date(time);
   return pad(at.getHours()) + ':' + pad(at.getMinutes()) + ':' + pad(at.getSeconds());
 };
-/** A save's time as people read it (Refactor.73): HH:MM today, with the date otherwise. 存檔時間：今天只寫 HH:MM，其他天加日期。 */
+/** A save's time as people read it (Refactor.73; R.75.16, human 2026-10-11: "as the case needs"): HH:MM today, M/D HH:MM
+ * this year, Y/M/D HH:MM before. 存檔時間（R.73；R.75.16，人類：看狀況）：今天只寫 HH:MM、今年加月日、更早再加年。 */
 export const clockOf = (time: number, now = Date.now()) => {
-  const at = new Date(time), clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
-  return at.toDateString() === new Date(now).toDateString() ? clock : (at.getMonth() + 1) + '/' + at.getDate() + ' ' + clock;
+  const at = new Date(time), today = new Date(now), clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
+  if (at.toDateString() === today.toDateString()) return clock;
+  const day = (at.getMonth() + 1) + '/' + at.getDate() + ' ' + clock;
+  return at.getFullYear() === today.getFullYear() ? day : at.getFullYear() + '/' + day;
 };
 
 // Data that carries its own English (Q34 修訂 4): the code is derived here, where the text is used.
