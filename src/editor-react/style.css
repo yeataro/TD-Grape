@@ -459,7 +459,8 @@ span.image-label:hover { background: var(--image-label); }
 .node-body { padding: calc(10px - var(--io-inset)) 0; display: flex; flex-direction: column; }
 /* Everything in a node body keeps the same side inset (human 2026-10-09: Math's rows and button ran past it).
    節點本體裡的每一種東西左右都留同樣的內距（人類：Math 的控制列與按鈕超出去了）。 */
-.node-body > :is(.value-row, .control-field, .control-row, .hint, button) { margin: 0 14px; }
+/* Everything in a card's body keeps the same side inset as its port rows (Refactor.64.1: the ghost note was missing). 卡片內容一律和接孔列同樣的左右內距（64.1：Ghost 說明漏了）。 */
+.node-body > :is(.value-row, .control-field, .control-row, .hint, .ghost-note, button) { margin: 0 14px; }
 .node-body > button { height: var(--io-field); padding: 0 8px; margin-block: var(--io-inset); }
 .node-body > .hint { padding-block: var(--io-inset); }
 /* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
