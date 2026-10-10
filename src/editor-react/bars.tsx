@@ -248,12 +248,16 @@ const words = {
   reloading: tr('light.reloading', 'Reloading'), deleted: tr('light.deleted', 'OP deleted'), device: tr('light.device', 'Device offline'),
   uncertain: tr('light.uncertain', 'Unsure'), conflict: tr('light.conflict', 'Conflict'), stopped: tr('light.stopped', 'Stopped'),
 };
+/** What the light says for why TD is away (Refactor.75); nothing said is "TD unreachable". TD 為什麼不在的字；沒說就是連不到。 */
+const awayWords: Record<Exclude<Link, 'unreachable'>, Message> = { busy: words.busy, closed: words.closed, stopped: words.serviceStopped,
+  reloading: words.reloading, deleted: words.deleted, device: words.device };
+const awayWord = (link?: Link) => !link || link === 'unreachable' ? words.offline : awayWords[link];
 const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
   if (!state) return { tone: 'none', busy: false, word: words.none };
   const busy = state.phase === 'sending' || !!state.checking;
   // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
   // 檢查連線中直接寫在列上，圓點同時閃，看得出在工作（R.70.2，人類）。
-  const word = state.checking ? words.checking : state.phase === 'offline' ? (state.link && state.link !== 'unreachable' ? words[state.link === 'stopped' ? 'serviceStopped' : state.link] : words.offline)
+  const word = state.checking ? words.checking : state.phase === 'offline' ? awayWord(state.link)
     : state.phase === 'uncertain' ? words.uncertain
     : state.phase === 'conflict' ? words.conflict : state.phase === 'error' ? words.stopped
     : state.phase === 'sending' ? words.sending : state.dirty ? words.unsent : words.applied;
@@ -451,7 +455,7 @@ function StatusPanel({ anchor, state, project, now, tone, onRetry, onClose }: {
 }
 /** One line of the state's record in words. 狀態紀錄的一行，寫成字。 */
 const recordWords = ({ kind, revision, from, link }: SyncRecord): Message => kind === 'offline' && link && link !== 'unreachable'
-  ? tr('record.away', '{cause} at revision {revision}', { cause: words[link === 'stopped' ? 'serviceStopped' : link as Exclude<Link, 'unreachable' | 'stopped'>], revision })
+  ? tr('record.away', '{cause} at revision {revision}', { cause: awayWord(link), revision })
   : kind === 'opened' ? tr('record.opened', 'Opened the graph at revision {revision}', { revision })
   : kind === 'applied' ? from !== undefined && from !== revision ? tr('record.appliedRange', 'Applied revisions {from} to {revision}', { from, revision })
     : tr('record.applied', 'Applied revision {revision}', { revision })

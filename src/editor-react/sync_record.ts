@@ -5,13 +5,14 @@
 // 又混著別的事，所以狀態留一份短紀錄——什麼時候失去 TD、什麼時候又連上、套用了哪幾版。異常的開始與結束一定記；連續的例行套用合成一行、
 // 範圍往後延，所以最近 50 行能涵蓋很長一段時間。純函式：編輯器把每次改變交進來。
 import type { Message } from './text';
+import type { Link } from './host_sync';
 
 export type SyncRecordKind = 'opened' | 'applied' | 'offline' | 'uncertain' | 'conflict' | 'error' | 'recovered';
 /** One line: when, what, which revision; an `applied` line covers `from`…`revision` until `until`; trouble keeps its reason.
  * 一行：何時、什麼事、哪一版；applied 涵蓋 from…revision 到 until；異常留下原因。 */
 // link: why TD was away, as the light says it (Refactor.75). link：TD 為什麼不在，同燈號的說法。
-export type SyncRecord = { kind: SyncRecordKind; time: number; revision: number; from?: number; until?: number; reason?: Message | string; link?: string };
-type Sync = { phase: string; revision: number; link?: string };
+export type SyncRecord = { kind: SyncRecordKind; time: number; revision: number; from?: number; until?: number; reason?: Message | string; link?: Link };
+type Sync = { phase: string; revision: number; link?: Link };
 export const SYNC_RECORDS = 50;
 const trouble = ['offline', 'uncertain', 'conflict', 'error'];
 
