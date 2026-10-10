@@ -69,6 +69,7 @@
   --glow-highlight: 8px;
   --glow-wirehover: 8px;
   --glow-wires: 6px;
+  --glow-merge: 12px;   /* round the rows a dragged wire would merge (R.76.18) 拖線會合併的那幾列外圍 */
   --glow-ports: 8px;
   --glow-logo: 8px;
   --selection-gap: 10px;   /* the multi-selection frame's distance to the nodes (legacy 6px on 190px nodes; human 2026-10-09: too close) 多選框離節點的距離（舊產品 6px、節點 190px；人類：太近） */

@@ -481,6 +481,8 @@
   "tune.glowHighlightReach": "Glow reach: highlights",
   "tune.glowLogo": "Glow strength: logo",
   "tune.glowLogoReach": "Glow reach: logo",
+  "tune.glowMerge": "Glow strength: rows a wire would merge",
+  "tune.glowMergeReach": "Glow reach: rows a wire would merge",
   "tune.glowPorts": "Glow strength: wired ports",
   "tune.glowPortsReach": "Glow reach: wired ports",
   "tune.glowSelect": "Glow strength: selection",

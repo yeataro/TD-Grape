@@ -25,6 +25,8 @@ export const TUNABLES: readonly Tunable[] = [
   { name: '--layer-glow-blur', label: tr('tune.layerGlowBlur', 'Inner glow reach'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--canvas-shadow', label: tr('tune.canvasShadow', 'Canvas inner shadow reach'), kind: 'px', min: 0, max: 60, step: 1 },
   { name: '--tint-merge-band', label: tr('tune.mergeBand', 'Rows a wire would merge'), kind: 'percent', min: 0, max: 60, step: 1 },
+  { name: '--tint-glow-merge', label: tr('tune.glowMerge', 'Glow strength: rows a wire would merge'), kind: 'percent', min: 0, max: 100, step: 1 },
+  { name: '--glow-merge', label: tr('tune.glowMergeReach', 'Glow reach: rows a wire would merge'), kind: 'px', min: 0, max: 40, step: 1 },
   { name: '--tint-wire-ghost', label: tr('tune.wireGhost', 'Ghost on wires: opacity'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--tint-glow-select', label: tr('tune.glowSelect', 'Glow strength: selection'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--glow-select', label: tr('tune.glowSelectReach', 'Glow reach: selection'), kind: 'px', min: 0, max: 40, step: 1 },

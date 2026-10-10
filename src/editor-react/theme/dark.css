@@ -80,6 +80,7 @@
   --tint-glow-highlight: 33%;
   --tint-glow-wirehover: 50%;
   --tint-glow-wires: 33%;
+  --tint-glow-merge: 50%;
   --tint-glow-ports: 33%;
   --tint-glow-logo: 33%;
   --tint-node-border: 12%;  /* a node's outline, also the line under its title (legacy: one colour) 節點外框線，也是標題下的線（舊產品同色） */

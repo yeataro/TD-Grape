@@ -691,7 +691,16 @@ span.image-label:hover { background: var(--image-label); }
    疊在列的上面而不是底下，數值框也一起亮（76.17，人類：在底下不夠亮）；深色主題用加亮（ADD），淺色主題一般疊色（--merge-band-blend）。
    用偽元素：React 不用管，也不擋滑鼠。 */
 .port-row[data-merge-band]::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: color-mix(in srgb, var(--merge-color) var(--tint-merge-band), transparent); mix-blend-mode: var(--merge-band-blend); }
+  background: color-mix(in srgb, var(--merge-color) var(--tint-merge-band), transparent); mix-blend-mode: var(--merge-band-blend);
+  /* A glow round the band (76.18, human 2026-10-11, tunable). Each row glows only outwards: its sides, and its top or bottom
+     only where the band starts or ends, so where two rows meet the light is not added twice (a bright seam). The cut follows
+     the reach. 色帶外圍一圈光（76.18，人類，可調）。每列只往外發光：左右兩側，上下緣只在色帶的頭尾，兩列相接處的光不會疊兩次
+     （一條亮線）。裁切範圍跟著光暈範圍。 */
+  --merge-reach: calc(2 * var(--glow-merge));
+  box-shadow: 0 0 var(--glow-merge) color-mix(in srgb, var(--merge-color) var(--tint-glow-merge), transparent);
+  clip-path: inset(0 calc(-1 * var(--merge-reach))); }
+.port-row[data-merge-band]:not(.port-row[data-merge-band] + .port-row[data-merge-band])::after { clip-path: inset(calc(-1 * var(--merge-reach)) calc(-1 * var(--merge-reach)) 0); }
+.port-row[data-merge-band]:not(:has(+ .port-row[data-merge-band]))::after { clip-path: inset(0 calc(-1 * var(--merge-reach)) calc(-1 * var(--merge-reach))); }
 /* Highlights, a separate thing from the wired state above (human 2026-10-09: 55.20's "solid" was about being wired; the
    highlights are wanted). Under the pointer, and the port a wire is being dragged from (React Flow marks it connectingfrom):
    a light lilac centre and a soft ring, as the legacy hover (style.css:88). Where the dragged wire will land (connectingto,

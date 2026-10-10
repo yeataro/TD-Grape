@@ -481,6 +481,8 @@
   "tune.glowHighlightReach": "光暈範圍：高亮",
   "tune.glowLogo": "光暈濃度：Logo",
   "tune.glowLogoReach": "光暈範圍：Logo",
+  "tune.glowMerge": "光暈濃度：拖線會合併的列",
+  "tune.glowMergeReach": "光暈範圍：拖線會合併的列",
   "tune.glowPorts": "光暈濃度：有接線的接孔",
   "tune.glowPortsReach": "光暈範圍：有接線的接孔",
   "tune.glowSelect": "光暈濃度：選取",
