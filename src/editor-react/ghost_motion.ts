@@ -21,10 +21,17 @@ export function roundedHem(cut = 0.3): string {
 }
 
 /** Where in its rounds a ghost starts, as a share from 0 to 1: each animation starts that share into its own length, so a
- * longer one is offset by more (R.75.30, human 2026-10-11). The same ID always gives the same share. 從各自一輪中的哪裡開始，
- * 寫成 0 到 1 的比例：每個動畫從自己長度的這個比例開始，越長的錯開越多（R.75.30，人類）。同一個 ID 永遠一樣。 */
-export function ghostPhase(id: string): number {
-  let hash = 2166136261; // FNV-1a
+ * longer one is offset by more (R.75.30, human 2026-10-11). The same ID (and seed) always gives the same share. The ID and the
+ * seed make a random number (human 2026-10-11): FNV-1a, then MurmurHash3's final mix, so IDs differing only in their last
+ * character (edge_4, edge_5) land far apart — without the mix they started almost together (R.76.13).
+ * 從各自一輪中的哪裡開始，寫成 0 到 1 的比例：每個動畫從自己長度的這個比例開始，越長的錯開越多（R.75.30，人類）。同一個 ID（和種子）
+ * 永遠一樣。ID 加種子算出亂數（人類）：FNV-1a 後再做 MurmurHash3 的收尾混合，只差最後一個字的 ID（edge_4、edge_5）也會差很遠——
+ * 沒有這一步時它們幾乎同時開始（R.76.13）。 */
+export function ghostPhase(id: string, seed = 0): number {
+  let hash = (2166136261 ^ seed) >>> 0; // FNV-1a
   for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+  hash ^= hash >>> 16; hash = Math.imul(hash, 0x85ebca6b); // MurmurHash3 fmix32
+  hash ^= hash >>> 13; hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
   return Math.floor((hash >>> 0) / 2 ** 32 * 10000) / 10000;
 }

@@ -1157,6 +1157,13 @@ test('ghosts start at their own place in the round, and the hem loops without a 
   assert.deepEqual(phases, ids.map(ghostPhase), 'the same ID, the same start');
   assert.ok(phases.every(p => p >= 0 && p < 1), 'a share of each round (each animation is offset by it times its own length)');
   assert.ok(new Set(phases).size > 1, 'different IDs start at different places');
+  // R.76.13 (human 2026-10-11: two ghost wires moved almost together): IDs differing only in their last character spread over
+  // the round. 只差最後一個字的 ID 也散開在一輪裡（人類：兩條 Ghost 線幾乎同時動）。
+  const run = Array.from({ length: 100 }, (_, i) => ghostPhase('edge_' + i));
+  assert.equal(new Set(run.map(p => Math.floor(p * 10))).size, 10, 'edge_0…edge_99 fill every tenth of the round');
+  const apart = run.slice(1).map((p, i) => { const d = Math.abs(p - run[i]); return Math.min(d, 1 - d); });
+  assert.ok(apart.reduce((a, b) => a + b) / apart.length > .2, 'neighbouring IDs start far apart on average');
+  assert.notEqual(ghostPhase('edge_4', 1), ghostPhase('edge_4'), 'a seed gives another start');
   const corners = [...roundedHem().matchAll(/Q(\d+) ([\d.]+)/g)].map(m => [+m[1], +m[2]]);
   const at = x => corners.find(c => c[0] === x)?.[1];
   for (let x = 6; x <= 22; x += 2) assert.equal(at(x), at(x + 4), `corner at ${x} repeats at ${x + 4}`);
