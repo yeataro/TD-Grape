@@ -233,6 +233,7 @@
   "params.noGraph": "打開一個 Grape OP 來編輯它的節點。",
   "params.notes": "註記",
   "params.operationType": "運算型別",
+  "params.selectSource": "選取來源 · {source}",
   "params.title": "參數",
   "picker.cannotOpen": "這個 Grape OP 無法在這裡打開：{reason}",
   "picker.choose": "選擇 Grape OP",

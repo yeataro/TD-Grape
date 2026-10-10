@@ -233,6 +233,7 @@
   "params.noGraph": "Open a Grape OP to edit its nodes.",
   "params.notes": "Notes",
   "params.operationType": "Operation type",
+  "params.selectSource": "Select source · {source}",
   "params.title": "Parameters",
   "picker.cannotOpen": "This Grape OP cannot be opened here: {reason}",
   "picker.choose": "Choose a Grape OP",

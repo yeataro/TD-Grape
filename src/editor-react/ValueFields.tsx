@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { core, type Value } from './core';
+import { core, typeColor, type Value } from './core';
 import type { ComponentState } from './host';
 import { NumberField } from './NumberField';
 import { useValueLadder } from './useValueLadder';
@@ -73,10 +73,10 @@ export const colorHex = (list: readonly unknown[]) =>
 /** Values laid out in the Parameter panel's columns (Refactor.76.2, human 2026-10-11: as TD's parameter dialog, names flush
  * right and fields flush left, with the type between): the expand triangle at the far left (TD's +), the name, the type, the
  * fields side by side; expanded, the side-by-side fields stay and each component also gets a line of its own under them, its
- * letter as the name and no type (TD). Each line is a row of the container's grid. The same widget and gestures as on a card;
+ * letter as the name and its own type (float…), as TD and the legacy panel. Each line is a row of the container's grid. The same widget and gestures as on a card;
  * only the arrangement differs.
  * 參數面板的欄位排法（R.76.2，人類：照 TD 參數視窗，名稱靠右、欄位靠左，中間多一欄型別）：展開三角形在最左（TD 的 +）、名稱、型別、
- * 並排的欄位；展開時並排的欄位留著，每個分量另在下面自己一行，分量字母當名稱、不寫型別（照 TD）。每一行是容器格線的一列。和卡片同一個
+ * 並排的欄位；展開時並排的欄位留著，每個分量另在下面自己一行，分量字母當名稱、型別寫分量自己的（float…，照 TD 與舊產品）。每一行是容器格線的一列。和卡片同一個
  * widget、同樣的手勢，只有排法不同。 */
 export const ValueColumns = createContext(false);
 
@@ -190,6 +190,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     </div>
     {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
       <span className="value-caption"><span className="component-letter" data-component={i}>{names[i]}</span></span>
+      <span className="value-type" style={{ '--port-color': typeColor(family) } as CSSProperties}>{family}</span>
       <div className="value-group nodrag nopan">{field(item, i, false)}</div>
     </div>)}
     {swatch && <div className="value-line">{swatch}</div>}

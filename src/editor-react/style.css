@@ -796,8 +796,12 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-grid > button { height: var(--io-field); margin-block: var(--io-inset); }
 .params-grid > .hint { padding-block: var(--io-inset); }
 .params-wired { height: var(--io-row); display: flex; align-items: center; gap: 8px; color: var(--text); }
-.params-wired > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .params-wired > button { flex: none; height: var(--io-field); padding: 0 8px; }
+/* The source's name leads to it (Refactor.76.4): in the link look of the GLSL panel's names. 來源名稱帶到它那裡（R.76.4）：和 GLSL 面板的名字同樣的連結樣子。 */
+.params-wired > .params-link { flex: 0 1 auto; min-width: 0; height: auto; padding: 0; border: 0; background: none; color: var(--code-link); font: inherit;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.params-wired > .params-link:hover { text-decoration-style: solid; }
+.params-wired > .params-link + button { margin-left: auto; }
 .params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; border-top: 1px solid var(--border-node); }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }

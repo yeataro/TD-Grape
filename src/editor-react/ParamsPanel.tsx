@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useReactFlow } from '@xyflow/react';
 import { core, typeColor } from './core';
 import type { EditorState } from './editor';
 import type { FlowNode } from './projection';
@@ -6,6 +7,7 @@ import { tr, say } from './text';
 import { Select } from './controls';
 import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext } from './contexts';
+import { frameNodes } from './viewport';
 import { Control, DeclarationValue, PortLabel, listed, single, sourceKinds } from './NodeCard';
 
 // The Parameter panel (Refactor.76, human 2026-10-11; work/refactor/parameter-panel-scope-2026-10-11.md): the current node,
@@ -45,7 +47,7 @@ function NodeNote({ id, note }: { id: string; note: string }) {
 }
 
 function NodeParameters({ node, state }: { node: FlowNode; state: EditorState }) {
-  const session = useSession(), text = useContext(TextContext);
+  const session = useSession(), text = useContext(TextContext), flow = useReactFlow();
   const { id, data } = node, { authored, view, inputs } = data;
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   // Where a wired input's value comes from: the other node's name (or its type) and port. 接線的輸入：另一端節點的名稱（或類型）與接孔。
@@ -54,8 +56,11 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
     if (!edge) return undefined;
     const from = state.projection.nodes.find(n => n.id === edge.source);
     const label = from?.data.authored.name ? core.shownName(from.data.authored.name) : from ? text(from.data.view.label ?? from.data.label) : edge.source;
-    return label + ' · ' + edge.sourceHandle;
+    return { node: edge.source, text: label + ' · ' + edge.sourceHandle };
   };
+  // Clicking it selects that node and frames it, as the legacy editor (inspector.js:1478 parameterConnectionSource →
+  // selectEdgeEndpoints; human 2026-10-11); the panel then shows it. 點它就選取那個節點並對準，照舊產品（人類）；面板隨之換成它。
+  const goTo = (node: string) => { session.selectNode(node); frameNodes(flow, [node]); };
   // A node standing for a shared source says which kind (Uniform, Global, TOP Input) where others say their type, as its card
   // does (human 2026-10-11: "Shared Source" alone said nothing). 代表共用來源的節點在類型的位置寫是哪一種（Uniform、Global、TOP
   // Input），同它的卡片（人類：只寫 Shared Source 什麼都沒說）。
@@ -88,7 +93,8 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
         const head = <><span className="value-caption">{label}</span><span className="value-type">{port.type}</span></>;
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
           data-component={single(view.components?.inputs?.[port.key])}>
-          {source !== undefined ? <>{head}<span className="params-wired"><span>{source}</span>
+          {source !== undefined ? <>{head}<span className="params-wired"><button type="button" className="params-link" onClick={() => goTo(source.node)}
+              title={say(tr('params.selectSource', 'Select source · {source}', { source: source.text }))}>{source.text}</button>
             <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></span></>
             : port.fallback !== undefined ? <>{head}<code className="port-fallback">{port.fallback}</code></>
             : core.values.types.includes(port.type) ? <ValueFields label={`${id} ${port.key}`} type={port.type} defaults={port.default} caption={label}
