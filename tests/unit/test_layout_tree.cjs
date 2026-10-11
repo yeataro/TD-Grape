@@ -417,6 +417,10 @@ test('floating frames with tabs (Refactor.90): join on the title bar, leave by a
   const docked = tree.dockFrame(layout, 'glsl', { kind: 'outer', edge: 'right' });
   assert.equal(shape(docked.root), 'row(canvas, appearance, addNode|glsl|sources)');
   assert.deepEqual(Object.keys(docked.floating), []);
+  // Into a pane with tabs: the frame's panels together, where it was dropped (R.91.2). 放進有分頁的窗格：框的面板排在一起、在放下的位置（R.91.2）。
+  const pair = tree.joinFloat(tree.floatOut(fresh(), 'glsl', at(0, 0)), 'sources', 'glsl', 1);
+  const intoPane = tree.dockFrame(pair, 'glsl', { kind: 'tab', pane: where(pair, 'addNode'), index: 0 });
+  assert.equal(shape(intoPane.root), 'row(glsl|sources|addNode, canvas, appearance)');
   const two = tree.floatOut(tree.floatOut(fresh(), 'glsl', at(0, 0)), 'sources', at(400, 0));
   assert.deepEqual(plain(tree.mergeFloat(two, 'sources', 'glsl', 1).floats.glsl.tabs), ['glsl', 'sources']);
   // Stored and read back. 存起來再讀回。

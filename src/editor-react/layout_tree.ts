@@ -561,10 +561,12 @@ export function mergeFloat(layout: LayoutData, from: string, frame: string, inde
 export function dockFrame(layout: LayoutData, frame: string, drop: Drop): LayoutData {
   const [first, ...rest] = tabsOf(layout, frame), shown = activeOf(layout, frame);
   let next = movePanel(layout, first!, drop);
-  for (const panel of rest) {
+  // The others right after the first, in their order (Refactor.91.2: not at the pane's end, apart from it). 其他的依序緊接在第一個後面
+  // （R.91.2：不是丟到那一格最後、和它分開）。
+  rest.forEach((panel, at) => {
     const pane = paneOf(next.root, first!);
-    if (pane) next = movePanel(next, panel, { kind: 'tab', pane: pane.path, index: pane.pane.panels.length });
-  }
+    if (pane) next = movePanel(next, panel, { kind: 'tab', pane: pane.path, index: pane.pane.panels.indexOf(first!) + 1 + at });
+  });
   const placed = paneOf(next.root, shown);
   return placed ? activate(next, placed.path, shown) : next;
 }

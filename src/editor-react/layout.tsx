@@ -593,17 +593,18 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   // 再加縫的線。
   const [seam, setSeam] = useState<Sizing | null>(null);
   useLayoutEffect(() => { geometry.current = drawn.current; });
-  // A free panel that appears (shown again from the Layout menu or a button) where it was kept is taken: the nearest free spot, once
-  // (rule 1, human 2026-10-12); not on the first drawing, and never because the window changed. 出現的自由浮動面板（從 Layout 選單或按鈕
-  // 再打開）在記的位置被佔了：去最近的空位，只一次（第 1 題，人類 10-12）；第一次畫的時候不算，視窗變化也不算。
-  const seen = useRef<Set<string> | null>(null);
+  // A closed free panel shown again (from the Layout menu or a button) where it was kept is taken: the nearest free spot, once (rule 1,
+  // human 2026-10-12); only one that was closed, so not on the first drawing, not because the window changed, not a frame taken over
+  // by its next panel (Refactor.91.2). 關掉的自由浮動面板再打開（從 Layout 選單或按鈕），記的位置被佔了：去最近的空位，只一次（第 1 題，
+  // 人類 10-12）；只限原本關著的，所以第一次畫、視窗變化、框由下一個面板接手都不算（R.91.2）。
+  const seen = useRef<ReadonlySet<string> | null>(null);
   useLayoutEffect(() => {
     const drawnNow = drawn.current;
     if (!drawnNow) return;
-    const free = Object.keys(layout.floating).filter(id => layout.floating[id] === 'free'), before = seen.current;
-    seen.current = new Set(free);
-    if (!before || !layout.apart) return;
-    const places = Object.fromEntries(free.filter(id => !before.has(id)).flatMap(id => {
+    const free = Object.keys(layout.floating).filter(id => layout.floating[id] === 'free'), closedBefore = seen.current;
+    seen.current = new Set(layout.hidden);
+    if (!closedBefore || !layout.apart) return;
+    const places = Object.fromEntries(free.filter(id => closedBefore.has(id)).flatMap(id => {
       const others = Object.entries(drawnNow.rects).filter(([key]) => key !== id).map(([, rect]) => rect);
       const place = tree.callUp(layout.floats[id]!, others, drawnNow.width, drawnNow.height, drawnNow.gap, drawnNow.title);
       return place ? [[id, place] as const] : [];
@@ -668,7 +669,9 @@ function FloatingPanel({ id, layout, view, panels, rect, area, rects, cap, measu
   const unfloat = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.unfloat', 'Stop floating'))}
     title={say(tr('layout.unfloat', 'Stop floating'))} onClick={() => layout.toggleFloat(id)}><Icon name="close" /></button>;
   const [menuAt, openMenu, closeMenu] = useMenuAt();
-  const popup = menuAt && <PanelMenuPopup title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, shown, view)} anchor={menuAt} onClose={closeMenu} />;
+  // Right-click on a tab: that tab's menu, as on a docked pane (Refactor.91.2). 在分頁上按右鍵：那個分頁的選單，同停靠窗格（R.91.2）。
+  const target = menuAt?.dataset.tab ?? shown, targetView = target === shown ? view : panels[target];
+  const popup = menuAt && <PanelMenuPopup title={targetView?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, target, targetView)} anchor={menuAt} onClose={closeMenu} />;
   // Sizing works from where every panel is when the drag starts (human 2026-10-12: only then). The panels that only stand in the way:
   // those with a home and collapsed ones. 調大小從開始拖的那一刻每個面板的位置算（人類 10-12：只在那時）。只是擋路的：有家的、收起的。
   const start = useRef<Record<string, tree.Box>>({});
@@ -724,7 +727,8 @@ function FloatingPanel({ id, layout, view, panels, rect, area, rects, cap, measu
       onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id, 'frame'); }}>
       {fold}
       {tabs.length > 1 ? <div className="floating-tabs" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" data-tab={tab}
-        className="floating-tab" aria-selected={tab === shown} onPointerDown={event => drag.current(event, tab, 'tab')} onClick={() => layout.show(tab)}>
+        className="floating-tab" aria-selected={tab === shown} onContextMenu={event => { event.stopPropagation(); openMenu(event); }}
+        onPointerDown={event => drag.current(event, tab, 'tab')} onClick={() => layout.show(tab)}>
         {say(panels[tab]?.title ?? tab)}</button>)}</div>
         : <span className="floating-title">{title}</span>}
       {menu}
