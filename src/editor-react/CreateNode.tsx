@@ -43,9 +43,11 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     return { left: Math.max(8, Math.min(left, innerWidth - width - 8)), top: Math.max(8, Math.min(top, innerHeight - height - 8)) };
   };
   useLayoutEffect(() => { setPlace(inside(request.screen.x, request.screen.y)); }, [request]);
-  // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it; Escape, a lost
-  // pointer or a cancel puts it back; each opening starts where it was called up.
-  // 抓標題列移動，照舊產品：移動 3px 以上才開始；Esc、指標遺失或取消就放回原位；每次打開都從叫出的位置開始。
+  // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it, so a click does not
+  // nudge it; each opening starts where it was called up. Escape closes the panel as always (Refactor.79.1: legacy cancelled the
+  // move instead; one meaning per key); only an interruption the person did not choose (a cancel, a lost pointer) puts it back.
+  // 抓標題列移動，照舊產品：移動 3px 以上才開始，點一下不會讓它抖；每次打開都從叫出的位置開始。Esc 照常關閉面板（R.79.1：
+  // 舊產品是取消移動；一個鍵一個意思）；只有不是人選的中斷（取消、指標遺失）才放回原位。
   const moveBy = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0 || (event.target as Element).closest('button')) return;
     const head: HTMLElement = event.currentTarget, id = event.pointerId, from = { x: event.clientX, y: event.clientY }, start = place;
@@ -60,7 +62,6 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     head.addEventListener('pointerup', up => { if (up.pointerId === id) end(true); }, options);
     head.addEventListener('pointercancel', () => end(false), options);
     head.addEventListener('lostpointercapture', () => end(false), options);
-    addEventListener('keydown', key => { if (key.key === 'Escape') { key.stopPropagation(); end(false); } }, { ...options, capture: true });
     event.preventDefault();
     try { head.setPointerCapture(id); } catch { end(false); } // a pointer already gone 指標已經不在
   };
