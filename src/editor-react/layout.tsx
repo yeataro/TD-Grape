@@ -110,6 +110,15 @@ type Sizing = { ids: string[]; id: string; edge: tree.FloatEdge; line: boolean }
  * lines up (Refactor.88.2, human 2026-10-12: 16). 浮動面板離邊多近就吸過去（Q47 第 5 點；可調）；調單一個面板時，它的邊離別人的邊線多近
  * 就對齊（R.88.2，人類 10-12：16）。 */
 const SNAP = 12, SNAP_SIZE = 16;
+/** When a move or a sizing ends: free panels kept by group, the one just handled first (Refactor.88.5). `after`: the layout the
+ * move leads to, when it is not yet the layout's. 移動或調大小結束時：自由浮動面板依組記位置，剛動的排最前面（R.88.5）。after：這一下之後的
+ * 版面（還沒成為版面時）。 */
+function settle(layout: Layout, rects: Record<string, tree.Box>, area: { width: number; height: number; gap: number }, first: string, after: LayoutData = layout) {
+  const places = tree.anchored(rects, after, area.width, area.height, area.gap);
+  if (!places[first]) return layout.placeFloats(places);
+  const { [first]: own, ...rest } = places;
+  layout.placeFloats({ [first]: own!, ...rest });
+}
 type Context = { layout: Layout; panels: Record<string, PanelView>; canvas: HTMLElement };
 
 /** The whole layout: the tree, and the marks shown while a panel is moved. The network is drawn once, into its own
@@ -314,7 +323,7 @@ type Mark = { kind: 'across' | 'along' | 'frame' | 'ghost'; left: number; top: n
   slots?: { count: number; at: number } };
 /** Where a dragged panel goes: a place in the tree; its home corner (Refactor.84); or floating free at a place (Refactor.88).
  * 拖著的面板放到哪：版面樹裡某處；它的家那一角（R.84）；或自由浮動在某處（R.88）。 */
-type Target = Drop | { kind: 'corner' } | { kind: 'float'; place: tree.FloatPlace };
+type Target = Drop | { kind: 'corner' } | { kind: 'float'; place: tree.FloatPlace; box: tree.Box };
 type Hint = { drop: Target; mark: Mark; refused?: Message } | null;
 const across = (box: DOMRect, edge: 'top' | 'bottom'): Mark => ({ kind: 'across', left: box.left, top: edge === 'top' ? box.top : box.bottom, width: box.width });
 const along = (box: DOMRect, side: Side): Mark => ({ kind: 'along', left: side === 'left' ? box.left : box.right, top: box.top, height: box.height, side });
@@ -409,7 +418,7 @@ function floatHint(layout: Layout, panel: string, x: number, y: number, geometry
   const box = tree.snap({ x: clamp(x - area.left - size.width / 2, width - size.width), y: clamp(y - area.top - title / 2, height - size.height), ...size },
     others, width, height, gap, SNAP);
   if (!others.every(other => tree.clear(box, other, gap))) return null;
-  return { drop: { kind: 'float', place: tree.placeAt(box, width, height) }, mark: { kind: 'ghost', left: area.left + box.x, top: area.top + box.y, width: box.width, height: box.height } };
+  return { drop: { kind: 'float', place: tree.placeAt(box, width, height), box }, mark: { kind: 'ghost', left: area.left + box.x, top: area.top + box.y, width: box.width, height: box.height } };
 }
 
 /** Moving a panel by its tab or a floating panel's title (legacy inspector.js:2296): a drag starts after 6px; the panel's name
@@ -452,12 +461,16 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
       const swallow = (click: Event) => { click.preventDefault(); click.stopImmediatePropagation(); };
       addEventListener('click', swallow, { capture: true, once: true }); setTimeout(() => removeEventListener('click', swallow, true), 0);
       // Esc puts a moved panel back. Esc 讓移動過的面板回到原處。
-      if (!accept && own && was) now.current.placeFloats({ [panel]: was });
-      if (!accept || !hint || hint.refused) return;
+      if (!accept) { if (own && was) now.current.placeFloats({ [panel]: was }); return; }
+      // Let go over the floating area: where it was moved to, kept with the panels it now sits with. 在浮動範圍上放開：留在移到的地方，
+      // 和現在貼著的面板一起記。
+      if (!hint || hint.refused) { if (own && shape && box && box !== own) settle(now.current, { ...shape.rects, [panel]: box }, shape, panel); return; }
       const drop = hint.drop;
       if (drop.kind === 'corner') now.current.toggleFloat(panel);
-      else if (drop.kind === 'float') now.current.floatOut(panel, drop.place);
-      else now.current.move(panel, drop);
+      else if (drop.kind === 'float') {
+        now.current.floatOut(panel, drop.place);
+        if (shape) settle(now.current, { ...shape.rects, [panel]: drop.box }, shape, panel, tree.floatOut(now.current, panel, drop.place));
+      } else now.current.move(panel, drop);
     };
     addEventListener('pointermove', move => {
       if (move.pointerId !== pointer) return;
@@ -539,6 +552,23 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   // 再加縫的線。
   const [seam, setSeam] = useState<Sizing | null>(null);
   useLayoutEffect(() => { geometry.current = drawn.current; });
+  // A free panel that appears (shown again from the Layout menu or a button) where it was kept is taken: the nearest free spot, once
+  // (rule 1, human 2026-10-12); not on the first drawing, and never because the window changed. 出現的自由浮動面板（從 Layout 選單或按鈕
+  // 再打開）在記的位置被佔了：去最近的空位，只一次（第 1 題，人類 10-12）；第一次畫的時候不算，視窗變化也不算。
+  const seen = useRef<Set<string> | null>(null);
+  useLayoutEffect(() => {
+    const drawnNow = drawn.current;
+    if (!drawnNow) return;
+    const free = Object.keys(layout.floating).filter(id => layout.floating[id] === 'free'), before = seen.current;
+    seen.current = new Set(free);
+    if (!before) return;
+    const places = Object.fromEntries(free.filter(id => !before.has(id)).flatMap(id => {
+      const others = Object.entries(drawnNow.rects).filter(([key]) => key !== id).map(([, rect]) => rect);
+      const place = tree.callUp(layout.floats[id]!, others, drawnNow.width, drawnNow.height, drawnNow.gap, drawnNow.title);
+      return place ? [[id, place] as const] : [];
+    }));
+    if (Object.keys(places).length) layout.placeFloats(places);
+  });
   if (!area) return null;
   const own = Object.keys(layout.floating).filter(id => panels[id]?.frame === 'own');
   // Collapsed, its head is its own (a node card's head, taller than a panel title), so it counts as open at its measured height
@@ -607,6 +637,8 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
       .map(key => [key, tree.placeAt(sized[key]!, area.width, area.height, layout.floats[key])])));
   };
   const begin = () => { start.current = rects; };
+  // Sizing ends: kept with the panels it now sits with (Refactor.88.5). 調完大小：和現在貼著的面板一起記（R.88.5）。
+  const done = () => settle(layout, rects, area, id);
   // A hand on an edge: this panel is about to be sized, or, on a seam, every panel on it (Refactor.88.1–88.2). 手在邊上：這個面板要被
   // 調大小；是縫的話，縫上的每個面板（R.88.1–88.2）。
   const enter = (edge: tree.FloatEdge) => {
@@ -617,7 +649,7 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
   const edges: tree.FloatEdge[] = free ? [{ y: 'start' }, { y: 'end' }, { x: 'start' }, { x: 'end' }, { x: 'start', y: 'start' }, { x: 'end', y: 'start' }, { x: 'start', y: 'end' }, { x: 'end', y: 'end' }]
     : own ? [{ x: left ? 'end' : 'start' }] : [{ x: left ? 'end' : 'start' }, { y: top ? 'end' : 'start' }];
   const handles = !shut && edges.map(edge => <FloatHandle key={(edge.x ?? '') + (edge.y ?? '')} edge={edge} label={label} onStart={begin} onMove={(dx, dy) => size(edge, dx, dy)}
-    onEnter={() => enter(edge)} onLeave={() => showSizing(null)} />);
+    onDone={done} onEnter={() => enter(edge)} onLeave={() => showSizing(null)} />);
   const frame = useRef<HTMLElement>(null);
   // Its height follows its content (measured when the content changes size, not while anything moves elsewhere).
   // 高度跟著內容（內容大小改變時量，不是別處在動時量）。
@@ -650,11 +682,16 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
 
 /** A floating panel's edge or corner handle: drawn thin, grabbed wider; reports how far it was dragged on each axis.
  * 浮動面板的邊或角把手：畫得細、可抓範圍寬；回報兩個方向各拖了多遠。 */
-function FloatHandle({ edge, label, onStart, onMove, onEnter, onLeave }: { edge: tree.FloatEdge; label: Message; onStart(): void; onMove(dx: number, dy: number): void;
-  onEnter(): void; onLeave(): void }) {
+function FloatHandle({ edge, label, onStart, onMove, onDone, onEnter, onLeave }: { edge: tree.FloatEdge; label: Message; onStart(): void;
+  onMove(dx: number, dy: number): void; onDone(): void; onEnter(): void; onLeave(): void }) {
   const start = useRef<{ x: number; y: number } | null>(null);
   // Let go: the outline stays while the hand is still on the handle. 放開：手還在把手上時淡框留著。
-  const end = (event: ReactPointerEvent<HTMLDivElement>) => { start.current = null; if (!event.currentTarget.matches(':hover')) onLeave(); };
+  const end = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragged = !!start.current;
+    start.current = null;
+    if (dragged) onDone();
+    if (!event.currentTarget.matches(':hover')) onLeave();
+  };
   const place = (edge.y === 'start' ? 'n' : edge.y === 'end' ? 's' : '') + (edge.x === 'start' ? 'w' : edge.x === 'end' ? 'e' : '');
   return <div className={'float-handle ' + place} role="separator" aria-label={say(label)}
     onPointerDown={event => {

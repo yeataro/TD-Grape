@@ -495,21 +495,91 @@ const put = (box: Box, axis: Axis, start: number, size?: number): Box => axis ==
   ? { ...box, x: start, width: size ?? box.width } : { ...box, y: start, height: size ?? box.height };
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 
-/** Where a free panel is kept, from where it is drawn: its nearest corner and how far from that corner's two edges, so it follows
- * that corner when the area changes size (human 2026-10-11, question 13). Collapsed, it keeps its open height.
- * 從畫的位置算出要記的位置：最近的角、離那個角兩條邊多遠，所以範圍變大變小時跟著那個角走（人類 10-11，第 13 題）。收起時保留打開的高度。 */
-export function placeAt(box: Box, width: number, height: number, was?: FloatPlace): FloatPlace {
-  const top = box.y + box.height / 2 < height / 2, left = box.x + box.width / 2 < width / 2;
-  return { corner: `${top ? 'top' : 'bottom'}-${left ? 'left' : 'right'}` as Corner, width: Math.round(box.width),
+/** The corner nearest a box's middle. 離框的中心最近的角。 */
+const nearestCorner = (box: Box, width: number, height: number) =>
+  `${box.y + box.height / 2 < height / 2 ? 'top' : 'bottom'}-${box.x + box.width / 2 < width / 2 ? 'left' : 'right'}` as Corner;
+/** Where a free panel is kept, from where it is drawn: its corner (the nearest, or its group's) and how far from that corner's two
+ * edges, so it follows that corner when the area changes size (human 2026-10-11, question 13). Collapsed, it keeps its open height.
+ * 從畫的位置算出要記的位置：它的角（最近的，或它那一組的）、離那個角兩條邊多遠，所以範圍變大變小時跟著那個角走（人類 10-11，第 13 題）。
+ * 收起時保留打開的高度。 */
+export function placeAt(box: Box, width: number, height: number, was?: FloatPlace, corner?: Corner): FloatPlace {
+  const at = corner ?? nearestCorner(box, width, height), top = at.startsWith('top'), left = at.endsWith('left');
+  return { corner: at, width: Math.round(box.width),
     height: Math.round(was?.collapsed ? was.height : box.height), x: Math.round(left ? box.x : width - box.x - box.width),
     y: Math.round(top ? box.y : height - box.y - box.height), ...(was?.collapsed ? { collapsed: true as const } : {}) };
 }
-/** Where a free panel wants to be drawn: its place in an area this size, made to fit. 自由浮動面板想畫在哪：記的位置放進這個大小的範圍。 */
+/** Where a free panel wants to be drawn: its place in an area this size. What runs out of the area is cut off, the side it follows
+ * kept (human 2026-10-11, question 13: too big, it shrinks first), never under its least. 自由浮動面板想畫在哪：記的位置放進這個大小的
+ * 範圍。超出範圍的部分切掉、保留它跟著的那一邊（人類 10-11，第 13 題：放不下先縮小），不小於最小值。 */
 export function boxOf(place: FloatPlace, width: number, height: number, title: number): FloatRect {
-  const collapsed = !!place.collapsed || height < FLOAT_MIN_HEIGHT, w = Math.min(place.width, width), h = Math.min(collapsed ? title : place.height, height);
-  const top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
-  return { x: clamp(left ? place.x ?? 0 : width - (place.x ?? 0) - w, 0, width - w), y: clamp(top ? place.y ?? 0 : height - (place.y ?? 0) - h, 0, height - h),
-    width: w, height: h, collapsed };
+  const collapsed = !!place.collapsed || height < FLOAT_MIN_HEIGHT, top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
+  const fit = (start: number, size: number, room: number, least: number, first: boolean): [number, number] => {
+    let from = Math.max(0, start), to = Math.min(room, start + size);
+    const need = Math.min(least, size, room);
+    if (to - from < need) { if (first) { from = clamp(start, 0, room - need); to = from + need; } else { to = clamp(start + size, need, room); from = to - need; } }
+    return [from, to - from];
+  };
+  const h = collapsed ? title : place.height;
+  const [x, w] = fit(left ? place.x ?? 0 : width - (place.x ?? 0) - place.width, place.width, width, FLOAT_MIN_WIDTH, left);
+  const [y, hh] = fit(top ? place.y ?? 0 : height - (place.y ?? 0) - h, h, height, collapsed ? h : FLOAT_MIN_HEIGHT, top);
+  return { x, y, width: w, height: hh, collapsed };
+}
+/** A panel crowded by others when drawn (a smaller window, a panel grown): it gives way from the side that is hit, down to its least;
+ * what still does not fit overlaps for now, and comes back when there is room (human 2026-10-12: the window rule, no jumping).
+ * 畫的時候被別的面板擠到（視窗變小、有面板變大）：從被撞到的那一邊讓開，最小到它的最小值；還是放不下就暫時重疊，有空間時恢復
+ * （人類 10-12：視窗的規則，不跳位）。 */
+export function giveWay(box: Box, others: readonly Box[], gap: number, least: { width: number; height: number }): Box {
+  let given = box;
+  for (const o of others) {
+    if (clear(given, o, gap)) continue;
+    const ways = (['x', 'y'] as const).map(axis => {
+      const [s, l] = along(given, axis), [os, ol] = along(o, axis), min = axis === 'x' ? least.width : least.height;
+      // The other is past its middle: give way at its end; else at its start. 對方在中間之後：從後緣讓；否則從前緣讓。
+      const atEnd = s + l / 2 <= os + ol / 2, from = atEnd ? s : Math.max(s, os + ol + gap), to = atEnd ? Math.min(s + l, os - gap) : s + l;
+      return { fits: to - from >= min, share: (to - from) / l, box: to - from >= min ? put(given, axis, from, to - from) : put(given, axis, atEnd ? s : s + l - min, min) };
+    });
+    given = (ways.filter(way => way.fits).sort((a, b) => b.share - a.share)[0] ?? ways[0]!).box;
+  }
+  return given;
+}
+/** Called up again (a closed panel shown, rule 1, human 2026-10-12): where it was kept is taken, so the nearest free spot, then at its
+ * least; none: where it was kept (it gives way when drawn). 再被叫出來（關掉的面板打開，第 1 題，人類 10-12）：記的位置被佔了，就去最近的
+ * 空位，再不行用最小尺寸找；都沒有就留在記的位置（畫的時候讓開）。 */
+export function callUp(place: FloatPlace, others: readonly Box[], width: number, height: number, gap: number, title: number): FloatPlace | null {
+  const want = boxOf(place, width, height, title);
+  if (others.every(o => clear(want, o, gap))) return null;
+  const least = { ...want, width: Math.min(want.width, FLOAT_MIN_WIDTH), height: want.collapsed ? want.height : Math.min(want.height, FLOAT_MIN_HEIGHT) };
+  const spot = freeSpot(want, others, width, height, gap) ?? freeSpot(least, others, width, height, gap);
+  return spot ? placeAt(spot, width, height, place) : null;
+}
+/** Panels sitting together: `gap` apart and overlapping along that edge, joined in chains (Refactor.88.5). 貼在一起的面板：隔 gap、沿著
+ * 那條邊有重疊的一段，連成一串（R.88.5）。 */
+export function groupsOf(rects: Readonly<Record<string, Box>>, gap: number): string[][] {
+  const ids = Object.keys(rects), owner = new Map(ids.map(id => [id, id]));
+  const root = (id: string): string => owner.get(id) === id ? id : root(owner.get(id)!);
+  const touching = (a: Box, b: Box) => (['x', 'y'] as const).some(axis => {
+    const [as, al] = along(a, axis), [bs, bl] = along(b, axis);
+    return (Math.abs(as + al + gap - bs) < near || Math.abs(bs + bl + gap - as) < near) && facing(a, b, axis, 0);
+  });
+  ids.forEach((a, index) => ids.slice(index + 1).forEach(b => { if (touching(rects[a]!, rects[b]!)) owner.set(root(b), root(a)); }));
+  const groups = new Map<string, string[]>();
+  for (const id of ids) groups.set(root(id), [...groups.get(root(id)) ?? [], id]);
+  return [...groups.values()];
+}
+/** Free panels kept by group (Refactor.88.5, human 2026-10-12): panels sitting together follow one corner, the nearest to the group's
+ * middle, or the corner of a panel with a home in it, so a smaller or larger window moves them together. Worked out when a move or a
+ * sizing ends, never while the window changes. 自由浮動面板依組記位置（R.88.5，人類 10-12）：貼在一起的面板跟著同一個角——離整組中心最近的，
+ * 或組裡有家的面板的角——所以視窗變大變小時一起走。在移動或調大小結束時算，視窗變化時不算。 */
+export function anchored(rects: Readonly<Record<string, Box>>, layout: LayoutData, width: number, height: number, gap: number): Record<string, FloatPlace> {
+  const places: Record<string, FloatPlace> = {};
+  for (const group of groupsOf(rects, gap)) {
+    const home = group.find(id => layout.floating[id] && layout.floating[id] !== 'free'), boxes = group.map(id => rects[id]!);
+    const left = Math.min(...boxes.map(box => box.x)), top = Math.min(...boxes.map(box => box.y));
+    const whole = { x: left, y: top, width: Math.max(...boxes.map(box => box.x + box.width)) - left, height: Math.max(...boxes.map(box => box.y + box.height)) - top };
+    const corner = home ? layout.floats[home]!.corner : nearestCorner(whole, width, height);
+    for (const id of group) if (layout.floating[id] === 'free') places[id] = placeAt(rects[id]!, width, height, layout.floats[id], corner);
+  }
+  return Object.fromEntries(Object.keys(layout.floating).filter(id => places[id]).map(id => [id, places[id]!]));
 }
 /** The nearest place for a box that keeps clear of the others, inside the area; none when it does not fit anywhere. 離某個框最近、
  * 和其他框保持距離、在範圍內的位置；哪裡都放不下時沒有。 */
@@ -527,12 +597,12 @@ export function freeSpot(box: Box, others: readonly Box[], width: number, height
   return best;
 }
 /** Where each floating panel is drawn in an area `width` x `height`. A panel with a home: in its corner, its own size, at most the
- * area. Free panels, the most recently placed first: where they are kept; where that is taken (a smaller window, a panel opened
- * or grown), the nearest free spot, then at their least, else where they are kept (rule 1, human 2026-10-12). What is kept does not
+ * area. Free panels, the most recently placed first: where they are kept, cut to the area; crowded by one drawn before, they give
+ * way, down to their least, else overlap for now (Refactor.88.5, human 2026-10-12: the window rule; no jumping). What is kept does not
  * change, so they come back when there is room again (question 13). Too low for a panel: its title only.
- * 每個浮動面板畫在 width x height 範圍的哪裡。有家的：在它的角、自己的大小、不超過範圍。自由浮動的，最近放的先：在記的位置；那裡被佔了
- * （視窗變小、有面板打開或變大）就去最近的空位，再不行用最小尺寸找，還是不行就留在記的位置（第 1 題，人類 10-12）。記的值不改，所以有空間時
- * 會回來（第 13 題）。範圍太矮：只有標題。 */
+ * 每個浮動面板畫在 width x height 範圍的哪裡。有家的：在它的角、自己的大小、不超過範圍。自由浮動的，最近放的先：在記的位置、超出範圍的切掉；
+ * 被先畫的擠到就讓開，最小到最小值，再不行暫時重疊（R.88.5，人類 10-12：視窗的規則，不跳位）。記的值不改，所以有空間時會回來（第 13 題）。
+ * 範圍太矮：只有標題。 */
 export function floatRects(layout: LayoutData, width: number, height: number, gap: number, title: number): Record<string, FloatRect> {
   const rects: Record<string, FloatRect> = {}, ids = Object.keys(layout.floating).filter(id => layout.floats[id]);
   for (const id of ids.filter(each => layout.floating[each] !== 'free')) {
@@ -543,9 +613,8 @@ export function floatRects(layout: LayoutData, width: number, height: number, ga
   const placed: Box[] = Object.values(rects);
   for (const id of ids.filter(each => layout.floating[each] === 'free')) {
     const want = boxOf(layout.floats[id]!, width, height, title);
-    const least = { ...want, width: Math.min(want.width, FLOAT_MIN_WIDTH), height: want.collapsed ? want.height : Math.min(want.height, FLOAT_MIN_HEIGHT) };
-    const spot = (placed.every(o => clear(want, o, gap)) ? want : null) ?? freeSpot(want, placed, width, height, gap) ?? freeSpot(least, placed, width, height, gap) ?? want;
-    rects[id] = { ...spot, collapsed: want.collapsed }; placed.push(spot);
+    const box = giveWay(want, placed, gap, { width: Math.min(FLOAT_MIN_WIDTH, width), height: want.collapsed ? want.height : Math.min(FLOAT_MIN_HEIGHT, height) });
+    rects[id] = { x: box.x, y: box.y, width: box.width, height: box.height, collapsed: want.collapsed }; placed.push(box);
   }
   return rects;
 }

@@ -255,28 +255,37 @@ test('stored floating panels are read back; anything malformed is dropped; old c
   assert.deepEqual(plain(tree.readLayout(noFloats, panels).floating), {}, 'a layout from before reads with nothing floating');
 });
 
-test('where floating panels are drawn: the home corner, free places kept, the nearest free spot when taken (Refactor.88)', () => {
+test('where floating panels are drawn: the home corner, free places kept; crowded, they give way, no jumping (Refactor.88.5)', () => {
   let layout = tree.popOut(fresh(), 'appearance', homes);
   layout = tree.floatOut(layout, 'glsl', at(0, 0));
   let rects = tree.floatRects(layout, 1000, 600, 8, 28);
   assert.deepEqual(plain(rects.appearance), { x: 680, y: 0, width: 320, height: 360, collapsed: false }, 'home: its corner');
   assert.deepEqual(plain(rects.glsl), { x: 0, y: 0, width: 320, height: 360, collapsed: false }, 'free: where it is kept');
-  // Kept on the right, under the home panel: it moves to the nearest free spot. 記在右上、壓到有家的面板：去最近的空位。
-  layout = tree.placeFloats(layout, { glsl: at(0, 0, 'top-right') });
-  rects = tree.floatRects(layout, 1000, 800, 8, 28);
-  assert.deepEqual(plain(rects.glsl), { x: 352, y: 0, width: 320, height: 360, collapsed: false }, 'the nearest: beside it, the gap apart');
-  assert.deepEqual(plain(layout.floats.glsl), at(0, 0, 'top-right'), 'what is kept does not change, so it comes back with room');
-  // A smaller area: it follows its corner. 範圍變小：跟著它的角走。
-  layout = tree.floatOut(tree.popOut(fresh(), 'appearance', homes), 'glsl', at(10, 20, 'bottom-left', 300, 200));
-  assert.deepEqual(plain(tree.floatRects(layout, 1000, 600, 8, 28).glsl), { x: 10, y: 380, width: 300, height: 200, collapsed: false });
-  assert.deepEqual(plain(tree.floatRects(layout, 700, 400, 8, 28).glsl), { x: 10, y: 180, width: 300, height: 200, collapsed: false });
-  // No free spot at its size: at its least; still none: where it is kept. 原大小沒有空位：用最小尺寸；還是沒有：留在記的位置。
-  layout = tree.floatOut(tree.floatOut(fresh(), 'glsl', at(0, 0, 'top-left', 600, 400)), 'sources', at(0, 0, 'top-left', 600, 400));
-  rects = tree.floatRects(layout, 900, 400, 8, 28);
-  assert.deepEqual(plain(rects.sources), { x: 608, y: 0, width: 280, height: 160, collapsed: false }, 'at its least, beside');
-  rects = tree.floatRects(layout, 700, 400, 8, 28);
-  assert.equal(rects.sources.x, 0, 'no room even so: where it is kept');
-  assert.equal(tree.floatRects(layout, 1000, 100, 8, 28).glsl.height, 28, 'too low: the title only');
+  // The human's case (2026-10-12): two side by side, each on its own corner; a narrower window. 人類的情況：並排的兩個各跟各的角；視窗變窄。
+  layout = tree.floatOut(tree.floatOut(fresh(), 'sources', at(100, 40, 'top-left', 300, 250)), 'glsl', at(100, 40, 'top-right', 300, 250));
+  layout = tree.floatOut(layout, 'addNode', at(100, 298, 'top-left', 300, 250));
+  rects = tree.floatRects(layout, 684, 800, 8, 28);
+  assert.deepEqual(plain(rects.glsl), { x: 304, y: 40, width: 280, height: 250, collapsed: false }, 'it gives way down to its least, then overlaps for now');
+  assert.deepEqual(plain(rects.addNode), { x: 100, y: 298, width: 300, height: 250, collapsed: false }, 'nobody else moves (no chain of jumps)');
+  assert.deepEqual(plain(layout.floats.glsl), at(100, 40, 'top-right', 300, 250), 'what is kept does not change');
+  // Kept as a group, they move together and shrink together. 依組記位置：一起走、一起縮。
+  const together = tree.placeFloats(layout, tree.anchored(tree.floatRects(layout, 808, 800, 8, 28), layout, 808, 800, 8));
+  assert.deepEqual([together.floats.sources.corner, together.floats.glsl.corner], ['top-right', 'top-right'], 'one corner for the pair');
+  rects = tree.floatRects(together, 684, 800, 8, 28);
+  assert.deepEqual([rects.sources.x, rects.sources.width, rects.glsl.x, rects.glsl.width], [0, 280, 288, 296], 'the pair shrinks, still a gap apart');
+  // Too big for the area: cut, the corner side kept. 比範圍大：切掉，保留跟著的那一邊。
+  assert.deepEqual(plain(tree.boxOf(at(0, 0, 'top-right', 900, 300), 600, 600, 28)), { x: 0, y: 0, width: 600, height: 300, collapsed: false });
+  assert.equal(tree.floatRects(layout, 1000, 100, 8, 28).sources.height, 28, 'too low: the title only');
+});
+
+test('called up again where it was kept is taken: the nearest free spot (rule 1); panels sitting together form groups', () => {
+  const other = { x: 0, y: 0, width: 320, height: 360 };
+  assert.equal(tree.callUp(at(0, 0), [{ x: 500, y: 0, width: 100, height: 100 }], 1000, 600, 8, 28), null, 'free there: stays');
+  assert.deepEqual(plain(tree.callUp(at(0, 0), [other], 1000, 600, 8, 28)), at(328, 0), 'taken: beside it');
+  assert.equal(tree.callUp(at(0, 0, 'top-left', 600, 600), [{ x: 0, y: 0, width: 600, height: 600 }], 600, 600, 8, 28), null, 'nowhere: where it was');
+  const rects = { a: { x: 0, y: 0, width: 100, height: 100 }, b: { x: 108, y: 50, width: 100, height: 100 }, c: { x: 108, y: 158, width: 50, height: 50 },
+    d: { x: 400, y: 0, width: 100, height: 100 }, e: { x: 0, y: 108, width: 50, height: 50 } };
+  assert.deepEqual(plain(tree.groupsOf(rects, 8)), [['a', 'b', 'c', 'e'], ['d']], 'chains of panels a gap apart; d stands alone');
 });
 
 test('a free place follows its nearest corner; collapsed, it keeps its open height', () => {
