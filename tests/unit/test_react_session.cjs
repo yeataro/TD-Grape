@@ -1778,3 +1778,17 @@ test('component names follow legacy: only a node whose own type is a vector; the
   session.setComponentNames(vec, 'xyzw');
   assert.equal('componentNames' in session.snapshot().projection.nodes.find(n => n.id === vec).data.authored.ui, false, 'back to the default: nothing kept');
 });
+
+test('trial: any node with names to choose, made from a wire, takes the names of the node at the other end (Refactor.85.2)', t => {
+  const { session } = open(t);
+  session.addNode({ nodeType: 'sgrape.builtin.vec3', params: {} }, { x: 0, y: 0 });
+  const vec = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.vec3').id;
+  session.setComponentNames(vec, 'rgba');
+  const before = new Set(session.snapshot().projection.nodes.map(n => n.id));
+  const fit = session.wireFit('sgrape.builtin.add:', { nodeType: 'sgrape.builtin.add', params: {} }, { node: vec, port: 'out', side: 'output' });
+  assert.ok(fit, 'Add takes a vec3 wire');
+  session.addNode({ nodeType: 'sgrape.builtin.add', params: {} }, { x: 300, y: 0 }, { end: { node: vec, port: 'out', side: 'output' }, port: fit.port, configure: fit.configure });
+  const made = session.snapshot().projection.nodes.find(n => !before.has(n.id));
+  assert.equal(made.data.authored.nodeType, 'sgrape.builtin.add');
+  assert.equal(made.data.componentStyle, 'rgba', 'Add (vec3) takes RGBA from the node it was dragged from');
+});

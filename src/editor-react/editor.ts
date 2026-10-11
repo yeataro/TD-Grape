@@ -145,6 +145,22 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
 /** What dropping a wire on an input would change (Refactor.57, 76.16). 線放在某個輸入上會改變什麼。 */
 export type WirePreview = { node: string; port: string; type: string; merged: string[]; replaced: string[] };
 
+/** How a node names its vector components, and how many it has; null when its own type is not a vector (Refactor.85; legacy
+ * inspector.js:1358: the node's type, or its source's): a node whose names are fixed by its kind (Split RGBA, Compose RGBA, TD
+ * values) has no choice. Inputs and outputs alike (human 2026-10-11: input components show here, legacy's did not). One rule for
+ * the Settings tab and for a node made from a wire. 節點怎麼稱呼向量分量、有幾個分量；自己的型別不是向量時是 null（R.85；照舊產品：
+ * 節點的型別，或它引用的來源的型別）：名稱由種類寫死的節點（Split RGBA、Compose RGBA、TD 內建值）沒有選擇。輸入輸出都適用（人類 10-11：
+ * 這裡看得到輸入的分量，舊產品看不到）。設定分頁與拉線新增用同一條規則。 */
+function namesOf(net: Network, id: string, declarations: readonly Declaration[]): { style: ComponentStyle; count: number } | null {
+  const node = net.node(id), module = node.definition;
+  if (!node.data || !module || module.componentNamesFixed) return null;
+  // Its own type: the one chosen, else its source's, else what it gives (a fixed vec3 value). 自己的型別：選的、否則來源的、否則輸出的（固定的 vec3 值）。
+  const source = module.referencedDeclaration?.(node.data);
+  const type = String(node.data.params.type ?? declarations.find(d => d.id === source)?.type ?? node.outputs[0]?.type ?? '');
+  const count = core.values.types.includes(type) ? core.values.count(type) : 0;
+  return count > 1 ? { style: core.componentStyle(module, node.data, net.context), count } : null;
+}
+
 export class Editor {
   private document: GraphDocument;
   private state: EditorState;
@@ -434,21 +450,8 @@ export class Editor {
       net.node(id).update({ name: core.freeName(name, taken) });
     });
   };
-  /** How a node names its vector components, and how many it has; null when its own type is not a vector (Refactor.85; legacy
-   * inspector.js:1358: the node's type, or its source's): a node whose names are fixed by its kind (Split RGBA, Compose RGBA) has
-   * no choice. Inputs and outputs alike (human 2026-10-11: input components show here, legacy's did not).
-   * 節點怎麼稱呼向量分量、有幾個分量；自己的型別不是向量時是 null（R.85；照舊產品：節點的型別，或它引用的來源的型別）：名稱由種類寫死的節點
-   * （Split RGBA、Compose RGBA）沒有選擇。輸入輸出都適用（人類 10-11：這裡看得到輸入的分量，舊產品看不到）。 */
-  componentNamesOf = (id: string): { style: ComponentStyle; count: number } | null => {
-    const net = this.document.networks.get('pixel')!, node = net.node(id), module = node.definition;
-    if (!node.data || !module) return null;
-    if (module.componentNamesFixed) return null;
-    // Its own type: the one chosen, else its source's, else what it gives (a fixed vec3 value). 自己的型別：選的、否則來源的、否則輸出的（固定的 vec3 值）。
-    const source = module.referencedDeclaration?.(node.data);
-    const type = String(node.data.params.type ?? this.document.document.declarations.find(d => d.id === source)?.type ?? node.outputs[0]?.type ?? '');
-    const count = core.values.types.includes(type) ? core.values.count(type) : 0;
-    return count > 1 ? { style: core.componentStyle(module, node.data, net.context), count } : null;
-  };
+  /** A node's component names and count, or null (see namesOf). 節點的分量名稱與分量數，或 null（見 namesOf）。 */
+  componentNamesOf = (id: string) => namesOf(this.document.networks.get('pixel')!, id, this.document.document.declarations);
   /** Name a node's vector components (Refactor.85; legacy inspector.js:1358): appearance only, kept in the graph, one Undo; the
    * node's own default is kept as nothing, so the graph only records a choice. 設定節點的分量名稱（R.85；照舊產品）：只是外觀、存在
    * 圖裡、一次 Undo；選回節點自己的預設就不記，圖裡只記真正的選擇。 */
@@ -485,11 +488,16 @@ export class Editor {
         if (old.length) net.disconnectAll(old);
         net.connect(net.node(id).port('output', port), net.node(end.node).port('input', end.port), core.values.policy);
       }
-      // A vector node made from a wire takes the component names of the node at the other end, in the same step
-      // (Refactor.59; legacy graph_ui.js:2346). 由拉線新增的向量節點沿用另一端節點的分量名稱樣式，同一步完成。
+      // A node made from a wire takes the component names of the node at the other end, in the same step (Refactor.59; legacy
+      // graph_ui.js:2346 did it for vector nodes). Trial (Refactor.85.2, human 2026-10-11: try it): every node that has names to
+      // choose, by the same rule as the Settings tab, not only vector nodes; the default is not stored.
+      // 由拉線新增的節點沿用另一端節點的分量名稱，同一步完成（R.59；舊產品只給向量節點）。試驗（R.85.2，人類：試試看）：凡是有分量名稱可選的節點
+      // 都沿用，規則和設定分頁同一條，不只向量節點；預設不記。
       const made = net.node(id), peer = net.node(end.node);
-      if (made.definition?.inheritsComponentNames && peer.data)
-        made.update({ ui: { ...made.data!.ui, componentNames: core.componentStyle(peer.definition, peer.data, net.context) } });
+      if (made.data && peer.data && namesOf(net, id, this.document.document.declarations)) {
+        const style = core.componentStyle(peer.definition, peer.data, net.context), { componentNames: _, ...ui } = made.data.ui ?? {};
+        made.update({ ui: style === core.componentStyle(made.definition, { ...made.data, ui }, net.context) ? ui : { ...ui, componentNames: style } });
+      }
     });
   /** Where a dropped wire would go on a new node made from this choice (Refactor.77, design-interview Q37 1-5 supplement):
    * looked up in the table the build wrote with the real rules; choices only the document knows (declared sources,
