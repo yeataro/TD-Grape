@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
-import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MenuItem } from './DropdownMenu';
@@ -10,7 +9,6 @@ import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, com
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
-import { frameNodes } from './viewport';
 import { CalmGate } from './calm';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
@@ -157,20 +155,19 @@ export function LocationBar({ layout, file, target, onCramped, onWidth }: {
 
 export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; frameGlide: boolean; errorNodes: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
 
-/** The network's own toolbar, floating over its top edge (human 2026-10-09): stages on the left; on the right
- * history, the selection's actions (until the floating selection toolbar exists), box select, canvas
- * preferences and the GLSL panel. Only what exists is shown. 網路區自己的功能列，浮在上緣：左邊 Stage；右邊歷史、
- * 選取的動作（浮動選取工具列做好之前放這裡）、框選、畫布偏好、GLSL 面板。只放現在有的。
+/** The network's own toolbar, floating over its top edge (human 2026-10-09): stages on the left; on the right history, box
+ * select, Snap and the GLSL panel. The selection's actions are in the floating toolbar (FloatingToolbar.tsx, Refactor.92, human
+ * 2026-10-12: all but what legacy kept up here, and our Snap). 網路區自己的功能列，浮在上緣：左邊 Stage；右邊歷史、框選、Snap、GLSL
+ * 面板。對選取的動作在浮動工具列（R.92，人類 10-12：除了舊產品留在上面的與我們的 Snap，一律併入浮動工具列）。
  * As it narrows, whole groups move into a "more" menu, as the legacy toolbar did (legacy selection_ui.js:463): GLSL first,
- * then Snap, the selection's actions, box select, and Undo / Redo last (human 2026-10-10); the stages never. In the menu a
- * tool is the same action, a toggle shown ticked. 變窄時整組搬進「更多」選單，照舊產品：先 GLSL，再 Snap、選取的動作、框選，
- * Undo／Redo 最後（人類 10-10）；Stage 永遠不收。選單裡是同樣的動作，開關會打勾。 */
+ * then box select with Snap, and Undo / Redo last (human 2026-10-10, 10-11); the stages never. In the menu a tool is the same
+ * action, a toggle shown ticked. 變窄時整組搬進「更多」選單，照舊產品：先 GLSL，再框選與 Snap，Undo／Redo 最後（人類 10-10、10-11）；
+ * Stage 永遠不收。選單裡是同樣的動作，開關會打勾。 */
 type Tool = { key: string; icon?: IconName; label: Message; hint?: Message; disabled?: boolean; pressed?: boolean; mode?: boolean; danger?: boolean; select(): void };
 export function NetworkBar({ session, prefs, onGlsl }: {
   session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
-  const state = useEditorState(session), flow = useReactFlow(), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
-  const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
+  const state = useEditorState(session), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
   const stages = session?.stageNames() ?? [];
   // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
   // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框
@@ -179,11 +176,6 @@ export function NetworkBar({ session, prefs, onGlsl }: {
     { order: 4, tools: [
       { key: 'undo', icon: 'undo', label: tr('toolbar.undo', 'Undo'), disabled: !state?.undo, select: () => session!.history(false) },
       { key: 'redo', icon: 'redo', label: tr('toolbar.redo', 'Redo'), disabled: !state?.redo, select: () => session!.history(true) }] },
-    // React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。
-    { order: 3, tools: [
-      { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), disabled: !nodes.length && !edges.length,
-        select: () => void flow.deleteElements({ nodes, edges }) },
-      { key: 'frame', icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), disabled: !nodes.length, select: () => frameNodes(flow, nodes.map(node => node.id)) }] },
     // Box select and Snap act on the canvas, so they are one group and fold together (Refactor.83.7, human 2026-10-11).
     // Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
     // 框選與 Snap 都是畫布功能，同一組、一起收（R.83.7，人類）。Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。

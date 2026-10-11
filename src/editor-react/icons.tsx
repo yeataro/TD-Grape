@@ -15,6 +15,15 @@ const paths = {
   redo: <path d="m15 5 5 5-5 5m5-5h-9a6 6 0 0 0-6 6v3" />,
   delete: <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,
   fitSelection: <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 8h8v8H8z" />,
+  // The floating toolbar's (Refactor.92). Make subgraph: four corner arrows pointing in (human 2026-10-11). 浮動工具列的（R.92）。
+  // 轉成子圖：四角箭頭往內（人類 10-11）。
+  copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></>,
+  paste: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3" /></>,
+  collapseCards: <path d="m7 11 5-5 5 5M7 18l5-5 5 5" />,
+  expandCards: <path d="m7 6 5 5 5-5M7 13l5 5 5-5" />,
+  group: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /><rect x="7" y="12" width="4" height="4" /><rect x="13" y="12" width="4" height="4" /></>,
+  subgraph: <path d="m3 3 6 6M9 4v5H4M21 3l-6 6M15 4v5h5M3 21l6-6M4 15h5v5M21 21l-6-6M20 15h-5v5" />,
+  arrange: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
   boxSelect: <rect x="4" y="4" width="16" height="16" rx="1" strokeDasharray="3 3" />,
   menu: <><circle cx="12" cy="5" r="1.6" className="icon-dot" /><circle cx="12" cy="12" r="1.6" className="icon-dot" /><circle cx="12" cy="19" r="1.6" className="icon-dot" /></>,
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,

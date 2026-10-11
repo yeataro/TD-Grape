@@ -17,6 +17,7 @@ import { Editor as EditorSession, type EditorState, type WireEnd, type WireFit }
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
+import { FloatingToolbar } from './FloatingToolbar';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
@@ -264,6 +265,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false}><ZoomReadout /></Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       <SelectionFrame nodes={projection.nodes} />
+      <FloatingToolbar nodes={projection.nodes} edges={edges} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
