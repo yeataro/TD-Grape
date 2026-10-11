@@ -89,7 +89,7 @@ test('Swizzle: the output menu says how many components, each menu picks one',()
  const doc=new GraphDocument(graph,registry),net=()=>doc.networks.get('pixel');
  const view=id=>net().node(id).definition.presentation(net().node(id).data,net().context);
  const menus=id=>view(id).controls[0].children;
- assert.deepEqual(view('plain').selector,{value:'vec3',command:'output',label:'vector.outputType',options:['float','vec2','vec3','vec4']});
+ assert.deepEqual(view('plain').selector,{value:'vec3',command:'output',options:['float','vec2','vec3','vec4']});
  assert.equal(view('plain').typeOf,'input','the input is its own row');
  assert.deepEqual(menus('plain').map(c=>[c.label,c.component,c.value]),[['X',0,'w'],['Y',1,'z'],['Z',2,'x']]);
  assert.deepEqual(menus('plain')[0].options.map(o=>o.label),['X','Y','Z','W'],'no "—"');

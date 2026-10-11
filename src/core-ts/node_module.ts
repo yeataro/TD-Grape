@@ -60,10 +60,12 @@ export interface NodePresentation {
    * only shows the output and the menu is a row in the body. 型別選單選的是哪一端（R.81.1，Q73 規則二）：預設 output（節點產生什麼，
    * 在標題列）；輸出由別的東西決定時是 input（邏輯類 bool、Swizzle 的分量、Split），標題列只顯示輸出，選單是本體的一列。 */
   typeOf?:'input'|'output';
-  selector?:{value:string;options:readonly string[];command:string;label:string};
+  /** The module's own output menu. No name: the card shows it in the title, the panel names the row "Output type" (Refactor.81.1).
+   * 模組自己的輸出選單。不帶名稱：卡片放在標題列，面板那一列叫「輸出型別」（R.81.1）。 */
+  selector?:{value:string;options:readonly string[];command:string};
   /** The module's own input menu, the input's counterpart of `selector` (Refactor.81.4): drawn as the shared "Input type" row.
    * 模組自己的輸入選單，對應輸出的 selector（R.81.4）：畫成共用的「輸入型別」那一列。 */
-  inputSelector?:{value:string;options:readonly string[];command:string;label:string};
+  inputSelector?:{value:string;options:readonly string[];command:string};
   inlineControls?:readonly NodeControl[];
   value?:{value:Value;type:string;componentCommand:string;valueCommand:string;names:string;color?:boolean;expandable?:boolean};
   controls?:readonly NodeControl[];

@@ -50,7 +50,7 @@ export default typedNode(catalog, {
   ports: t => [input('value', t), output('out', values.shaped('bool', values.count(t)))],
   presentation: n => ({selector: {
     value: outputs[inputs.indexOf(String(n.params.type))]!, options: outputs,
-    command: 'output', label: 'vector.outputType'
+    command: 'output'
   }}),
   edit: (n, command, data) => {
     const index = outputs.indexOf(String(payload(data)));

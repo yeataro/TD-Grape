@@ -170,17 +170,17 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
     {visible.map(({ child, index }, n) => {
       const before = visible[n - 1], after = visible[n + 1];
       // A collapsed part has no height to drag, so no handle touches it (Refactor.80). 收起的一格沒有高度可拖，旁邊不放把手（R.80）。
-      const folded = (part?: { child: Pane }) => part?.child.kind === 'tabs' && !!part.child.collapsed;
+      const folded = (part?: Pane) => part?.kind === 'tabs' && !!part.collapsed, shut = folded(child);
       // In a split with the canvas, a handle belongs to the pixel part, on its edge towards the canvas; elsewhere it sits
       // between two parts on the later one's leading edge (R.53). 含畫布時，把手屬於像素那一格、在朝畫布的邊上；其他在兩格之間、後一格的前緣。
-      const lead = before && !folded({ child }) && !(holdsCanvas ? false : folded(before)) && (holdsCanvas ? index > centre && <ResizeHandle axis={axis} label={label}
+      const lead = before && !shut && (holdsCanvas || !folded(before.child)) && (holdsCanvas ? index > centre && <ResizeHandle axis={axis} label={label}
           onStart={() => startPixels(index)} onMove={delta => movePixels(index, -delta)} />
         : <ResizeHandle axis={axis} label={label} onStart={startShare} onMove={delta => moveShare(before.index, index, delta)} />);
-      const trail = after && holdsCanvas && index < centre && !folded({ child }) && <ResizeHandle axis={axis} edge="trail" label={label}
+      const trail = after && holdsCanvas && index < centre && !shut && <ResizeHandle axis={axis} edge="trail" label={label}
         onStart={() => startPixels(index)} onMove={delta => movePixels(index, delta)} />;
       // Next to the canvas, parts give way before the canvas goes below its minimum (one side on a narrow screen).
       // 畫布旁的格子先讓，畫布不會小於最小值（窄畫面上只開一側時）。
-      const flex: CSSProperties = folded({ child }) ? { flex: '0 0 auto' } : !holdsCanvas ? { flex: `${pane.sizes[index] ?? 1} 1 0` } : index !== centre ? { flex: `0 1 ${pane.sizes[index]}px` }
+      const flex: CSSProperties = shut ? { flex: '0 0 auto' } : !holdsCanvas ? { flex: `${pane.sizes[index] ?? 1} 1 0` } : index !== centre ? { flex: `0 1 ${pane.sizes[index]}px` }
         : { flex: '1 0 0', [row ? 'minWidth' : 'minHeight']: row ? tree.CANVAS_MIN_WIDTH : tree.CANVAS_MIN_HEIGHT };
       return <div key={keyOf(child)} className={zone(index)} style={flex} data-pane={[...path, index].join('.')} data-kind={child.kind}>
         {lead}<PaneView pane={child} path={[...path, index]} context={context} />{trail}

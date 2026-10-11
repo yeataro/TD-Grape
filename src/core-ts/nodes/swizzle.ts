@@ -83,7 +83,7 @@ export default typedNode(catalog, {
       // The output and the input are two things (Refactor.81.3, human 2026-10-11: "output 跟 input 不是一件事"): the title chooses
       // the output, how many components it has; the input type is a row of its own (typeOf 'input') and follows a wire (81.2).
       // 輸出和輸入是兩件事（R.81.3，人類）：標題列選輸出、也就是有幾個分量；輸入型別是自己的一列（typeOf 'input'），接線時跟著線（81.2）。
-      selector: {value: values.shaped(values.family(t), selected.length), command: 'output', label: 'vector.outputType',
+      selector: {value: values.shaped(values.family(t), selected.length), command: 'output',
         options: [1, 2, 3, 4].map(count => values.shaped(values.family(t), count))},
       // Each menu is named by the output component it fills, in the node's letters and that component's colour (Refactor.80.3,
       // human 2026-10-11: not 1, 2…); it only picks which input component goes there, the title says how many (Refactor.81.3).

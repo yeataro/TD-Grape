@@ -734,7 +734,10 @@ span.image-label:hover { background: var(--image-label); }
 /* A wire that does not count, one look (Refactor.78, human 2026-10-11): a ghost wire, and a wire that dropping here would
    replace (Refactor.57). Over the wire's own colour, as hovered and selected wires are, hence !important.
    不算數的線，同一個樣子（R.78，人類）：Ghost 線，以及放開後會被換掉的線（R.57）。蓋過線自己的顏色，和滑過、選中一樣，所以要 !important。 */
-.react-flow__edge:is(.react-flow__edge-ghost, .replacing):not(:hover, .selected) .react-flow__edge-path { stroke: var(--wire-off) !important; stroke-dasharray: var(--wire-off-dash); }
+/* The dash stays when hovered or selected; only the grey gives way to their colour (human 2026-10-11: a selected ghost wire
+   turned solid). 滑過或選取時虛線留著，只有灰色讓給它們的顏色（人類：選取的 Ghost 線變成實心）。 */
+.react-flow__edge:is(.react-flow__edge-ghost, .replacing) .react-flow__edge-path { stroke-dasharray: var(--wire-off-dash); }
+.react-flow__edge:is(.react-flow__edge-ghost, .replacing):not(:hover, .selected) .react-flow__edge-path { stroke: var(--wire-off) !important; }
 /* The wire being dragged: dashed, solid over a port it can connect to (Refactor.78; legacy style.css:201, 306).
    拖曳中的線：虛線，停在接得上的接孔上變實線（R.78；照舊產品）。 */
 .react-flow__connectionline .wire-drag { stroke-width: var(--wire-width-drag); stroke-dasharray: 5 4; }

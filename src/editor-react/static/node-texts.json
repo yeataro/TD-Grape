@@ -1,8 +1,6 @@
 {
   "booleanOperation.operator": "Operation",
   "compare.operator": "Comparison",
-  "convert.fromType": "Input type",
-  "convert.toType": "Output type",
   "function.limit": "A Shader supports up to 64 Subgraph definitions; local edits also retain source snapshots.",
   "inputs.preset.absFrame": "Absolute Frame · process frame",
   "inputs.preset.absTime": "Absolute Time · process seconds",
@@ -37,6 +35,5 @@
   "sources.shaderInfo": "Shader Info",
   "sources.textures": "Texture Inputs",
   "sources.time": "Time",
-  "vector.componentOrder": "Component order",
-  "vector.outputType": "Output type"
+  "vector.componentOrder": "Component order"
 }

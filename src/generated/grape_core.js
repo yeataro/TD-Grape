@@ -2591,24 +2591,23 @@ const control = (operator) => ({
     kind: 'select', key: 'operator', label: 'compare.operator', command: 'operator', value: operator,
     options: operators.map(value => ({ value, label: 'A ' + value + ' B', literal: true }))
 });
-// A logic node, drawn in the logic group (legacy graph_ui.js:142). 邏輯節點，畫成邏輯色組（照舊產品）。
-exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
-        types: ['float', 'int', 'uint'],
-        ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', 'bool')],
-        validate: n => { var _a; if (!operators.includes(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>')))
-            throw Error('Invalid comparison operator'); },
-        edit: (n, command, data) => {
-            const value = String((0, node_sdk_1.payload)(data));
-            if (command !== 'operator' || !operators.includes(value))
-                throw Error('Invalid comparison operator');
-            n.params.operator = value;
-            return n;
-        },
-        // One operator menu, at the top of the body as legacy (human 2026-10-09: it was shown twice).
-        // 一個運算選單，放在本體開頭，同舊產品（人類：原本出現兩次）。
-        presentation: n => { var _a; return ({ typeOf: 'input', inlineControls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))] }); },
-        emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
-    }), colorGroup: 'logic' };
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['float', 'int', 'uint'],
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', 'bool')],
+    validate: n => { var _a; if (!operators.includes(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>')))
+        throw Error('Invalid comparison operator'); },
+    edit: (n, command, data) => {
+        const value = String((0, node_sdk_1.payload)(data));
+        if (command !== 'operator' || !operators.includes(value))
+            throw Error('Invalid comparison operator');
+        n.params.operator = value;
+        return n;
+    },
+    // One operator menu, at the top of the body as legacy (human 2026-10-09: it was shown twice).
+    // 一個運算選單，放在本體開頭，同舊產品（人類：原本出現兩次）。
+    presentation: n => { var _a; return ({ typeOf: 'input', inlineControls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))] }); },
+    emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
+});
 
 },
 "nodes/convert":function(require,module,exports){
@@ -2680,9 +2679,9 @@ const conversion = {
     },
     validate: () => { },
     presentation: n => ({
-        selector: { value: String(n.params.toType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(String(n.params.fromType), t)), command: 'toType', label: 'convert.toType' },
+        selector: { value: String(n.params.toType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(String(n.params.fromType), t)), command: 'toType' },
         // The input as the shared "Input type" row, where every node has it (Refactor.81.4). 輸入是共用的「輸入型別」那一列，和每個節點同位置（R.81.4）。
-        inputSelector: { value: String(n.params.fromType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(t, String(n.params.toType))), command: 'fromType', label: 'convert.fromType' }
+        inputSelector: { value: String(n.params.fromType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(t, String(n.params.toType))), command: 'fromType' }
     }),
     edit: (n, command, data) => {
         if (!['fromType', 'toType'].includes(command))
@@ -3216,12 +3215,11 @@ const catalog = {
         ]
     }
 };
-// A logic node, drawn in the logic group (legacy graph_ui.js:142). 邏輯節點，畫成邏輯色組（照舊產品）。
-exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
-        types: node_sdk_1.values.types,
-        ports: t => [(0, node_sdk_1.input)('condition', 'bool', false), (0, node_sdk_1.input)('true', t, 1), (0, node_sdk_1.input)('false', t), (0, node_sdk_1.output)('out', t)],
-        emit: (_n, c) => ({ outputs: { out: '(' + c.input('condition') + ' ? ' + c.input('true') + ' : ' + c.input('false') + ')' } })
-    }), colorGroup: 'logic' };
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.types,
+    ports: t => [(0, node_sdk_1.input)('condition', 'bool', false), (0, node_sdk_1.input)('true', t, 1), (0, node_sdk_1.input)('false', t), (0, node_sdk_1.output)('out', t)],
+    emit: (_n, c) => ({ outputs: { out: '(' + c.input('condition') + ' ? ' + c.input('true') + ' : ' + c.input('false') + ')' } })
+});
 
 },
 "nodes/isinf":function(require,module,exports){
@@ -3277,7 +3275,7 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
     presentation: n => ({ selector: {
             value: outputs[inputs.indexOf(String(n.params.type))], options: outputs,
-            command: 'output', label: 'vector.outputType'
+            command: 'output'
         } }),
     edit: (n, command, data) => {
         var _a;
@@ -3347,7 +3345,7 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
     presentation: n => ({ selector: {
             value: outputs[inputs.indexOf(String(n.params.type))], options: outputs,
-            command: 'output', label: 'vector.outputType'
+            command: 'output'
         } }),
     edit: (n, command, data) => {
         var _a;
@@ -4826,7 +4824,7 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
             // The output and the input are two things (Refactor.81.3, human 2026-10-11: "output 跟 input 不是一件事"): the title chooses
             // the output, how many components it has; the input type is a row of its own (typeOf 'input') and follows a wire (81.2).
             // 輸出和輸入是兩件事（R.81.3，人類）：標題列選輸出、也就是有幾個分量；輸入型別是自己的一列（typeOf 'input'），接線時跟著線（81.2）。
-            selector: { value: node_sdk_1.values.shaped(node_sdk_1.values.family(t), selected.length), command: 'output', label: 'vector.outputType',
+            selector: { value: node_sdk_1.values.shaped(node_sdk_1.values.family(t), selected.length), command: 'output',
                 options: [1, 2, 3, 4].map(count => node_sdk_1.values.shaped(node_sdk_1.values.family(t), count)) },
             // Each menu is named by the output component it fills, in the node's letters and that component's colour (Refactor.80.3,
             // human 2026-10-11: not 1, 2…); it only picks which input component goes there, the title says how many (Refactor.81.3).
