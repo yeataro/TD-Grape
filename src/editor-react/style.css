@@ -341,11 +341,16 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    選單）用來拖，下面是可捲動的內容。調大小的邊一半在外面，所以面板本身不裁切。 */
 .canvas-host { position: relative; }
 .floating-area { position: absolute; z-index: 5; pointer-events: none; }
-/* The rows no panel floats into, shown only while a panel is dragged (Refactor.91, a trial): grey diagonal lines, rounded, quiet; under
-   the toolbar and the canvas controls. 面板不會浮進去的那兩排，只在拖面板時顯示（R.91，試做）：灰色斜線、圓角、不搶眼；在工具列與畫布控制項下面。 */
-.float-zone { display: none; position: absolute; left: 0; right: 0; border-radius: 8px; pointer-events: none;
+/* The rows no panel floats into, shown only while a panel is dragged (Refactor.91, a trial): grey diagonal lines, rounded, quiet;
+   beneath what sits in them (Refactor.91.1, human 2026-10-12: the toolbar, the stages and the canvas controls on top): the toolbar's
+   row draws them as its own backdrop; the controls' row inside React Flow, under its panels (its ::after is the canvas's inner shadow). 面板不會浮進去的那兩排，只在拖面板時顯示
+   （R.91，試做）：灰色斜線、圓角、不搶眼；墊在那兩排的東西下面（R.91.1，人類 10-12：工具列、Stage、畫布控制項在上面）：工具列那一排畫成它自己的
+   底；控制項那一排畫在 React Flow 裡、它的面板下面。 */
+.network-bar-slot { position: relative; isolation: isolate; }
+:root.moving-panel .network-bar-slot::before, :root.moving-panel .react-flow::before { content: ""; position: absolute; border-radius: 8px; pointer-events: none;
   background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text-muted) 14%, transparent) 0 2px, transparent 2px 9px); }
-:root.moving-panel .float-zone { display: block; }
+:root.moving-panel .network-bar-slot::before { inset: 0; z-index: -1; }
+:root.moving-panel .react-flow::before { left: var(--float-gap); right: var(--float-gap); bottom: var(--float-gap); height: var(--icon-button); z-index: 4; }
 .floating-panel { position: absolute; display: flex; flex-direction: column; min-width: 0; pointer-events: auto;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-zone);
   /* Its glass is its own, darker than a menu's; solid, a pane's colour (Refactor.89.3–89.4, human 2026-10-12).
