@@ -505,8 +505,14 @@ export function FloatingPanels({ layout, panels, host }: { layout: Layout; panel
   const [measured, setMeasured] = useState<Record<string, number>>({});
   if (!area) return null;
   const own = Object.keys(layout.floating).filter(id => panels[id]?.frame === 'own');
+  // Collapsed, its head is its own (a node card's head, taller than a panel title), so it counts as open at its measured height
+  // (Refactor.86.1, human 2026-10-11: the collapsed Parameter panel had the wrong height). 收起時它的頭是自己的（節點卡的頭，比面板標題
+  // 列高），所以照量到的高度、當成沒收起來算（R.86.1，人類 10-11：浮動參數面板收起時高度不對）。
   const sized = (height: (id: string) => number): LayoutData => ({ ...layout,
-    floats: { ...layout.floats, ...Object.fromEntries(own.map(id => [id, { ...layout.floats[id]!, height: height(id) }])) } });
+    floats: { ...layout.floats, ...Object.fromEntries(own.map(id => {
+      const { collapsed: _, ...open } = layout.floats[id]!;
+      return [id, { ...open, height: height(id) }];
+    })) } });
   const caps = tree.floatRects(sized(() => 1e6), area.width, area.height, area.gap, area.title);
   const rects = tree.floatRects(sized(id => Math.min(measured[id] ?? caps[id]?.height ?? 0, caps[id]?.height ?? 0)), area.width, area.height, area.gap, area.title);
   const measure = (id: string, height: number) => setMeasured(old => old[id] === height ? old : { ...old, [id]: height });
@@ -524,11 +530,12 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
   area: { width: number; height: number; gap: number; title: number }; cap?: number; measure(height: number): void }) {
   const drag = useContext(DragContext), place = layout.floats[id]!, top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
   const start = useRef({ width: 0, height: 0 });
-  // The panel above or below on the same side: the edge between them moves both. 同一邊上下的另一個面板：兩者之間的邊一起動。
   const title = say(view?.title ?? id), own = view?.frame === 'own';
-  const fold = <button type="button" className="icon-button pane-collapse" aria-expanded={!rect.collapsed}
-    aria-label={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
-    title={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+  // Collapsed: a panel with its own frame keeps its own head (see FloatingPanels). 收起：自己畫外殼的面板保留自己的頭（見 FloatingPanels）。
+  const shut = own ? !!place.collapsed : rect.collapsed;
+  const fold = <button type="button" className="icon-button pane-collapse" aria-expanded={!shut}
+    aria-label={say(shut ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+    title={say(shut ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
     onClick={() => layout.setFloat(id, { collapsed: !place.collapsed })}><Icon name="chevronDown" /></button>;
   const menu = <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} />;
   // A panel with its own frame (the Parameter panel's node card, Refactor.85) gets the triangle, the menu and close, and the
@@ -542,7 +549,7 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
   const popup = menuAt && <PanelMenuPopup title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} anchor={menuAt} onClose={closeMenu} />;
   // The edge that sizes its width, every floating panel alike (pushing the one across its row, R.84). 調寬度的邊，每個浮動面板都一樣
   // （推擠同一列對面的，R.84）。
-  const widthEdge = !rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
+  const widthEdge = !shut && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
     onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
     onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />;
   const frame = useRef<HTMLElement>(null);
@@ -555,9 +562,9 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
     watch.observe(element);
     return () => watch.disconnect();
   }, [own]);
-  if (own) return <section ref={frame} className={'floating-panel own-frame' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
+  if (own) return <section ref={frame} className={'floating-panel own-frame' + (shut ? ' collapsed' : '')} aria-label={title}
     style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
-    <FloatingContext.Provider value={{ collapsed: rect.collapsed, fold, controls: unfloat, drag: event => drag.current(event, id), openMenu }}>
+    <FloatingContext.Provider value={{ collapsed: shut, fold, controls: unfloat, drag: event => drag.current(event, id), openMenu }}>
       {view?.content}</FloatingContext.Provider>
     {popup}
     {widthEdge}
