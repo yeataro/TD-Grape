@@ -929,6 +929,41 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; border-top: 1px solid var(--border-node); }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.params-note { border-top: 0; } .params-note textarea { min-height: 6em; }
+.params-pad { padding: 8px var(--params-pad); }
+/* The Parameter panel's tabs (Refactor.85; legacy style.css:917): Parameters, Settings, Notes, the shown one underlined.
+   參數面板的分頁（R.85；照舊產品）：參數、設定、註記，顯示中的加底線。 */
+.params-tabs { display: flex; gap: 2px; padding: 0 var(--params-pad); border-bottom: 1px solid var(--border-node); flex-shrink: 0; }
+.params-tabs > button { padding: 5px 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none;
+  color: var(--text-muted); font-size: var(--font-md); }
+.params-tabs > button[aria-selected="true"] { color: var(--text-strong); border-bottom-color: var(--text-strong); }
+.params-settings { padding-block: 8px; }
+/* Floating, the node card is the panel (Refactor.85, human 2026-10-11): no panel frame; the card's own border and corners, a
+   shadow as anything floating; its head holds the triangle, the menu and close; the body scrolls. 浮動時節點卡就是面板（R.85，人類）：
+   沒有面板外框；用卡片自己的框與圓角、和其他浮動物一樣有陰影；頭上放三角形、選單與關閉；本體可捲動。 */
+.floating-panel.own-frame { border: 0; background: none; box-shadow: none; }
+.floating-panel.own-frame > .params-card { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+:root[data-shadow-layers="on"] .floating-panel.own-frame > .params-card { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
+/* As tall as its content; it shrinks and scrolls only when the panel reaches its limit (Refactor.85). 和內容一樣高；面板到上限時才縮、捲動（R.85）。 */
+.params-card.floating > .node-body, .params-card.floating > .params-note, .params-card.floating > .params-settings { flex: 0 1 auto; min-height: 0; overflow: auto; }
+/* Rows keep their height and start at the top however tall the panel is (human 2026-10-11: sizing on resize was awful).
+   列維持自己的高度、從上往下排，面板多高都一樣（人類 10-11：調大小時排版很可怕）。 */
+.params-card.floating > :is(.node-body, .params-settings) { align-content: start; }
+.params-card.floating .params-title { gap: 4px; padding-left: 4px; padding-right: 4px; cursor: grab; touch-action: none; }
+.params-card.floating .params-title :is(.pane-collapse, .panel-menu, .floating-close) { position: static; flex: none; height: var(--io-field); color: inherit; }
+.params-card.floating .params-title .pane-collapse .icon { width: 12px; height: 12px; }
+/* Floating, each input's port, a wire can be dropped on (Refactor.85; legacy style.css:905–910): the row's type colour, filled while
+   wired; lit while a wire is dragged. 浮動時每個輸入的接孔，可以把線放上來（R.85；照舊產品）：輸入型別的顏色，接著線時實心；拖線時亮起。 */
+.params-card.floating .params-grid { padding-left: calc(var(--params-pad) + 12px); }
+.params-card.floating .input-row { position: relative; }
+.port-row > .params-port { display: block; padding: 0; }
+.port-row > .params-port, .params-port { position: absolute; left: -18px; top: calc(var(--io-row) / 2 - var(--port-size) / 2); width: var(--port-size); height: var(--port-size);
+  flex: none; border-radius: 50%; border: 2px solid var(--port-color); background: var(--surface-node, transparent); }
+.params-port.wired { background: var(--port-color); }
+.params-port::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+.params-card.wiring .params-port { box-shadow: 0 0 0 2px color-mix(in srgb, var(--port-color) 35%, transparent); }
+.params-card.wiring .params-port:hover { background: var(--port-color); box-shadow: 0 0 0 4px color-mix(in srgb, var(--port-color) 45%, transparent); }
 .control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
 /* Buttons side by side are one group of equal widths (Controls in NodeCard.tsx, Refactor.80.3); on a card the group fills its line.
    相鄰的按鈕是一組、等寬（NodeCard.tsx 的 Controls，R.80.3）；卡片上一組佔滿那一行。 */

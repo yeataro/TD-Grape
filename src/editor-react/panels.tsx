@@ -22,7 +22,9 @@ export type PanelInput = { session: EditorSession | null; state: EditorState; ch
 /** `menu`: the panel's own menu, on its tab's corner while shown (Refactor.83). menu：面板自己的選單，顯示時在分頁右上角（R.83）。 */
 /** `corner`: it floats only in that corner, which no other panel may take (Refactor.84, human 2026-10-11: the Parameter panel
  * keeps the top right). corner：只浮在那一角、別的面板不能用（R.84，人類 10-11：參數面板佔右上角）。 */
-export type PanelRow = { title: Message; side: Side; first?: true; corner?: Corner; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
+/** `frame: 'own'`: floating, it draws its own frame and head (Refactor.85: the Parameter panel is a node card). frame：浮動時自己畫外殼與頭
+ * （R.85：參數面板是一張節點卡）。 */
+export type PanelRow = { title: Message; side: Side; first?: true; corner?: Corner; frame?: 'own'; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
 
 export const PANELS = {
   sources: { title: tr('sources.title', 'Shared Sources'), side: 'left', content: ({ session, state }) => session
@@ -37,7 +39,7 @@ export const PANELS = {
     ? <GlslPanel glsl={state.glsl} glslMap={state.glslMap} glslVariables={state.glslVariables} glslDeclarations={state.glslDeclarations} stuck={state.stuck} />
     : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p>, menu: glslMenu },
   // The Parameter panel (Refactor.76): the current node. 參數面板（R.76）：目前的節點。
-  params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, corner: 'top-right', content: ({ session, state }) => session
+  params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, corner: 'top-right', frame: 'own', content: ({ session, state }) => session
     ? <ParamsPanel state={state} />
     : <p className="hint">{say(tr('params.noGraph', 'Open a Grape OP to edit its nodes.'))}</p> },
   // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.

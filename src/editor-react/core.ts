@@ -28,7 +28,8 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   freeDeclarationName: typeof declarations.freeDeclarationName; freeLegacyName: typeof declarations.freeLegacyName; defaultTextures: typeof declarations.defaultTextures;
   uniformPresets: typeof presetTable.uniformPresets; commonSources: typeof commonTable.commonSources;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
-  componentStyle: typeof componentNames.componentStyle;
+  componentStyle: typeof componentNames.componentStyle; componentStyles: typeof componentNames.componentStyles;
+  componentLetters: typeof componentNames.componentLetters;
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
 } & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>;
 export type { TdValue } from '../core-ts/td_values';

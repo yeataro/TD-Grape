@@ -4,6 +4,9 @@ import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node
 
 export type FlowNode = RFNode<{
   authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
+  /** How the node names vector components, inputs and outputs alike (Refactor.85, human 2026-10-11: we show input components,
+   * legacy did not). 節點怎麼稱呼向量分量，輸入輸出都用（R.85，人類 10-11：我們看得到輸入的分量，舊產品看不到）。 */
+  componentStyle?: string;
   /** connected: inputs with a wire; wired: outputs with at least one (port styles, Refactor.54.2). 接了線的輸入／輸出。 */
   inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; wired: string[]; ghost?: GhostKind;
   /** The declaration a reference node points to (its value is shown on the card, Refactor.55.2). 引用宣告節點指向的宣告。 */
@@ -41,7 +44,9 @@ export function project(document: GraphDocument, previous: Projection, contract:
   const network = document.networks.get('pixel')!;
   const delta = changes?.networks.find(item => item.id === 'pixel');
   const all = !changes || !!changes.global.length || !!changes.definitions.length || delta?.complete === false;
-  const dirty = new Set(delta?.nodes.filter(item => item.fields.some(key => key !== 'ui')).map(item => item.id));
+  // A move (ui x, y) redraws nothing but the position; any other change, in ui too (component names, Refactor.85), redraws the node.
+  // 移動（ui 的 x、y）只改位置；其他改變，包括 ui 裡的（分量名稱，R.85），重畫節點。
+  const dirty = new Set(delta?.nodes.filter(item => item.fields.some(key => key !== 'ui') || item.ui.some(key => key !== 'x' && key !== 'y')).map(item => item.id));
   for (const edge of delta?.edges ?? []) {
     if (edge.before) { dirty.add(edge.before.to[0]); dirty.add(edge.before.from[0]); }
     if (edge.after) { dirty.add(edge.after.to[0]); dirty.add(edge.after.from[0]); }
@@ -83,6 +88,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
           .filter((type: string | null): type is string => !!type))] : [];
       const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module, authored, document),
+        componentStyle: core.componentStyle(module, authored, network.context),
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [],

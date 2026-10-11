@@ -203,6 +203,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         if (reconnecting.current) return;
         // A warning, not an error: nothing broke, the wire just does not fit (Refactor.75.8, human 2026-10-11: red was too much).
         // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。
+        // Released on an input of the floating Parameter panel: wired to that input of the node it shows (Refactor.85; legacy
+        // inspector.js:1571). 放在浮動參數面板的輸入接孔上：接到它顯示的那個節點的那個輸入（R.85；照舊產品）。
+        const released = 'changedTouches' in event ? event.changedTouches[0]! : event;
+        const panelPort = (document.elementFromPoint(released.clientX, released.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-panel-port]');
+        if (panelPort && state.fromNode && state.fromHandle?.id && state.fromHandle.type === 'source') {
+          const wire = { source: state.fromNode.id, sourceHandle: state.fromHandle.id, target: panelPort.dataset.panelNode!, targetHandle: panelPort.dataset.panelPort! };
+          if (session.valid(wire)) session.connect(wire); else session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.'));
+          return;
+        }
         if (state.toHandle && !state.isValid) { session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.')); return; }
         if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
         const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
@@ -405,7 +414,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const add = useCallback((choice: AddChoice) => adding.current(choice, middle()), []);
   const panels = useMemo<Record<string, PanelView>>(() => {
     const input: PanelInput = { session, state, choices, add };
-    return Object.fromEntries((Object.entries(PANELS) as [string, PanelRow][]).map(([id, row]) => [id, { title: row.title, content: row.content(input), menu: row.menu }]));
+    return Object.fromEntries((Object.entries(PANELS) as [string, PanelRow][]).map(([id, row]) => [id, { title: row.title, content: row.content(input), menu: row.menu, frame: row.frame }]));
   }, [session, state, choices, add, text]);
   // The location bar sits over the canvas; when its file or path would be cut there, it moves to a row of its own under the
   // title bar, as the legacy one always was, and comes back once the canvas can show it whole again, with a little to spare

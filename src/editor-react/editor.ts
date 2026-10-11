@@ -434,6 +434,22 @@ export class Editor {
       net.node(id).update({ name: core.freeName(name, taken) });
     });
   };
+  /** How a node names its vector components, and how many there are at most; null when it has no vector (Refactor.85; human
+   * 2026-10-11: inputs and outputs alike, since input components show here, legacy's did not). 節點怎麼稱呼向量分量、最多幾個；沒有
+   * 向量時是 null（R.85；人類 10-11：輸入輸出都改，因為這裡看得到輸入的分量，舊產品看不到）。 */
+  componentNamesOf = (id: string): { style: string; count: number } | null => {
+    const net = this.document.networks.get('pixel')!, node = net.node(id);
+    if (!node.data) return null;
+    const ports = [...node.inputs, ...node.outputs].map(port => port.type).filter(type => core.values.types.includes(type));
+    const count = Math.max(0, ...ports.map(type => core.values.count(type)));
+    return count > 1 ? { style: core.componentStyle(node.definition, node.data, net.context), count } : null;
+  };
+  /** Name a node's vector components (Refactor.85; legacy inspector.js:1358): appearance only, kept in the graph, one Undo.
+   * 設定節點的分量名稱（R.85；照舊產品）：只是外觀、存在圖裡、一次 Undo。 */
+  setComponentNames = (id: string, style: string) => {
+    if (!core.componentStyles.includes(style as never) || this.componentNamesOf(id)?.style === style) return;
+    this.transact(tr('edit.componentNames', 'Component names changed'), net => net.node(id).update({ ui: { ...net.node(id).data!.ui, componentNames: style } }));
+  };
   /** A node's note (Refactor.76; the graph's `comment`). 節點的註記（R.76；圖裡的 comment）。 */
   setNote = (id: string, text: string) => {
     if ((this.document.networks.get('pixel')!.node(id).data?.comment ?? '') === text) return;

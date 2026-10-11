@@ -6,6 +6,7 @@ import { PANELS } from './panels';
 import { readPreference, writePreference } from './preferences';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon } from './icons';
+import { FloatingContext } from './contexts';
 import * as tree from './layout_tree';
 import type { Corner, Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
 
@@ -21,7 +22,7 @@ export type { Side } from './layout_tree';
 /** What a tab pane shows for one panel. 一個面板在分頁窗格裡顯示什麼。 */
 /** A panel as the layout sees it: its name, its content, and its own menu if it has one (Refactor.83): the panel decides the items,
  * the layout only gives them a place. 版面看到的面板：名字、內容，以及它自己的選單（R.83）：項目由面板決定，版面只給位置。 */
-export type PanelView = { title: Message; content: ReactNode; menu?: () => readonly MenuItem[] };
+export type PanelView = { title: Message; content: ReactNode; menu?: () => readonly MenuItem[]; frame?: 'own' };
 
 const defaults: tree.PanelDefaults = (Object.entries(PANELS) as [string, { side: Side; first?: true }][]).map(([id, row]) => [id, row.side, !!row.first]);
 const homes: tree.Homes = Object.fromEntries((Object.entries(PANELS) as [string, { corner?: Corner }][]).filter(([, row]) => row.corner).map(([id, row]) => [id, row.corner!]));
@@ -484,10 +485,20 @@ export function FloatingPanels({ layout, panels, host }: { layout: Layout; panel
     for (const part of [host.querySelector('.network-bar-slot'), host.querySelector('.react-flow__controls')]) if (part) watch.observe(part);
     return () => watch.disconnect();
   }, [host, Object.keys(layout.floating).length > 0]);
+  // A panel drawing its own frame is as tall as its content (the Parameter panel: legacy worked its height out for each tab, only
+  // its width could be sized; human 2026-10-11): its height is measured, up to what its side leaves it. 自己畫外殼的面板和內容一樣高
+  // （參數面板：舊產品每個分頁自動算高度、只能調寬；人類 10-11）：高度用量的，最多到它那一邊留給它的。
+  const [measured, setMeasured] = useState<Record<string, number>>({});
   if (!area) return null;
-  const rects = tree.floatRects(layout, area.width, area.height, area.gap, area.title);
+  const own = Object.keys(layout.floating).filter(id => panels[id]?.frame === 'own');
+  const sized = (height: (id: string) => number): LayoutData => ({ ...layout,
+    floats: { ...layout.floats, ...Object.fromEntries(own.map(id => [id, { ...layout.floats[id]!, height: height(id) }])) } });
+  const caps = tree.floatRects(sized(() => 1e6), area.width, area.height, area.gap, area.title);
+  const rects = tree.floatRects(sized(id => Math.min(measured[id] ?? caps[id]?.height ?? 0, caps[id]?.height ?? 0)), area.width, area.height, area.gap, area.title);
+  const measure = (id: string, height: number) => setMeasured(old => old[id] === height ? old : { ...old, [id]: height });
   return <div className="floating-area" style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
-    {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area} />)}
+    {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
+      cap={caps[id]?.height} measure={height => measure(id, height)} />)}
   </div>;
 }
 
@@ -495,21 +506,46 @@ export function FloatingPanels({ layout, panels, host }: { layout: Layout; panel
  * and the edges that face the network, to size it (legacy: the inner edges, inspector.js:2090). With a panel above or below on its
  * side, the edge between them moves both (human 2026-10-11). 一個浮動面板：標題（三角形、名字、選單；拖到別的角或拖回版面）、內容，以及朝網路區的
  * 邊，用來調大小（照舊產品：內側的邊）。同一邊上下都有面板時，兩者之間的邊一起動（人類 10-11）。 */
-function FloatingPanel({ id, layout, view, rect, area }: { id: string; layout: Layout; view: PanelView | undefined; rect: tree.FloatRect;
-  area: { width: number; height: number; gap: number; title: number } }) {
+function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: string; layout: Layout; view: PanelView | undefined; rect: tree.FloatRect;
+  area: { width: number; height: number; gap: number; title: number }; cap?: number; measure(height: number): void }) {
   const drag = useContext(DragContext), place = layout.floats[id]!, top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
   const start = useRef({ width: 0, height: 0 });
   // The panel above or below on the same side: the edge between them moves both. 同一邊上下的另一個面板：兩者之間的邊一起動。
-  const title = say(view?.title ?? id);
+  const title = say(view?.title ?? id), own = view?.frame === 'own';
+  const fold = <button type="button" className="icon-button pane-collapse" aria-expanded={!rect.collapsed}
+    aria-label={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+    title={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+    onClick={() => layout.setFloat(id, { collapsed: !place.collapsed })}><Icon name="chevronDown" /></button>;
+  const menu = <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} />;
+  // A panel with its own frame (the Parameter panel's node card, Refactor.85) gets the triangle, the menu and close, and the
+  // drag, and draws the rest; collapsed, it is as tall as its head. 自己畫外殼的面板（參數面板的節點卡，R.85）拿到三角形、選單與
+  // 關閉、拖曳，其他自己畫；收起時和它的頭一樣高。
+  const close = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.closePanel', 'Close panel'))}
+    title={say(tr('layout.closePanel', 'Close panel'))} onClick={() => layout.close(id)}><Icon name="close" /></button>;
+  const frame = useRef<HTMLElement>(null);
+  // Its height follows its content (measured when the content changes size, not while anything moves elsewhere).
+  // 高度跟著內容（內容大小改變時量，不是別處在動時量）。
+  useLayoutEffect(() => {
+    const element = frame.current;
+    if (!own || !element) return;
+    const watch = new ResizeObserver(() => measure(Math.round(element.getBoundingClientRect().height)));
+    watch.observe(element);
+    return () => watch.disconnect();
+  }, [own]);
+  if (own) return <section ref={frame} className={'floating-panel own-frame' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
+    style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
+    <FloatingContext.Provider value={{ collapsed: rect.collapsed, fold, controls: <>{menu}{close}</>, drag: event => drag.current(event, id) }}>
+      {view?.content}</FloatingContext.Provider>
+    {!rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
+      onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
+      onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />}
+  </section>;
   return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     <div className="floating-head" onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
-      <button type="button" className="icon-button pane-collapse" aria-expanded={!rect.collapsed}
-        aria-label={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
-        title={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
-        onClick={() => layout.setFloat(id, { collapsed: !place.collapsed })}><Icon name="chevronDown" /></button>
+      {fold}
       <span className="floating-title">{title}</span>
-      <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} />
+      {menu}
     </div>
     {!rect.collapsed && <div className="panel-content">{view?.content}</div>}
     {!rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}

@@ -1751,3 +1751,17 @@ test('nodes in the Logic category take the logic colour', t => {
   assert.deepEqual(['equal', 'isnan', 'any', 'not', 'compare'].map(colour), ['logic', 'logic', 'logic', 'logic', 'logic']);
   assert.equal(session.snapshot().projection.nodes.find(n => n.id === 'sum').data.colorGroup, 'function', 'Add stays a function');
 });
+
+test('component names: set from the Settings tab, shown on the node, one Undo (Refactor.85)', t => {
+  const { session } = open(t);
+  session.addNode({ nodeType: 'sgrape.builtin.vec3', params: {} }, { x: 0, y: 0 });
+  const id = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.vec3').id;
+  assert.equal(session.componentNamesOf('sum'), null, 'a float node has none');
+  const before = session.componentNamesOf(id);
+  assert.ok(before, 'a vector node has component names');
+  session.setComponentNames(id, 'rgba');
+  assert.equal(session.componentNamesOf(id).style, 'rgba');
+  assert.equal(session.snapshot().projection.nodes.find(n => n.id === id).data.componentStyle, 'rgba', 'the card follows at once');
+  session.history(false);
+  assert.equal(session.snapshot().projection.nodes.find(n => n.id === id).data.componentStyle, before.style, 'one Undo puts it back');
+});
