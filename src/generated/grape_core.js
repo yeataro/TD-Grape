@@ -2583,8 +2583,8 @@ const conversion = {
     validate: () => { },
     presentation: n => ({
         selector: { value: String(n.params.toType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(String(n.params.fromType), t)), command: 'toType', label: 'convert.toType' },
-        controls: [{ kind: 'select', key: 'fromType', label: 'convert.fromType', command: 'fromType', value: String(n.params.fromType),
-                options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(t, String(n.params.toType))).map(value => ({ value, label: value, literal: true })) }]
+        // The input as the shared "Input type" row, where every node has it (Refactor.81.4). 輸入是共用的「輸入型別」那一列，和每個節點同位置（R.81.4）。
+        inputSelector: { value: String(n.params.fromType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(t, String(n.params.toType))), command: 'fromType', label: 'convert.fromType' }
     }),
     edit: (n, command, data) => {
         if (!['fromType', 'toType'].includes(command))
@@ -3848,7 +3848,8 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: ['bvec2', 'bvec3', 'bvec4'],
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', t)],
-    presentation: () => ({ typeOf: 'input' }),
+    // Input and output are the same type, so the title's menu chooses both (Refactor.81.4, design-interview Q73).
+    // 輸入輸出同型別，標題列的選單兩端一起選（R.81.4，Q73）。
     emit: (_n, c) => ({ outputs: { out: 'not(' + c.input('value') + ')' } })
 });
 

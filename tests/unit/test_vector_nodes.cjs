@@ -114,3 +114,13 @@ test('a wire into Swizzle sets its input size and leaves its output alone',()=>{
  assert.throws(()=>wire('small','far'),/existing vector components/,'vec3 has no W');
  assert.equal(after(wire('whole','pick'),'pick').type,'vec4','int in: still a float Swizzle, the wire converts');
 });
+// Refactor.81.4 (design-interview Q73): not chooses in the title (input and output are the same type); Convert's input is a
+// module menu drawn as the shared Input type row. R.81.4（Q73）：not 在標題列選（輸入輸出同型別）；Convert 的輸入是模組選單，畫成共用的輸入型別一列。
+test('not chooses its type in the title; Convert gives its input as an input menu',()=>{
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[
+  node('flip','not',{type:'bvec3'}),node('cast','convert',{fromType:'float',toType:'int'})],edges:[]}}};
+ const net=new GraphDocument(graph,registry).networks.get('pixel'),view=id=>net.node(id).definition.presentation(net.node(id).data,net.context);
+ assert.equal(view('flip').typeOf,'output','the title chooses the output, here both ends');
+ assert.deepEqual([view('cast').inputSelector.value,view('cast').inputSelector.command,view('cast').selector.command],['float','fromType','toType']);
+ assert.equal(view('cast').controls,undefined,'no control of its own for the input');
+});

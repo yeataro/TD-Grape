@@ -64,8 +64,8 @@ const conversion: NodeModule = {
   validate: () => {},
   presentation: n => ({
     selector: {value:String(n.params.toType),options:values.types.filter(t=>values.explicit(String(n.params.fromType),t)),command:'toType',label:'convert.toType'},
-    controls: [{kind:'select',key:'fromType',label:'convert.fromType',command:'fromType',value:String(n.params.fromType),
-      options:values.types.filter(t=>values.explicit(t,String(n.params.toType))).map(value=>({value,label:value,literal:true}))}]
+    // The input as the shared "Input type" row, where every node has it (Refactor.81.4). 輸入是共用的「輸入型別」那一列，和每個節點同位置（R.81.4）。
+    inputSelector: {value:String(n.params.fromType),options:values.types.filter(t=>values.explicit(t,String(n.params.toType))),command:'fromType',label:'convert.fromType'}
   }),
   edit: (n, command, data) => {
     if (!['fromType','toType'].includes(command)) throw Error('Invalid conversion selection');

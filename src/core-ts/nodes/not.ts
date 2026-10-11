@@ -46,6 +46,7 @@ const catalog = {
 export default typedNode(catalog, {
   types: ['bvec2', 'bvec3', 'bvec4'],
   ports: t => [input('value', t), output('out', t)],
-  presentation: () => ({typeOf: 'input'}),
+  // Input and output are the same type, so the title's menu chooses both (Refactor.81.4, design-interview Q73).
+  // 輸入輸出同型別，標題列的選單兩端一起選（R.81.4，Q73）。
   emit: (_n, c) => ({outputs: {out: 'not(' + c.input('value') + ')'}})
 });

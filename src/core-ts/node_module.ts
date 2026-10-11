@@ -61,6 +61,9 @@ export interface NodePresentation {
    * 在標題列）；輸出由別的東西決定時是 input（邏輯類 bool、Swizzle 的分量、Split），標題列只顯示輸出，選單是本體的一列。 */
   typeOf?:'input'|'output';
   selector?:{value:string;options:readonly string[];command:string;label:string};
+  /** The module's own input menu, the input's counterpart of `selector` (Refactor.81.4): drawn as the shared "Input type" row.
+   * 模組自己的輸入選單，對應輸出的 selector（R.81.4）：畫成共用的「輸入型別」那一列。 */
+  inputSelector?:{value:string;options:readonly string[];command:string;label:string};
   inlineControls?:readonly NodeControl[];
   value?:{value:Value;type:string;componentCommand:string;valueCommand:string;names:string;color?:boolean;expandable?:boolean};
   controls?:readonly NodeControl[];

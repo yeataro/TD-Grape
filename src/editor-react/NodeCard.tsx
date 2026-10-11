@@ -30,11 +30,13 @@ export const listed = (values: readonly string[]) => values.map(value => ({ valu
  * Swizzle、Split…）。可以兩個都有（Swizzle：輸出幾個分量、輸入接什麼）。 */
 export const picksInput = (data: FlowNode['data']) => data.view.typeOf === 'input';
 export const hasOutputChoice = (data: FlowNode['data']) => !data.view.typeLocked && (!!data.view.selector || (!picksInput(data) && data.types.length > 1));
-export const hasInputChoice = (data: FlowNode['data']) => !data.view.typeLocked && picksInput(data) && data.types.length > 1;
+export const hasInputChoice = (data: FlowNode['data']) => !data.view.typeLocked && (!!data.view.inputSelector || (picksInput(data) && data.types.length > 1));
 export function TypeChoice({ id, data, end }: { id: string; data: FlowNode['data']; end: 'input' | 'output' }) {
   const session = useSession(), { view, authored } = data;
-  if (end === 'output' && view.selector) return <Select className="nodrag" label={`${id} output type`} value={view.selector.value}
-    onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} />;
+  // A module's own menu for that end (output: selector, input: inputSelector), else the node's types. 模組自己那一端的選單，否則用節點的型別。
+  const own = end === 'output' ? view.selector : view.inputSelector;
+  if (own) return <Select className="nodrag" label={`${id} ${end} type`} value={own.value}
+    onChange={value => session.edit(id, own.command, { value })} options={listed(own.options)} />;
   return <Select className="nodrag" label={`${id} ${end} type`} value={String(authored.params.type)}
     onChange={value => session.configure(id, value)} options={listed(data.types)} />;
 }
