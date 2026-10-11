@@ -280,7 +280,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    網路區功能列浮在上緣，兩組之間不擋畫布。 */
 .network-overlay { position: absolute; z-index: 6; top: var(--float-gap); left: var(--float-gap); right: var(--float-gap);
   display: flex; flex-direction: column; gap: var(--float-gap); pointer-events: none; }
-.network-bar { display: flex; justify-content: space-between; gap: var(--float-gap); }
+/* The stages on the left; the tool groups (the toolbar, then boxes of their own such as GLSL, R.83.7) together on the right.
+   Stage 切換在左；工具組（功能列，再來是自己一個框的，例如 GLSL，R.83.7）一起靠右。 */
+.network-bar { display: flex; justify-content: flex-end; gap: var(--float-gap); }
+.network-bar > .network-bar-stages { margin-right: auto; }
 .network-bar-group { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 8px; pointer-events: auto;
   background: var(--surface-floating); border: 1px solid var(--border); }
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
@@ -289,7 +292,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    an icon button, and the stage switch is as tall as the tool group (a transparent line stands in for the group's border).
    整條功能列同一個高度（R.83.6，人類：太大，Stage 切換要和它對齊；舊產品 Stage 與工具按鈕同高，標準 32px、舒適 38px）：文字按鈕和圖示按鈕
    一樣高；Stage 切換和工具組一樣高（用透明的線補上工具組的框線）。 */
-.network-bar-group .tool-group > button:not(.icon-button) { height: var(--icon-button); padding: 0 8px; }
+.network-bar-group button:not(.icon-button) { height: var(--icon-button); padding: 0 8px; }
 .network-bar-stages .segmented { border: 1px solid transparent; }
 .network-bar-stages .segmented button { height: var(--icon-button); padding: 0 10px; }
 .canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); pointer-events: none; }

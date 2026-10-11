@@ -172,9 +172,11 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   const state = useEditorState(session), flow = useReactFlow(), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
   const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
   const stages = session?.stageNames() ?? [];
-  // Left to right as shown; `order` is when the group folds (1 first). 由左到右照顯示；order＝這組第幾個收（1 先收）。
-  const groups: { order: number; tools: Tool[] }[] = [
-    { order: 5, tools: [
+  // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
+  // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框
+  // （R.83.7，人類：GLSL 不是編輯工具）。
+  const groups: { order: number; own?: true; tools: Tool[] }[] = [
+    { order: 4, tools: [
       { key: 'undo', icon: 'undo', label: tr('toolbar.undo', 'Undo'), disabled: !state?.undo, select: () => session!.history(false) },
       { key: 'redo', icon: 'redo', label: tr('toolbar.redo', 'Redo'), disabled: !state?.redo, select: () => session!.history(true) }] },
     // React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。
@@ -182,15 +184,19 @@ export function NetworkBar({ session, prefs, onGlsl }: {
       { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), disabled: !nodes.length && !edges.length,
         select: () => void flow.deleteElements({ nodes, edges }) },
       { key: 'frame', icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), disabled: !nodes.length, select: () => frameNodes(flow, nodes.map(node => node.id)) }] },
-    { order: 4, tools: [{ key: 'boxSelect', icon: 'boxSelect', mode: true, label: tr('toolbar.boxSelectName', 'Box select'),
-      hint: tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)'),
-      pressed: prefs.boxSelect, select: () => prefs.set({ boxSelect: !prefs.boxSelect }) }] },
+    // Box select and Snap act on the canvas, so they are one group and fold together (Refactor.83.7, human 2026-10-11).
     // Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).
-    // Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。
-    { order: 2, tools: [{ key: 'snap', icon: 'snap', label: tr('toolbar.snap', 'Snap'), pressed: prefs.snap, select: () => prefs.set({ snap: !prefs.snap }) }] },
-    { order: 1, tools: [{ key: 'glsl', label: tr('toolbar.glsl', 'GLSL'), select: onGlsl }] },
+    // 框選與 Snap 都是畫布功能，同一組、一起收（R.83.7，人類）。Snap 是磁鐵圖示的工具開關（Blender）；Body 拖曳搬到設定面板（Q64）。
+    { order: 2, tools: [{ key: 'boxSelect', icon: 'boxSelect', mode: true, label: tr('toolbar.boxSelectName', 'Box select'),
+      hint: tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)'),
+      pressed: prefs.boxSelect, select: () => prefs.set({ boxSelect: !prefs.boxSelect }) },
+      { key: 'snap', icon: 'snap', label: tr('toolbar.snap', 'Snap'), pressed: prefs.snap, select: () => prefs.set({ snap: !prefs.snap }) }] },
+    { order: 1, own: true, tools: [{ key: 'glsl', label: tr('toolbar.glsl', 'GLSL'), select: onGlsl }] },
   ];
-  const fold = (order: number) => ({ 'data-fold': order, className: 'tool-group' + (folded >= order ? ' folded' : '') });
+  const fold = (order: number, box = 'tool-group') => ({ 'data-fold': order, className: box + (folded >= order ? ' folded' : '') });
+  const tool = (tool: Tool) => tool.icon
+    ? <IconButton key={tool.key} icon={tool.icon} label={tool.hint ?? tool.label} disabled={tool.disabled} pressed={tool.pressed} mode={tool.mode} danger={tool.danger} onClick={tool.select} />
+    : <button key={tool.key} type="button" onClick={tool.select}>{say(tool.label)}</button>;
   const more: MenuItem[] = groups.filter(group => folded >= group.order).flatMap((group, index) => group.tools.map((tool, at) => ({
     key: tool.key, divider: index > 0 && at === 0, disabled: tool.disabled, danger: tool.danger,
     ...(tool.pressed === undefined ? {} : { checkbox: true, checked: tool.pressed }),
@@ -207,12 +213,12 @@ export function NetworkBar({ session, prefs, onGlsl }: {
           disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
     </div>
     <div className="network-bar-group">
-      {groups.map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool => tool.icon
-        ? <IconButton key={tool.key} icon={tool.icon} label={tool.hint ?? tool.label} disabled={tool.disabled} pressed={tool.pressed} mode={tool.mode} danger={tool.danger} onClick={tool.select} />
-        : <button key={tool.key} type="button" onClick={tool.select}>{say(tool.label)}</button>)}</div>)}
+      {groups.filter(group => !group.own).map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool)}</div>)}
       <div data-appear={1} className={'tool-group tool-more' + (folded >= 1 ? ' appeared' : '')}>
         <MenuButton icon="more" label={tr('toolbar.more', 'More tools')} items={more} /></div>
     </div>
+    {/* A group of its own folds as a whole box. 自己一個框的組，收起時整個框一起收。 */}
+    {groups.filter(group => group.own).map(group => <div key={group.order} {...fold(group.order, 'network-bar-group')}>{group.tools.map(tool)}</div>)}
   </div>;
 }
 
