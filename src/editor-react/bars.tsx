@@ -212,13 +212,17 @@ export function NetworkBar({ session, prefs, onGlsl }: {
         options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
           disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
     </div>
-    <div className="network-bar-group">
-      {groups.filter(group => !group.own).map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool)}</div>)}
-      <div data-appear={1} className={'tool-group tool-more' + (folded >= 1 ? ' appeared' : '')}>
-        <MenuButton icon="more" label={tr('toolbar.more', 'More tools')} items={more} /></div>
+    {/* The boxes on the right, together in one row (Refactor.86.2: not pushed there by an auto margin, which the bar would count
+        as width it needs and never unfold). 右邊的框放在同一列（R.86.2：不用自動邊距推過去，否則列會把它算成需要的寬、收了就不再展開）。 */}
+    <div className="network-bar-tools">
+      <div className="network-bar-group">
+        {groups.filter(group => !group.own).map(group => <div key={group.order} {...fold(group.order)}>{group.tools.map(tool)}</div>)}
+        <div data-appear={1} className={'tool-group tool-more' + (folded >= 1 ? ' appeared' : '')}>
+          <MenuButton icon="more" label={tr('toolbar.more', 'More tools')} items={more} /></div>
+      </div>
+      {/* A group of its own folds as a whole box. 自己一個框的組，收起時整個框一起收。 */}
+      {groups.filter(group => group.own).map(group => <div key={group.order} {...fold(group.order, 'network-bar-group')}>{group.tools.map(tool)}</div>)}
     </div>
-    {/* A group of its own folds as a whole box. 自己一個框的組，收起時整個框一起收。 */}
-    {groups.filter(group => group.own).map(group => <div key={group.order} {...fold(group.order, 'network-bar-group')}>{group.tools.map(tool)}</div>)}
   </div>;
 }
 

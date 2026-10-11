@@ -264,8 +264,12 @@ a { color: var(--accent); }
 /* A select sized to its widest label: the labels stacked in one cell, only the value seen (controls.tsx sizeTo).
    依最寬的文字定寬：全部疊在同一格，只看得到目前的值。 */
 .select-sized { display: inline-grid; } .select-sized > * { grid-area: 1 / 1; overflow: hidden; text-overflow: ellipsis; } .select-size { visibility: hidden; }
-.tool-group { display: flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--border); }
-.tool-group:first-child { border-left: 0; }
+/* A line between groups, only after a group that shows (Refactor.86.2: folded groups are still there, hidden, so `:first-child`
+   left a line on the "more" button alone); the box's own edge is the only space at its ends, as the GLSL box.
+   組與組之間一條線，只在顯示中的組後面（R.86.2：收起的組還在、只是隱藏，所以 :first-child 讓單獨的「更多」也帶線）；兩端只有框自己的邊距，
+   和 GLSL 的框一樣。 */
+.tool-group { display: flex; align-items: center; gap: 2px; }
+.tool-group:not(.folded, .tool-more:not(.appeared)) ~ .tool-group { margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--border); }
 label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .segmented { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--surface-zone); }
 .segmented button { border: 0; background: none; padding: 4px 10px; color: var(--text-muted); height: auto; }
@@ -284,8 +288,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   display: flex; flex-direction: column; gap: var(--float-gap); pointer-events: none; }
 /* The stages on the left; the tool groups (the toolbar, then boxes of their own such as GLSL, R.83.7) together on the right.
    Stage 切換在左；工具組（功能列，再來是自己一個框的，例如 GLSL，R.83.7）一起靠右。 */
-.network-bar { display: flex; justify-content: flex-end; gap: var(--float-gap); }
-.network-bar > .network-bar-stages { margin-right: auto; }
+.network-bar { display: flex; justify-content: space-between; gap: var(--float-gap); }
+.network-bar-tools { display: flex; gap: var(--float-gap); }
 .network-bar-group { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 8px; pointer-events: auto;
   background: var(--surface-floating); border: 1px solid var(--border); }
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
@@ -893,7 +897,8 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
   font-size: var(--font-md); line-height: var(--line-md); }
 .params-title { padding: 8px var(--params-pad); }
 .params-title > strong { flex: none; }
-.params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; background: var(--surface-name-field); }
+/* No line round the name, only its tint (Refactor.86.2, human 2026-10-11; legacy style.css:702). 名稱框沒有框線，只有底色（R.86.2，人類；照舊產品）。 */
+.params-name { flex: 1; min-width: 0; height: var(--io-field); padding-block: 0; background: var(--surface-name-field); border-color: transparent; }
 .params-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--text-secondary); }
 /* The body is one grid, as TD's parameter dialog (Refactor.76.2, human 2026-10-11): the expand triangle at the far left (TD's
    +) | names flush right | types flush left | fields. Every row (an input, a value's line, a control) is a subgrid across all
@@ -954,12 +959,21 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-card.floating .params-title :is(.pane-collapse, .panel-menu, .floating-close) { position: static; flex: none; height: var(--io-field); color: inherit; }
 .params-card.floating .params-title .pane-collapse .icon { width: 12px; height: 12px; }
 /* Floating, each input's port, a wire can be dropped on (Refactor.85; legacy style.css:905–910): the row's type colour, filled while
-   wired; lit while a wire is dragged. 浮動時每個輸入的接孔，可以把線放上來（R.85；照舊產品）：輸入型別的顏色，接著線時實心；拖線時亮起。 */
-.params-card.floating .params-grid { padding-left: calc(var(--params-pad) + 12px); }
+   wired; lit while a wire is dragged. It sits on the card's left edge as a node's does (Refactor.86.2, human 2026-10-11; legacy put
+   it inside): the scrolling body reaches past the edge by half a port and its glow, so it is not cut, and the card clips nothing
+   while open (collapsed, it still clips its head to its corners). 浮動時每個輸入的接孔，可以把線放上來（R.85；照舊產品）：輸入型別的
+   顏色，接著線時實心；拖線時亮起。和節點一樣騎在卡片左邊的框線上（R.86.2，人類；舊產品放在裡面）：可捲動的本體往外多半個接孔加光暈，才不會
+   被切掉；打開時卡片不裁切（收起時仍把頭裁成圓角）。 */
+.floating-panel.own-frame:not(.collapsed) > .params-card { overflow: visible; }
+.params-card.floating > .node-body { --port-overhang: calc(var(--port-size) / 2 + 4px); margin-left: calc(-1 * var(--port-overhang)); }
+.params-card.floating .params-grid { padding-left: calc(var(--params-pad) + var(--port-overhang, 0px)); }
 .params-card.floating .input-row { position: relative; }
 .port-row > .params-port { display: block; padding: 0; }
-.port-row > .params-port, .params-port { position: absolute; left: -18px; top: calc(var(--io-row) / 2 - var(--port-size) / 2); width: var(--port-size); height: var(--port-size);
+.port-row > .params-port, .params-port { position: absolute; left: calc(-1 * (var(--params-pad) + var(--port-size) / 2 + .5px)); top: calc(var(--io-row) / 2 - var(--port-size) / 2); width: var(--port-size); height: var(--port-size);
   flex: none; border-radius: 50%; border: 2px solid var(--port-color); background: var(--surface-node, transparent); }
+/* Over the panel's width edge, which runs along the same line: the edge still works between ports. 蓋在面板調寬的邊上面（同一條線）：
+   接孔之間仍可調寬。 */
+.params-port { z-index: 5; }
 .params-port.wired { background: var(--port-color); }
 .params-port::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
 .params-card.wiring .params-port { box-shadow: 0 0 0 2px color-mix(in srgb, var(--port-color) 35%, transparent); }
