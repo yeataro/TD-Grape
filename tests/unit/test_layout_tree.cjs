@@ -181,138 +181,152 @@ test('a stacked pane collapses to its tab bar and opens again', () => {
 });
 
 // Floating panels (Refactor.84; work/refactor/floating-panels-scope-2026-10-11.md). 浮動面板（R.84）。
-test('a floating panel stays a member of its pane, and goes back there or to closed', () => {
-  let layout = tree.popOut(fresh(), 'glsl', ['bottom-left', 'top-left']);
-  assert.equal(layout.floating.glsl, 'docked');
-  assert.equal(layout.floats.glsl.corner, 'bottom-left');
-  assert.ok(tree.paneOf(layout.root, 'glsl'), 'still in the tree');
-  assert.ok(tree.away(layout).includes('glsl'), 'the tree does not draw it');
-  layout = tree.backToA(layout, 'glsl');
-  assert.equal(layout.floating.glsl, undefined);
-  assert.equal(tree.paneOf(layout.root, 'glsl').pane.active, 'glsl', 'back as the shown tab');
-  assert.equal(layout.floats.glsl.corner, 'bottom-left', 'its corner is remembered');
-  let closed = tree.popOut(tree.hidePanel(fresh(), 'sources'), 'sources');
-  assert.equal(closed.floating.sources, 'closed');
-  assert.ok(!closed.hidden.includes('sources'), 'shown while it floats');
-  closed = tree.toggleFloat(closed, 'sources');
-  assert.ok(closed.hidden.includes('sources'), 'closed before, closed again (human 2026-10-11)');
-});
+// Floating (Refactor.84, 88). In these tests `appearance` stands in for the Parameter panel: the panel with a home.
+// 浮動（R.84、88）。這些測試裡 appearance 代替參數面板：有家的面板。
+const homes = { appearance: 'top-right' };
+const at = (x, y, corner = 'top-left', width = 320, height = 360) => ({ corner, width, height, x, y });
 
-test('its pane is kept while only a floating panel is left in it, and it lands back there', () => {
-  let layout = tree.movePanel(fresh(), 'glsl', { kind: 'outer', edge: 'right' });
-  layout = tree.popOut(layout, 'glsl');
-  layout = tree.movePanel(layout, 'appearance', { kind: 'outer', edge: 'left' });
-  const home = tree.paneOf(layout.root, 'glsl');
-  assert.deepEqual(home.pane.panels, ['glsl'], 'the pane holds only the floating panel');
-  assert.equal(tree.sideHasPanels(layout, 'right'), false, 'and is not drawn');
-  layout = tree.backToA(layout, 'glsl');
-  assert.equal(tree.sideHasPanels(layout, 'right'), true, 'back on the right');
-});
-
-test('a corner holds one panel: moving there swaps, popping out takes a free one', () => {
-  let layout = tree.popOut(fresh(), 'glsl', ['top-left']);
-  layout = tree.popOut(layout, 'sources', ['top-left', 'bottom-left']);
-  assert.equal(layout.floats.sources.corner, 'bottom-left', 'the nearest free corner');
-  layout = tree.moveFloat(layout, 'sources', 'top-left');
-  assert.equal(layout.floats.sources.corner, 'top-left');
-  assert.equal(layout.floats.glsl.corner, 'bottom-left', 'swapped (human 2026-10-11)');
-  for (const id of ['addNode', 'appearance']) layout = tree.popOut(layout, id);
-  layout = tree.backToA(tree.popOut(tree.backToA(layout, 'appearance'), 'appearance', ['top-right']), 'appearance');
-  assert.equal(Object.keys(layout.floating).length, 3);
-});
-
-test('closing and dragging into the tree end floating', () => {
-  let layout = tree.popOut(fresh(), 'glsl');
-  assert.equal(tree.hidePanel(layout, 'glsl').floating.glsl, undefined, 'closing is closing');
-  const into = tree.movePanel(layout, 'glsl', { kind: 'tab', pane: tree.paneOf(layout.root, 'glsl').path, index: 0 });
-  assert.equal(into.floating.glsl, undefined, 'dropped into its own pane, it lands');
-  assert.equal(tree.showPanel(layout, 'glsl').floating.glsl, 'docked', 'called up while floating, it stays floating');
-});
-
-test('stored floating panels are read back; anything malformed is dropped', () => {
-  const layout = tree.popOut(tree.popOut(fresh(), 'glsl', ['top-right']), 'sources', ['bottom-left']);
-  const read = tree.readLayout(JSON.parse(JSON.stringify(layout)), panels);
-  assert.deepEqual(read.floating, { glsl: 'docked', sources: 'docked' });
-  const bad = JSON.parse(JSON.stringify(layout));
-  bad.floats.glsl.corner = 'middle'; bad.floating.unknown = 'docked';
-  assert.deepEqual(tree.readLayout(bad, panels).floating, { sources: 'docked' }, 'a bad corner and an unknown panel are dropped');
-  const twice = JSON.parse(JSON.stringify(layout)); twice.floats.sources.corner = 'top-right';
-  assert.deepEqual(tree.readLayout(twice, panels).floating, { glsl: 'docked' }, 'one panel per corner: the second goes back');
-  const old = { ...JSON.parse(JSON.stringify(fresh())) }; delete old.floating; delete old.floats;
-  assert.deepEqual(tree.readLayout(old, panels).floating, {}, 'a layout from before reads with nothing floating');
-});
-
-test('where floating panels are drawn: own heights, rows share their width', () => {
-  let layout = tree.popOut(fresh(), 'glsl', ['top-left']);
-  let rects = tree.floatRects(layout, 1000, 600, 8, 28);
-  assert.deepEqual(rects.glsl, { x: 0, y: 0, width: 320, height: 360, collapsed: false });
-  layout = tree.popOut(layout, 'sources', ['bottom-left']);
-  rects = tree.floatRects(layout, 1000, 600, 8, 28);
-  assert.equal(rects.glsl.height, 360, 'each keeps its own height');
-  assert.equal(rects.sources.height, 600 - 8 - 360, 'the lower one fits in what is left');
-  rects = tree.floatRects(layout, 1000, 900, 8, 28);
-  assert.equal(rects.sources.height, 360, 'with room, they do not stick together (human 2026-10-11)');
-  assert.equal(rects.sources.y, 900 - 360);
-  layout = tree.setFloat(layout, 'glsl', { collapsed: true });
-  rects = tree.floatRects(layout, 1000, 600, 8, 28);
-  assert.equal(rects.glsl.height, 28, 'collapsed: the title only');
-  layout = tree.setFloat(tree.popOut(layout, 'addNode', ['top-right']), 'addNode', { width: 900 });
-  rects = tree.floatRects(layout, 1000, 600, 8, 28);
-  assert.equal(rects.addNode.width, 1000 - 8 - 320, 'across the row it takes at most what the left one leaves');
-  assert.equal(rects.addNode.x, 1000 - rects.addNode.width);
-  rects = tree.floatRects(layout, 600, 600, 8, 28);
-  assert.equal(rects.glsl.width, 600 - 8 - tree.FLOAT_MIN_WIDTH, 'a smaller area: the left one leaves the right one its least');
-  assert.equal(rects.addNode.width, tree.FLOAT_MIN_WIDTH, 'the right one takes what is left');
-  let pushed = tree.pushFloat(layout, 'glsl', 'width', 700, 1000, 8, 28);
-  assert.equal(pushed.floats.addNode.width, 1000 - 8 - 700, 'growing across the row pushes the other narrower');
-  assert.equal(tree.pushFloat(pushed, 'glsl', 'width', 300, 1000, 8, 28).floats.addNode.width, 292, 'and it does not grow back');
-  const narrow = tree.pushFloat(layout, 'glsl', 'width', 999, 428, 8, 28);
-  assert.equal(narrow.floats.glsl.width, tree.FLOAT_MIN_WIDTH, 'too narrow for two minimums: one still gets its minimum');
-  assert.equal(narrow.floats.addNode.width, 428 - 8 - tree.FLOAT_MIN_WIDTH, 'by pushing the other to what is left, above the floor');
-  assert.equal(tree.floatRects(layout, 1000, 100, 8, 28).sources.collapsed, true, 'no room: titles only');
-});
-
-test('panels on one side push each other; one pushed smaller stays so (human 2026-10-11)', () => {
-  let layout = tree.popOut(tree.popOut(fresh(), 'glsl', ['top-left']), 'sources', ['bottom-left']);
-  layout = tree.pushFloat(layout, 'glsl', 'height', 300, 800, 8, 28);
-  assert.equal(layout.floats.glsl.height, 300);
-  assert.equal(layout.floats.sources.height, 360, 'shrinking leaves a space; the other does not move');
-  layout = tree.pushFloat(layout, 'glsl', 'height', 500, 800, 8, 28);
-  assert.equal(layout.floats.sources.height, 800 - 8 - 500, 'growing into it pushes it smaller');
-  layout = tree.pushFloat(layout, 'glsl', 'height', 400, 800, 8, 28);
-  assert.equal(layout.floats.sources.height, 292, 'and it does not grow back');
-  layout = tree.pushFloat(layout, 'glsl', 'height', 9999, 800, 8, 28);
-  assert.equal(layout.floats.sources.height, tree.FLOAT_MIN_HEIGHT, 'pushed down to its least');
-  assert.equal(layout.floats.glsl.height, 800 - 8 - tree.FLOAT_MIN_HEIGHT, 'then the pushing stops');
-  layout = tree.pushFloat(layout, 'sources', 'height', 9999, 800, 8, 28);
-  assert.equal(layout.floats.glsl.height, tree.FLOAT_MIN_HEIGHT, 'from below it pushes the upper one the same way');
-});
-
-test('a panel with a home floats only there, and nobody else takes it (human 2026-10-11)', () => {
-  const homes = { appearance: 'top-right' };
-  let layout = tree.popOut(fresh(), 'appearance', ['bottom-left'], homes);
-  assert.equal(layout.floats.appearance.corner, 'top-right', 'home, whatever is nearest');
-  layout = tree.popOut(layout, 'glsl', ['top-right', 'bottom-right'], homes);
-  assert.equal(layout.floats.glsl.corner, 'bottom-right', 'another one skips that corner');
-  assert.equal(tree.moveFloat(layout, 'glsl', 'top-right', homes), layout, 'and cannot be moved into it');
-  assert.equal(tree.moveFloat(layout, 'appearance', 'top-left', homes), layout, 'the owner does not leave it');
-  const old = tree.popOut(tree.popOut(fresh(), 'glsl', ['top-right']), 'appearance', ['bottom-left']);
-  const kept = tree.keepHomes(old, homes);
-  assert.equal(kept.floating.glsl, undefined, 'a stored layout: whoever sat in the home goes back');
-  assert.equal(kept.floats.appearance.corner, 'top-right', 'and the owner moves home');
-});
-
-test('floating again: its last corner and size, opened', () => {
-  let layout = tree.setFloat(tree.popOut(fresh(), 'glsl', ['bottom-right']), 'glsl', { width: 400, collapsed: true });
-  layout = tree.popOut(tree.backToA(layout, 'glsl'), 'glsl');
-  assert.deepEqual(layout.floats.glsl, { corner: 'bottom-right', width: 400, height: tree.FLOAT_HEIGHT });
+test('a panel with a home floats in it, and goes back to its pane or to closed', () => {
+  let layout = tree.popOut(fresh(), 'appearance', homes);
+  assert.equal(layout.floating.appearance, 'docked');
+  assert.equal(layout.floats.appearance.corner, 'top-right', 'its home');
+  assert.ok(tree.paneOf(layout.root, 'appearance'), 'still in the tree');
+  assert.ok(tree.away(layout).includes('appearance'), 'the tree does not draw it');
+  layout = tree.backToA(layout, 'appearance');
+  assert.equal(layout.floating.appearance, undefined);
+  assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance', 'back as the shown tab');
+  let closed = tree.popOut(tree.hidePanel(fresh(), 'appearance'), 'appearance', homes);
+  assert.equal(closed.floating.appearance, 'closed');
+  assert.ok(!closed.hidden.includes('appearance'), 'shown while it floats');
+  closed = tree.toggleFloat(closed, 'appearance', homes);
+  assert.ok(closed.hidden.includes('appearance'), 'closed before, closed again (human 2026-10-11)');
+  const base = fresh();
+  assert.equal(tree.popOut(base, 'glsl', homes), base, 'a panel without a home does not float this way');
 });
 
 test('going back from floating leaves the sides as they are (Refactor.86)', () => {
   let layout = { ...fresh(), closed: { left: false, right: true } };
-  layout = tree.backToA(tree.popOut(layout, 'appearance'), 'appearance');
+  layout = tree.backToA(tree.popOut(layout, 'appearance', homes), 'appearance');
   assert.deepEqual(layout.closed, { left: false, right: true }, 'the right side stays closed, as before it floated');
   assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance');
+});
+
+test('a panel without a home floats free: out of the tree, docked again only by dragging (Refactor.88)', () => {
+  let layout = tree.floatOut(fresh(), 'glsl', at(20, 30));
+  assert.equal(layout.floating.glsl, 'free');
+  assert.equal(tree.paneOf(layout.root, 'glsl'), undefined, 'it leaves the tree (human 2026-10-12: no springing back)');
+  assert.equal(shape(layout.root), 'row(sources|addNode, canvas, appearance)');
+  const docked = tree.movePanel(layout, 'glsl', { kind: 'tab', pane: where(layout, 'sources'), index: 0 });
+  assert.equal(shape(docked.root), 'row(glsl|sources|addNode, canvas, appearance)', 'dragged into a pane: a tab there');
+  assert.equal(docked.floating.glsl, undefined);
+  assert.equal(shape(tree.movePanel(layout, 'glsl', { kind: 'beside', pane: where(layout, 'appearance'), edge: 'bottom' }).root),
+    'row(sources|addNode, canvas, column(appearance, glsl))', 'or a new pane');
+  assert.equal(shape(tree.movePanel(layout, 'glsl', { kind: 'outer', edge: 'left' }).root), 'row(glsl, sources|addNode, canvas, appearance)', 'or an outer edge');
+  // Closed, it keeps where it floated, and floats there again when shown, opened. 關掉時記著浮動的位置，再顯示時回到那裡、打開。
+  layout = tree.setFloat(layout, 'glsl', { collapsed: true });
+  const hidden = tree.hidePanel(layout, 'glsl');
+  assert.equal(hidden.floating.glsl, undefined); assert.ok(hidden.hidden.includes('glsl'));
+  assert.equal(tree.paneOf(hidden.root, 'glsl'), undefined, 'closed, it is still not in the tree');
+  const shown = tree.showPanel(hidden, 'glsl');
+  assert.equal(shown.floating.glsl, 'free');
+  assert.deepEqual(plain(shown.floats.glsl), at(20, 30), 'where it floated last, opened');
+  assert.equal(tree.showOrFold(shown, 'glsl').floats.glsl.collapsed, true, 'the GLSL button folds it');
+});
+
+test('stored floating panels are read back; anything malformed is dropped; old corner layouts float free', () => {
+  const layout = tree.floatOut(tree.popOut(fresh(), 'appearance', homes), 'glsl', at(10, 10, 'bottom-left'));
+  const read = tree.readLayout(JSON.parse(JSON.stringify(layout)), panels);
+  assert.deepEqual(plain(read.floating), { appearance: 'docked', glsl: 'free' });
+  assert.equal(tree.paneOf(read.root, 'glsl'), undefined, 'a free panel is not put back into the tree');
+  const bad = JSON.parse(JSON.stringify(layout)); delete bad.floats.glsl.x;
+  const fixed = tree.readLayout(bad, panels);
+  assert.equal(fixed.floating.glsl, undefined, 'free without a place is not free');
+  assert.ok(tree.paneOf(fixed.root, 'glsl'), 'and goes back to its side');
+  const closed = tree.readLayout(JSON.parse(JSON.stringify(tree.hidePanel(layout, 'glsl'))), panels);
+  assert.equal(tree.paneOf(closed.root, 'glsl'), undefined, 'a closed free panel stays out of the tree');
+  // Before R.88 any panel floated in a corner, still in the tree. R.88 之前任何面板都浮在角落、仍在樹裡。
+  const old = JSON.parse(JSON.stringify(fresh()));
+  old.floating = { glsl: 'docked' }; old.floats = { glsl: { corner: 'bottom-right', width: 300, height: 200 } };
+  const kept = tree.keepHomes(tree.readLayout(old, panels), homes);
+  assert.equal(kept.floating.glsl, 'free');
+  assert.deepEqual(plain(kept.floats.glsl), { corner: 'bottom-right', width: 300, height: 200, x: 0, y: 0 }, 'from its corner');
+  assert.equal(tree.paneOf(kept.root, 'glsl'), undefined);
+  const noFloats = JSON.parse(JSON.stringify(fresh())); delete noFloats.floating; delete noFloats.floats;
+  assert.deepEqual(plain(tree.readLayout(noFloats, panels).floating), {}, 'a layout from before reads with nothing floating');
+});
+
+test('where floating panels are drawn: the home corner, free places kept, the nearest free spot when taken (Refactor.88)', () => {
+  let layout = tree.popOut(fresh(), 'appearance', homes);
+  layout = tree.floatOut(layout, 'glsl', at(0, 0));
+  let rects = tree.floatRects(layout, 1000, 600, 8, 28);
+  assert.deepEqual(plain(rects.appearance), { x: 680, y: 0, width: 320, height: 360, collapsed: false }, 'home: its corner');
+  assert.deepEqual(plain(rects.glsl), { x: 0, y: 0, width: 320, height: 360, collapsed: false }, 'free: where it is kept');
+  // Kept on the right, under the home panel: it moves to the nearest free spot. 記在右上、壓到有家的面板：去最近的空位。
+  layout = tree.placeFloats(layout, { glsl: at(0, 0, 'top-right') });
+  rects = tree.floatRects(layout, 1000, 800, 8, 28);
+  assert.deepEqual(plain(rects.glsl), { x: 352, y: 0, width: 320, height: 360, collapsed: false }, 'the nearest: beside it, the gap apart');
+  assert.deepEqual(plain(layout.floats.glsl), at(0, 0, 'top-right'), 'what is kept does not change, so it comes back with room');
+  // A smaller area: it follows its corner. 範圍變小：跟著它的角走。
+  layout = tree.floatOut(tree.popOut(fresh(), 'appearance', homes), 'glsl', at(10, 20, 'bottom-left', 300, 200));
+  assert.deepEqual(plain(tree.floatRects(layout, 1000, 600, 8, 28).glsl), { x: 10, y: 380, width: 300, height: 200, collapsed: false });
+  assert.deepEqual(plain(tree.floatRects(layout, 700, 400, 8, 28).glsl), { x: 10, y: 180, width: 300, height: 200, collapsed: false });
+  // No free spot at its size: at its least; still none: where it is kept. 原大小沒有空位：用最小尺寸；還是沒有：留在記的位置。
+  layout = tree.floatOut(tree.floatOut(fresh(), 'glsl', at(0, 0, 'top-left', 600, 400)), 'sources', at(0, 0, 'top-left', 600, 400));
+  rects = tree.floatRects(layout, 900, 400, 8, 28);
+  assert.deepEqual(plain(rects.sources), { x: 608, y: 0, width: 280, height: 160, collapsed: false }, 'at its least, beside');
+  rects = tree.floatRects(layout, 700, 400, 8, 28);
+  assert.equal(rects.sources.x, 0, 'no room even so: where it is kept');
+  assert.equal(tree.floatRects(layout, 1000, 100, 8, 28).glsl.height, 28, 'too low: the title only');
+});
+
+test('a free place follows its nearest corner; collapsed, it keeps its open height', () => {
+  const place = tree.placeAt({ x: 700, y: 400, width: 200, height: 100 }, 1000, 600);
+  assert.deepEqual(plain(place), { corner: 'bottom-right', width: 200, height: 100, x: 100, y: 100 });
+  assert.deepEqual(plain(tree.boxOf(place, 1000, 600, 28)), { x: 700, y: 400, width: 200, height: 100, collapsed: false });
+  const folded = tree.placeAt({ x: 10, y: 10, width: 200, height: 28 }, 1000, 600, { ...at(0, 0), collapsed: true });
+  assert.deepEqual(plain(folded), { corner: 'top-left', width: 200, height: 360, x: 10, y: 10, collapsed: true });
+});
+
+test('moving a free panel: solid, it stops a gap short of another and slides along it; it snaps near edges', () => {
+  const other = { x: 400, y: 0, width: 200, height: 300 };
+  const from = { x: 0, y: 0, width: 200, height: 200 };
+  assert.deepEqual(tree.slide(from, { x: 500, y: 50 }, [other], 1000, 600, 8), { x: 192, y: 50, width: 200, height: 200 }, 'stops 8 short, slides down');
+  assert.deepEqual(tree.slide(from, { x: 900, y: 0 }, [other], 1000, 600, 8), { x: 192, y: 0, width: 200, height: 200 }, 'never through it');
+  assert.deepEqual(tree.slide({ ...from, y: 320 }, { x: 500, y: 320 }, [other], 1000, 600, 8), { x: 500, y: 320, width: 200, height: 200 }, 'below it, free to pass');
+  assert.deepEqual(tree.slide(from, { x: -50, y: 900 }, [], 1000, 600, 8), { x: 0, y: 400, width: 200, height: 200 }, 'inside the area');
+  assert.deepEqual(tree.snap({ x: 185, y: 5, width: 200, height: 200 }, [other], 1000, 600, 8, 12), { x: 192, y: 0, width: 200, height: 200 }, 'beside it, and to the top');
+  assert.deepEqual(tree.snap({ x: 300, y: 300, width: 200, height: 200 }, [], 1000, 600, 8, 12), { x: 300, y: 300, width: 200, height: 200 }, 'far from edges: stays');
+  assert.equal(tree.freeSpot({ x: 400, y: 0, width: 200, height: 200 }, [other], 1000, 600, 8).x, 608, 'the nearest free spot');
+  assert.equal(tree.freeSpot({ x: 0, y: 0, width: 900, height: 200 }, [other], 1000, 600, 8).y, 308);
+  assert.equal(tree.freeSpot({ x: 0, y: 0, width: 1100, height: 200 }, [], 1000, 600, 8), null, 'too big: nowhere');
+});
+
+test('sizing free panels: an edge stops at another; a seam moves both until one is dragged away (human 2026-10-12)', () => {
+  const rects = { a: { x: 0, y: 0, width: 300, height: 300 }, b: { x: 308, y: 0, width: 400, height: 200 }, c: { x: 308, y: 208, width: 400, height: 180 },
+    d: { x: 0, y: 400, width: 300, height: 180 } };
+  // The seam between a and b, c: dragging it right grows a, shrinks both. a 和 b、c 之間的縫：往右拉，a 變寬、兩個一起變窄。
+  let sized = tree.sizeFloats(rects, 'a', { x: 'end' }, 50, 0, 1000, 600, 8);
+  assert.equal(sized.a.width, 350); assert.equal(sized.b.x, 358); assert.equal(sized.b.width, 350); assert.equal(sized.c.width, 350);
+  assert.deepEqual(sized.d, rects.d, 'a panel not on the seam stays');
+  sized = tree.sizeFloats(rects, 'a', { x: 'end' }, 500, 0, 1000, 600, 8);
+  assert.equal(sized.b.width, tree.FLOAT_MIN_WIDTH, 'down to the least');
+  sized = tree.sizeFloats(rects, 'b', { x: 'start' }, 100, 0, 1000, 600, 8);
+  assert.equal(sized.b.x, 408); assert.equal(sized.c.x, 408); assert.equal(sized.a.width, 400, 'from the other side, the same seam');
+  // Not a seam (b moved away): the edge stops a gap short. 不是縫（b 拖開了）：邊停在隔一個間隙的地方。
+  const apart = { a: rects.a, b: { ...rects.b, x: 400, width: 300 } };
+  sized = tree.sizeFloats(apart, 'a', { x: 'end' }, 500, 0, 1000, 600, 8);
+  assert.equal(sized.a.width, 392); assert.equal(sized.b.x, 400, 'it does not push');
+  // a's bottom edge with d below: stops a gap short (not a seam: d does not sit right under it). a 的下緣、下面有 d：停在隔一個間隙的地方。
+  sized = tree.sizeFloats(rects, 'a', { y: 'end' }, 500, 0, 1000, 600, 8);
+  assert.equal(sized.a.height, 300, 'dy is 0');
+  sized = tree.sizeFloats(rects, 'a', { y: 'end' }, 0, 500, 1000, 600, 8);
+  assert.equal(sized.a.height, 392); assert.equal(sized.d.y, 400);
+  // A corner sizes only itself. 角只動自己。
+  sized = tree.sizeFloats(rects, 'a', { x: 'end', y: 'end' }, 50, 50, 1000, 600, 8);
+  assert.equal(sized.a.width, 300, 'b is in the way: no wider'); assert.equal(sized.b.x, 308); assert.equal(sized.a.height, 350, 'taller, up to d');
+  // Fixed ones are only in the way. 固定的只是擋路。
+  sized = tree.sizeFloats(rects, 'a', { x: 'end' }, 50, 0, 1000, 600, 8, ['b', 'c']);
+  assert.equal(sized.a.width, 300);
 });
 
 test('the GLSL button: in view it does what the triangle does there; otherwise it brings the panel forward (Refactor.86.4)', () => {
@@ -329,7 +343,7 @@ test('the GLSL button: in view it does what the triangle does there; otherwise i
   assert.equal(tree.paneOf(layout.root, 'glsl').pane.collapsed, true);
   assert.equal(tree.paneOf(tree.showOrFold(layout, 'glsl').root, 'glsl').pane.collapsed, undefined);
   // Floating: folds, then opens. 浮動：收起，再按打開。
-  layout = tree.popOut(fresh(), 'glsl');
+  layout = tree.floatOut(fresh(), 'glsl', { corner: 'top-left', width: 320, height: 360, x: 0, y: 0 });
   layout = tree.showOrFold(layout, 'glsl');
   assert.equal(layout.floats.glsl.collapsed, true);
   assert.ok(!tree.showOrFold(layout, 'glsl').floats.glsl.collapsed);

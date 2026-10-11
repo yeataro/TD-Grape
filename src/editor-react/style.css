@@ -443,6 +443,19 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* On the leading (left, top) or trailing (right, bottom) edge of the part it belongs to. 在所屬那一格的前緣（左、上）或後緣（右、下）。 */
 .resize-x.lead { left: calc(var(--handle-grab) / -2); } .resize-x.trail { right: calc(var(--handle-grab) / -2); }
 .resize-y.lead { top: calc(var(--handle-grab) / -2); } .resize-y.trail { bottom: calc(var(--handle-grab) / -2); }
+/* A free floating panel's edges and corners (Refactor.88): edges as the handles above, corners a little larger, no line.
+   自由浮動面板的邊與角（R.88）：邊同上面的把手，角大一點、不畫線。 */
+.float-handle { position: absolute; z-index: 4; touch-action: none; }
+.float-handle:is(.n, .s, .e, .w)::after { content: ""; position: absolute; background: transparent; transition: background .12s; }
+.float-handle:is(.n, .s, .e, .w):is(:hover, :active)::after { background: var(--accent); }
+.float-handle:is(.n, .s) { left: var(--handle-grab); right: var(--handle-grab); height: var(--handle-grab); cursor: row-resize; }
+.float-handle:is(.n, .s)::after { left: 0; right: 0; top: calc(50% - var(--handle-line)); height: calc(var(--handle-line) * 2); }
+.float-handle:is(.e, .w) { top: var(--handle-grab); bottom: var(--handle-grab); width: var(--handle-grab); cursor: col-resize; }
+.float-handle:is(.e, .w)::after { top: 0; bottom: 0; left: calc(50% - var(--handle-line)); width: calc(var(--handle-line) * 2); }
+.float-handle:is(.nw, .ne, .sw, .se) { width: calc(var(--handle-grab) * 1.5); height: calc(var(--handle-grab) * 1.5); }
+.float-handle:is(.nw, .se) { cursor: nwse-resize; } .float-handle:is(.ne, .sw) { cursor: nesw-resize; }
+.float-handle:is(.n, .nw, .ne) { top: calc(var(--handle-grab) / -2); } .float-handle:is(.s, .sw, .se) { bottom: calc(var(--handle-grab) / -2); }
+.float-handle:is(.w, .nw, .sw) { left: calc(var(--handle-grab) / -2); } .float-handle:is(.e, .ne, .se) { right: calc(var(--handle-grab) / -2); }
 /* Moving a panel (Refactor.68; human 2026-10-10, Resolume Wire): corner marks on a pane it would join as a tab, a line where a
    new pane would be cut or a tab would go; in our purple, shared with the handles for now (human), red with the reason where
    it cannot go. The panel's name follows the pointer. 搬面板：要合併成分頁的窗格四角亮角框；會切出新窗格或插入分頁的地方一條線；
@@ -461,6 +474,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    （人類：左右看起來粗細不同）。 */
 .drop-mark.along.left { translate: 0 0; } .drop-mark.along.right { translate: -100% 0; }
 .drop-mark.refused { background: var(--drop-refused); }
+/* A panel about to float free (Refactor.88, human 2026-10-12): a see-through floating panel where it would land.
+   即將自由浮動的面板（R.88，人類 10-12）：在會落下的地方畫一個半透明的浮動面板。 */
+.drop-mark.ghost { border: 1px solid var(--drop-target); border-radius: 8px; background: color-mix(in srgb, var(--surface-zone) 55%, transparent); }
+.drop-mark.ghost > .floating-head { cursor: inherit; border-bottom-color: color-mix(in srgb, var(--drop-target) 50%, transparent); }
 .drop-corner { position: absolute; width: var(--drop-corner); height: var(--drop-corner); border: 0 solid var(--drop-target); }
 .drop-corner.tl { left: 0; top: 0; border-left-width: var(--drop-line); border-top-width: var(--drop-line); }
 .drop-corner.tr { right: 0; top: 0; border-right-width: var(--drop-line); border-top-width: var(--drop-line); }

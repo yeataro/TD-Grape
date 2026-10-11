@@ -29,19 +29,21 @@ export type LayoutData = {
   hidden: string[];
   /** The left and right toggles: a closed side is kept, only not drawn. 左右開關：收起的一側保留、只是不畫。 */
   closed: Record<Side, boolean>;
-  /** Panels floating now, with where they were before (Refactor.84): a floating panel stays a member of its tab pane, which
-   * skips it, so it can always go back (human 2026-10-11; legacy inspector.js:2232). 現在浮動的面板，記浮起來前在哪（R.84）：浮動的面板
-   * 仍是原本分頁窗格的成員、那一格畫時跳過，所以一定回得去（人類 10-11；照舊產品）。 */
-  floating: Record<string, 'docked' | 'closed'>;
-  /** Where each panel floats, kept after it goes back so it floats there again (human 2026-10-11). 每個面板浮動的位置；回去後仍記著，
-   * 下次浮動回到這裡（人類 10-11）。 */
+  /** Panels floating now. A panel with a home records where it was before (Refactor.84): it stays a member of its tab pane, which
+   * skips it, so it can always go back (human 2026-10-11; legacy inspector.js:2232). Any other floats `free`: out of the tree
+   * (Refactor.88, human 2026-10-12: no springing back). 現在浮動的面板。有家的記浮起來前在哪（R.84）：仍是原本分頁窗格的成員、那一格畫時
+   * 跳過，所以一定回得去（人類 10-11；照舊產品）。其他的是 free：不在版面樹裡（R.88，人類 10-12：不彈回）。 */
+  floating: Record<string, 'docked' | 'closed' | 'free'>;
+  /** Where each panel floats, kept after it stops floating so it floats there again (human 2026-10-11). 每個面板浮動的位置；不浮動後
+   * 仍記著，下次浮動回到這裡（人類 10-11）。 */
   floats: Record<string, FloatPlace>;
 };
-/** The first version floats in the network's four corners (Refactor.84, human 2026-10-11); dragging picks the corner.
- * 第一版浮在網路區的四個角（R.84，人類 10-11）；拖曳決定去哪一角。 */
+/** A corner of the floating area: a home panel's place (Refactor.84), or the corner a free panel follows (Refactor.88).
+ * 浮動範圍的角：有家面板的位置（R.84），或自由浮動面板跟著走的角（R.88）。 */
 export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export const CORNERS: readonly Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-export type FloatPlace = { corner: Corner; width: number; height: number; collapsed?: true };
+/** `x`, `y`: a free panel's distance from its corner's two edges (Refactor.88). x、y：自由浮動面板離它的角兩條邊多遠（R.88）。 */
+export type FloatPlace = { corner: Corner; width: number; height: number; collapsed?: true; x?: number; y?: number };
 /** Panels that float in one corner only, which no other panel may take (human 2026-10-11: the Parameter panel stays top right).
  * Given by the panel table, not stored. 只浮在某一角的面板，那一角別人不能用（人類 10-11：參數面板留在右上角）。由面板表給，不存。 */
 export type Homes = Readonly<Record<string, Corner>>;
@@ -189,11 +191,13 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
         closed: { left: closed?.left === true, right: closed?.right === true }, floating: {}, floats: {} };
       // Floating panels (Refactor.84): read only what is well formed. 浮動面板（R.84）：只讀格式對的。
       const floats = value.floats as Record<string, Record<string, unknown>> | undefined, floating = value.floating as Record<string, unknown> | undefined;
+      const offset = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
       for (const [id, place] of Object.entries(floats && typeof floats === 'object' ? floats : {}))
         if (known.has(id) && place && CORNERS.includes(place.corner as Corner) && Number(place.width) > 0 && Number(place.height) > 0)
-          layout.floats[id] = { corner: place.corner as Corner, width: Number(place.width), height: Number(place.height), ...(place.collapsed === true ? { collapsed: true as const } : {}) };
+          layout.floats[id] = { corner: place.corner as Corner, width: Number(place.width), height: Number(place.height), ...(place.collapsed === true ? { collapsed: true as const } : {}),
+            ...(offset(place.x) && offset(place.y) ? { x: place.x as number, y: place.y as number } : {}) };
       for (const [id, from] of Object.entries(floating && typeof floating === 'object' ? floating : {}))
-        if (layout.floats[id] && (from === 'docked' || from === 'closed')) layout.floating[id] = from;
+        if (layout.floats[id] && (from === 'docked' || from === 'closed' || (from === 'free' && isFree(layout.floats[id])))) layout.floating[id] = from;
     } else return fallback;
     // The shape this round allows; anything else is not ours to guess at. 這一輪允許的形狀；別的不猜。
     if (!wellFormed(layout.root)) return fallback;
@@ -202,10 +206,17 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
     const tidied = tidy(layout.root);
     if (!tidied) return fallback;
     layout.root = tidied;
-    for (const [id, side] of panels) if (!tabPanes(layout.root).some(found => found.pane.panels.includes(id))) layout = addToSide(layout, id, side);
-    // One panel per corner: a second one on the same corner goes back. 一角一個：同一角的第二個回去。
+    // A free panel is not in the tree, floating or closed; in the tree it is not free. 自由浮動的面板不在版面樹裡（浮著或關著）；在樹裡就不是自由浮動。
+    const inTree = (id: string) => tabPanes(layout.root).some(found => found.pane.panels.includes(id));
+    for (const id of Object.keys(layout.floating)) if (layout.floating[id] === 'free' && inTree(id)) delete layout.floating[id];
+    const freeAway = (id: string) => layout.floating[id] === 'free' || (layout.hidden.includes(id) && isFree(layout.floats[id]));
+    for (const [id, side] of panels) if (!inTree(id) && !freeAway(id)) layout = addToSide(layout, id, side);
+    // One panel per corner slot: a second one on the same corner goes back. 一個角落槽一個：同一角的第二個回去。
     const taken = new Set<Corner>();
-    for (const id of Object.keys(layout.floating)) { const corner = layout.floats[id]!.corner; if (taken.has(corner)) delete layout.floating[id]; else taken.add(corner); }
+    for (const id of Object.keys(layout.floating)) {
+      if (layout.floating[id] === 'free') continue;
+      const corner = layout.floats[id]!.corner; if (taken.has(corner)) delete layout.floating[id]; else taken.add(corner);
+    }
     layout.hidden = layout.hidden.filter(id => !layout.floating[id]);
     return layout;
   } catch { return fallback; }
@@ -260,30 +271,31 @@ export type Drop =
 /** Move a panel; the result is tidied. A drop that changes nothing returns the layout as it was.
  * 移動面板，結果整理過。沒有改變的放置原樣回傳。 */
 export function movePanel(layout: LayoutData, panel: string, drop: Drop): LayoutData {
-  const source = paneOf(layout.root, panel);
-  if (!source) return layout;
-  // A floating panel dropped where it already belongs lands there (Refactor.84). 浮動面板放回它原本所屬的位置：就地落地（R.84）。
-  if (layout.floating[panel]) {
+  const source = paneOf(layout.root, panel), free = layout.floating[panel] === 'free';
+  if (!source && !free) return layout;
+  // A floating panel with a home dropped where it already belongs lands there (Refactor.84). 有家的浮動面板放回它原本所屬的位置：就地落地（R.84）。
+  if (layout.floating[panel] && !free) {
     const bare = { ...layout, floating: {} }, moved = movePanel(bare, panel, drop);
     return finish(copy(moved === bare ? layout : { ...moved, floating: layout.floating }), panel, null);
   }
   if (drop.kind === 'outer') return toOuter(layout, panel, drop.edge);
   const next = copy(layout), target = at(next.root, drop.pane);
   if (!target) return layout;
-  const from = at(next.root, source.path) as Extract<Pane, { kind: 'tabs' }>;
+  // A free panel comes in from outside the tree (Refactor.88). 自由浮動的面板從版面樹外面進來（R.88）。
+  const from = source ? at(next.root, source.path) as Extract<Pane, { kind: 'tabs' }> : null;
   if (drop.kind === 'tab') {
     if (target.kind !== 'tabs') return layout;
     let index = Math.max(0, Math.min(drop.index, target.panels.length));
-    if (target === from) {
+    if (from && target === from) {
       const old = from.panels.indexOf(panel);
       if (old < index) index--;
       if (old === index) return layout;
     }
-    from.panels.splice(from.panels.indexOf(panel), 1);
+    from?.panels.splice(from.panels.indexOf(panel), 1);
     target.panels.splice(index, 0, panel); target.active = panel;
   } else {
-    if (target === from && from.panels.length === 1) return layout;
-    from.panels.splice(from.panels.indexOf(panel), 1);
+    if (from && target === from && from.panels.length === 1) return layout;
+    from?.panels.splice(from.panels.indexOf(panel), 1);
     const fresh: Pane = { kind: 'tabs', panels: [panel], active: panel };
     const direction: Direction = drop.edge === 'top' || drop.edge === 'bottom' ? 'column' : 'row', before = drop.edge === 'top' || drop.edge === 'left';
     const pixels = direction === 'row' ? SIDE_WIDTH : PANE_HEIGHT;
@@ -351,9 +363,18 @@ function finish(layout: LayoutData, panel: string, side: Side | null): LayoutDat
 }
 
 /** Bring a panel forward: shown, its tab chosen, its side opened; a floating one stays where it floats and opens (human
- * 2026-10-11, floating-panels question 9). 把面板叫到前面：顯示、選中、打開所在的那一側；浮動的留在原地、展開（人類 10-11，第 9 題）。 */
-export const showPanel = (layout: LayoutData, panel: string) => layout.floating[panel]
-  ? setFloat(layout, panel, { collapsed: false }) : finish(copy(layout), panel, null);
+ * 2026-10-11, floating-panels question 9); a free panel that was closed floats again where it floated last (Refactor.88, rule 6).
+ * 把面板叫到前面：顯示、選中、打開所在的那一側；浮動的留在原地、展開（人類 10-11，第 9 題）；關掉的自由浮動面板回到上次浮動的位置
+ * （R.88，規格第 6 條）。 */
+export function showPanel(layout: LayoutData, panel: string): LayoutData {
+  if (layout.floating[panel]) return setFloat(layout, panel, { collapsed: false });
+  const place = layout.floats[panel];
+  if (!paneOf(layout.root, panel) && isFree(place)) {
+    const { collapsed: _, ...open } = place!;
+    return { ...layout, hidden: layout.hidden.filter(id => id !== panel), floating: { ...layout.floating, [panel]: 'free' }, floats: { ...layout.floats, [panel]: open } };
+  }
+  return finish(copy(layout), panel, null);
+}
 /** A button that calls a panel up (the toolbar's GLSL, Refactor.86.4; human 2026-10-11: pressed again while the panel is in
  * view, it does what that panel's collapse triangle does there): floating, it folds or opens; docked in view and stacked, its
  * pane collapses to its tab bar; docked in view with no triangle, it stays as it is; out of view, it is brought forward.
@@ -366,33 +387,37 @@ export function showOrFold(layout: LayoutData, panel: string): LayoutData {
   if (!inView) return showPanel(layout, panel);
   return stacked(layout.root, placed.path) ? setCollapsed(layout, placed.path, true) : layout;
 }
-/** Close a panel: it is hidden, and no longer floats (human 2026-10-11: closing is closing). 關閉面板：藏起來，也不再浮動（人類：關閉就是關閉）。 */
+/** Close a panel: it is hidden, and no longer floats (human 2026-10-11: closing is closing); a free panel keeps where it floated,
+ * to float there when shown again. 關閉面板：藏起來，也不再浮動（人類：關閉就是關閉）；自由浮動的記著浮動的位置，再顯示時回到那裡。 */
 export function hidePanel(layout: LayoutData, panel: string): LayoutData {
   const { [panel]: _, ...floating } = layout.floating;
   return layout.hidden.includes(panel) && !layout.floating[panel] ? layout : { ...layout, floating, hidden: [...layout.hidden.filter(id => id !== panel), panel] };
 }
 
-/** Which panel floats in a corner. 哪個面板浮在這一角。 */
-export const occupant = (layout: LayoutData, corner: Corner) => Object.keys(layout.floating).find(id => layout.floats[id]?.corner === corner);
-/** Float a panel (Pop out, Refactor.84): to the corner it floated in last, else the first free one of `corners` (nearest first,
- * from where it sits), else the first, whose panel goes back. It keeps whether it was in the tree or closed, to go back to.
- * 讓面板浮動（Pop out，R.84）：去它上次浮的那一角，否則 corners（由近到遠）裡第一個空的，都滿就去第一個、那一角的面板回去。記住浮起來前
- * 在版面裡還是關著，回去時用。 */
-export function popOut(layout: LayoutData, panel: string, corners: readonly Corner[] = CORNERS, homes: Homes = {}): LayoutData {
-  if (layout.floating[panel] || !paneOf(layout.root, panel)) return layout;
-  const last = layout.floats[panel], kept = (each: Corner) => Object.entries(homes).some(([id, home]) => home === each && id !== panel);
-  const order = homes[panel] ? [homes[panel]!] : [...(last ? [last.corner] : []), ...corners, ...CORNERS].filter(each => !kept(each));
-  const corner = order.find(each => !occupant(layout, each)) ?? order[0]!, other = occupant(layout, corner);
-  const next = other ? backToA(layout, other) : layout;
-  return { ...next, hidden: next.hidden.filter(id => id !== panel), floating: { ...next.floating, [panel]: next.hidden.includes(panel) ? 'closed' : 'docked' },
+// Floating, two kinds (Refactor.88, human 2026-10-12: floating is by dragging, it does not spring back; the Parameter panel stays
+// as it was). A panel with a home (the panel table's `corner`: the Parameter panel) floats in that corner and goes back to where it
+// was (P, R.84–86). Any other panel floats free: it leaves the tree, sits where it was dropped, and is docked again only by
+// dragging it into the layout. 浮動分兩種（R.88，人類 10-12：浮動靠拖拉、不彈回；參數面板維持原樣）。有家的面板（面板表的 corner：
+// 參數面板）浮在那一角、可以回到原本的地方（P，R.84–86）。其他面板自由浮動：離開版面樹、放在哪就在哪，只有拖進版面才再停靠。
+
+/** A free panel's place: its corner, and how far it is from that corner's two edges. 自由浮動面板的位置：它的角，以及離那個角兩條邊多遠。 */
+export const isFree = (place: FloatPlace | undefined): boolean => place?.x !== undefined && place.y !== undefined;
+/** Float a panel in its home corner (P, Refactor.84): it keeps whether it was in the tree or closed, to go back to. Only a panel with
+ * a home; the others float by dragging. 讓有家的面板浮在它的角（P，R.84）：記住浮起來前在版面裡還是關著，回去時用。只給有家的面板；
+ * 其他的靠拖拉浮動。 */
+export function popOut(layout: LayoutData, panel: string, homes: Homes): LayoutData {
+  const corner = homes[panel];
+  if (!corner || layout.floating[panel] || !paneOf(layout.root, panel)) return layout;
+  const last = layout.floats[panel];
+  return { ...layout, hidden: layout.hidden.filter(id => id !== panel), floating: { ...layout.floating, [panel]: layout.hidden.includes(panel) ? 'closed' : 'docked' },
     // Its last size, open: it was just called up. 上次的大小、打開：剛被叫出來。
-    floats: { ...next.floats, [panel]: { width: last?.width ?? FLOAT_WIDTH, height: last?.height ?? FLOAT_HEIGHT, corner } } };
+    floats: { ...layout.floats, [panel]: { width: last?.width ?? FLOAT_WIDTH, height: last?.height ?? FLOAT_HEIGHT, corner } } };
 }
 /** Stop floating and go back to where it was before: its tab pane, or closed (human 2026-10-11). 不再浮動、回到浮起來前：
  * 所屬的分頁窗格，或關閉（人類 10-11）。 */
 export function backToA(layout: LayoutData, panel: string): LayoutData {
   const from = layout.floating[panel];
-  if (!from) return layout;
+  if (!from || from === 'free') return layout;
   const { [panel]: _, ...floating } = layout.floating, next = copy({ ...layout, floating });
   if (from === 'closed') return { ...next, hidden: [...next.hidden.filter(id => id !== panel), panel] };
   // Back as its pane's shown tab, the sides left as they are: it goes back to how things were, it does not open a side
@@ -402,36 +427,36 @@ export function backToA(layout: LayoutData, panel: string): LayoutData {
   if (placed) { placed.pane.active = panel; delete placed.pane.collapsed; }
   return next;
 }
-/** Float or go back: the A/B switch any button may call (human 2026-10-11). 浮動或回去：任何按鈕都能叫的 A／B 切換（人類 10-11）。 */
-export const toggleFloat = (layout: LayoutData, panel: string, corners?: readonly Corner[], homes: Homes = {}) =>
-  layout.floating[panel] ? backToA(layout, panel) : popOut(layout, panel, corners, homes);
-/** Put floating panels where homes allow (a layout kept before a home was given): a panel with a home goes there, any other panel
- * in someone's home goes back. 讓浮動面板符合各自的家（家是後來才定的舊版面）：有家的回家，佔了別人家的回去。 */
+/** Float or go back, for a panel with a home (P; human 2026-10-11). 有家的面板浮動或回去（P；人類 10-11）。 */
+export const toggleFloat = (layout: LayoutData, panel: string, homes: Homes) =>
+  layout.floating[panel] ? backToA(layout, panel) : popOut(layout, panel, homes);
+/** A layout kept before R.88 (floating in corners) or before a home was given: a panel with a home floats in its home; any other
+ * panel floating in a corner floats free, from that corner. 舊版面（R.88 之前浮在角落，或家是後來才定的）：有家的浮在自己的家；其他浮在
+ * 角落的改成自由浮動，從那個角開始。 */
 export function keepHomes(layout: LayoutData, homes: Homes): LayoutData {
   let next = layout;
   for (const id of Object.keys(layout.floating)) {
-    const place = next.floats[id];
-    if (!place || !next.floating[id] || mayFloatIn(id, place.corner, homes)) continue;
-    next = homes[id] ? { ...next, floats: { ...next.floats, [id]: { ...place, corner: homes[id]! } } } : backToA(next, id);
-  }
-  for (const [id, home] of Object.entries(homes)) {
-    const other = Object.keys(next.floating).find(each => each !== id && next.floats[each]?.corner === home);
-    if (other) next = backToA(next, other);
+    const place = next.floats[id]!;
+    if (homes[id]) { if (layout.floating[id] === 'free') { const { [id]: _, ...rest } = next.floating; next = addToSide({ ...next, floating: rest }, id, homes[id]!.endsWith('left') ? 'left' : 'right'); } else if (place.corner !== homes[id]) next = { ...next, floats: { ...next.floats, [id]: { ...place, corner: homes[id]! } } }; }
+    else if (layout.floating[id] !== 'free') next = floatOut(next, id, { ...place, x: 0, y: 0 });
   }
   return next;
 }
-/** Whether a floating panel may go to a corner: not away from its home, not into another panel's home. 浮動面板能不能去某一角：
- * 有家的不離家，別人的家不能進。 */
-export const mayFloatIn = (panel: string, corner: Corner, homes: Homes = {}) =>
-  homes[panel] ? homes[panel] === corner : !Object.values(homes).includes(corner);
-/** Move a floating panel to a corner; a panel already there takes its old corner (human 2026-10-11: swap).
- * 把浮動面板移到某一角；那一角已有面板就換到它原本的角（人類 10-11：互換）。 */
-export function moveFloat(layout: LayoutData, panel: string, corner: Corner, homes: Homes = {}): LayoutData {
-  const place = layout.floats[panel];
-  if (!layout.floating[panel] || !place || place.corner === corner || !mayFloatIn(panel, corner, homes)) return layout;
-  const other = occupant(layout, corner), floats = { ...layout.floats, [panel]: { ...place, corner } };
-  if (other) floats[other] = { ...floats[other]!, corner: place.corner };
-  return { ...layout, floats };
+/** Float a panel free where it was dropped (Refactor.88): out of the tree, at `place`. 讓面板自由浮動在放下的地方（R.88）：離開版面樹、
+ * 放在 place。 */
+export function floatOut(layout: LayoutData, panel: string, place: FloatPlace): LayoutData {
+  const from = layout.floating[panel];
+  const next = from === 'free' ? layout : remove(from ? { ...layout, floating: Object.fromEntries(Object.entries(layout.floating).filter(([id]) => id !== panel)) } : layout, panel);
+  return { ...next, hidden: next.hidden.filter(id => id !== panel), floating: { ...next.floating, [panel]: 'free' }, floats: { ...next.floats, [panel]: place } };
+}
+/** Keep where free panels now are (moved or sized together); the ones just placed go first, so where they were put wins when
+ * room runs short (floatRects). 記下自由浮動面板現在的位置（一起移動或調大小）；剛放的排最前面，空間不夠時（floatRects）以它們放的
+ * 位置為準。 */
+export function placeFloats(layout: LayoutData, places: Readonly<Record<string, FloatPlace>>): LayoutData {
+  const ids = Object.keys(places).filter(id => layout.floating[id] === 'free');
+  if (!ids.length) return layout;
+  const floating = Object.fromEntries([...ids.map(id => [id, 'free'] as const), ...Object.entries(layout.floating).filter(([id]) => !ids.includes(id))]);
+  return { ...layout, floating, floats: { ...layout.floats, ...Object.fromEntries(ids.map(id => [id, places[id]!])) } };
 }
 /** Change a floating panel's size or collapse. 改浮動面板的大小或收合。 */
 export function setFloat(layout: LayoutData, panel: string, patch: { width?: number; height?: number; collapsed?: boolean }): LayoutData {
@@ -444,88 +469,163 @@ export function setFloat(layout: LayoutData, panel: string, patch: { width?: num
   return { ...layout, floats: { ...layout.floats, [panel]: next } };
 }
 
-/** The panel a floating panel pushes: the one above or below it on its side (`height`), or across its row (`width`).
- * 浮動面板會推到的那一個：同一邊上下的（height），或同一列對面的（width）。 */
-const neighbour = (layout: LayoutData, corner: Corner, axis: 'width' | 'height') => {
-  const [row, side] = corner.split('-') as ['top' | 'bottom', 'left' | 'right'];
-  return occupant(layout, (axis === 'height' ? `${row === 'top' ? 'bottom' : 'top'}-${side}` : `${row}-${side === 'left' ? 'right' : 'left'}`) as Corner);
+// Geometry of free panels, in the floating area (the network between its toolbar and canvas controls, gaps taken off). Panels
+// do not overlap (Refactor.88, human 2026-10-12: try it, drop it if it does not work): they keep `gap` apart; all of it is here,
+// so dropping the rule is one change. 自由浮動面板的幾何，在浮動範圍裡（網路區功能列到畫布控制項之間，已扣間隙）。面板不重疊（R.88，
+// 人類 10-12：先試，有問題再拿掉）：彼此至少隔 gap；全部集中在這裡，要拿掉只改一處。
+export type Box = { x: number; y: number; width: number; height: number };
+export type FloatRect = Box & { collapsed: boolean };
+const near = 0.5;
+/** Whether two boxes keep `gap` apart. 兩個框是否至少隔 gap。 */
+export const clear = (a: Box, b: Box, gap: number) => a.x + a.width + gap <= b.x + near || b.x + b.width + gap <= a.x + near
+  || a.y + a.height + gap <= b.y + near || b.y + b.height + gap <= a.y + near;
+type Axis = 'x' | 'y';
+const along = (box: Box, axis: Axis): [number, number] => axis === 'x' ? [box.x, box.width] : [box.y, box.height];
+const other = (axis: Axis): Axis => axis === 'x' ? 'y' : 'x';
+/** Whether two boxes face each other across `axis`: their spans on the other axis come closer than `reach`. 兩個框在 axis 方向上
+ * 是否相對：另一個方向的範圍距離小於 reach。 */
+const facing = (a: Box, b: Box, axis: Axis, reach: number) => {
+  const [as, al] = along(a, other(axis)), [bs, bl] = along(b, other(axis));
+  return as < bs + bl + reach - near && bs < as + al + reach - near;
 };
-/** The least a floating panel is pushed to along an axis: its minimum; where two minimums do not fit, as little as leaves the other
- * its minimum, but never under the floor, so one of them can still have a usable size (Refactor.84: a narrow network); collapsed,
- * its title. 浮動面板在某個方向被推到的最小值：它的最小值；兩個最小值放不下時，讓另一個能有最小值、但不低於底線，好讓其中一個仍有可用的大小
- * （R.84：窄的網路區）；收起時是標題高。 */
-const FLOOR = { width: 140, height: 80 } as const;
-const leastOf = (place: FloatPlace | undefined, axis: 'width' | 'height', room: number, gap: number, title: number) => {
-  if (axis === 'height' && place?.collapsed) return title;
-  const least = axis === 'width' ? FLOAT_MIN_WIDTH : FLOAT_MIN_HEIGHT;
-  return Math.min(least, Math.max(FLOOR[axis], room - gap - least));
-};
-/** Size a floating panel in an area `room` long on that axis. Panels push, they do not stick (human 2026-10-11): growing into the
- * one above or below (height) or across the row (width) pushes it smaller, down to its least, and stops there; shrinking leaves a
- * space; one pushed smaller stays so (it does not grow back when the other shrinks again). 在 room 長的範圍裡改浮動面板的大小。面板互相
- * 推擠、不黏在一起（人類 10-11）：長到碰到上下（高）或同一列對面（寬）的另一個時把它推小、最小到它的最小值就停；變小就留出空隙；被推小的
- * 維持那樣（另一個再變小時不會長回去）。 */
-export function pushFloat(layout: LayoutData, panel: string, axis: 'width' | 'height', size: number, room: number, gap: number, title: number): LayoutData {
-  const place = layout.floats[panel];
-  if (!place) return layout;
-  const other = neighbour(layout, place.corner, axis), partner = other ? layout.floats[other] : undefined;
-  const least = (each: FloatPlace) => leastOf(each, axis, room, gap, title);
-  const own = Math.round(Math.max(least(place), Math.min(size, room - (partner ? gap + least(partner) : 0))));
-  const floats = { ...layout.floats, [panel]: { ...place, [axis]: own } };
-  if (other && partner && !(axis === 'height' && partner.collapsed) && partner[axis] > room - gap - own)
-    floats[other] = { ...partner, [axis]: Math.round(Math.max(least(partner), room - gap - own)) };
-  return { ...layout, floats };
-}
+const put = (box: Box, axis: Axis, start: number, size?: number): Box => axis === 'x'
+  ? { ...box, x: start, width: size ?? box.width } : { ...box, y: start, height: size ?? box.height };
+const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 
-export type FloatRect = { x: number; y: number; width: number; height: number; collapsed: boolean };
-/** Where each floating panel is drawn in an area `width` x `height` (the network between its toolbar and canvas controls, gaps
- * taken off). Width: its own, at most the area, at most half (less the gap) when the facing corner on its row is taken. Height:
- * its own (pushFloat keeps a side's two apart); when the area is smaller than they need (a smaller window), the top one leaves
- * the lower one its least and the lower one takes what is left, without changing what is kept. Collapsed, or no room: the title
- * only (`title` tall). 每個浮動面板畫在 width x height 的範圍裡哪裡（網路區功能列到畫布控制項之間，已扣間隙）。寬：自己的，不超過範圍；
- * 同一列對面那一角有面板時最多一半（扣間隙）。高：自己的（pushFloat 讓同一邊兩個不重疊）；範圍比需要的小時（視窗變小），上面的留給下面
- * 的最小值、下面的拿剩下的，不改記下的值。收起或放不下：只有標題（title 高）。 */
+/** Where a free panel is kept, from where it is drawn: its nearest corner and how far from that corner's two edges, so it follows
+ * that corner when the area changes size (human 2026-10-11, question 13). Collapsed, it keeps its open height.
+ * 從畫的位置算出要記的位置：最近的角、離那個角兩條邊多遠，所以範圍變大變小時跟著那個角走（人類 10-11，第 13 題）。收起時保留打開的高度。 */
+export function placeAt(box: Box, width: number, height: number, was?: FloatPlace): FloatPlace {
+  const top = box.y + box.height / 2 < height / 2, left = box.x + box.width / 2 < width / 2;
+  return { corner: `${top ? 'top' : 'bottom'}-${left ? 'left' : 'right'}` as Corner, width: Math.round(box.width),
+    height: Math.round(was?.collapsed ? was.height : box.height), x: Math.round(left ? box.x : width - box.x - box.width),
+    y: Math.round(top ? box.y : height - box.y - box.height), ...(was?.collapsed ? { collapsed: true as const } : {}) };
+}
+/** Where a free panel wants to be drawn: its place in an area this size, made to fit. 自由浮動面板想畫在哪：記的位置放進這個大小的範圍。 */
+export function boxOf(place: FloatPlace, width: number, height: number, title: number): FloatRect {
+  const collapsed = !!place.collapsed || height < FLOAT_MIN_HEIGHT, w = Math.min(place.width, width), h = Math.min(collapsed ? title : place.height, height);
+  const top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
+  return { x: clamp(left ? place.x ?? 0 : width - (place.x ?? 0) - w, 0, width - w), y: clamp(top ? place.y ?? 0 : height - (place.y ?? 0) - h, 0, height - h),
+    width: w, height: h, collapsed };
+}
+/** The nearest place for a box that keeps clear of the others, inside the area; none when it does not fit anywhere. 離某個框最近、
+ * 和其他框保持距離、在範圍內的位置；哪裡都放不下時沒有。 */
+export function freeSpot(box: Box, others: readonly Box[], width: number, height: number, gap: number): Box | null {
+  const spots = (axis: Axis, room: number) => {
+    const [start, size] = along(box, axis);
+    return [start, 0, room - size, ...others.flatMap(o => { const [s, l] = along(o, axis); return [s + l + gap, s - gap - size]; })]
+      .filter(at => at >= -near && at <= room - size + near);
+  };
+  let best: Box | null = null, distance = Infinity;
+  for (const x of spots('x', width)) for (const y of spots('y', height)) {
+    const spot = { ...box, x, y }, far = Math.hypot(x - box.x, y - box.y);
+    if (far < distance && others.every(o => clear(spot, o, gap))) { best = spot; distance = far; }
+  }
+  return best;
+}
+/** Where each floating panel is drawn in an area `width` x `height`. A panel with a home: in its corner, its own size, at most the
+ * area. Free panels, the most recently placed first: where they are kept; where that is taken (a smaller window, a panel opened
+ * or grown), the nearest free spot, then at their least, else where they are kept (rule 1, human 2026-10-12). What is kept does not
+ * change, so they come back when there is room again (question 13). Too low for a panel: its title only.
+ * 每個浮動面板畫在 width x height 範圍的哪裡。有家的：在它的角、自己的大小、不超過範圍。自由浮動的，最近放的先：在記的位置；那裡被佔了
+ * （視窗變小、有面板打開或變大）就去最近的空位，再不行用最小尺寸找，還是不行就留在記的位置（第 1 題，人類 10-12）。記的值不改，所以有空間時
+ * 會回來（第 13 題）。範圍太矮：只有標題。 */
 export function floatRects(layout: LayoutData, width: number, height: number, gap: number, title: number): Record<string, FloatRect> {
-  const rects: Record<string, FloatRect> = {}, at = (corner: Corner) => occupant(layout, corner);
-  for (const side of ['left', 'right'] as const) {
-    const top = at(`top-${side}` as Corner), bottom = at(`bottom-${side}` as Corner);
-    // Width: its own; across a row the left one leaves the right one its least, the right one takes at most what is left.
-    // 寬：自己的；同一列時左邊的留給右邊的最小值，右邊的最多拿剩下的。
-    const wide = (id: string, row: 'top' | 'bottom') => {
-      const left = at(`${row}-left` as Corner), right = at(`${row}-right` as Corner), own = layout.floats[id]!.width;
-      const least = (each: string) => leastOf(layout.floats[each], 'width', width, gap, title);
-      if (!left || !right) return Math.max(0, Math.min(own, width));
-      const leftWidth = Math.max(Math.min(least(left), width), Math.min(layout.floats[left]!.width, width - gap - least(right)));
-      return Math.max(0, id === left ? leftWidth : Math.min(own, width - gap - leftWidth));
-    };
-    const both = !!top && !!bottom;
-    const folded = (id: string) => !!layout.floats[id]?.collapsed || height < (both ? 2 * FLOAT_MIN_HEIGHT + gap : FLOAT_MIN_HEIGHT);
-    const least = (id: string) => folded(id) ? title : FLOAT_MIN_HEIGHT;
-    let topHeight = 0;
-    if (top) {
-      const room = bottom ? height - gap - least(bottom) : height;
-      topHeight = folded(top) ? Math.min(title, height) : Math.max(Math.min(layout.floats[top]!.height, room), Math.min(least(top), room));
-      const w = wide(top, 'top');
-      rects[top] = { x: side === 'left' ? 0 : width - w, y: 0, width: w, height: topHeight, collapsed: folded(top) };
-    }
-    if (bottom) {
-      const room = top ? height - gap - topHeight : height;
-      const h = folded(bottom) ? Math.min(title, height) : Math.min(layout.floats[bottom]!.height, room);
-      const w = wide(bottom, 'bottom');
-      rects[bottom] = { x: side === 'left' ? 0 : width - w, y: height - h, width: w, height: h, collapsed: folded(bottom) };
-    }
+  const rects: Record<string, FloatRect> = {}, ids = Object.keys(layout.floating).filter(id => layout.floats[id]);
+  for (const id of ids.filter(each => layout.floating[each] !== 'free')) {
+    const place = layout.floats[id]!, collapsed = !!place.collapsed || height < FLOAT_MIN_HEIGHT;
+    const w = Math.max(0, Math.min(place.width, width)), h = Math.max(0, Math.min(collapsed ? title : place.height, height));
+    rects[id] = { x: place.corner.endsWith('left') ? 0 : width - w, y: place.corner.startsWith('top') ? 0 : height - h, width: w, height: h, collapsed };
+  }
+  const placed: Box[] = Object.values(rects);
+  for (const id of ids.filter(each => layout.floating[each] === 'free')) {
+    const want = boxOf(layout.floats[id]!, width, height, title);
+    const least = { ...want, width: Math.min(want.width, FLOAT_MIN_WIDTH), height: want.collapsed ? want.height : Math.min(want.height, FLOAT_MIN_HEIGHT) };
+    const spot = (placed.every(o => clear(want, o, gap)) ? want : null) ?? freeSpot(want, placed, width, height, gap) ?? freeSpot(least, placed, width, height, gap) ?? want;
+    rects[id] = { ...spot, collapsed: want.collapsed }; placed.push(spot);
   }
   return rects;
 }
-/** The corner nearest a point in the area. 範圍裡離某一點最近的角。 */
-export const cornerAt = (x: number, y: number, width: number, height: number): Corner =>
-  `${y < height / 2 ? 'top' : 'bottom'}-${x < width / 2 ? 'left' : 'right'}` as Corner;
-/** Corners from nearest to farthest for a box (where a panel sits), to float it near there (human 2026-10-11: from where it was).
- * 依某個框（面板所在處）由近到遠排好的四個角，讓它在附近浮動（人類 10-11：依原本的位置）。 */
-export function cornersNear(box: { x: number; y: number; width: number; height: number }, width: number, height: number): Corner[] {
-  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-  const point: Record<Corner, [number, number]> = { 'top-left': [0, 0], 'top-right': [width, 0], 'bottom-left': [0, height], 'bottom-right': [width, height] };
-  return [...CORNERS].sort((a, b) => Math.hypot(cx - point[a][0], cy - point[a][1]) - Math.hypot(cx - point[b][0], cy - point[b][1]));
+/** Moving a free panel (human 2026-10-12: like a solid thing): from where it is toward `to`, one axis then the other; it stops at
+ * the area's edge and `gap` short of another panel, and slides along it; it never passes through. 移動自由浮動面板（人類 10-12：像實體）：
+ * 從現在的位置往 to 移，先一個方向再另一個；碰到範圍的邊、或離別的面板 gap 時停下，可以沿著它滑；不會穿過去。 */
+export function slide(from: Box, to: { x: number; y: number }, others: readonly Box[], width: number, height: number, gap: number): Box {
+  let box = from;
+  for (const axis of ['x', 'y'] as const) {
+    const [start, size] = along(box, axis), room = axis === 'x' ? width : height;
+    let next = clamp(axis === 'x' ? to.x : to.y, 0, room - size);
+    for (const o of others) {
+      if (!facing(box, o, axis, gap)) continue;
+      const [s, l] = along(o, axis);
+      if (start + size + gap <= s + near && next + size + gap > s) next = s - gap - size;
+      if (s + l + gap <= start + near && next < s + l + gap) next = s + l + gap;
+    }
+    box = put(box, axis, next);
+  }
+  return box;
+}
+/** Snapping (Q47 5: near an edge it snaps, leaving the gap): within `reach` of the area's edge, or of a panel beside it, it lines up
+ * there, `gap` apart, if that is clear. 吸附（Q47 第 5 點：靠近邊緣就吸過去、留間隙）：離範圍的邊、或旁邊的面板 reach 以內時對齊過去、
+ * 隔 gap，前提是那裡沒有別的面板。 */
+export function snap(box: Box, others: readonly Box[], width: number, height: number, gap: number, reach: number): Box {
+  let snapped = box;
+  for (const axis of ['x', 'y'] as const) {
+    const [start, size] = along(snapped, axis), room = axis === 'x' ? width : height;
+    const lines = [0, room - size, ...others.filter(o => facing(snapped, o, axis, reach)).flatMap(o => { const [s, l] = along(o, axis); return [s + l + gap, s - gap - size]; })];
+    const best = lines.filter(at => Math.abs(at - start) <= reach && at >= -near && at <= room - size + near)
+      .sort((a, b) => Math.abs(a - start) - Math.abs(b - start)).find(at => others.every(o => clear(put(snapped, axis, at), o, gap)));
+    if (best !== undefined) snapped = put(snapped, axis, best);
+  }
+  return snapped;
+}
+
+export type FloatEdge = { x?: 'start' | 'end'; y?: 'start' | 'end' };
+/** Sizing free panels by an edge or a corner of `id` (human 2026-10-12). An edge moves until the area's edge, the panel's least, or
+ * `gap` short of another panel; it does not push. Where it is a seam (panels sit `gap` across it, overlapping), the seam is a divider:
+ * every panel on it moves with it, one side growing as the other shrinks, each down to its least, until a panel is dragged away.
+ * Worked out from where they are when the drag starts (human: only then, no cost otherwise). `fixed`: panels that are only in the
+ * way (the Parameter panel, collapsed ones). 用 id 的某條邊或某個角調自由浮動面板的大小（人類 10-12）。邊移動到範圍的邊、面板的最小值、
+ * 或離別的面板 gap 為止；不推。那條邊是縫時（對面隔 gap 有面板、彼此有重疊）就是分隔線：縫上的面板一起動，一邊變大一邊變小，各自到最小值，
+ * 直到有面板被拖開。從開始拖的那一刻的位置算（人類：只在那時算，平常不耗成本）。fixed：只是擋路的面板（參數面板、收起的）。 */
+export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edge: FloatEdge, dx: number, dy: number, width: number, height: number,
+  gap: number, fixed: readonly string[] = []): Record<string, Box> {
+  let boxes: Record<string, Box> = { ...rects };
+  for (const axis of ['x', 'y'] as const) {
+    const side = edge[axis];
+    if (!side) continue;
+    const d = axis === 'x' ? dx : dy, room = axis === 'x' ? width : height, least = axis === 'x' ? FLOAT_MIN_WIDTH : FLOAT_MIN_HEIGHT;
+    // Worked out on the end side: a start edge is the end edge of the area mirrored. 都當成後緣來算：前緣就是把範圍鏡射後的後緣。
+    const flip = (box: Box) => { const [s, l] = along(box, axis); return put(box, axis, side === 'end' ? s : room - s - l); };
+    const mirrored = Object.fromEntries(Object.entries(boxes).map(([key, box]) => [key, flip(box)]));
+    const end = (key: string) => { const [s, l] = along(mirrored[key]!, axis); return s + l; }, start = (key: string) => along(mirrored[key]!, axis)[0];
+    const overlapping = (a: string, b: string) => facing(mirrored[a]!, mirrored[b]!, axis, 0);
+    // The seam: panels ending on its line, and panels starting `gap` after it, joined by overlap; only one panel at corners.
+    // 縫：結束在那條線上的面板，與隔 gap 開始的面板，彼此有重疊就連在一起；角只動一個面板。
+    const near_ = new Set([id]), far = new Set<string>(), free = Object.keys(mirrored).filter(key => !fixed.includes(key));
+    if (!edge[other(axis)]) for (let grew = true; grew;) {
+      grew = false;
+      for (const key of free) {
+        if (near_.has(key) || far.has(key)) continue;
+        if ([...near_].some(n => Math.abs(start(key) - end(n) - gap) < near && overlapping(key, n))) { far.add(key); grew = true; }
+        else if ([...far].some(f => Math.abs(end(key) + gap - start(f)) < near && overlapping(key, f))) { near_.add(key); grew = true; }
+      }
+    }
+    const group = new Set([...near_, ...far]), others = Object.keys(mirrored).filter(key => !group.has(key));
+    const length = (key: string) => along(mirrored[key]!, axis)[1];
+    // How far the line may go: each side down to its least; the near side not past the area or another panel, the far side not
+    // into another panel behind it. 線能走多遠：兩邊各自到最小值；近的一邊不超出範圍或碰到別的面板，遠的一邊不往後碰到別的面板。
+    let high = Math.min(...[...near_].map(n => Math.min(room, ...others.filter(o => facing(mirrored[n]!, mirrored[o]!, axis, gap) && start(o) + near >= end(n) + gap)
+      .map(o => start(o) - gap)) - end(n)), ...[...far].map(f => length(f) - least));
+    let low = Math.max(...[...near_].map(n => least - length(n)), ...[...far].map(f => Math.max(0, ...others.filter(o => facing(mirrored[f]!, mirrored[o]!, axis, gap) && end(o) <= start(f) - gap + near)
+      .map(o => end(o) + gap)) - start(f)));
+    if (high < low) { high = 0; low = 0; }
+    const move = clamp(d * (side === 'end' ? 1 : -1), low, high);
+    const sized = { ...mirrored };
+    for (const n of near_) { const [s, l] = along(sized[n]!, axis); sized[n] = put(sized[n]!, axis, s, l + move); }
+    for (const f of far) { const [s, l] = along(sized[f]!, axis); sized[f] = put(sized[f]!, axis, s + move, l - move); }
+    boxes = Object.fromEntries(Object.entries(sized).map(([key, box]) => [key, flip(box)]));
+  }
+  return boxes;
 }
 /** Show a tab; a collapsed pane opens (its tab clicked, Refactor.80). 顯示某個分頁；收起的窗格打開（點它的分頁，R.80）。 */
 export function activate(layout: LayoutData, path: Path, panel: string): LayoutData {
