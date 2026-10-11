@@ -248,13 +248,14 @@ export function addToSide(layout: LayoutData, panel: string, side: Side): Layout
 }
 
 /** Where a dragged panel goes. tab: into a tab pane at a tab position; beside: a new tab pane on one edge of a pane (a tab
- * pane or the canvas); side: a tab on that side (made, or opened, if needed; see addToSide).
- * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）的某條邊旁多一個分頁窗格；side＝那一側的分頁（見 addToSide）。 */
+ * pane or the canvas); outer: a new pane along one edge of the whole layout, full height or full width (Refactor.87).
+ * 拖著的面板放到哪：tab＝放進某個分頁窗格的某個位置；beside＝在某一格（分頁窗格或畫布）的某條邊旁多一個分頁窗格；outer＝沿整個版面的
+ * 某條外緣多一格，整個高度或整個寬度（R.87）。 */
 export type Edge = 'top' | 'bottom' | 'left' | 'right';
 export type Drop =
   | { kind: 'tab'; pane: Path; index: number }
   | { kind: 'beside'; pane: Path; edge: Edge }
-  | { kind: 'side'; side: Side };
+  | { kind: 'outer'; edge: Edge };
 
 /** Move a panel; the result is tidied. A drop that changes nothing returns the layout as it was.
  * 移動面板，結果整理過。沒有改變的放置原樣回傳。 */
@@ -266,7 +267,7 @@ export function movePanel(layout: LayoutData, panel: string, drop: Drop): Layout
     const bare = { ...layout, floating: {} }, moved = movePanel(bare, panel, drop);
     return finish(copy(moved === bare ? layout : { ...moved, floating: layout.floating }), panel, null);
   }
-  if (drop.kind === 'side') return finish(addToSide(remove(layout, panel), panel, drop.side), panel, drop.side);
+  if (drop.kind === 'outer') return toOuter(layout, panel, drop.edge);
   const next = copy(layout), target = at(next.root, drop.pane);
   if (!target) return layout;
   const from = at(next.root, source.path) as Extract<Pane, { kind: 'tabs' }>;
@@ -303,6 +304,30 @@ export function movePanel(layout: LayoutData, panel: string, drop: Drop): Layout
   }
   next.root = tidy(next.root) ?? layout.root;
   return finish(next, panel, null);
+}
+/** A new pane along one edge of the whole layout (Refactor.87, human 2026-10-12: the far-left full-height place had no way in).
+ * The outermost row stays the root, so its sides still read from it: left or right, the pane is its first or last part, full
+ * height; top or bottom, everything else is wrapped in a column with the pane above or below it, full width. Nothing changes
+ * when the panel is already alone there. 沿整個版面某條外緣多一格（R.87，人類 10-12：最左邊整個高度的位置進不去）。最外層的左右分割
+ * 仍是根，兩側照舊從它讀：左或右，新的一格是它的第一或最後一格、整個高度；上或下，其餘全部包進一個上下分割、新的一格在上或下、整個寬度。
+ * 面板已經單獨在那裡時不變。 */
+function toOuter(layout: LayoutData, panel: string, edge: Edge): LayoutData {
+  const next = remove(layout, panel), root = next.root as Extract<Pane, { kind: 'split' }>;
+  const fresh: Pane = { kind: 'tabs', panels: [panel], active: panel }, first = edge === 'left' || edge === 'top';
+  if (edge === 'left' || edge === 'right') {
+    root.children.splice(first ? 0 : root.children.length, 0, fresh); root.sizes.splice(first ? 0 : root.sizes.length, 0, SIDE_WIDTH);
+  } else {
+    // Into the column that already spans the whole width, or a new one round everything. 放進已經橫跨全寬的上下分割，或新包一個。
+    const only = root.children.length === 1 ? root.children[0]! : null;
+    const column = only?.kind === 'split' && only.direction === 'column' ? only
+      : { kind: 'split' as const, direction: 'column' as const, children: [only ?? { ...root }], sizes: [1] };
+    column.children.splice(first ? 0 : column.children.length, 0, fresh); column.sizes.splice(first ? 0 : column.sizes.length, 0, PANE_HEIGHT);
+    next.root = { kind: 'split', direction: 'row', children: [column], sizes: [1] };
+  }
+  next.root = tidy(next.root) ?? layout.root;
+  const placed = paneOf(next.root, panel)!;
+  if (JSON.stringify(next.root) === JSON.stringify(layout.root) && !layout.floating[panel]) return layout;
+  return finish(next, panel, edge === 'left' || edge === 'right' ? sideOf(next.root, placed.path[0]!) : null);
 }
 const remove = (layout: LayoutData, panel: string): LayoutData => {
   const next = copy(layout);

@@ -292,15 +292,16 @@ function useMenuAt(): [HTMLElement | null, (event: ReactMouseEvent<HTMLElement>)
 // - 分頁列上：兩個分頁之間（直線）；
 // - 分頁窗格：靠近邊緣（外圍 15%、至少四角標記的寬度，取最近的那條邊；R.80.2）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
 //   中間＝合併成分頁，位置看游標在寬度的哪一段（格子，放下後有幾個分頁就幾格；Wire）；
-// - 畫布：上下帶＝畫布上方或下方切一格；左右兩塊（和側欄一樣寬，R.68.1）＝畫布旁切一格；那一側沒東西顯示時，靠外的一段＝放到那一側本身、
-//   整個高度（人類：兩者要分得出來；線的長度表示是哪一種）。
+// - 畫布：上下帶＝畫布上方或下方切一格；左右兩塊（和側欄一樣寬，R.68.1）＝畫布旁切一格；
+// - 整個版面的最外緣（R.87，人類 10-12：最左邊整個高度的位置進不去）：沿那條邊多一格，整個高度或整個寬度，永遠在、優先於裡面的格子
+//   （人類：兩者要分得出來；線的長度表示是哪一種）。
 // A line is drawn on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊上，粗細由主題決定。
 // A tabbed pane's edge: a share of the pane along that axis, never less than the drop frame's corner mark (--drop-edge,
 // --drop-corner; Refactor.80.2, human 2026-10-11: half of the old 30%, with today's fixed width as the least; the corner mark
 // keeps its size; R.74.2 had made the edge the fixed width only).
 // 分頁窗格的「邊」：那個方向的一定比例，不小於放下框四角標記的寬度（--drop-edge、--drop-corner；R.80.2，人類：以前 30% 的一半，
 // 最小就是現在的固定寬度；四角標記維持原大小；R.74.2 時邊只有固定寬度）。
-const BAND = 56, OUTER = 96;
+const BAND = 56;
 type EdgeZone = { share: number; least: number };
 const edgeZone = (): EdgeZone => {
   const style = getComputedStyle(document.documentElement);
@@ -322,9 +323,8 @@ const across = (box: DOMRect, edge: 'top' | 'bottom'): Mark => ({ kind: 'across'
 const along = (box: DOMRect, side: Side): Mark => ({ kind: 'along', left: side === 'left' ? box.left : box.right, top: box.top, height: box.height, side });
 const noRoom = tr('layout.noRoom', 'Not enough room here for another pane.');
 const newPane = tr('layout.dropPane', 'New pane here'), asTab = tr('layout.dropTab', 'Join as a tab');
-const onSide = { left: tr('layout.dropLeft', 'Put on the left side, full height'), right: tr('layout.dropRight', 'Put on the right side, full height') };
-const tabOnSide = { left: tr('layout.dropLeftTab', 'Join the left side as a tab'), right: tr('layout.dropRightTab', 'Join the right side as a tab') };
-const showing = (layout: Layout, side: Side) => layout.hasPanels(side) && !layout.closed[side];
+const onOuter = { left: tr('layout.dropOuterLeft', 'Far left, full height'), right: tr('layout.dropOuterRight', 'Far right, full height'),
+  top: tr('layout.dropOuterTop', 'Along the top, full width'), bottom: tr('layout.dropOuterBottom', 'Along the bottom, full width') };
 
 /** A new pane on one edge of a pane: next to the canvas it takes pixels from the canvas, elsewhere it halves the pane.
  * 在某一格的某條邊旁新增一格：在畫布旁從畫布拿像素，其他地方平分那一格。 */
@@ -345,7 +345,23 @@ function keptFor(panel: string, corner: Corner, homes: tree.Homes): Message {
   return tr('layout.cornerKept', 'This corner is kept for {panel}.', { panel: say(PANELS[owner as keyof typeof PANELS]?.title ?? owner) });
 }
 
+/** The whole layout's outer edges (Refactor.87): a band as wide as a pane edge's least, the nearest edge; always there, ahead of
+ * anything inside, its line the whole edge. 整個版面的外緣（R.87）：一條和分頁窗格的邊最小值一樣寬的帶、取最近的那條邊；永遠在、優先於裡面
+ * 的一切，線畫滿整條邊。 */
+function outerAt(x: number, y: number, zone: EdgeZone): Hint {
+  const whole = document.querySelector('.workspace')?.getBoundingClientRect();
+  if (!whole || x < whole.left || x > whole.right || y < whole.top || y > whole.bottom) return null;
+  const near: [Edge, number][] = [['left', x - whole.left], ['right', whole.right - x], ['top', y - whole.top], ['bottom', whole.bottom - y]];
+  const [edge, distance] = near.reduce((closest, item) => item[1] < closest[1] ? item : closest);
+  if (distance >= zone.least) return null;
+  const canvas = document.querySelector('[data-kind="canvas"]')!.getBoundingClientRect(), row = edge === 'left' || edge === 'right';
+  const fits = row ? canvas.width - tree.SIDE_WIDTH >= tree.CANVAS_MIN_WIDTH : canvas.height - tree.PANE_HEIGHT >= tree.CANVAS_MIN_HEIGHT;
+  return { drop: { kind: 'outer', edge }, mark: { ...(row ? along(whole, edge) : across(whole, edge)), label: onOuter[edge] }, refused: fits ? undefined : noRoom };
+}
+
 function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZone): Hint {
+  const outer = outerAt(x, y, zone);
+  if (outer) return outer;
   // A floating panel over the network goes to the nearest corner; one already there takes its corner (Refactor.84, human
   // 2026-10-11: swap, shown while dragging). 浮動面板拖在網路區上：去最近的角；那一角已有面板就互換（R.84，人類 10-11：拖曳時預告）。
   const area = layout.floating[panel] ? document.querySelector<HTMLElement>('.floating-area') : null, space = area?.getBoundingClientRect();
@@ -390,15 +406,8 @@ function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZ
   }
   if (pane?.kind === 'canvas') {
     if (y - box.top < BAND || box.bottom - y < BAND) return beside(layout, path, y - box.top < BAND ? 'top' : 'bottom', box);
-    for (const side of ['left', 'right'] as const) {
-      const distance = side === 'left' ? x - box.left : box.right - x, reach = Math.min(tree.SIDE_WIDTH, box.width * .4);
-      if (distance >= reach) continue;
-      if (showing(layout, side) || distance >= Math.min(OUTER, reach / 2)) return beside(layout, path, side, box);
-      // The side itself, full height: its line runs the whole layout. 那一側本身、整個高度：線畫滿整個版面。
-      const whole = document.querySelector('.workspace')!.getBoundingClientRect();
-      return { drop: { kind: 'side', side }, mark: { ...along(whole, side), label: layout.hasPanels(side) ? tabOnSide[side] : onSide[side] },
-        refused: box.width - tree.SIDE_WIDTH >= tree.CANVAS_MIN_WIDTH ? undefined : noRoom };
-    }
+    for (const side of ['left', 'right'] as const)
+      if ((side === 'left' ? x - box.left : box.right - x) < Math.min(tree.SIDE_WIDTH, box.width * .4)) return beside(layout, path, side, box);
   }
   return null;
 }

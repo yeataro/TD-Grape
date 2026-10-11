@@ -74,13 +74,32 @@ test('two full-height columns on one side: a pane beside a side pane (human 2026
   assert.deepEqual(plain(layout.root.children[1].children[0].sizes), [1, 1]);
 });
 
-test('a side: made when empty, opened when closed, joined as a tab otherwise; its toggles read the tree', () => {
-  let layout = tree.movePanel(fresh(), 'appearance', { kind: 'side', side: 'left' });
-  assert.equal(shape(layout.root), 'row(sources|addNode|glsl|appearance, canvas)', 'a tab by default (human 2026-10-10)');
+test('the outer edges of the whole layout: full height or full width, from any shape (Refactor.87)', () => {
+  let layout = tree.movePanel(fresh(), 'appearance', { kind: 'outer', edge: 'left' });
+  assert.equal(shape(layout.root), 'row(appearance, sources|addNode|glsl, canvas)', 'the far left, beside the side that was there');
   assert.equal(tree.sideHasPanels(layout, 'right'), false, 'the right toggle greys out');
-  layout = tree.movePanel(layout, 'glsl', { kind: 'side', side: 'right' });
-  assert.equal(shape(layout.root), 'row(sources|addNode|appearance, canvas, glsl)');
+  // The human's case (2026-10-12): a bottom row across the whole width leaves no side; the far left is still a way in.
+  // 人類的情況（10-12）：下面一整行橫跨全寬，沒有左右側了；最左邊仍然進得去。
+  layout = tree.movePanel(fresh(), 'sources', { kind: 'outer', edge: 'bottom' });
+  assert.equal(shape(layout.root), 'row(column(row(addNode|glsl, canvas, appearance), sources))');
+  assert.equal(tree.sideHasPanels(layout, 'left'), false);
+  layout = tree.movePanel(layout, 'glsl', { kind: 'outer', edge: 'left' });
+  assert.equal(shape(layout.root), 'row(glsl, column(row(addNode, canvas, appearance), sources))');
+  assert.equal(tree.sideHasPanels(layout, 'left'), true, 'a left side again, full height');
+  layout = tree.movePanel(layout, 'appearance', { kind: 'outer', edge: 'top' });
+  assert.equal(shape(layout.root), 'row(column(appearance, row(glsl, column(row(addNode, canvas), sources))))', 'along the top, over everything');
+  layout = tree.movePanel(layout, 'glsl', { kind: 'outer', edge: 'bottom' });
+  assert.equal(shape(layout.root), 'row(column(appearance, column(row(addNode, canvas), sources), glsl))', 'into the column already spanning the width');
+  assert.equal(tree.movePanel(layout, 'glsl', { kind: 'outer', edge: 'bottom' }), layout, 'already alone there: nothing changes');
+});
+
+test('the sides read the tree; moving a panel to a closed side opens it', () => {
+  let layout = { ...fresh(), closed: { left: false, right: true } };
+  layout = tree.movePanel(layout, 'glsl', { kind: 'outer', edge: 'right' });
+  assert.equal(shape(layout.root), 'row(sources|addNode, canvas, appearance, glsl)');
   assert.equal(layout.closed.right, false, 'moving a panel to a closed side opens it');
+  layout = tree.movePanel(layout, 'appearance', { kind: 'tab', pane: where(layout, 'sources'), index: 2 });
+  assert.equal(shape(layout.root), 'row(sources|addNode|appearance, canvas, glsl)');
   layout = { ...layout, closed: { left: true, right: false } };
   assert.equal(tree.sideOf(layout.root, 0), 'left'); assert.equal(tree.sideOf(layout.root, 1), null); assert.equal(tree.sideOf(layout.root, 2), 'right');
   layout = tree.showPanel(layout, 'sources');
@@ -180,9 +199,9 @@ test('a floating panel stays a member of its pane, and goes back there or to clo
 });
 
 test('its pane is kept while only a floating panel is left in it, and it lands back there', () => {
-  let layout = tree.movePanel(fresh(), 'glsl', { kind: 'side', side: 'right' });
+  let layout = tree.movePanel(fresh(), 'glsl', { kind: 'outer', edge: 'right' });
   layout = tree.popOut(layout, 'glsl');
-  layout = tree.movePanel(layout, 'appearance', { kind: 'side', side: 'left' });
+  layout = tree.movePanel(layout, 'appearance', { kind: 'outer', edge: 'left' });
   const home = tree.paneOf(layout.root, 'glsl');
   assert.deepEqual(home.pane.panels, ['glsl'], 'the pane holds only the floating panel');
   assert.equal(tree.sideHasPanels(layout, 'right'), false, 'and is not drawn');
