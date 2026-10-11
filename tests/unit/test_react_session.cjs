@@ -1741,3 +1741,13 @@ test('new nodes are named Float_1, Float_2; a rename moves a taken name up; a ba
   session.setNote(first.id, 'keeps the base colour');
   assert.equal(nodes().find(n => n.id === first.id).comment, 'keeps the base colour');
 });
+
+// Refactor.81.6 (human 2026-10-11): every node in the Logic category wears the logic colour, not only Compare and If.
+// R.81.6（人類）：新增選單分類是「邏輯」的節點都用邏輯色，不只 Compare、If。
+test('nodes in the Logic category take the logic colour', t => {
+  const { session } = open(t);
+  for (const key of ['equal', 'isnan', 'any', 'not', 'compare']) session.addNode({ nodeType: 'sgrape.builtin.' + key, params: {} }, { x: 0, y: 0 });
+  const colour = key => session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.' + key)?.data.colorGroup;
+  assert.deepEqual(['equal', 'isnan', 'any', 'not', 'compare'].map(colour), ['logic', 'logic', 'logic', 'logic', 'logic']);
+  assert.equal(session.snapshot().projection.nodes.find(n => n.id === 'sum').data.colorGroup, 'function', 'Add stays a function');
+});

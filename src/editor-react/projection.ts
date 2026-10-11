@@ -24,8 +24,12 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 // possible; the core never reads it. 顏色組：只給畫面的 tag；能從行為推的就推，核心永遠不讀。
 // A reference node takes its colour from the kind of declaration it points to (Q42).
 // 引用宣告節點的顏色來自它指向的宣告種類。
-const colorGroupOf = (module: { role: string; colorGroup?: string; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+// A node in the Logic category wears the logic colour, whatever it is built from (Refactor.81.6, human 2026-10-11: all of them in
+// logic; legacy coloured only Compare and If, graph_ui.js:142). 新增選單分類是「邏輯」的節點用邏輯色，不管它怎麼做出來的（R.81.6，人類：
+// 通通放到邏輯類；舊產品只給 Compare、If）。
+const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
   if (module.colorGroup) return module.colorGroup;
+  if (module.catalog?.browser?.category === 'logic') return 'logic';
   if (module.referencedDeclaration) {
     const kind = document.document.declarations.find(d => d.id === module.referencedDeclaration!(node))?.kind;
     return (kind && core.declarationKinds.get(kind)?.colorGroup) || 'function';
