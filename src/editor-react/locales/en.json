@@ -504,6 +504,7 @@
   "tune.fontMd": "Text size: medium",
   "tune.fontSm": "Text size: small",
   "tune.fontXs": "Text size: smallest",
+  "tune.glassClear": "Glass panel colour: see-through",
   "tune.glowHighlight": "Glow strength: highlights",
   "tune.glowHighlightReach": "Glow reach: highlights",
   "tune.glowLogo": "Glow strength: logo",

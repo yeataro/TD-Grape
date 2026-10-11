@@ -31,6 +31,8 @@ export const TUNABLES: readonly Tunable[] = [
   { name: '--tint-glow-merge', label: tr('tune.glowMerge', 'Glow strength: rows a wire would merge'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--glow-merge', label: tr('tune.glowMergeReach', 'Glow reach: rows a wire would merge'), kind: 'px', min: 0, max: 40, step: 1 },
   { name: '--tint-wire-ghost', label: tr('tune.wireGhost', 'Ghost on wires: opacity'), kind: 'percent', min: 0, max: 100, step: 1 },
+  // Glass panels' colour, how see-through (Refactor.89.2, human 2026-10-12). 玻璃面板的底色有多透明（R.89.2，人類 10-12）。
+  { name: '--glass-clear', label: tr('tune.glassClear', 'Glass panel colour: see-through'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--tint-glow-select', label: tr('tune.glowSelect', 'Glow strength: selection'), kind: 'percent', min: 0, max: 100, step: 1 },
   { name: '--glow-select', label: tr('tune.glowSelectReach', 'Glow reach: selection'), kind: 'px', min: 0, max: 40, step: 1 },
   { name: '--tint-glow-title', label: tr('tune.glowTitle', 'Glow strength: node titles'), kind: 'percent', min: 0, max: 100, step: 1 },
