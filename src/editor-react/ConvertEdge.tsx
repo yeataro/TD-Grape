@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { crossedFingersPath, crossedFingersViewBox } from './crossed_fingers';
 import { appearanceSubscribe, componentTintOn, currentConvertLabel, currentGradientBlend, shadowOn, type GradientBlend } from './appearance';
 
 /** A wire whose two ends have different types, the conversion done on it (design-interview Q11: the wire carries the
@@ -26,20 +27,11 @@ function stops(from: string, to: string, blend: GradientBlend): { offset: number
   });
 }
 
-/** The hand with crossed fingers (human 2026-10-11, the sign for a conversion; drawn here, not taken from an emoji set): its
- * outline in ink, filled with the two ends' colours, blending across the icon itself from its middle out to its sides.
- * 交叉手指的手（人類，轉型的記號；這裡自己畫的，沒拿現成的 emoji 圖）：墨色外框，填兩端的顏色，在圖示本身範圍內從中間往兩邊漸變。 */
-function CrossedFingers({ id }: { id: string }) {
-  return <svg viewBox="0 0 24 24" aria-hidden="true">
-    <defs><linearGradient id={id} gradientUnits="userSpaceOnUse" x1="5" y1="12" x2="19" y2="12">
-      <stop offset="0.3" style={{ stopColor: 'var(--convert-from)' }} /><stop offset="0.7" style={{ stopColor: 'var(--convert-to)' }} /></linearGradient></defs>
-    <g fill={`url(#${id})`} stroke="var(--wire-convert-ink)" strokeWidth="1.5" strokeLinejoin="round">
-      <rect x="9.6" y="0.8" width="4" height="15" rx="2" transform="rotate(24 11.6 12)" />
-      <rect x="10.4" y="0.8" width="4" height="15" rx="2" transform="rotate(-22 12.4 12)" />
-      <rect x="6.5" y="13" width="11.5" height="9.5" rx="4.2" />
-    </g>
-    <path d="M9 16.2h3.6M9.4 19.4c1.8-1.2 3.8-1.2 5.6.3" fill="none" stroke="var(--wire-convert-ink)" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>;
+/** The hand with crossed fingers (Refactor.77.8, human 2026-10-11): Fluent UI Emoji's line drawing (MIT, crossed_fingers.ts) in
+ * ink, over a round patch filled with the two ends' colours, blending from the middle of the patch out to its sides.
+ * 交叉手指（R.77.8，人類）：Fluent UI Emoji 的線稿（MIT，crossed_fingers.ts）用墨色，疊在一塊圓形底片上；底片填兩端顏色，從中間往兩邊漸變。 */
+function CrossedFingers() {
+  return <svg viewBox={crossedFingersViewBox} aria-hidden="true"><path d={crossedFingersPath} fill="var(--wire-convert-ink)" /></svg>;
 }
 
 export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth, data }: EdgeProps) {
@@ -67,7 +59,7 @@ export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosi
     {shown !== 'none' && to && <EdgeLabelRenderer>
       <span className={'wire-convert ' + shown} style={ends}>
         {shown === 'text' ? <><span className="from">{facts.fromType}</span><span className="arrow" aria-hidden="true">→</span><span className="to">{facts.toType}</span></>
-          : <CrossedFingers id={key + '-icon'} />}
+          : <CrossedFingers />}
       </span>
     </EdgeLabelRenderer>}
   </>;

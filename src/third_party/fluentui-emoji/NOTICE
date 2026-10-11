@@ -1,0 +1,12 @@
+Fluent UI Emoji
+
+Copyright (c) Microsoft Corporation.
+Licensed under the MIT License. See the LICENSE file in this folder for the full text.
+
+Source: https://github.com/microsoft/fluentui-emoji (commit 1ffb34c752ec, fetched 2026-10-11)
+
+Used in TD-Grape:
+- crossed_fingers_high_contrast_default.svg
+  from assets/Crossed fingers/Default/High Contrast/, kept here unchanged.
+  The editor draws the same path (src/editor-react/crossed_fingers.ts) as the label of a
+  wire that converts types; a test checks the two stay the same.

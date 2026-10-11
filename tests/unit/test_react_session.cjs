@@ -1462,6 +1462,16 @@ test('wire-drop table: full audit against rehearsing every configuration', { ski
   assert.deepEqual(failed, [], 'every row adds and wires, and one Undo takes it back');
 });
 
+// Refactor.77.8: the conversion label's hand is Fluent UI Emoji's (MIT), kept unchanged in src/third_party with its licence.
+// 轉型標籤的手取自 Fluent UI Emoji（MIT），原檔與授權留在 src/third_party，路徑不改。
+test('the crossed fingers path is the third-party file, unchanged, with its licence beside it', () => {
+  const { crossedFingersPath, crossedFingersViewBox } = load(path.join(root, 'src/editor-react/crossed_fingers.ts'));
+  const folder = path.join(root, 'src/third_party/fluentui-emoji'), svg = fs.readFileSync(path.join(folder, 'crossed_fingers_high_contrast_default.svg'), 'utf8');
+  assert.equal(crossedFingersPath, /<path d="([^"]+)"/.exec(svg)[1]);
+  assert.equal(crossedFingersViewBox, /viewBox="([^"]+)"/.exec(svg)[1]);
+  assert.match(fs.readFileSync(path.join(folder, 'LICENSE'), 'utf8'), /MIT License[\s\S]*Copyright \(c\) Microsoft Corporation/);
+});
+
 // Dragging a wire previews what dropping it changes (Refactor.57): rehearsed with the real edit, never written.
 // 拖線預告放開後會改變什麼：用真正的修改預演，不寫入。
 test('a wire preview names the inputs it merges and the wires it replaces, exactly as the drop does', t => {
