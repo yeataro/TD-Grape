@@ -74,6 +74,7 @@
 
 ### 三、等某一輪一起做
 
+- **小外觀實驗（彩蛋選項）：純量展開的線中間放一個交叉手指圖示 🤞（U+1F91E）**（人類 10-11，給了 EmojiTerra 的黑白線稿截圖當參考；人類說是彩蛋、不期待助手懂是什麼梗）：只用在線上轉型屬於「純量展開成向量」的線（例如 `float → vec4`），放在線的中點，做法可比照 Ghost 線中點的幽靈（`GhostMark.tsx` 的 `GhostEdge`，用 React Flow 的 `EdgeLabelRenderer`）。做成外觀選項（彩蛋，可開關），不取代線上原本的轉換標示。圖示要用自己畫的或開放授權的，不直接拿網站上的圖。未做。
 - **Combine 換型別後，接在合併分量上的線變成 Ghost 線、要重接**（人類 10-11 截圖：Vector 2 的 vec2 接 Combine 的 X，換成 vec3 後是 Ghost 線；人類：不知道有沒有辦法處理，先記起來）：原因——把 vec2 接到 X 時核心自動合成 XY 一組（`src/core-ts/vector_assembly.ts:38` `wire`），換型別時 `configure` 把 `groups` 全清（同檔第 34 行），線還接在 `x`、`x` 變回 float，型別不合就成 Ghost。可能的方向（未查舊產品、未動）：換型別時保留新尺寸還放得下的合併（XY 在 vec3 裡還放得下）。改核心行為，動之前要先和人類確認、對照舊產品。Replace 共用同一段，應該也一樣。
 - **Replace 的分量合併**（人類 10-11 筆記：舊產品 Replace 也有分量合併）：已查——舊產品 Combine 與 Replace 共用 `groups`（legacy `src/core/sgrape_core.py:265`），新核心也共用（`vector_assembly.ts`，Replace 的 `groups` 預設 `{}`），測試圖的 Replace 已有合併好的 XY 輸入。待確認的是畫面：Replace 能不能和 Combine 一樣做合併／拆開的操作。
 - **Swizzle 分量選單裡的 W 被切到**（人類 10-11 截圖：1 Y、2 X、3 Z、4 W 四個小選單，W 比較寬、在選單框裡被截）：是字寬問題，但人類說根本是位置問題，而且 Swizzle 最後可能不會長這樣（同 Q67 控制項移出卡片、計算類分量改在面板展開編輯的方向）。等 Swizzle 改版時一起看，現在不修。
