@@ -15,7 +15,7 @@ import type { FlowNode, FlowEdge } from './projection';
 // release (Refactor.50.1, human 2026-10-09: nodes no longer light up and go out mid-drag).
 // 規則對齊 TD：空白處右鍵拖或 Shift＋左鍵拖；碰到即算；按 Shift 保留原選取，否則取代（Ctrl 同無修飾鍵）。
 // 拖曳中只顯示預覽，放開才真的選取（R.50.1，人類：不再有拖曳途中亮了又熄的節點）。
-type Drag = { x: number; y: number; previous: Set<string>; moved: boolean; right: boolean; touched: string[]; result: Set<string>; shown: boolean };
+type Drag = { x: number; y: number; origin: { left: number; top: number }; previous: Set<string>; moved: boolean; right: boolean; touched: string[]; result: Set<string>; shown: boolean };
 /** What the box would select if released now; null when no box is being dragged. 現在放開會選到哪些；沒在框選時為 null。 */
 export const BoxPreviewContext = createContext<ReadonlySet<string> | null>(null);
 /** Ctrl (or Cmd) toggles, Shift only adds, otherwise only this (TD as measured, Q39). */
@@ -53,7 +53,10 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     if (!starts(event)) return;
     if (event.button === 0) event.stopPropagation(); // Shift+left (or box-select) drag selects instead of panning
     const previous = new Set(event.shiftKey ? flow.getNodes().filter(node => node.selected).map(node => node.id) : []);
-    drag.current = { x: event.clientX, y: event.clientY, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false };
+    // Where the canvas is, measured once: it does not move during a box drag (EDITOR_UI_RULES, continuous interactions;
+    // Refactor.79.5). 畫布在哪，量一次：框選中它不會動（畫面規則「連續互動」；R.79.5）。
+    const { left, top } = host.current!.getBoundingClientRect();
+    drag.current = { x: event.clientX, y: event.clientY, origin: { left, top }, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false };
     host.current!.setPointerCapture(event.pointerId);
   };
   // The pane pans on mousedown (d3-zoom), so a Shift+left press must stop there too. 平移由 mousedown 觸發，一併攔下。
@@ -88,7 +91,7 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     if (!(event.buttons & (start.right ? 2 : 1))) { end(event); return; }
     if (!start.moved && Math.hypot(event.clientX - start.x, event.clientY - start.y) <= threshold) return;
     start.moved = true;
-    const origin = host.current!.getBoundingClientRect();
+    const { origin } = start;
     setBox({ left: Math.min(start.x, event.clientX) - origin.left, top: Math.min(start.y, event.clientY) - origin.top,
       width: Math.abs(event.clientX - start.x), height: Math.abs(event.clientY - start.y) });
     select(start, event);
