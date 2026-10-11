@@ -45,6 +45,7 @@
   "appearance.valuesHint": "改了立刻生效，記在這個瀏覽器。箭頭可以還原成主題的值。",
   "appearance.wireGlow": "光暈：接線",
   "appearance.wireGradient": "轉型的線：兩端型別色漸層",
+  "appearance.wireGradientBlend": "漸層混色",
   "canvas.hint": "由左至右，組合你的 Shader。",
   "canvas.nodeCount": "{count} 個節點",
   "canvas.zoom": "縮放",

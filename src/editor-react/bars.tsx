@@ -6,7 +6,7 @@ import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
 import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, componentLettersOn, setComponentLetters, shadowOn, setShadow, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, componentLettersOn, setComponentLetters, shadowOn, setShadow, currentGradientBlend, gradientBlends, setGradientBlend, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
@@ -541,8 +541,14 @@ function ComponentTint() {
 // 分量染色旁邊，還沒決定歸屬的設定先放這裡（人類）。
 function WireGradient() {
   useSyncExternalStore(appearanceSubscribe, appearance);
-  return <label className="check"><input type="checkbox" checked={shadowOn('wireGradient')} onChange={event => setShadow('wireGradient', event.target.checked)} />
-    {say(tr('appearance.wireGradient', 'Type conversion wires: gradient between the two type colours'))}</label>;
+  return <>
+    <label className="check"><input type="checkbox" checked={shadowOn('wireGradient')} onChange={event => setShadow('wireGradient', event.target.checked)} />
+      {say(tr('appearance.wireGradient', 'Type conversion wires: gradient between the two type colours'))}</label>
+    {/* How it blends (Refactor.77.4); the choices are named as the human named them. 怎麼混色（R.77.4）；選項照人類給的名字。 */}
+    <SettingsRow label={tr('appearance.wireGradientBlend', 'Gradient blend')}>
+      <Select label={tr('appearance.wireGradientBlend', 'Gradient blend')} value={currentGradientBlend()} onChange={setGradientBlend}
+        options={gradientBlends.map(value => ({ value, label: value }))} /></SettingsRow>
+  </>;
 }
 
 function ComponentLetters() {

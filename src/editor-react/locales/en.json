@@ -45,6 +45,7 @@
   "appearance.valuesHint": "Changes show at once and stay in this browser. The arrow puts one back to the theme.",
   "appearance.wireGlow": "Glow: wires",
   "appearance.wireGradient": "Type conversion wires: gradient between the two type colours",
+  "appearance.wireGradientBlend": "Gradient blend",
   "canvas.hint": "Build your Shader from left to right.",
   "canvas.nodeCount": "{count} node(s)",
   "canvas.zoom": "Zoom",

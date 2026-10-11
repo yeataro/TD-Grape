@@ -39,6 +39,11 @@ let componentTint = browser ? readChoice('appearance.componentTint', ['on', 'off
 // 數值框裡的分量字母（R.76.10，人類：到處同一條規則，一律放或一律不放；舊產品兩種都有、沒有規則）：關掉時改由數字帶分量顏色
 // （依分量染色開關），框也變窄。Off by default (R.76.11, human 2026-10-11). 預設不放（R.76.11，人類）。
 let componentLetters = browser ? readChoice('appearance.componentLetters', ['on', 'off'], 'off') === 'on' : false;
+// How the type conversion gradient blends (Refactor.77.4, human 2026-10-11, a trial with the gradient): evenly, eased by
+// smoothstep, or evenly through the oklch colour space. 轉型漸層怎麼混色（R.77.4，人類，和漸層一起試）：等速、smoothstep 緩動、或在 oklch 色彩空間等速混。
+export type GradientBlend = 'linear' | 'smoothstep' | 'oklch';
+export const gradientBlends: readonly GradientBlend[] = ['linear', 'smoothstep', 'oklch'];
+let gradientBlend: GradientBlend = browser ? readChoice<GradientBlend>('appearance.wireGradientBlend', gradientBlends, 'linear') : 'linear';
 // Effects that follow a system setting unless told otherwise (Refactor.75.21, 75.22; design-interview Q70; human 2026-10-11:
 // follow the system, always on or always off): fades follow "reduce motion", the glass "reduce transparency".
 // 跟隨系統設定、也可以指定的效果（R.75.21、75.22；Q70；人類：跟隨系統、一律開、一律關）：淡入跟「減少動態效果」，玻璃跟「減少透明度」。
@@ -76,12 +81,16 @@ function apply() {
 apply();
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}${Number(componentLetters)}/${effects.motion}/${effects.glass}/${Object.values(shadows).map(Number).join('')}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}${Number(componentLetters)}${gradientBlend}/${effects.motion}/${effects.glass}/${Object.values(shadows).map(Number).join('')}`;
 export const componentTintOn = () => componentTint;
 export function setComponentTint(on: boolean) {
   if (on !== componentTint) { componentTint = on; writePreference('appearance.componentTint', on ? 'on' : 'off'); changed(); }
 }
 export const componentLettersOn = () => componentLetters;
+export const currentGradientBlend = () => gradientBlend;
+export function setGradientBlend(next: GradientBlend) {
+  if (next !== gradientBlend) { gradientBlend = next; writePreference('appearance.wireGradientBlend', next); changed(); }
+}
 export function setComponentLetters(on: boolean) {
   if (on !== componentLetters) { componentLetters = on; writePreference('appearance.componentLetters', on ? 'on' : 'off'); changed(); }
 }
