@@ -1,6 +1,6 @@
 import { useSyncExternalStore, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
-import { crossedFingersPath, crossedFingersViewBox } from './crossed_fingers';
+import { crossedFingersOutline, crossedFingersPath, crossedFingersViewBox } from './crossed_fingers';
 import { appearanceSubscribe, componentTintOn, currentConvertLabel, currentGradientBlend, shadowOn, type GradientBlend } from './appearance';
 
 /** A wire whose two ends have different types, the conversion done on it (design-interview Q11: the wire carries the
@@ -27,11 +27,17 @@ function stops(from: string, to: string, blend: GradientBlend): { offset: number
   });
 }
 
-/** The hand with crossed fingers (Refactor.77.8, human 2026-10-11): Fluent UI Emoji's line drawing (MIT, crossed_fingers.ts) in
- * ink, over a round patch filled with the two ends' colours, blending from the middle of the patch out to its sides.
- * 交叉手指（R.77.8，人類）：Fluent UI Emoji 的線稿（MIT，crossed_fingers.ts）用墨色，疊在一塊圓形底片上；底片填兩端顏色，從中間往兩邊漸變。 */
-function CrossedFingers() {
-  return <svg viewBox={crossedFingersViewBox} aria-hidden="true"><path d={crossedFingersPath} fill="var(--wire-convert-ink)" /></svg>;
+/** The hand with crossed fingers (Refactor.77.8, 77.9, human 2026-10-11: the hand itself filled, not a round patch): Fluent UI
+ * Emoji's line drawing (MIT, crossed_fingers.ts) in ink, over its own outer edge filled with the two ends' colours, blending
+ * across the hand from its middle out to its sides. 交叉手指（R.77.8、77.9，人類：填的是手本身，不是外面一個圓）：Fluent UI Emoji 的
+ * 線稿（MIT）用墨色，底下是它自己的外輪廓，填兩端顏色，在手的範圍內從中間往兩邊漸變。 */
+function CrossedFingers({ id }: { id: string }) {
+  return <svg viewBox={crossedFingersViewBox} aria-hidden="true">
+    <defs><linearGradient id={id} gradientUnits="userSpaceOnUse" x1="4" y1="16" x2="28" y2="16">
+      <stop offset="0.3" style={{ stopColor: 'var(--convert-from)' }} /><stop offset="0.7" style={{ stopColor: 'var(--convert-to)' }} /></linearGradient></defs>
+    <path d={crossedFingersOutline()} fill={`url(#${id})`} />
+    <path d={crossedFingersPath} fill="var(--wire-convert-ink)" />
+  </svg>;
 }
 
 export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth, data }: EdgeProps) {
@@ -59,7 +65,7 @@ export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosi
     {shown !== 'none' && to && <EdgeLabelRenderer>
       <span className={'wire-convert ' + shown} style={ends}>
         {shown === 'text' ? <><span className="from">{facts.fromType}</span><span className="arrow" aria-hidden="true">→</span><span className="to">{facts.toType}</span></>
-          : <CrossedFingers />}
+          : <CrossedFingers id={key + '-hand'} />}
       </span>
     </EdgeLabelRenderer>}
   </>;

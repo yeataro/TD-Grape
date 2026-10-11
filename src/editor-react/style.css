@@ -476,9 +476,8 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .wire-convert { position: absolute; pointer-events: none; display: inline-flex; align-items: center; }
 .wire-convert.text { gap: 3px; padding: 1px 5px; border-radius: 4px; background: var(--surface-raised); font-size: var(--font-xs); line-height: var(--line-xs); }
 .wire-convert .from { color: var(--convert-from); } .wire-convert .to { color: var(--convert-to); } .wire-convert .arrow { color: var(--text-muted); }
-.wire-convert.icon { width: 26px; height: 26px; padding: 4px; box-sizing: border-box; border-radius: 50%;
-  background: linear-gradient(90deg, var(--convert-from) 30%, var(--convert-to) 70%); }
-.wire-convert.icon svg { display: block; width: 100%; height: 100%; }
+.wire-convert.icon { width: 28px; height: 28px; }
+.wire-convert.icon svg { display: block; width: 100%; height: 100%; stroke: none; } /* the drawing is filled shapes; the page's icon stroke would ring it in white 圖是填色形狀；不吃全頁圖示的外框線（否則會多一圈白邊） */
 /* An input showing the conversion, as the legacy port caption: the incoming type in its colour, an arrow, the port's type.
    輸入接孔寫出轉換，同舊產品：接進來的型別用它的顏色、箭頭、接孔自己的型別。 */
 .port-conversion { display: inline-flex; gap: 2px; } .port-conversion .conversion-arrow { color: var(--text-muted); }
