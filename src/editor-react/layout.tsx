@@ -212,7 +212,7 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
 // Where a panel would go, worked out from what is under the pointer (legacy inspector.js:2314; human 2026-10-10, Resolume
 // Wire). Everything is allowed for now (R.68.4, human: try it all first, then decide what to limit):
 // - on a tab bar: between two tabs (a line);
-// - on a tab pane: near an edge (its outer 30%, whichever edge is nearest) a new pane on that edge (a line on the edge, so the
+// - on a tab pane: near an edge (its outer 15%, at least the corner mark; whichever edge is nearest) a new pane on that edge (a line on the edge, so the
 //   part of one pane next to a boundary and the part of the next mean the same boundary: "between" is easy to hit); its
 //   middle joins it as a tab, at the place chosen by where the pointer is across it (slots, one per tab it will have; Wire);
 // - on the canvas: its top or bottom band, a pane above or below it; its left or right part (as wide as a side, R.68.1), a
@@ -220,16 +220,22 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
 //   (human: the two must be told apart; the line's length shows which).
 // 放到哪，由游標下方是什麼決定（舊產品；人類 10-10，Resolume Wire）。目前全部開放（R.68.4，人類：先都試過再決定限制）：
 // - 分頁列上：兩個分頁之間（直線）；
-// - 分頁窗格：靠近邊緣（離邊緣在四角標記的寬度內，取最近的那條邊；R.74.2）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
+// - 分頁窗格：靠近邊緣（外圍 15%、至少四角標記的寬度，取最近的那條邊；R.80.2）＝在那條邊切新的一格（邊上一條線，交界兩旁都算同一個交界，「中間」好觸發）；
 //   中間＝合併成分頁，位置看游標在寬度的哪一段（格子，放下後有幾個分頁就幾格；Wire）；
 // - 畫布：上下帶＝畫布上方或下方切一格；左右兩塊（和側欄一樣寬，R.68.1）＝畫布旁切一格；那一側沒東西顯示時，靠外的一段＝放到那一側本身、
 //   整個高度（人類：兩者要分得出來；線的長度表示是哪一種）。
 // A line is drawn on the edge it marks, its width the theme's (--drop-line). 線畫在它標的那條邊上，粗細由主題決定。
-// A tabbed pane's edge is as wide as the drop frame's corner mark (--drop-corner; Refactor.74.2, human 2026-10-10: 30% of
-// the pane left too little for joining as a tab, and a fixed width matches what the frame shows).
-// 分頁窗格的「邊」和放下框四角的標記一樣寬（--drop-corner；R.74.2，人類：外圍 30% 讓合併成分頁的區域太小，固定寬度和框上看到的一致）。
+// A tabbed pane's edge: a share of the pane along that axis, never less than the drop frame's corner mark (--drop-edge,
+// --drop-corner; Refactor.80.2, human 2026-10-11: half of the old 30%, with today's fixed width as the least; the corner mark
+// keeps its size; R.74.2 had made the edge the fixed width only).
+// 分頁窗格的「邊」：那個方向的一定比例，不小於放下框四角標記的寬度（--drop-edge、--drop-corner；R.80.2，人類：以前 30% 的一半，
+// 最小就是現在的固定寬度；四角標記維持原大小；R.74.2 時邊只有固定寬度）。
 const BAND = 56, OUTER = 96;
-const edgeWidth = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--drop-corner')) || 18;
+type EdgeZone = { share: number; least: number };
+const edgeZone = (): EdgeZone => {
+  const style = getComputedStyle(document.documentElement);
+  return { share: (parseFloat(style.getPropertyValue('--drop-edge')) || 15) / 100, least: parseFloat(style.getPropertyValue('--drop-corner')) || 18 };
+};
 type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; width?: number; height?: number;
   /** What dropping here does, written beside the mark (R.68.2, human 2026-10-10); an upright line says which edge it is on,
    * so its words go inside. 放下會發生什麼，寫在提示旁（人類 10-10）；直線標明是哪一條邊，說明寫在內側。 */
@@ -257,7 +263,7 @@ function beside(layout: Layout, path: number[], edge: Edge, box: DOMRect): Hint 
   return { drop: { kind: 'beside', pane: path, edge }, mark: { ...mark, label: newPane }, refused: fits ? undefined : noRoom };
 }
 
-function hintAt(layout: Layout, panel: string, x: number, y: number, edgeWidth: number): Hint {
+function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZone): Hint {
   const under = document.elementFromPoint(x, y) as HTMLElement | null, slot = under?.closest<HTMLElement>('[data-pane]');
   if (!under || !slot) return null;
   const path = slot.dataset.pane!.split('.').map(Number), pane = tree.at(layout.root, path), box = slot.getBoundingClientRect();
@@ -271,9 +277,12 @@ function hintAt(layout: Layout, panel: string, x: number, y: number, edgeWidth: 
       const at = next ? next.getBoundingClientRect().left : tabs.at(-1)!.getBoundingClientRect().right;
       return { drop: { kind: 'tab', pane: path, index }, mark: { kind: 'along', left: at, top: strip.top, height: strip.height } };
     }
-    const near: [Edge, number][] = [['top', y - box.top], ['bottom', box.bottom - y], ['left', x - box.left], ['right', box.right - x]];
+    // Each distance against its own axis's edge width, so a tall pane and a wide one are judged alike. 每個距離和它那個方向的邊寬比。
+    const edgeY = Math.max(zone.least, box.height * zone.share), edgeX = Math.max(zone.least, box.width * zone.share);
+    const near: [Edge, number][] = [['top', (y - box.top) / edgeY], ['bottom', (box.bottom - y) / edgeY],
+      ['left', (x - box.left) / edgeX], ['right', (box.right - x) / edgeX]];
     const [edge, distance] = near.reduce((closest, item) => item[1] < closest[1] ? item : closest);
-    if (distance < edgeWidth) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
+    if (distance < 1) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
     // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
     // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
     const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
@@ -319,9 +328,9 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
     if (event.button !== 0) return;
     const x0 = event.clientX, y0 = event.clientY, pointer = event.pointerId, controller = new AbortController();
     const options = { capture: true, signal: controller.signal };
-    // The theme's edge width, read once per drag, not on every move. 主題的邊寬，每次拖曳讀一次，不是每次移動都讀。
+    // The theme's edge zone, read once per drag, not on every move. 主題的邊緣範圍，每次拖曳讀一次，不是每次移動都讀。
     let moving = false, hint: Hint = null;
-    const edge = edgeWidth();
+    const zone = edgeZone();
     const finish = (accept: boolean) => {
       controller.abort(); document.documentElement.classList.remove('moving-panel'); setDrag(null);
       if (!moving) return;
@@ -337,7 +346,7 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
       if (!moving && Math.hypot(move.clientX - x0, move.clientY - y0) < (event.pointerType === 'touch' ? 10 : 6)) return;
       move.preventDefault(); move.stopPropagation();
       if (!moving) { moving = true; document.documentElement.classList.add('moving-panel'); }
-      hint = hintAt(now.current, panel, move.clientX, move.clientY, edge);
+      hint = hintAt(now.current, panel, move.clientX, move.clientY, zone);
       setDrag({ panel, x: move.clientX, y: move.clientY, hint });
     }, options);
     addEventListener('pointerup', up => { if (up.pointerId === pointer) finish(true); }, options);

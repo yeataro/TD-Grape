@@ -84,6 +84,7 @@
   /* The marks shown while a panel is moved (Refactor.68): line width and corner length. 搬面板時提示的線寬與角框長。 */
   --drop-line: 3px;
   --drop-corner: 18px;
+  --drop-edge: 15%;   /* a tabbed pane's edge for a new pane: this share of the pane, at least --drop-corner (R.80.2, human 2026-10-11) 分頁窗格切新格的邊：窗格的這個比例，至少 --drop-corner（R.80.2，人類） */
   /* Joining as a tab: one slot per tab it will have, the new one lit (R.68.1, Wire). 合併成分頁：每個分頁一格，新的那格亮。 */
   --drop-slot: 24px;
   --drop-slot-gap: 3px;
