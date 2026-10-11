@@ -580,6 +580,29 @@ export function snap(box: Box, others: readonly Box[], width: number, height: nu
 }
 
 export type FloatEdge = { x?: 'start' | 'end'; y?: 'start' | 'end' };
+/** The panels on the seam at one edge of `id` (one axis only): `near`, ending on its line with `id`; `far`, starting `gap` after
+ * it; joined by overlap. No `far`: not a seam, the edge moves alone. Worked out when a hand reaches the edge (Refactor.88.1: shown
+ * before dragging) or starts dragging it. 某個面板某條邊（只一個方向）的縫上有哪些面板：near＝和它一起結束在那條線上的；far＝隔 gap 開始的；
+ * 彼此有重疊就連在一起。沒有 far：不是縫，那條邊自己動。在手碰到那條邊（R.88.1：拖之前就顯示）或開始拖時算。 */
+export function seamOf(rects: Readonly<Record<string, Box>>, id: string, edge: FloatEdge, width: number, height: number, gap: number,
+  fixed: readonly string[] = []): { near: string[]; far: string[] } {
+  const axis: Axis = edge.x ? 'x' : 'y', side = edge[axis]!, room = axis === 'x' ? width : height;
+  const flip = (box: Box) => { const [s, l] = along(box, axis); return put(box, axis, side === 'end' ? s : room - s - l); };
+  const mirrored = Object.fromEntries(Object.entries(rects).map(([key, box]) => [key, flip(box)]));
+  const end = (key: string) => { const [s, l] = along(mirrored[key]!, axis); return s + l; }, start = (key: string) => along(mirrored[key]!, axis)[0];
+  const overlapping = (a: string, b: string) => facing(mirrored[a]!, mirrored[b]!, axis, 0);
+  // Panels ending on the line and panels starting `gap` after it, joined by overlap. 結束在線上的與隔 gap 開始的，有重疊就連在一起。
+  const nearSet = new Set([id]), far = new Set<string>(), free = Object.keys(mirrored).filter(key => !fixed.includes(key));
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const key of free) {
+      if (nearSet.has(key) || far.has(key)) continue;
+      if ([...nearSet].some(n => Math.abs(start(key) - end(n) - gap) < near && overlapping(key, n))) { far.add(key); grew = true; }
+      else if ([...far].some(f => Math.abs(end(key) + gap - start(f)) < near && overlapping(key, f))) { nearSet.add(key); grew = true; }
+    }
+  }
+  return { near: [...nearSet], far: [...far] };
+}
 /** Sizing free panels by an edge or a corner of `id` (human 2026-10-12). An edge moves until the area's edge, the panel's least, or
  * `gap` short of another panel; it does not push. Where it is a seam (panels sit `gap` across it, overlapping), the seam is a divider:
  * every panel on it moves with it, one side growing as the other shrinks, each down to its least, until a panel is dragged away.
@@ -598,18 +621,9 @@ export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edg
     const flip = (box: Box) => { const [s, l] = along(box, axis); return put(box, axis, side === 'end' ? s : room - s - l); };
     const mirrored = Object.fromEntries(Object.entries(boxes).map(([key, box]) => [key, flip(box)]));
     const end = (key: string) => { const [s, l] = along(mirrored[key]!, axis); return s + l; }, start = (key: string) => along(mirrored[key]!, axis)[0];
-    const overlapping = (a: string, b: string) => facing(mirrored[a]!, mirrored[b]!, axis, 0);
-    // The seam: panels ending on its line, and panels starting `gap` after it, joined by overlap; only one panel at corners.
-    // 縫：結束在那條線上的面板，與隔 gap 開始的面板，彼此有重疊就連在一起；角只動一個面板。
-    const near_ = new Set([id]), far = new Set<string>(), free = Object.keys(mirrored).filter(key => !fixed.includes(key));
-    if (!edge[other(axis)]) for (let grew = true; grew;) {
-      grew = false;
-      for (const key of free) {
-        if (near_.has(key) || far.has(key)) continue;
-        if ([...near_].some(n => Math.abs(start(key) - end(n) - gap) < near && overlapping(key, n))) { far.add(key); grew = true; }
-        else if ([...far].some(f => Math.abs(end(key) + gap - start(f)) < near && overlapping(key, f))) { near_.add(key); grew = true; }
-      }
-    }
+    // Only one panel at corners. 角只動一個面板。
+    const seam = edge[other(axis)] ? { near: [id], far: [] } : seamOf(boxes, id, { [axis]: side }, width, height, gap, fixed);
+    const near_ = new Set(seam.near), far = new Set(seam.far);
     const group = new Set([...near_, ...far]), others = Object.keys(mirrored).filter(key => !group.has(key));
     const length = (key: string) => along(mirrored[key]!, axis)[1];
     // How far the line may go: each side down to its least; the near side not past the area or another panel, the far side not

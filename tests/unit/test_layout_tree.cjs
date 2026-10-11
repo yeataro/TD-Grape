@@ -304,6 +304,8 @@ test('moving a free panel: solid, it stops a gap short of another and slides alo
 test('sizing free panels: an edge stops at another; a seam moves both until one is dragged away (human 2026-10-12)', () => {
   const rects = { a: { x: 0, y: 0, width: 300, height: 300 }, b: { x: 308, y: 0, width: 400, height: 200 }, c: { x: 308, y: 208, width: 400, height: 180 },
     d: { x: 0, y: 400, width: 300, height: 180 } };
+  assert.deepEqual(plain(tree.seamOf(rects, 'a', { x: 'end' }, 1000, 600, 8)), { near: ['a'], far: ['b', 'c'] }, 'the seam, found when a hand reaches it (R.88.1)');
+  assert.deepEqual(plain(tree.seamOf(rects, 'a', { y: 'end' }, 1000, 600, 8)), { near: ['a'], far: [] }, 'not a seam');
   // The seam between a and b, c: dragging it right grows a, shrinks both. a 和 b、c 之間的縫：往右拉，a 變寬、兩個一起變窄。
   let sized = tree.sizeFloats(rects, 'a', { x: 'end' }, 50, 0, 1000, 600, 8);
   assert.equal(sized.a.width, 350); assert.equal(sized.b.x, 358); assert.equal(sized.b.width, 350); assert.equal(sized.c.width, 350);

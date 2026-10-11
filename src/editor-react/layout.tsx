@@ -529,6 +529,9 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   // its width could be sized; human 2026-10-11): its height is measured, up to what its side leaves it. 自己畫外殼的面板和內容一樣高
   // （參數面板：舊產品每個分頁自動算高度、只能調寬；人類 10-11）：高度用量的，最多到它那一邊留給它的。
   const [measured, setMeasured] = useState<Record<string, number>>({}), drawn = useRef<Geometry | null>(null);
+  // The seam a hand is on, shown before and while dragging (Refactor.88.1, human 2026-10-12: tell that both will change; a trial).
+  // 手所在的縫，拖之前與拖的時候都顯示（R.88.1，人類 10-12：讓人知道會一起變；試驗）。
+  const [seam, setSeam] = useState<{ ids: string[]; id: string; edge: tree.FloatEdge } | null>(null);
   useLayoutEffect(() => { geometry.current = drawn.current; });
   if (!area) return null;
   const own = Object.keys(layout.floating).filter(id => panels[id]?.frame === 'own');
@@ -544,9 +547,19 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   const rects = tree.floatRects(sized(id => Math.min(measured[id] ?? caps[id]?.height ?? 0, caps[id]?.height ?? 0)), area.width, area.height, area.gap, area.title);
   const measure = (id: string, height: number) => setMeasured(old => old[id] === height ? old : { ...old, [id]: height });
   drawn.current = { width: area.width, height: area.height, gap: area.gap, title: area.title, rects };
+  // The seam's line, the whole length of the panels on it, from where they are now (it follows the drag). 縫的線，畫滿縫上所有面板的長度，
+  // 照它們現在的位置（拖的時候跟著走）。
+  const line = seam && rects[seam.id] && (() => {
+    const axis = seam.edge.x ? 'x' : 'y', own = rects[seam.id]!, boxes = seam.ids.map(key => rects[key]).filter((box): box is tree.FloatRect => !!box);
+    const at = axis === 'x' ? (seam.edge.x === 'end' ? own.x + own.width + area.gap / 2 : own.x - area.gap / 2)
+      : (seam.edge.y === 'end' ? own.y + own.height + area.gap / 2 : own.y - area.gap / 2);
+    const from = Math.min(...boxes.map(box => axis === 'x' ? box.y : box.x)), to = Math.max(...boxes.map(box => axis === 'x' ? box.y + box.height : box.x + box.width));
+    return axis === 'x' ? { className: 'float-seam x', style: { left: at, top: from, height: to - from } } : { className: 'float-seam y', style: { top: at, left: from, width: to - from } };
+  })();
   return <div className="floating-area" style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
     {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
-      rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} />)}
+      rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} inSeam={!!seam?.ids.includes(id)} showSeam={setSeam} />)}
+    {line && <div className={line.className} style={line.style} />}
   </div>;
 }
 
@@ -555,8 +568,9 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
  * both; a panel with a home: the edge facing the network (legacy inspector.js:2090). 一個浮動面板：標題（三角形、名字、選單；拖它移動或
  * 拖回版面）、內容，以及調大小的邊。自由浮動的：每條邊、每個角（人類 10-12），碰到別的面板就停，兩個之間的縫一起動；有家的：朝網路區的邊
  * （照舊產品）。 */
-function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure }: { id: string; layout: Layout; view: PanelView | undefined; rect: tree.FloatRect;
-  area: { width: number; height: number; gap: number; title: number }; rects: Record<string, tree.FloatRect>; cap?: number; measure(height: number): void }) {
+function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, inSeam, showSeam }: { id: string; layout: Layout; view: PanelView | undefined;
+  rect: tree.FloatRect; area: { width: number; height: number; gap: number; title: number }; rects: Record<string, tree.FloatRect>; cap?: number;
+  measure(height: number): void; inSeam: boolean; showSeam(seam: { ids: string[]; id: string; edge: tree.FloatEdge } | null): void }) {
   const drag = useContext(DragContext), place = layout.floats[id]!, free = layout.floating[id] === 'free';
   const top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
   const title = say(view?.title ?? id), own = view?.frame === 'own';
@@ -584,10 +598,17 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure }: { 
       .map(key => [key, tree.placeAt(sized[key]!, area.width, area.height, layout.floats[key])])));
   };
   const begin = () => { start.current = rects; };
+  // A hand on an edge that is a seam: show every panel on it (Refactor.88.1). 手在一條是縫的邊上：把縫上的面板都標出來（R.88.1）。
+  const enter = (edge: tree.FloatEdge) => {
+    if (!free || (edge.x && edge.y)) return;
+    const found = tree.seamOf(rects, id, edge, area.width, area.height, area.gap, fixed());
+    showSeam(found.far.length ? { ids: [...found.near, ...found.far], id, edge } : null);
+  };
   const label = tr('layout.resizeFloat', 'Resize the panel');
   const edges: tree.FloatEdge[] = free ? [{ y: 'start' }, { y: 'end' }, { x: 'start' }, { x: 'end' }, { x: 'start', y: 'start' }, { x: 'end', y: 'start' }, { x: 'start', y: 'end' }, { x: 'end', y: 'end' }]
     : own ? [{ x: left ? 'end' : 'start' }] : [{ x: left ? 'end' : 'start' }, { y: top ? 'end' : 'start' }];
-  const handles = !shut && edges.map(edge => <FloatHandle key={(edge.x ?? '') + (edge.y ?? '')} edge={edge} label={label} onStart={begin} onMove={(dx, dy) => size(edge, dx, dy)} />);
+  const handles = !shut && edges.map(edge => <FloatHandle key={(edge.x ?? '') + (edge.y ?? '')} edge={edge} label={label} onStart={begin} onMove={(dx, dy) => size(edge, dx, dy)}
+    onEnter={() => enter(edge)} onLeave={() => showSeam(null)} />);
   const frame = useRef<HTMLElement>(null);
   // Its height follows its content (measured when the content changes size, not while anything moves elsewhere).
   // 高度跟著內容（內容大小改變時量，不是別處在動時量）。
@@ -605,7 +626,7 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure }: { 
     {popup}
     {handles}
   </section>;
-  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
+  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '') + (inSeam ? ' in-seam' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
       {fold}
@@ -620,8 +641,10 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure }: { 
 
 /** A floating panel's edge or corner handle: drawn thin, grabbed wider; reports how far it was dragged on each axis.
  * 浮動面板的邊或角把手：畫得細、可抓範圍寬；回報兩個方向各拖了多遠。 */
-function FloatHandle({ edge, label, onStart, onMove }: { edge: tree.FloatEdge; label: Message; onStart(): void; onMove(dx: number, dy: number): void }) {
+function FloatHandle({ edge, label, onStart, onMove, onEnter, onLeave }: { edge: tree.FloatEdge; label: Message; onStart(): void; onMove(dx: number, dy: number): void;
+  onEnter(): void; onLeave(): void }) {
   const start = useRef<{ x: number; y: number } | null>(null);
+  const end = () => { start.current = null; onLeave(); };
   const place = (edge.y === 'start' ? 'n' : edge.y === 'end' ? 's' : '') + (edge.x === 'start' ? 'w' : edge.x === 'end' ? 'e' : '');
   return <div className={'float-handle ' + place} role="separator" aria-label={say(label)}
     onPointerDown={event => {
@@ -630,7 +653,7 @@ function FloatHandle({ edge, label, onStart, onMove }: { edge: tree.FloatEdge; l
       start.current = { x: event.clientX, y: event.clientY }; onStart();
     }}
     onPointerMove={event => { if (start.current) onMove(event.clientX - start.current.x, event.clientY - start.current.y); }}
-    onPointerUp={() => { start.current = null; }} onPointerCancel={() => { start.current = null; }} />;
+    onPointerEnter={onEnter} onPointerLeave={() => { if (!start.current) onLeave(); }} onPointerUp={end} onPointerCancel={end} />;
 }
 
 /** The Layout menu (legacy inspector.js:2396; floating-panels.md 6): each panel shown or hidden, and the default layout.
