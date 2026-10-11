@@ -197,20 +197,24 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
   const collapsed = !!pane.collapsed;
   return <section className={'tab-pane' + (collapsed ? ' collapsed' : '')} aria-label={say(panels[active]?.title ?? '')}>
     <div className="tab-head">
-      {/* Stacked in a column split, a pane collapses to its tab bar, every tab still in view; a tab opens it again (Refactor.80,
-          human 2026-10-11). 疊在上下分割裡的窗格可以收成分頁列，分頁都還看得到；點分頁就再打開（R.80，人類）。 */}
-      {stacked && <button type="button" className="expand-toggle pane-collapse" aria-expanded={!collapsed}
-        aria-label={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
-        title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
-        onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
       {/* A tab is also the handle that moves its panel (legacy: drag the panel title). 分頁也是搬面板的把手（舊產品：拖面板標題）。 */}
       {/* The shown tab carries its panel's menu on its corner (Refactor.83, human 2026-10-11: the shown tab already takes half the bar,
           so no room is taken; legacy put a pop-out button on its tabs, inspector.js:2245). The button sits beside the tab, not in it
           (a button cannot hold one), so pressing it never starts a panel move. 選中的分頁右上角放它面板的選單（R.83，人類：選中的分頁本來
           就佔一半，不多佔空間；舊產品在分頁上放過彈出按鈕）。按鈕在分頁旁邊、不在裡面（按鈕裡不能放按鈕），按它不會開始搬面板。 */}
+      {/* Stacked in a column split, a pane collapses to its tab bar, every tab still in view; a tab opens it again (Refactor.80,
+          human 2026-10-11). Its triangle sits on the shown tab's left as the menu sits on its right, as wide as any icon button
+          (Refactor.83.2, human: easier to press and tidier); collapsed, it stays there to open the pane. It is the pane's, not the
+          panel's. 疊在上下分割裡的窗格可以收成分頁列，分頁都還看得到；點分頁就再打開（R.80，人類）。三角形在顯示中分頁的左邊，和選單在
+          右邊一樣，一般圖示按鈕寬（R.83.2，人類：好按、好看）；收起時留在原地用來打開。它屬於窗格，不屬於面板。 */}
       <div className="panel-tabs" role="tablist">{ids.map(id => {
         const menu = id === active && !collapsed ? panels[id]?.menu : undefined;
-        return <div key={id} role="presentation" className={'tab-slot' + (id === active ? ' shown' : '') + (menu ? ' with-menu' : '')}>
+        const fold = id === active && stacked;
+        return <div key={id} role="presentation" className={'tab-slot' + (id === active ? ' shown' : '') + (menu ? ' with-menu' : '') + (fold ? ' with-fold' : '')}>
+          {fold && <button type="button" className="icon-button pane-collapse" aria-expanded={!collapsed}
+            aria-label={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+            title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+            onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
           <button role="tab" aria-selected={id === active} data-panel={id} className="panel-tab"
             onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>
           {menu && <PanelMenu title={panels[id]!.title} items={menu} />}

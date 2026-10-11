@@ -311,13 +311,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .split-row > .pane-slot + .pane-slot .panel-content { border-left: 0; }
 /* Tabs drawn as in TD (Refactor.80.1, human 2026-10-11): a tab draws its top, left and right; the panel below draws all
    four sides; the shown tab reaches 1px down over the panel's top line, so the two are one piece; the others sit on that line.
-   The collapse triangle (stacked panes, Refactor.80) stands outside the tabs, with no lines, so it never breaks their frame.
+   The collapse triangle (stacked panes, Refactor.80) sits on the shown tab's left, inside its frame (Refactor.83.2).
    The bar is as tall as the location bar beside it, so their lower edges meet (human 2026-10-09).
    分頁照 TD 的畫法（R.80.1，人類）：分頁畫上、左、右；下面的面板畫上下左右；顯示中的分頁往下蓋過面板頂線 1px，連成一塊；其他分頁
-   坐在那條線上。收合三角形（疊著的窗格，R.80）在分頁外面、不畫線，不破壞分頁的框。這一排和旁邊網址列一樣高，下緣接得上（人類）。 */
+   坐在那條線上。收合三角形（疊著的窗格，R.80）在顯示中分頁的左邊、框裡面（R.83.2）。這一排和旁邊網址列一樣高，下緣接得上（人類）。 */
 .tab-head { position: relative; z-index: 1; display: flex; align-items: flex-end; flex-shrink: 0; height: var(--bar-height); }
 .panel-tabs { display: flex; align-items: flex-end; flex: 1; min-width: 0; height: 100%; }
-.pane-collapse { height: 100%; }
 /* Collapsed: only the tabs, each closed below. 收起：只剩分頁，每個下面都封起來。 */
 .tab-pane.collapsed .panel-tab { border-bottom: 1px solid var(--border); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
@@ -335,6 +334,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    三條橫線，和一般圖示按鈕一樣寬（R.83.1，人類：不要太窄，平常是收著的）。 */
 .tab-slot.with-menu .panel-tab { padding-right: calc(var(--icon-button) + 2px); }
 .panel-menu { position: absolute; top: 1px; right: 1px; height: calc(100% - 2px); }
+/* The collapse triangle on the shown tab's left (Refactor.83.2), pointing right while collapsed. 收合三角形在顯示中分頁的左邊（R.83.2），收起時朝右。 */
+.tab-slot.with-fold .panel-tab { padding-left: calc(var(--icon-button) + 2px); }
+.pane-collapse { position: absolute; top: 1px; left: 1px; z-index: 1; height: calc(100% - 2px); }
+.pane-collapse .icon { width: 12px; height: 12px; }
+.pane-collapse[aria-expanded="false"] .icon { transform: rotate(-90deg); }
 .tab-pane:not(.collapsed) .panel-tab[aria-selected="true"] { position: relative; height: calc(100% + 1px); margin-bottom: -1px; }
 /* The shown tab takes half the strip so its name fits; the others share the rest (human 2026-10-09: "Shared Sources" never
    showed whole). Alone, it takes all. 顯示中的分頁佔一半，名字放得下；其他平分剩下的（人類：「共用來源」永遠顯示不完整）。只有一個就佔滿。 */
