@@ -9,7 +9,7 @@ import './theme/dark.css';
 import './theme/td.css';
 import './theme/light.css';
 import './theme/sizes.css';
-import { appearanceSubscribe, currentTheme } from './appearance';
+import { appearanceSubscribe, currentTheme, shadowOn } from './appearance';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
@@ -160,7 +160,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // Dragged from an input onto empty canvas, releasing pulls its wire (onConnectEnd below), so that is previewed too
   // (Refactor.78.1). A wire picked up by its end is hidden by React Flow while it moves, so it has nothing to show.
   // 從輸入拉到空白處，放開會拔線（下面的 onConnectEnd），也預告（R.78.1）。抓著線端拿起的線，移動中 React Flow 本來就不畫，不用預告。
+  // Off in the gear, nothing is rehearsed while dragging (Refactor.78.2, to compare the repaint). 齒輪關掉時拖線不預演（R.78.2，比對重畫用）。
+  const previewing = useSyncExternalStore(appearanceSubscribe, () => shadowOn('wirePreview'));
   const over = useConnection(state => {
+    if (!previewing) return '';
     if (state.inProgress && !state.toHandle && state.fromHandle?.type === 'target' && state.fromHandle.id)
       return ['pull', state.fromHandle.nodeId, state.fromHandle.id].join('\n');
     if (!state.inProgress || !state.toHandle || !state.fromHandle) return '';
