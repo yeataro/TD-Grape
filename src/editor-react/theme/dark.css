@@ -30,6 +30,7 @@
   --palette-select-green: #70dc69;
   --palette-wire-cream: #fff2d2;
   --palette-wire-lilac: #ede5ff;
+  --palette-wire-off: #545454;   /* wires that do not count: ghost, about to be replaced (R.78, human 2026-10-11: the grey they tuned) 不算數的線：Ghost、即將被換掉（R.78，人類調的灰） */
   --palette-warning: #e4bd77;        /* legacy .tag.pending */
   --palette-error: #f78b96;
   --palette-alarm: #ff2a2a;          /* TD's error mark, a true red (human 2026-10-10: redder) TD 錯誤標記的正紅（人類：紅一點） */
@@ -134,7 +135,10 @@
   --wire-ready: var(--palette-wire-lilac);
   --wire-ready-glow: color-mix(in srgb, var(--palette-accent) var(--tint-wire-ready), transparent);
   --port-glow: var(--palette-lift);   /* what a wired port's colour is lifted towards (it glows a little) 接上線的接孔往這個顏色提亮（微微發亮） */
-  --wire-ghost: var(--palette-error);
+  /* A wire that does not count, one look for both kinds (Refactor.78, human 2026-10-11): a ghost wire (Q37 1-3) and a wire a drop
+     would replace. Grey and dashed; the width stays the wire's. 不算數的線，兩種同一個樣子（R.78，人類）：Ghost 線與放開後會被換掉的線。灰色虛線，粗細不變。 */
+  --wire-off: var(--palette-wire-off);
+  --wire-off-dash: 6 4;
   --type-scalar: var(--palette-type-scalar);
   --type-vec2: var(--palette-type-vec2);
   --type-vec3: var(--palette-type-vec3);

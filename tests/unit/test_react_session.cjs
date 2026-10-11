@@ -753,7 +753,8 @@ test('a graph with an unknown node and a bad wire opens; ghosts survive edits an
   const ghostNode = view.nodes.find(node => node.id === 'future');
   assert.equal(ghostNode.data.ghost, 'unknown');
   assert.deepEqual(ghostNode.data.outputs.map(port => port.key), ['out']);
-  assert.equal(view.edges.find(edge => edge.id === 'eFuture').style.strokeDasharray, '6 4');
+  // Drawn as a wire that does not count: the ghost edge type, its look the theme's (Refactor.78). 畫成不算數的線：ghost 類型，樣子由主題決定。
+  assert.equal(view.edges.find(edge => edge.id === 'eFuture').type, 'ghost');
   assert.match(zh(ghostSession.snapshot().message), /1 個 Ghost 節點、1 條 Ghost 線/);
   ghostSession.transact(tr('edit.valueChanged', 'Value updated; waiting to apply'), net => setValue(net, 'a', 6));
   await ghostSession.flush();
@@ -1493,8 +1494,13 @@ test('a wire preview names the inputs it merges and the wires it replaces, exact
   assert.deepEqual(clone(node.params.groups), { x: 'vec3' });
   assert.ok(!after.edges.some(edge => edge.id === intoY), 'the previewed wire is the one replaced');
   assert.ok(after.edges.some(edge => edge.to[0] === join && edge.to[1] === 'w'), 'w keeps its wire');
-  // A node whose wiring never changes its ports is not rehearsed. 接線不會改變接孔的節點不預演。
+  // Any node: dropping on a wired input previews the wire it replaces (Refactor.78); an empty input has nothing to show.
+  // 任何節點：放到已接線的輸入上，預告會被換掉的線（R.78）；空的輸入沒有要預告的。
   assert.equal(session.wirePreview({ source: 'a', sourceHandle: 'out', target: 'sum', targetHandle: 'b' }), null);
+  session.connect({ source: 'a', sourceHandle: 'out', target: 'sum', targetHandle: 'b' });
+  const intoB = session.graph().stages.pixel.edges.find(edge => edge.to[0] === 'sum' && edge.to[1] === 'b').id;
+  assert.deepEqual(clone(session.wirePreview({ source: 'b', sourceHandle: 'out', target: 'sum', targetHandle: 'b' })),
+    { node: 'sum', port: 'b', type: 'float', merged: [], replaced: [intoB] });
 });
 
 test('a picked-up wire moves to another input in one step', t => {

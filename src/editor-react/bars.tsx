@@ -542,6 +542,9 @@ function ComponentTint() {
 function WireGradient() {
   useSyncExternalStore(appearanceSubscribe, appearance);
   return <>
+    {/* Trial (Refactor.78): solid over a port it can connect to, as the legacy editor. 試驗（R.78）：接得上時變實線，照舊產品。 */}
+    <label className="check"><input type="checkbox" checked={shadowOn('wireReadySolid')} onChange={event => setShadow('wireReadySolid', event.target.checked)} />
+      {say(tr('appearance.wireReadySolid', 'Dragged wire turns solid over a port it can connect to'))}</label>
     <label className="check"><input type="checkbox" checked={shadowOn('wireGradient')} onChange={event => setShadow('wireGradient', event.target.checked)} />
       {say(tr('appearance.wireGradient', 'Type conversion wires: gradient between the two type colours'))}</label>
     {/* How it blends (Refactor.77.4); the choices are named as the human named them. 怎麼混色（R.77.4）；選項照人類給的名字。 */}

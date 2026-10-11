@@ -98,9 +98,10 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // Ghost 線保留、畫成虛線；產碼時當作沒接。
     const ghost = ghosts.edges.has(edge.id);
     const sourceType = ghost ? '' : edge.from?.type ?? '', targetType = ghost ? '' : edge.to?.type ?? '';
-    // The width is the theme's (--wire-width); only colour and dashes are per wire. The colour is also `color`, for looks
-    // that follow it (the wire glow). 粗細由主題決定；每條線只決定顏色與虛線。顏色也放在 color，給跟著它的外觀用（接線光暈）。
-    const style = ghost ? { stroke: 'var(--wire-ghost)', strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), color: typeColor(sourceType) };
+    // The width is the theme's (--wire-width); only the colour is per wire, also as `color` for looks that follow it (the wire
+    // glow). A ghost wire's look is the theme's, as a wire that does not count (style.css, Refactor.78).
+    // 粗細由主題決定；每條線只決定顏色，也放在 color 給跟著它的外觀用（接線光暈）。Ghost 線的樣子由主題決定：不算數的線（R.78）。
+    const style = ghost ? {} : { stroke: typeColor(sourceType), color: typeColor(sourceType) };
     const label = !ghost && sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
     // A wire leaving a one-component output takes that component's colour under component tint (Refactor.59; legacy
     // app.js:623). 從單一分量輸出出發的線，在分量染色下用該分量色。

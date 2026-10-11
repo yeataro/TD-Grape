@@ -552,13 +552,15 @@ export class Editor {
    * their ports pay for it): the target's inputs it would merge away (a component group) and the wires it would
    * replace. Rehearsed with the real edit on a discarded candidate, so the preview is what happens. null: no change
    * to show, or it does not fit. 線放在這裡會改變什麼：目標節點會被併掉的輸入、會被換掉的線。用真正的修改在丟棄的候選上
-   * 預演，預告就是實際結果。只有接線會改變接孔的節點（模組有 wire）才預演；null＝沒有要預告的或接不上。
+   * 預演，預告就是實際結果；null＝沒有要預告的或接不上。
+   * Every node is rehearsed, so a wire about to be replaced shows on any input (Refactor.78, human 2026-10-11: treat them
+   * alike; legacy and R.57 did Combine and Replace only). 每個節點都預演，任何輸入上即將被換掉的線都會預告（R.78，人類：
+   * 一視同仁；舊產品和 R.57 只做 Combine、Replace）。
    * Also the input it lands on and the wire's type, so the rows that merge can be shown as one band in the wire's colour
    * (Refactor.76.16). 也帶上落在哪個輸入與線的型別，會合併的列才能畫成線色的一整條（R.76.16）。 */
   wirePreview = (c: Connection): WirePreview | null => {
     if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle) return null;
     const net = this.document.networks.get('pixel')!;
-    if (!net.node(c.target).definition?.wire) return null;
     const inputs = Object.keys(net.node(c.target).interface.inputs), edges = net.data.edges.map(edge => edge.id);
     const type = net.node(c.source).interface.outputs[c.sourceHandle]?.type ?? '';
     let found: WirePreview | null = null;

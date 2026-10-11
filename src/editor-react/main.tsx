@@ -104,8 +104,11 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
   // The dragged wire takes the component of a one-component port too (legacy graph_ui.js:1627). 拖曳中的線也帶單一分量。
   const view = props.fromNode.data.view.components, components = props.fromHandle.type === 'source'
     ? view?.outputs?.[props.fromHandle.id ?? ''] : view?.inputs?.[props.fromHandle.id ?? ''];
-  return <g className={components?.length === 1 ? 'component-' + components[0] : undefined}><path d={path} fill="none"
-    style={{ stroke: typeColor(port?.type ?? ''), strokeWidth: 'var(--wire-width-drag)' }} strokeDasharray="5 4" />
+  // Dashed while looking for a port, solid over one it can connect to (Refactor.78; legacy style.css:201, 306 .wire-preview.ready;
+  // the gear can keep it dashed). 找接孔時是虛線，停在接得上的接孔上變實線（R.78；照舊產品；齒輪可改回全程虛線）。
+  const className = [components?.length === 1 ? 'component-' + components[0] : '', props.connectionStatus === 'valid' ? 'ready' : ''].join(' ').trim();
+  return <g className={className || undefined}><path className="wire-drag" d={path} fill="none"
+    style={{ stroke: typeColor(port?.type ?? ''), strokeWidth: 'var(--wire-width-drag)' }} />
     {plus && <text className="wire-plus" x={props.toX + 9} y={props.toY - 7}>+</text>}</g>;
 }
 // The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until

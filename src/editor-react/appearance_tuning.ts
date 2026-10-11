@@ -11,8 +11,9 @@ export type Tunable = { name: string; label: Message } & ({ kind: 'color' } | { 
 
 export const TUNABLES: readonly Tunable[] = [
   { name: '--palette-select-green', label: tr('tune.select', 'Selection'), kind: 'color' },
-  // Ghost wires only; the error red they take by default stays (Refactor.77.7, human 2026-10-11). 只改 Ghost 線；預設借用的錯誤紅不受影響。
-  { name: '--wire-ghost', label: tr('tune.wireGhostColour', 'Ghost wires'), kind: 'color' },
+  // Wires that do not count: ghost wires and wires about to be replaced, one colour (Refactor.77.7; Refactor.78, human 2026-10-11).
+  // 不算數的線：Ghost 線與即將被換掉的線，同一個顏色（R.77.7；R.78，人類）。
+  { name: '--wire-off', label: tr('tune.wireOffColour', 'Ghost wires and wires about to be replaced'), kind: 'color' },
   { name: '--tint-select-primary', label: tr('tune.selectPrimary', 'Current among several, brighter by'), kind: 'percent', min: 0, max: 80, step: 1 },
   { name: '--selection-gap', label: tr('tune.selectionGap', 'Multi-selection frame distance'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--tint-node-border', label: tr('tune.nodeBorder', 'Node outline and title line'), kind: 'percent', min: 0, max: 40, step: 1 },

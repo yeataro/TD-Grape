@@ -727,8 +727,14 @@ span.image-label:hover { background: var(--image-label); }
 /* Trial: the highlights glow too, each in its own colour. 試驗：高亮也發光，各用自己的顏色。 */
 :root[data-shadow-highlight-glow="on"] .react-flow__handle:is(:hover, .connectingfrom)::after { --port-highlight-glow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-hover) var(--tint-glow-highlight), transparent); }
 :root[data-shadow-highlight-glow="on"] .react-flow__handle.connectingto.valid::after { --port-highlight-glow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-ready) var(--tint-glow-highlight), transparent); }
-/* A wire that dropping here would replace fades, dashed (Refactor.57). 放開後會被換掉的線：變淡、虛線。 */
-.react-flow__edge.replacing .react-flow__edge-path { opacity: .35; stroke-dasharray: 6 4; }
+/* A wire that does not count, one look (Refactor.78, human 2026-10-11): a ghost wire, and a wire that dropping here would
+   replace (Refactor.57). Over the wire's own colour, as hovered and selected wires are, hence !important.
+   不算數的線，同一個樣子（R.78，人類）：Ghost 線，以及放開後會被換掉的線（R.57）。蓋過線自己的顏色，和滑過、選中一樣，所以要 !important。 */
+.react-flow__edge:is(.react-flow__edge-ghost, .replacing):not(:hover, .selected) .react-flow__edge-path { stroke: var(--wire-off) !important; stroke-dasharray: var(--wire-off-dash); }
+/* The wire being dragged: dashed, solid over a port it can connect to (Refactor.78; legacy style.css:201, 306), unless the gear
+   keeps it dashed. 拖曳中的線：虛線，停在接得上的接孔上變實線（R.78；照舊產品），齒輪可改成全程虛線。 */
+.react-flow__connectionline .wire-drag { stroke-dasharray: 5 4; }
+:root[data-shadow-wire-ready-solid="on"] .react-flow__connectionline .ready > .wire-drag { stroke-dasharray: none; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
 .react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
 /* Component tint (Refactor.59; legacy style.css:146-149, 1840-1846; one switch, Q67): a port that stands for one
