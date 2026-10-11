@@ -99,8 +99,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
   // does (human 2026-10-11: "Shared Source" alone said nothing). 代表共用來源的節點在類型的位置寫是哪一種（Uniform、Global、TOP
   // Input），同它的卡片（人類：只寫 Shared Source 什麼都沒說）。
   const kind = data.declaration && sourceKinds[data.declaration.kind];
-  // Floating, it is glass as every floating panel (Refactor.89, human 2026-10-12). 浮動時和每個浮動面板一樣是玻璃（R.89，人類 10-12）。
-  return <article className={`grape-node params-card${data.ghost ? ' ghost' : ''}${floating ? ' floating glass' : ''}${wiring ? ' wiring' : ''}`}
+  return <article className={`grape-node params-card${data.ghost ? ' ghost' : ''}${floating ? ' floating' : ''}${wiring ? ' wiring' : ''}`}
     style={{ '--group-color': `var(--group-${data.ghost ? 'ghost' : data.colorGroup})` } as CSSProperties}>
     {/* Floating, the node card is the panel (Refactor.85, human 2026-10-11: no frame, no panel title): its head holds the triangle,
         and the menu and close on the right, and moves it. 浮動時節點卡就是面板（R.85，人類：沒有外框、沒有面板標題列）：頭上放三角形、
@@ -162,7 +161,7 @@ export function ParamsPanel({ state }: { state: EditorState }) {
   const floating = useContext(FloatingContext);
   // Nothing selected: one line (legacy inspector.js:1592); floating, under a plain head so it can still be moved and closed.
   // 沒選：一行提示（照舊產品）；浮動時放在一個素的頭下面，仍能搬、能關。
-  if (!node) return floating ? <article className="grape-node params-card floating glass params-empty">
+  if (!node) return floating ? <article className="grape-node params-card floating params-empty">
     <div className="node-title params-title" onContextMenu={floating.openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) floating.drag(event); }}>
       {floating.fold}<strong>{say(tr('params.title', 'Parameters'))}</strong><span className="spacer" />{floating.controls}</div>
     {!floating.collapsed && <p className="hint params-pad">{say(tr('params.empty', 'Select a node to edit its parameters.'))}</p>}
