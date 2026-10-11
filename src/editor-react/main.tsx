@@ -397,10 +397,16 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const failure = state.stuck?.failure;
   const errorNodes = useMemo(() => prefs.errorNodes ? findErrorNodes(failure, state.glsl, state.glslMap) : null,
     [prefs.errorNodes, failure, state.glsl, state.glslMap]);
-  // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
-  const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
-  const panels: Record<string, PanelView> = Object.fromEntries(Object.entries(PANELS)
-    .map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
+  // The panels' content, from the graph being edited (Q47 4). Kept while only the layout changes (a splitter drag re-renders
+  // this every move): rebuilt when the graph, the choices or the language change (Refactor.79.3; EDITOR_UI_RULES, continuous
+  // interactions). 面板內容，來自正在編輯的圖（Q47 4）。只有版面變時沿用（拖分隔線每動一下都會重繪這裡）：圖、可新增的東西或語言變了才重建
+  // （R.79.3；畫面規則「連續互動」）。
+  const adding = useRef(addAt); adding.current = addAt;
+  const add = useCallback((choice: AddChoice) => adding.current(choice, middle()), []);
+  const panels = useMemo<Record<string, PanelView>>(() => {
+    const input: PanelInput = { session, state, choices, add };
+    return Object.fromEntries(Object.entries(PANELS).map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
+  }, [session, state, choices, add, text]);
   // The location bar sits over the canvas; when its file or path would be cut there, it moves to a row of its own under the
   // title bar, as the legacy one always was, and comes back once the canvas can show it whole again, with a little to spare
   // (R.69.5, human 2026-10-10: try it, by what fits rather than a set width).

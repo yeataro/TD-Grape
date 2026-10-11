@@ -116,13 +116,13 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   const holdsCanvas = tree.hasCanvas(pane), centre = pane.children.findIndex(tree.hasCanvas), row = pane.direction === 'row';
   const closed = (index: number) => { const side = root ? tree.sideOf(layout.root, index) : null; return !!side && layout.closed[side]; };
   const visible = pane.children.map((child, index) => ({ child, index })).filter(({ child, index }) => tree.shown(child, layout.hidden) && !closed(index));
-  const begin = useRef({ sizes: [] as number[], limit: 0, total: 0 });
+  const begin = useRef({ sizes: [] as number[], limit: 0, total: 0, across: 1 });
   const length = () => (row ? element.current?.clientWidth : element.current?.clientHeight) || 1;
   // Next to the canvas, a part is pixels: it stays between its minimum and what leaves the canvas its own; elsewhere parts
   // share the length and none goes below a pane's minimum. 畫布旁的一格是像素：不小於最小值、也要留給畫布它的最小值；其他地方平分長度。
   const startPixels = (index: number) => {
     const others = visible.filter(part => part.index !== index && part.index !== centre).reduce((sum, part) => sum + (pane.sizes[part.index] ?? 0), 0);
-    begin.current = { sizes: [...pane.sizes], total: 0,
+    begin.current = { sizes: [...pane.sizes], total: 0, across: 1,
       limit: Math.min(row ? tree.SIDE_MAX : Infinity, length() - others - (row ? tree.CANVAS_MIN_WIDTH : tree.CANVAS_MIN_HEIGHT)) };
   };
   const movePixels = (index: number, delta: number) => {
@@ -130,13 +130,14 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
     sizes[index] = Math.round(Math.max(minimum, Math.min(Math.max(minimum, begin.current.limit), begin.current.sizes[index]! + delta)));
     layout.resize(path, sizes);
   };
+  // The length is measured once, at the start of a drag (EDITOR_UI_RULES, continuous interactions). 長度在拖曳開始時量一次。
   const startShare = () => {
-    const total = visible.reduce((sum, part) => sum + (pane.sizes[part.index] ?? 1), 0);
-    begin.current = { sizes: [...pane.sizes], total, limit: (row ? tree.PANE_MIN_WIDTH : tree.PANE_MIN) / length() * total };
+    const total = visible.reduce((sum, part) => sum + (pane.sizes[part.index] ?? 1), 0), across = length();
+    begin.current = { sizes: [...pane.sizes], total, across, limit: (row ? tree.PANE_MIN_WIDTH : tree.PANE_MIN) / across * total };
   };
   const moveShare = (before: number, after: number, delta: number) => {
-    const { sizes: start, total, limit } = begin.current, next = [...start];
-    const share = delta / length() * total, a = start[before]!, b = start[after]!;
+    const { sizes: start, total, limit, across } = begin.current, next = [...start];
+    const share = delta / across * total, a = start[before]!, b = start[after]!;
     const moved = Math.max(limit - a, Math.min(b - limit, share));
     next[before] = a + moved; next[after] = b - moved; layout.resize(path, next);
   };
@@ -289,13 +290,16 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
   const now = useRef(layout); now.current = layout;
   // A line's words go above it, or below when above would leave the layout (the title bar; R.68.3, human 2026-10-10).
   // 線的說明放在上方；上方會超出版面（蓋到標題列）時放到下方（人類 10-10）。
+  // Measured when the line moves, not on every pointer move (EDITOR_UI_RULES, continuous interactions).
+  // 線換位置時才量，不是指標每動一下都量（畫面規則「連續互動」）。
   const label = useRef<HTMLSpanElement>(null), [below, setBelow] = useState(false);
+  const lineAt = drag?.hint?.mark.kind === 'across' ? drag.hint.mark.top : null;
   useLayoutEffect(() => {
-    const mark = drag?.hint?.mark, element = label.current;
-    if (mark?.kind !== 'across' || !element) return;
+    const element = label.current;
+    if (lineAt === null || !element) return;
     const gap = parseFloat(getComputedStyle(element).getPropertyValue('--drop-label-gap')) || 0;
-    setBelow(mark.top - gap - element.offsetHeight < (document.querySelector('.workspace')?.getBoundingClientRect().top ?? 0));
-  }, [drag]);
+    setBelow(lineAt - gap - element.offsetHeight < (document.querySelector('.workspace')?.getBoundingClientRect().top ?? 0));
+  }, [lineAt]);
   start.current = (event, panel) => {
     if (event.button !== 0) return;
     const x0 = event.clientX, y0 = event.clientY, pointer = event.pointerId, controller = new AbortController();
