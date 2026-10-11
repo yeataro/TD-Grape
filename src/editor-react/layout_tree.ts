@@ -42,8 +42,12 @@ export type LayoutData = {
  * 浮動範圍的角：有家面板的位置（R.84），或自由浮動面板跟著走的角（R.88）。 */
 export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export const CORNERS: readonly Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-/** `x`, `y`: a free panel's distance from its corner's two edges (Refactor.88). x、y：自由浮動面板離它的角兩條邊多遠（R.88）。 */
-export type FloatPlace = { corner: Corner; width: number; height: number; collapsed?: true; x?: number; y?: number };
+/** `x`, `y`: a free panel's distance from its corner's two edges (Refactor.88). `tabs`, `active`: a floating frame holding several
+ * panels as tabs, kept on the frame's key panel (Refactor.90). `with`: a panel closed out of a frame, the panels it was with, to go
+ * back among them (Refactor.90, human 2026-10-12). x、y：自由浮動面板離它的角兩條邊多遠（R.88）。tabs、active：一個浮動框裝好幾個面板當
+ * 分頁，記在框的鑰匙面板上（R.90）。with：從框裡關掉的面板，當時和哪些面板在一起，打開時回到它們那裡（R.90，人類 10-12）。 */
+export type FloatPlace = { corner: Corner; width: number; height: number; collapsed?: true; x?: number; y?: number;
+  tabs?: string[]; active?: string; with?: string[] };
 /** Panels that float in one corner only, which no other panel may take (human 2026-10-11: the Parameter panel stays top right).
  * Given by the panel table, not stored. 只浮在某一角的面板，那一角別人不能用（人類 10-11：參數面板留在右上角）。由面板表給，不存。 */
 export type Homes = Readonly<Record<string, Corner>>;
@@ -192,10 +196,13 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
       // Floating panels (Refactor.84): read only what is well formed. 浮動面板（R.84）：只讀格式對的。
       const floats = value.floats as Record<string, Record<string, unknown>> | undefined, floating = value.floating as Record<string, unknown> | undefined;
       const offset = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+      const names = (value: unknown) => Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string' && known.has(id)) : [];
       for (const [id, place] of Object.entries(floats && typeof floats === 'object' ? floats : {}))
         if (known.has(id) && place && CORNERS.includes(place.corner as Corner) && Number(place.width) > 0 && Number(place.height) > 0)
           layout.floats[id] = { corner: place.corner as Corner, width: Number(place.width), height: Number(place.height), ...(place.collapsed === true ? { collapsed: true as const } : {}),
-            ...(offset(place.x) && offset(place.y) ? { x: place.x as number, y: place.y as number } : {}) };
+            ...(offset(place.x) && offset(place.y) ? { x: place.x as number, y: place.y as number } : {}),
+            ...(names(place.tabs).length ? { tabs: names(place.tabs), ...(typeof place.active === 'string' ? { active: place.active } : {}) } : {}),
+            ...(names(place.with).length ? { with: names(place.with) } : {}) };
       for (const [id, from] of Object.entries(floating && typeof floating === 'object' ? floating : {}))
         if (layout.floats[id] && (from === 'docked' || from === 'closed' || (from === 'free' && isFree(layout.floats[id])))) layout.floating[id] = from;
     } else return fallback;
@@ -209,7 +216,18 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
     // A free panel is not in the tree, floating or closed; in the tree it is not free. 自由浮動的面板不在版面樹裡（浮著或關著）；在樹裡就不是自由浮動。
     const inTree = (id: string) => tabPanes(layout.root).some(found => found.pane.panels.includes(id));
     for (const id of Object.keys(layout.floating)) if (layout.floating[id] === 'free' && inTree(id)) delete layout.floating[id];
-    const freeAway = (id: string) => layout.floating[id] === 'free' || (layout.hidden.includes(id) && isFree(layout.floats[id]));
+    // A frame's tabs: known, out of the tree, nobody else's, the key among them; under two, no tabs. 框的分頁：認得、不在樹裡、不屬於別人、
+    // 鑰匙在裡面；不到兩個就沒有分頁。
+    const claimed = new Set(Object.keys(layout.floating).filter(id => layout.floating[id] === 'free'));
+    for (const key of Object.keys(layout.floating)) {
+      const place = layout.floats[key]!;
+      if (layout.floating[key] !== 'free' || !place.tabs) continue;
+      const tabs = place.tabs.filter(id => id === key || (!inTree(id) && !claimed.has(id) && !!claimed.add(id)));
+      if (!tabs.includes(key)) tabs.unshift(key);
+      const { tabs: _, active: __, ...bare } = place;
+      layout.floats[key] = tabs.length > 1 ? { ...bare, tabs, active: place.active && tabs.includes(place.active) ? place.active : tabs[0]! } : bare;
+    }
+    const freeAway = (id: string) => claimed.has(id) || (layout.hidden.includes(id) && isFree(layout.floats[id]));
     for (const [id, side] of panels) if (!inTree(id) && !freeAway(id)) layout = addToSide(layout, id, side);
     // One panel per corner slot: a second one on the same corner goes back. 一個角落槽一個：同一角的第二個回去。
     const taken = new Set<Corner>();
@@ -217,7 +235,8 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
       if (layout.floating[id] === 'free') continue;
       const corner = layout.floats[id]!.corner; if (taken.has(corner)) delete layout.floating[id]; else taken.add(corner);
     }
-    layout.hidden = layout.hidden.filter(id => !layout.floating[id]);
+    // Floating, or a tab of a frame: not closed. 浮著的、或是框裡的分頁：不算關閉。
+    layout.hidden = layout.hidden.filter(id => !layout.floating[id] && !claimed.has(id));
     return layout;
   } catch { return fallback; }
 }
@@ -271,13 +290,15 @@ export type Drop =
 /** Move a panel; the result is tidied. A drop that changes nothing returns the layout as it was.
  * 移動面板，結果整理過。沒有改變的放置原樣回傳。 */
 export function movePanel(layout: LayoutData, panel: string, drop: Drop): LayoutData {
-  const source = paneOf(layout.root, panel), free = layout.floating[panel] === 'free';
-  if (!source && !free) return layout;
+  const source = paneOf(layout.root, panel), framed = !source && !!frameOf(layout, panel);
+  if (!source && !framed) return layout;
   // A floating panel with a home dropped where it already belongs lands there (Refactor.84). 有家的浮動面板放回它原本所屬的位置：就地落地（R.84）。
-  if (layout.floating[panel] && !free) {
+  if (layout.floating[panel] && layout.floating[panel] !== 'free') {
     const bare = { ...layout, floating: {} }, moved = movePanel(bare, panel, drop);
     return finish(copy(moved === bare ? layout : { ...moved, floating: layout.floating }), panel, null);
   }
+  // A free panel leaves its frame first, the others float on (Refactor.90). 自由浮動的面板先離開它的框，其他的繼續浮著（R.90）。
+  if (framed) layout = detach(layout, panel);
   if (drop.kind === 'outer') return toOuter(layout, panel, drop.edge);
   const next = copy(layout), target = at(next.root, drop.pane);
   if (!target) return layout;
@@ -367,11 +388,21 @@ function finish(layout: LayoutData, panel: string, side: Side | null): LayoutDat
  * 把面板叫到前面：顯示、選中、打開所在的那一側；浮動的留在原地、展開（人類 10-11，第 9 題）；關掉的自由浮動面板回到上次浮動的位置
  * （R.88，規格第 6 條）。 */
 export function showPanel(layout: LayoutData, panel: string): LayoutData {
+  // In a floating frame: its tab chosen, the frame opened (Refactor.90). 在浮動框裡：選中它的分頁、打開那個框（R.90）。
+  const frame = frameOf(layout, panel);
+  if (frame) {
+    const { collapsed: _, ...open } = layout.floats[frame]!;
+    return { ...layout, floats: { ...layout.floats, [frame]: open.tabs ? { ...open, active: panel } : open } };
+  }
   if (layout.floating[panel]) return setFloat(layout, panel, { collapsed: false });
   const place = layout.floats[panel];
   if (!paneOf(layout.root, panel) && isFree(place)) {
-    const { collapsed: _, ...open } = place!;
-    return { ...layout, hidden: layout.hidden.filter(id => id !== panel), floating: { ...layout.floating, [panel]: 'free' }, floats: { ...layout.floats, [panel]: open } };
+    const { collapsed: _, with: among, ...open } = place!;
+    // Closed out of a frame that still floats: back among them (human 2026-10-12, question 4). 從還在浮的框裡關掉的：回到它們那裡（人類 10-12，第 4 題）。
+    const back = among?.map(id => frameOf(layout, id)).find((key): key is string => !!key);
+    const shown = { ...layout, hidden: layout.hidden.filter(id => id !== panel), floats: { ...layout.floats, [panel]: open } };
+    if (back) return joinFloat(shown, panel, back, tabsOf(shown, back).length);
+    return { ...shown, floating: { ...layout.floating, [panel]: 'free' } };
   }
   return finish(copy(layout), panel, null);
 }
@@ -381,6 +412,10 @@ export function showPanel(layout: LayoutData, panel: string): LayoutData {
  * 叫出面板的按鈕（功能列的 GLSL，R.86.4；人類 10-11：面板看得到時再按一次，等於按它當下的收合三角形）：浮動的收起或打開；停靠、看得到、
  * 上下疊著的，那一格收成分頁列；停靠、看得到、沒有三角形的，維持原樣；看不到的，叫到前面。 */
 export function showOrFold(layout: LayoutData, panel: string): LayoutData {
+  // In a floating frame: shown, it folds or opens the frame; behind another tab, it is brought forward (Refactor.90).
+  // 在浮動框裡：正顯示著就收起或打開那個框；在別的分頁後面就叫到前面（R.90）。
+  const frame = frameOf(layout, panel);
+  if (frame) return activeOf(layout, frame) === panel ? setFloat(layout, frame, { collapsed: !layout.floats[frame]?.collapsed }) : showPanel(layout, panel);
   if (layout.floating[panel]) return setFloat(layout, panel, { collapsed: !layout.floats[panel]?.collapsed });
   const placed = paneOf(layout.root, panel), side = placed && layout.root.kind === 'split' ? sideOf(layout.root, placed.path[0]!) : null;
   const inView = placed && !layout.hidden.includes(panel) && placed.pane.active === panel && !placed.pane.collapsed && !(side && layout.closed[side]);
@@ -390,6 +425,13 @@ export function showOrFold(layout: LayoutData, panel: string): LayoutData {
 /** Close a panel: it is hidden, and no longer floats (human 2026-10-11: closing is closing); a free panel keeps where it floated,
  * to float there when shown again. 關閉面板：藏起來，也不再浮動（人類：關閉就是關閉）；自由浮動的記著浮動的位置，再顯示時回到那裡。 */
 export function hidePanel(layout: LayoutData, panel: string): LayoutData {
+  // One tab of a frame: only it closes, remembering whom it was with (human 2026-10-12, questions 3, 4). 框裡的一個分頁：只關它，記住和誰在一起
+  // （人類 10-12，第 3、4 題）。
+  const frame = frameOf(layout, panel), others = frame ? tabsOf(layout, frame).filter(id => id !== panel) : [];
+  if (others.length) {
+    const next = detach(layout, panel);
+    return { ...next, hidden: [...next.hidden.filter(id => id !== panel), panel], floats: { ...next.floats, [panel]: { ...next.floats[panel]!, with: others } } };
+  }
   const { [panel]: _, ...floating } = layout.floating;
   return layout.hidden.includes(panel) && !layout.floating[panel] ? layout : { ...layout, floating, hidden: [...layout.hidden.filter(id => id !== panel), panel] };
 }
@@ -435,6 +477,9 @@ export const toggleFloat = (layout: LayoutData, panel: string, homes: Homes) =>
  * 角落的改成自由浮動，從那個角開始。 */
 export function keepHomes(layout: LayoutData, homes: Homes): LayoutData {
   let next = layout;
+  // A panel with a home is nobody's tab: back to its side. 有家的面板不當別人的分頁：回到它那一側。
+  for (const [id, home] of Object.entries(homes)) if (frameOf(next, id) && next.floating[id] !== 'free')
+    next = addToSide(detach(next, id), id, home.endsWith('left') ? 'left' : 'right');
   for (const id of Object.keys(layout.floating)) {
     const place = next.floats[id]!, home = homes[id], free = layout.floating[id] === 'free';
     // A panel with a home stored free: back to its side, it floats only at home. 有家的卻存成自由浮動：回到它那一側，它只浮在家。
@@ -449,7 +494,7 @@ export function keepHomes(layout: LayoutData, homes: Homes): LayoutData {
 /** Float a panel free where it was dropped (Refactor.88): out of the tree, at `place`. 讓面板自由浮動在放下的地方（R.88）：離開版面樹、
  * 放在 place。 */
 export function floatOut(layout: LayoutData, panel: string, place: FloatPlace): LayoutData {
-  const next = layout.floating[panel] === 'free' ? layout : remove(layout, panel);
+  const next = frameOf(layout, panel) ? detach(layout, panel) : remove(layout, panel);
   return { ...next, hidden: next.hidden.filter(id => id !== panel), floating: { ...next.floating, [panel]: 'free' }, floats: { ...next.floats, [panel]: place } };
 }
 /** A floating panel clicked: first in line, so it is drawn on top and wins when room runs short (Refactor.89.1, human 2026-10-12).
@@ -458,6 +503,70 @@ export function raise(layout: LayoutData, panel: string): LayoutData {
   if (!layout.floating[panel] || Object.keys(layout.floating)[0] === panel) return layout;
   const { [panel]: own, ...rest } = layout.floating;
   return { ...layout, floating: { [panel]: own!, ...rest } };
+}
+/** Floating frames with tabs (Refactor.90, human 2026-10-12; work/refactor/floating-tabs-scope-2026-10-12.md): a free panel's
+ * frame may hold others as tabs; the frame is kept on its key panel (`floating`, `floats`), the others only in its `tabs`.
+ * 有分頁的浮動框（R.90，人類 10-12）：自由浮動面板的框可以把別的面板當分頁；框記在鑰匙面板上（floating、floats），其他的只在它的 tabs 裡。 */
+export const tabsOf = (layout: LayoutData, key: string): string[] => layout.floats[key]?.tabs ?? [key];
+/** The tab a frame shows. 框顯示的分頁。 */
+export const activeOf = (layout: LayoutData, key: string): string => {
+  const place = layout.floats[key];
+  return place?.tabs ? (place.active && place.tabs.includes(place.active) ? place.active : place.tabs[0]!) : key;
+};
+/** The floating frame a free panel is in: its own, or the one holding it as a tab. 自由浮動面板所在的框：它自己的，或把它當分頁的。 */
+export function frameOf(layout: LayoutData, panel: string): string | undefined {
+  if (layout.floating[panel] === 'free') return panel;
+  return Object.keys(layout.floating).find(key => layout.floating[key] === 'free' && layout.floats[key]?.tabs?.includes(panel));
+}
+/** A panel leaves its floating frame; the others float on, under the next panel when the key leaves, in the same turn. It keeps the
+ * frame's place, to float there again. 面板離開它的浮動框；其他的繼續浮著，鑰匙離開時由下一個接手、先後不變。它記著框的位置，再浮動時回到那裡。 */
+function detach(layout: LayoutData, panel: string): LayoutData {
+  const frame = frameOf(layout, panel);
+  if (!frame) return layout;
+  const { tabs: _, active: __, with: ___, ...place } = layout.floats[frame]!, tabs = tabsOf(layout, frame), rest = tabs.filter(id => id !== panel);
+  const shown = activeOf(layout, frame) === panel ? rest[Math.max(0, tabs.indexOf(panel) - 1)] : activeOf(layout, frame);
+  const kept: FloatPlace = { ...place, ...(rest.length > 1 ? { tabs: rest, active: shown } : {}) };
+  if (!rest.length) { const { [frame]: ____, ...floating } = layout.floating; return { ...layout, floating }; }
+  if (frame !== panel) return { ...layout, floats: { ...layout.floats, [frame]: kept, [panel]: place } };
+  const key = rest[0]!, floating = Object.fromEntries(Object.entries(layout.floating).map(([id, from]) => [id === frame ? key : id, from]));
+  return { ...layout, floating, floats: { ...layout.floats, [frame]: place, [key]: kept } };
+}
+/** A panel joins a floating frame as a tab at `index` (dropped on its title bar; human 2026-10-12, question 1): from the tree, from
+ * another frame, or closed; moved within the frame if already there. Not a panel with a home. 面板在 index 加入浮動框成為分頁（放在它的
+ * 標題列上；人類 10-12，第 1 題）：從版面樹、別的框或關著的；已經在框裡就是換位置。有家的面板不行。 */
+export function joinFloat(layout: LayoutData, panel: string, frame: string, index: number, homes: Homes = {}): LayoutData {
+  if (layout.floating[frame] !== 'free' || homes[panel] || (layout.floating[panel] && layout.floating[panel] !== 'free')) return layout;
+  const tabs = tabsOf(layout, frame);
+  if (frameOf(layout, panel) === frame) {
+    const old = tabs.indexOf(panel), at = clamp(index > old ? index - 1 : index, 0, tabs.length - 1);
+    if (old === at) return showPanel(layout, panel);
+    const moved = tabs.filter(id => id !== panel); moved.splice(at, 0, panel);
+    return { ...layout, floats: { ...layout.floats, [frame]: { ...layout.floats[frame]!, tabs: moved, active: panel } } };
+  }
+  const next = frameOf(layout, panel) ? detach(layout, panel) : paneOf(layout.root, panel) ? remove(layout, panel) : layout;
+  const joined = tabsOf(next, frame).filter(id => id !== panel); joined.splice(clamp(index, 0, joined.length), 0, panel);
+  const { collapsed: _, ...open } = next.floats[frame]!;
+  return { ...next, hidden: next.hidden.filter(id => id !== panel), floats: { ...next.floats, [frame]: { ...open, tabs: joined, active: panel } } };
+}
+/** A whole frame dropped on another's title bar: all its tabs join, in order, the one it showed shown. 整個框放在另一個框的標題列上：
+ * 它的分頁全部依序加入，原本顯示的那個顯示出來。 */
+export function mergeFloat(layout: LayoutData, from: string, frame: string, index: number): LayoutData {
+  if (from === frame || layout.floating[from] !== 'free') return layout;
+  const tabs = tabsOf(layout, from), shown = activeOf(layout, from);
+  const next = tabs.reduce((sofar, panel, at) => joinFloat(sofar, panel, frame, index + at), layout);
+  return showPanel(next, shown);
+}
+/** A whole frame docked: its panels in one tab pane where it is dropped, the one it showed shown. 整個框停靠：它的面板放進放下處的同一個
+ * 分頁窗格，原本顯示的那個顯示出來。 */
+export function dockFrame(layout: LayoutData, frame: string, drop: Drop): LayoutData {
+  const [first, ...rest] = tabsOf(layout, frame), shown = activeOf(layout, frame);
+  let next = movePanel(layout, first!, drop);
+  for (const panel of rest) {
+    const pane = paneOf(next.root, first!);
+    if (pane) next = movePanel(next, panel, { kind: 'tab', pane: pane.path, index: pane.pane.panels.length });
+  }
+  const placed = paneOf(next.root, shown);
+  return placed ? activate(next, placed.path, shown) : next;
 }
 /** Keep where free panels now are (moved or sized together); the ones just placed go first, so where they were put wins when
  * room runs short (floatRects). 記下自由浮動面板現在的位置（一起移動或調大小）；剛放的排最前面，空間不夠時（floatRects）以它們放的
@@ -514,7 +623,8 @@ export function placeAt(box: Box, width: number, height: number, was?: FloatPlac
   const at = corner ?? nearestCorner(box, width, height), top = at.startsWith('top'), left = at.endsWith('left');
   return { corner: at, width: Math.round(box.width),
     height: Math.round(was?.collapsed ? was.height : box.height), x: Math.round(left ? box.x : width - box.x - box.width),
-    y: Math.round(top ? box.y : height - box.y - box.height), ...(was?.collapsed ? { collapsed: true as const } : {}) };
+    y: Math.round(top ? box.y : height - box.y - box.height), ...(was?.collapsed ? { collapsed: true as const } : {}),
+    ...(was?.tabs ? { tabs: was.tabs, ...(was.active ? { active: was.active } : {}) } : {}) };
 }
 /** Where a free panel wants to be drawn: its place in an area this size. What runs out of the area is cut off, the side it follows
  * kept (human 2026-10-11, question 13: too big, it shrinks first), never under its least. 自由浮動面板想畫在哪：記的位置放進這個大小的

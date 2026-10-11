@@ -47,6 +47,9 @@ export type Layout = LayoutData & {
   toggleFloat(id: string): void; floatOut(id: string, place: tree.FloatPlace): void; placeFloats(places: Record<string, tree.FloatPlace>): void;
   /** A floating panel clicked comes to the front (Refactor.89.1). 點到的浮動面板到最前面（R.89.1）。 */
   raise(id: string): void;
+  /** Floating frames with tabs (Refactor.90): a panel joins one, a whole frame joins another, a whole frame docks. 有分頁的浮動框
+   * （R.90）：一個面板加入、整個框併入另一個、整個框停靠。 */
+  joinFloat(id: string, frame: string, index: number): void; mergeFloat(from: string, frame: string, index: number): void; dockFrame(frame: string, drop: Drop): void;
   /** Floating panels keep clear of each other ("forbid overlap" in the gear, off by default; Refactor.89.1, human 2026-10-12): a
    * personal preference, kept in this browser. 浮動面板彼此避開（齒輪裡的「禁止重疊」，預設關；R.89.1，人類 10-12）：個人偏好，存在這個瀏覽器。 */
   apart: boolean; setApart(on: boolean): void;
@@ -82,6 +85,9 @@ export function useLayout(): Layout {
     setFloat: (id, patch) => setData(old => tree.setFloat(old, id, patch)),
     close: id => setData(old => tree.hidePanel(old, id)),
     raise: id => setData(old => tree.raise(old, id)),
+    joinFloat: (id, frame, index) => setData(old => tree.joinFloat(old, id, frame, index, homes)),
+    mergeFloat: (from, frame, index) => setData(old => tree.mergeFloat(old, from, frame, index)),
+    dockFrame: (frame, drop) => setData(old => tree.dockFrame(old, frame, drop)),
     apart, setApart: on => { setApart(on); writePreference('floating.apart', on ? 'on' : 'off'); },
   }), [data, apart]);
 }
@@ -106,7 +112,9 @@ export function ResizeHandle({ axis, edge = 'lead', label, onStart, onMove }: {
     aria-label={say(label)} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />;
 }
 
-type Drag = (event: ReactPointerEvent, panel: string) => void;
+/** `part`: a floating frame is moved by its title bar ('frame'), one of its panels by its tab ('tab'; Refactor.90). part：浮動框抓
+ * 標題列是搬整個框（frame），抓分頁是搬那一個面板（tab；R.90）。 */
+type Drag = (event: ReactPointerEvent, panel: string, part?: 'frame' | 'tab') => void;
 const DragContext = createContext<MutableRefObject<Drag>>({ current: () => {} });
 /** The floating area as last drawn (its size, gap, title height, and where each panel is), read when a drag starts.
  * 浮動範圍上次畫的樣子（大小、間隙、標題高、每個面板在哪），開始拖曳時讀。 */
@@ -330,7 +338,7 @@ type Mark = { kind: 'across' | 'along' | 'frame' | 'ghost'; left: number; top: n
   slots?: { count: number; at: number } };
 /** Where a dragged panel goes: a place in the tree; its home corner (Refactor.84); or floating free at a place (Refactor.88).
  * 拖著的面板放到哪：版面樹裡某處；它的家那一角（R.84）；或自由浮動在某處（R.88）。 */
-type Target = Drop | { kind: 'corner' } | { kind: 'float'; place: tree.FloatPlace; box: tree.Box };
+type Target = Drop | { kind: 'corner' } | { kind: 'float'; place: tree.FloatPlace; box: tree.Box } | { kind: 'join'; frame: string; index: number };
 type Hint = { drop: Target; mark: Mark; refused?: Message } | null;
 const across = (box: DOMRect, edge: 'top' | 'bottom'): Mark => ({ kind: 'across', left: box.left, top: edge === 'top' ? box.top : box.bottom, width: box.width });
 const along = (box: DOMRect, side: Side): Mark => ({ kind: 'along', left: side === 'left' ? box.left : box.right, top: box.top, height: box.height, side });
@@ -365,7 +373,7 @@ function outerAt(x: number, y: number, zone: EdgeZone): Hint {
   return { drop: { kind: 'outer', edge }, mark: { ...(row ? along(whole, edge) : across(whole, edge)), label: onOuter[edge] }, refused: fits ? undefined : noRoom };
 }
 
-function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZone, geometry: Geometry | null): Hint {
+function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZone, geometry: Geometry | null, leaving = false): Hint {
   const outer = outerAt(x, y, zone);
   if (outer) return outer;
   const under = document.elementFromPoint(x, y) as HTMLElement | null, slot = under?.closest<HTMLElement>('[data-pane]');
@@ -401,7 +409,7 @@ function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZ
     // 左右邊緣和分頁窗格一樣算（R.88：中間現在是浮動；R.68.1 時和側欄一樣寬）。
     const edge = Math.max(zone.least, box.width * zone.share);
     for (const side of ['left', 'right'] as const) if ((side === 'left' ? x - box.left : box.right - x) < edge) return beside(layout, path, side, box);
-    return floatHint(layout, panel, x, y, geometry);
+    return floatHint(layout, panel, x, y, geometry, leaving);
   }
   return null;
 }
@@ -410,9 +418,10 @@ function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZ
  * panel of the first size where it would land, snapped; where it would overlap or not fit, nothing is shown and nothing happens
  * (human 2026-10-12: only where it can go). 在網路區中間：有家的面板浮在它的家（R.84）；其他的在這裡自由浮動，用第一次的大小、吸附後的位置
  * 畫一個半透明的面板示意；會重疊或放不下就什麼都不顯示、放開也不會發生事（人類 10-12：拖得進來的地方才拖得進來）。 */
-function floatHint(layout: Layout, panel: string, x: number, y: number, geometry: Geometry | null): Hint {
+function floatHint(layout: Layout, panel: string, x: number, y: number, geometry: Geometry | null, leaving = false): Hint {
   const area = document.querySelector('.floating-area')?.getBoundingClientRect();
-  if (!area || !geometry || x < area.left || x > area.right || y < area.top || y > area.bottom || layout.floating[panel]) return null;
+  // `leaving`: a tab dragged out of its floating frame floats alone (Refactor.90). leaving：從浮動框拖出來的分頁單獨浮動（R.90）。
+  if (!area || !geometry || x < area.left || x > area.right || y < area.top || y > area.bottom || (layout.floating[panel] && !leaving)) return null;
   const { width, height, gap, title, rects } = geometry;
   if (layout.homes[panel]) {
     const rect = tree.floatRects(tree.popOut(layout, panel, layout.homes), width, height, gap, title)[panel];
@@ -426,6 +435,24 @@ function floatHint(layout: Layout, panel: string, x: number, y: number, geometry
     others, width, height, gap, SNAP, layout.apart);
   if (layout.apart && !others.every(other => tree.clear(box, other, gap))) return null;
   return { drop: { kind: 'float', place: tree.placeAt(box, width, height), box }, mark: { kind: 'ghost', left: area.left + box.x, top: area.top + box.y, width: box.width, height: box.height } };
+}
+
+/** Over a floating frame's title bar: join it as a tab, a line where it goes (Refactor.90, human 2026-10-12: only the title bar
+ * joins, the rest of a panel is for overlapping). `except`: the frame being moved, under the pointer itself. 在浮動框的標題列上：加入成
+ * 它的分頁，線畫在要插入的位置（R.90，人類 10-12：只有標題列合併，面板其他地方留給重疊）。except：正在搬的那個框，它自己就在游標下。 */
+function joinHint(layout: Layout, panel: string, x: number, y: number, except?: string): Hint {
+  if (layout.homes[panel]) return null;
+  const head = document.elementsFromPoint(x, y).map(element => element.closest<HTMLElement>('.floating-head[data-frame]'))
+    .find(found => found && found.dataset.frame !== except);
+  if (!head) return null;
+  const frame = head.dataset.frame!, tabs = [...head.querySelectorAll<HTMLElement>('[data-tab]')], box = head.getBoundingClientRect();
+  if (!tabs.length) {
+    const title = head.querySelector('.floating-title')!.getBoundingClientRect(), index = x < title.left + title.width / 2 ? 0 : 1;
+    return { drop: { kind: 'join', frame, index }, mark: { kind: 'along', left: index ? title.right : title.left, top: box.top, height: box.height } };
+  }
+  const next = tabs.find(tab => { const b = tab.getBoundingClientRect(); return x < b.left + b.width / 2; });
+  return { drop: { kind: 'join', frame, index: next ? tree.tabsOf(layout, frame).indexOf(next.dataset.tab!) : tabs.length },
+    mark: { kind: 'along', left: next ? next.getBoundingClientRect().left : tabs.at(-1)!.getBoundingClientRect().right, top: box.top, height: box.height } };
 }
 
 /** Moving a panel by its tab or a floating panel's title (legacy inspector.js:2296): a drag starts after 6px; the panel's name
@@ -448,7 +475,7 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
     const gap = parseFloat(getComputedStyle(element).getPropertyValue('--drop-label-gap')) || 0;
     setBelow(lineAt - gap - element.offsetHeight < (document.querySelector('.workspace')?.getBoundingClientRect().top ?? 0));
   }, [lineAt]);
-  start.current = (event, panel) => {
+  start.current = (event, panel, part = 'frame') => {
     if (event.button !== 0) return;
     const x0 = event.clientX, y0 = event.clientY, pointer = event.pointerId, controller = new AbortController();
     const options = { capture: true, signal: controller.signal };
@@ -457,7 +484,8 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
     const zone = edgeZone();
     // A free panel moves itself while over the floating area, as a solid thing (human 2026-10-12); what it moves among is read once,
     // here. 自由浮動的面板在浮動範圍上時自己移動、像實體（人類 10-12）；周圍有什麼在這裡讀一次。
-    const shape = geometry.current, own = now.current.floating[panel] === 'free' ? shape?.rects[panel] : undefined;
+    const frame = part === 'frame' && now.current.floating[panel] === 'free';
+    const shape = geometry.current, own = frame ? shape?.rects[panel] : undefined;
     const space = own ? document.querySelector('.floating-area')?.getBoundingClientRect() : undefined;
     const was = now.current.floats[panel], others = Object.entries(shape?.rects ?? {}).filter(([id]) => id !== panel).map(([, rect]) => rect);
     let box: tree.Box | undefined = own;
@@ -473,11 +501,13 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
       // 和現在貼著的面板一起記。
       if (!hint || hint.refused) { if (own && shape && box && box !== own) settle(now.current, { ...shape.rects, [panel]: box }, shape, panel); return; }
       const drop = hint.drop;
-      if (drop.kind === 'corner') now.current.toggleFloat(panel);
+      if (drop.kind === 'join') { if (frame) now.current.mergeFloat(panel, drop.frame, drop.index); else now.current.joinFloat(panel, drop.frame, drop.index); }
+      else if (drop.kind === 'corner') now.current.toggleFloat(panel);
       else if (drop.kind === 'float') {
         now.current.floatOut(panel, drop.place);
         if (shape) settle(now.current, { ...shape.rects, [panel]: drop.box }, shape, panel, tree.floatOut(now.current, panel, drop.place));
-      } else now.current.move(panel, drop);
+      } else if (frame && tree.tabsOf(now.current, panel).length > 1) now.current.dockFrame(panel, drop);
+      else now.current.move(panel, drop);
     };
     addEventListener('pointermove', move => {
       if (move.pointerId !== pointer) return;
@@ -486,6 +516,9 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
       if (!moving && Math.hypot(move.clientX - x0, move.clientY - y0) < (event.pointerType === 'touch' ? 10 : 6)) return;
       move.preventDefault(); move.stopPropagation();
       if (!moving) { moving = true; document.documentElement.classList.add('moving-panel'); }
+      // Over a floating frame's title bar: join it (Refactor.90). 在浮動框的標題列上：加入它（R.90）。
+      const join = joinHint(now.current, panel, move.clientX, move.clientY, frame ? panel : undefined);
+      if (join) { hint = join; setDrag({ panel, x: move.clientX, y: move.clientY, hint }); return; }
       if (own && shape && space && box && move.clientX >= space.left && move.clientX <= space.right && move.clientY >= space.top && move.clientY <= space.bottom) {
         const to = { x: own.x + move.clientX - x0, y: own.y + move.clientY - y0 };
         const apart = now.current.apart;
@@ -494,7 +527,7 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
         now.current.placeFloats({ [panel]: tree.placeAt(box, shape.width, shape.height, was) });
         return;
       }
-      hint = hintAt(now.current, panel, move.clientX, move.clientY, zone, geometry.current);
+      hint = hintAt(now.current, panel, move.clientX, move.clientY, zone, geometry.current, part === 'tab');
       setDrag({ panel, x: move.clientX, y: move.clientY, hint });
     }, options);
     addEventListener('pointerup', up => { if (up.pointerId === pointer) finish(true); }, options);
@@ -603,7 +636,7 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   // On a seam its line is the one mark: the edge's own line goes (human 2026-10-12). 縫上只留縫的線：邊自己的線不畫（人類 10-12）。
   return <div className={'floating-area' + (line ? ' on-seam' : '')} style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
     {/* The first in line is drawn last, on top (Refactor.89.1). 排最前面的最後畫，在最上面（R.89.1）。 */}
-    {Object.keys(layout.floating).reverse().map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
+    {Object.keys(layout.floating).reverse().map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[tree.activeOf(layout, id)]} panels={panels} rect={rects[id]!} area={area}
       rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} sizing={!!seam?.ids.includes(id)} showSizing={setSeam} />)}
     {line && <div className={line.className} style={line.style} />}
   </div>;
@@ -614,7 +647,8 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
  * both; a panel with a home: the edge facing the network (legacy inspector.js:2090). 一個浮動面板：標題（三角形、名字、選單；拖它移動或
  * 拖回版面）、內容，以及調大小的邊。自由浮動的：每條邊、每個角（人類 10-12），碰到別的面板就停，兩個之間的縫一起動；有家的：朝網路區的邊
  * （照舊產品）。 */
-function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizing, showSizing }: { id: string; layout: Layout; view: PanelView | undefined;
+function FloatingPanel({ id, layout, view, panels, rect, area, rects, cap, measure, sizing, showSizing }: { id: string; layout: Layout; view: PanelView | undefined;
+  panels: Record<string, PanelView>;
   rect: tree.FloatRect; area: { width: number; height: number; gap: number; title: number }; rects: Record<string, tree.FloatRect>; cap?: number;
   measure(height: number): void; sizing: boolean; showSizing(sizing: Sizing | null): void }) {
   const drag = useContext(DragContext), place = layout.floats[id]!, free = layout.floating[id] === 'free';
@@ -626,13 +660,15 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
     aria-label={say(shut ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
     title={say(shut ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
     onClick={() => layout.setFloat(id, { collapsed: !place.collapsed })}><Icon name="chevronDown" /></button>;
-  const menu = <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} />;
+  // A frame shows one of its tabs: its content, its menu (Refactor.90). 框顯示它的一個分頁：那個的內容、那個的選單（R.90）。
+  const shown = free ? tree.activeOf(layout, id) : id, tabs = free ? tree.tabsOf(layout, id) : [id];
+  const menu = <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, shown, view)} />;
   // The Parameter panel's cross: not closing, it stops floating, back to where it was (human 2026-10-11; for now it keeps only this,
   // its menu by right-click). 參數面板的叉叉：不是關閉，是取消浮動、回到原本的狀態（人類 10-11；目前只留它，選單用右鍵）。
   const unfloat = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.unfloat', 'Stop floating'))}
     title={say(tr('layout.unfloat', 'Stop floating'))} onClick={() => layout.toggleFloat(id)}><Icon name="close" /></button>;
   const [menuAt, openMenu, closeMenu] = useMenuAt();
-  const popup = menuAt && <PanelMenuPopup title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} anchor={menuAt} onClose={closeMenu} />;
+  const popup = menuAt && <PanelMenuPopup title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, shown, view)} anchor={menuAt} onClose={closeMenu} />;
   // Sizing works from where every panel is when the drag starts (human 2026-10-12: only then). The panels that only stand in the way:
   // those with a home and collapsed ones. 調大小從開始拖的那一刻每個面板的位置算（人類 10-12：只在那時）。只是擋路的：有家的、收起的。
   const start = useRef<Record<string, tree.Box>>({});
@@ -682,9 +718,15 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
   // 受齒輪的玻璃設定管）。
   return <section onPointerDownCapture={front} className={'floating-panel glass' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
-    <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
+    {/* Its title bar moves the whole frame (anywhere but a tab or a button); a free frame takes panels dropped on it as tabs
+        (Refactor.90). 標題列搬整個框（分頁與按鈕以外的地方）；自由浮動的框接受放上來的面板成為分頁（R.90）。 */}
+    <div className="floating-head" data-frame={free ? id : undefined} onContextMenu={openMenu}
+      onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id, 'frame'); }}>
       {fold}
-      <span className="floating-title">{title}</span>
+      {tabs.length > 1 ? <div className="floating-tabs" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" data-tab={tab}
+        className="floating-tab" aria-selected={tab === shown} onPointerDown={event => drag.current(event, tab, 'tab')} onClick={() => layout.show(tab)}>
+        {say(panels[tab]?.title ?? tab)}</button>)}</div>
+        : <span className="floating-title">{title}</span>}
       {menu}
     </div>
     {!rect.collapsed && <div className="panel-content">{view?.content}</div>}

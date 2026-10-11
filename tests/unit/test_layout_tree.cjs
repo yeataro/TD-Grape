@@ -381,3 +381,46 @@ test('overlapping allowed (the default, R.89.1): nothing keeps clear, snapping s
   assert.deepEqual(Object.keys(tree.raise(layout, 'glsl').floating), ['glsl', 'sources'], 'pressed: first in line (drawn on top)');
   assert.equal(tree.raise(layout, 'sources'), layout, 'already first: nothing changes');
 });
+
+test('floating frames with tabs (Refactor.90): join on the title bar, leave by a tab, close one, back among them, dock the whole', () => {
+  let layout = tree.floatOut(fresh(), 'glsl', at(10, 10));
+  layout = tree.joinFloat(layout, 'sources', 'glsl', 1);
+  assert.deepEqual(plain(layout.floats.glsl.tabs), ['glsl', 'sources'], 'from the tree, as the second tab');
+  assert.equal(tree.activeOf(layout, 'glsl'), 'sources', 'the one joined is shown');
+  assert.equal(tree.paneOf(layout.root, 'sources'), undefined, 'out of the tree');
+  assert.equal(tree.frameOf(layout, 'sources'), 'glsl');
+  assert.equal(tree.joinFloat(layout, 'appearance', 'glsl', 0, { appearance: 'top-right' }), layout, 'a panel with a home joins no frame');
+  layout = tree.joinFloat(layout, 'addNode', 'glsl', 0);
+  assert.deepEqual(plain(layout.floats.glsl.tabs), ['addNode', 'glsl', 'sources']);
+  assert.deepEqual(plain(tree.joinFloat(layout, 'sources', 'glsl', 0).floats.glsl.tabs), ['sources', 'addNode', 'glsl'], 'within the frame: moved');
+  // The key leaves (dragged out as a tab): the frame goes on under the next, in the same turn. 鑰匙被拖出：框由下一個接手。
+  let out = tree.floatOut(layout, 'glsl', at(500, 10));
+  assert.deepEqual(Object.keys(out.floating), ['addNode', 'glsl'], 'the frame now keyed by addNode, first in line as before');
+  assert.deepEqual(plain(out.floats.addNode.tabs), ['addNode', 'sources']);
+  assert.equal(out.floats.addNode.x, 10, 'the frame stays where it was');
+  assert.equal(out.floats.glsl.tabs, undefined, 'glsl floats alone');
+  // Close one tab: only it, remembering whom it was with; shown again, back among them. 關一個分頁：只關它，記住同伴；打開回到它們那裡。
+  let closed = tree.hidePanel(layout, 'sources');
+  assert.deepEqual(plain(closed.floats.glsl.tabs), ['addNode', 'glsl']);
+  assert.ok(closed.hidden.includes('sources'));
+  let shown = tree.showPanel(closed, 'sources');
+  assert.deepEqual(plain(shown.floats.glsl.tabs), ['addNode', 'glsl', 'sources'], 'back in its frame');
+  assert.equal(tree.activeOf(shown, 'glsl'), 'sources');
+  closed = tree.hidePanel(tree.hidePanel(tree.hidePanel(layout, 'sources'), 'addNode'), 'glsl');
+  assert.deepEqual(Object.keys(closed.floating), [], 'the last one closed: the frame is gone');
+  shown = tree.showPanel(closed, 'sources');
+  assert.equal(shown.floating.sources, 'free', 'its frame gone: it floats alone where it floated');
+  // The GLSL button: shown tab folds the frame; a tab behind is brought forward. GLSL 按鈕：顯示中的收起框；後面的叫到前面。
+  assert.equal(tree.activeOf(tree.showOrFold(layout, 'glsl'), 'glsl'), 'glsl');
+  assert.equal(tree.showOrFold(tree.showPanel(layout, 'glsl'), 'glsl').floats.glsl.collapsed, true);
+  // Dock the whole frame; merge a frame into another. 整個框停靠；整個框併進另一個。
+  const docked = tree.dockFrame(layout, 'glsl', { kind: 'outer', edge: 'right' });
+  assert.equal(shape(docked.root), 'row(canvas, appearance, addNode|glsl|sources)');
+  assert.deepEqual(Object.keys(docked.floating), []);
+  const two = tree.floatOut(tree.floatOut(fresh(), 'glsl', at(0, 0)), 'sources', at(400, 0));
+  assert.deepEqual(plain(tree.mergeFloat(two, 'sources', 'glsl', 1).floats.glsl.tabs), ['glsl', 'sources']);
+  // Stored and read back. 存起來再讀回。
+  const read = tree.readLayout(JSON.parse(JSON.stringify(layout)), panels);
+  assert.deepEqual(plain(read.floats.glsl.tabs), ['addNode', 'glsl', 'sources']);
+  assert.equal(tree.paneOf(read.root, 'sources'), undefined, 'tabs are not put back into the tree');
+});

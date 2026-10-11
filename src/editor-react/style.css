@@ -357,6 +357,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .floating-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px;
   font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600; color: var(--text-strong); }
 .floating-head :is(.pane-collapse, .panel-menu) { position: static; height: calc(100% - 2px); }
+/* A frame of several panels: its tabs on the title bar, the shown one underlined as the Parameter panel's (Refactor.90); the space
+   after them still moves the frame. 好幾個面板的框：分頁放在標題列，顯示中的加底線，同參數面板（R.90）；分頁後面的空白仍可搬整個框。 */
+.floating-tabs { flex: 1; min-width: 0; display: flex; align-self: stretch; overflow: hidden; }
+.floating-tab { flex: 0 1 auto; min-width: 0; padding: 0 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none;
+  color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; touch-action: none; }
+.floating-tab[aria-selected="true"] { color: var(--text-strong); font-weight: 600; border-bottom-color: var(--text-strong); }
 .floating-panel > .panel-content { border: 0; border-radius: 0 0 8px 8px; background: none; /* the frame's own, or its glass (R.89) 用外框的底色或玻璃（R.89） */ }
 /* Panes frame themselves (below), so two panes side by side share one line: the later one drops its left line (R.68.1's
    boundary, drawn by the frames since Refactor.80.1). 窗格自己畫框（下面），並排的兩格共用一條線：後一格不畫左線（R.68.1 的邊界，
