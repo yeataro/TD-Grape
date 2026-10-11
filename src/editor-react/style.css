@@ -733,7 +733,7 @@ span.image-label:hover { background: var(--image-label); }
 .react-flow__edge:is(.react-flow__edge-ghost, .replacing):not(:hover, .selected) .react-flow__edge-path { stroke: var(--wire-off) !important; stroke-dasharray: var(--wire-off-dash); }
 /* The wire being dragged: dashed, solid over a port it can connect to (Refactor.78; legacy style.css:201, 306).
    拖曳中的線：虛線，停在接得上的接孔上變實線（R.78；照舊產品）。 */
-.react-flow__connectionline .wire-drag { stroke-dasharray: 5 4; }
+.react-flow__connectionline .wire-drag { stroke-width: var(--wire-width-drag); stroke-dasharray: 5 4; }
 .react-flow__connectionline .ready > .wire-drag { stroke-dasharray: none; }
 /* Over a port it can connect to, the dragged wire goes under the nodes, as a wired one: the ports cover its ends
    (Refactor.78.1, human 2026-10-11). React Flow keeps it above every node (its z-index 1001), so this overrides React Flow

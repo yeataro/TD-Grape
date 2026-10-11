@@ -104,11 +104,11 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
   // The dragged wire takes the component of a one-component port too (legacy graph_ui.js:1627). 拖曳中的線也帶單一分量。
   const view = props.fromNode.data.view.components, components = props.fromHandle.type === 'source'
     ? view?.outputs?.[props.fromHandle.id ?? ''] : view?.inputs?.[props.fromHandle.id ?? ''];
-  // Dashed while looking for a port, solid over one it can connect to (Refactor.78; legacy style.css:201, 306 .wire-preview.ready;
-  // the gear can keep it dashed). 找接孔時是虛線，停在接得上的接孔上變實線（R.78；照舊產品；齒輪可改回全程虛線）。
+  // Over a port it can connect to it is "ready" (React Flow's own check, isValidConnection): solid and under the nodes
+  // (style.css; Refactor.78, 78.1). Only the colour is per wire. 停在接得上的接孔上是 ready（React Flow 自己的檢查）：實線、在節點下面
+  // （style.css；R.78、78.1）。每條線只決定顏色。
   const className = [components?.length === 1 ? 'component-' + components[0] : '', props.connectionStatus === 'valid' ? 'ready' : ''].join(' ').trim();
-  return <g className={className || undefined}><path className="wire-drag" d={path} fill="none"
-    style={{ stroke: typeColor(port?.type ?? ''), strokeWidth: 'var(--wire-width-drag)' }} />
+  return <g className={className || undefined}><path className="wire-drag" d={path} fill="none" style={{ stroke: typeColor(port?.type ?? '') }} />
     {plus && <text className="wire-plus" x={props.toX + 9} y={props.toY - 7}>+</text>}</g>;
 }
 // The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until
@@ -160,28 +160,40 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // Dragged from an input onto empty canvas, releasing pulls its wire (onConnectEnd below), so that is previewed too
   // (Refactor.78.1). A wire picked up by its end is hidden by React Flow while it moves, so it has nothing to show.
   // 從輸入拉到空白處，放開會拔線（下面的 onConnectEnd），也預告（R.78.1）。抓著線端拿起的線，移動中 React Flow 本來就不畫，不用預告。
+  // `over` is a plain string so React Flow re-renders this only when the place changes: what releasing there does, then
+  // its ends. over 是純字串，停的地方換了才重繪：放開會做什麼，接著是兩端。
   const over = useConnection(state => {
     if (state.inProgress && !state.toHandle && state.fromHandle?.type === 'target' && state.fromHandle.id)
       return ['pull', state.fromHandle.nodeId, state.fromHandle.id].join('\n');
     if (!state.inProgress || !state.toHandle || !state.fromHandle) return '';
     const [out, input] = state.fromHandle.type === 'source' ? [state.fromHandle, state.toHandle] : [state.toHandle, state.fromHandle];
-    return out.type === 'source' && input.type === 'target' ? [out.nodeId, out.id, input.nodeId, input.id].join('\n') : '';
+    return out.type === 'source' && input.type === 'target' ? ['wire', out.nodeId, out.id, input.nodeId, input.id].join('\n') : '';
   });
   const preview = useMemo(() => {
-    if (!over) return null;
-    const parts = over.split('\n');
-    if (parts.length === 3) return session.pullPreview(parts[1]!, parts[2]!);
-    const [source, sourceHandle, target, targetHandle] = parts;
-    return session.wirePreview({ source: source!, sourceHandle: sourceHandle!, target: target!, targetHandle: targetHandle! });
+    const [kind, ...ends] = over.split('\n');
+    if (kind === 'pull') return session.pullPreview(ends[0]!, ends[1]!);
+    if (kind !== 'wire') return null;
+    const [source, sourceHandle, target, targetHandle] = ends as [string, string, string, string];
+    return session.wirePreview({ source, sourceHandle, target, targetHandle });
   }, [over, session, projection]);
-  const replaced = useMemo(() => new Set(preview?.replaced), [preview]);
-  const edges = useMemo(() => projection.edges.map(edge => ({ ...edge,
-    ...(options.wirePickUp ? { reconnectable: 'target' as const } : {}),
-    ...(replaced.has(edge.id) ? { className: 'replacing' } : {}) })), [projection.edges, options.wirePickUp, replaced]);
+  // Cards follow only a preview that merges rows, so the other previews do not re-render every card.
+  // 卡片只跟著會合併列的預告，其他預告不會讓每張卡片重繪。
+  const merging = preview?.merged.length ? preview : null;
+  // A wire about to go takes `replacing` in place of its classes: like a ghost wire, a wire that does not count has no
+  // component tint (style.css). The list of ids keys the memo, so an equal preview keeps the same edges.
+  // 即將不見的線改用 replacing、不留原本的 class：和 Ghost 線一樣，不算數的線沒有分量染色（style.css）。以 id 清單當依據，
+  // 內容相同的預告沿用同一份線。
+  const replacedKey = preview?.replaced.join('\n') ?? '';
+  const edges = useMemo(() => {
+    const replaced = new Set(replacedKey ? replacedKey.split('\n') : []);
+    return projection.edges.map(edge => ({ ...edge,
+      ...(options.wirePickUp ? { reconnectable: 'target' as const } : {}),
+      ...(replaced.has(edge.id) ? { className: 'replacing' } : {}) }));
+  }, [projection.edges, options.wirePickUp, replacedKey]);
   // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
-  return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><ErrorNodesContext.Provider value={errorNodes}>
+  return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect}>
     <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
