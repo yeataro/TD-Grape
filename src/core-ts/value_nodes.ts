@@ -45,7 +45,7 @@ export function typedNode(catalog:CatalogRow,spec:{
     ...(spec.fixed?{entries:()=>[{key:'',label:catalog.definition.label,params:{}},
       ...spec.types.map(t=>({key:t,label:t,literal:true,params:{type:t,fixedType:t,...spec.fixed!(t)}}))]}:{}),
     // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。
-    presentation:n=>({selectorLabel:'vector.outputType',...spec.presentation?.(n),
+    presentation:n=>({typeOf:'output',...spec.presentation?.(n),
       ...(n.params.fixedType?{label:String(n.params.fixedType),literalLabel:true,typeLocked:true}:{})})
   };
 }

@@ -55,7 +55,11 @@ export interface NodePresentation {
   /** The type cannot be changed here (a fixed entry, Refactor.17.2): no type menu on the card.
    * 型別不能在這裡改（固定入口）：卡片不顯示型別選單。 */
   typeLocked?:boolean;
-  selectorLabel?:string;
+  /** Which end the type menu chooses (Refactor.81.1, design-interview Q73 rule two): 'output' by default, what the node makes,
+   * shown in the title; 'input' when the output is decided otherwise (logic: bool; Swizzle: its components; Split), so the title
+   * only shows the output and the menu is a row in the body. 型別選單選的是哪一端（R.81.1，Q73 規則二）：預設 output（節點產生什麼，
+   * 在標題列）；輸出由別的東西決定時是 input（邏輯類 bool、Swizzle 的分量、Split），標題列只顯示輸出，選單是本體的一列。 */
+  typeOf?:'input'|'output';
   selector?:{value:string;options:readonly string[];command:string;label:string};
   inlineControls?:readonly NodeControl[];
   value?:{value:Value;type:string;componentCommand:string;valueCommand:string;names:string;color?:boolean;expandable?:boolean};

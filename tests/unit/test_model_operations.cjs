@@ -231,7 +231,7 @@ test('Dot and Length configuration changes inputs while scalar output is invaria
     const network=g.networks.get('pixel');
     for(const key of ['dot','length']){
       const n=network.create(key,'sgrape.builtin.'+key),out=n.outputs[0];
-      assert.equal(n.definition.presentation(n.data,g.context).selectorLabel,'vector.inputType');
+      assert.equal(n.definition.presentation(n.data,g.context).typeOf,'input');
       n.configure({type:'vec4'});assert.ok(n.inputs.every(p=>p.type==='vec4'));assert.equal(n.outputs[0],out);assert.equal(out.type,'float');
     }
   });

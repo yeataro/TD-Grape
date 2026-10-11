@@ -52,7 +52,7 @@ export default typedNode(catalog, {
   // 每個輸出是一個分量，名稱與顏色照節點的名稱樣式（照舊產品）。
   presentation: n => {
     const t = String(n.params.type), keys = 'xyzw'.slice(0, values.count(t)).split(''), letters = componentLetters(storedOr(n, 'xyzw'), keys.length);
-    return {selectorLabel: 'vector.inputType', portLabels: {outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]!]))},
+    return {typeOf: 'input', portLabels: {outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]!]))},
       components: {outputs: Object.fromEntries(keys.map((k, i) => [k, [i]]))}};
   },
   emit: (n, c) => ({outputs: Object.fromEntries('xyzw'.slice(0, values.count(String(n.params.type))).split('').map(p => [p, '(' + c.input('value') + ').' + p]))})

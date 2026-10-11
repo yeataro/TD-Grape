@@ -67,6 +67,6 @@ export default {...typedNode(catalog, {
   },
   // One operator menu, at the top of the body as legacy (human 2026-10-09: it was shown twice).
   // 一個運算選單，放在本體開頭，同舊產品（人類：原本出現兩次）。
-  presentation: n => ({selectorLabel: 'vector.inputType', inlineControls: [control(String(n.params.operator ?? '>'))]}),
+  presentation: n => ({typeOf: 'input', inlineControls: [control(String(n.params.operator ?? '>'))]}),
   emit: (n, c) => ({outputs: {out: '(' + c.input('a') + ' ' + String(n.params.operator ?? '>') + ' ' + c.input('b') + ')'}})
 }), colorGroup: 'logic'};

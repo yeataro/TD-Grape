@@ -4,11 +4,10 @@ import { core, typeColor } from './core';
 import type { EditorState } from './editor';
 import type { FlowNode } from './projection';
 import { tr, say } from './text';
-import { Select } from './controls';
 import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext } from './contexts';
 import { frameNodes } from './viewport';
-import { Controls, DeclarationValue, PortLabel, listed, single, sourceKinds } from './NodeCard';
+import { Controls, DeclarationValue, PortLabel, TypeRow, single, sourceKinds } from './NodeCard';
 
 // The Parameter panel (Refactor.76, human 2026-10-11; work/refactor/parameter-panel-scope-2026-10-11.md): the current node,
 // drawn like a node card from the same declarations — the head in the node's group colour with its type and its name; every
@@ -79,11 +78,8 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
         every row lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：展開｜名稱靠右｜型別｜欄位；
         每一列都和其他列對齊。 */}
     {!data.ghost && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
-      {!view.typeLocked && (view.selector
-        ? <label className="control-field"><span>{say(tr('params.operationType', 'Operation type'))}</span>
-          <Select label={`${id} type`} value={view.selector.value} onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /></label>
-        : data.types.length > 1 && <label className="control-field"><span>{say(tr('params.operationType', 'Operation type'))}</span>
-          <Select label={`${id} type`} value={String(authored.params.type)} onChange={value => session.configure(id, value)} options={listed(data.types)} /></label>)}
+      {/* Named by the end it chooses (Q73 rule two): input or output type. 照它選的那一端命名（Q73 規則二）：輸入或輸出型別。 */}
+      <TypeRow id={id} data={data} />
       {view.inlineControls && <Controls id={id} controls={view.inlineControls} />}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}

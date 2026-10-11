@@ -136,7 +136,7 @@ export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<R
       if('signature' in s)n.params.inputTypes={...s.signature.inputs};else delete n.params.inputTypes;
       return reshapeDefaults(n,before,ports(n));
     },
-    presentation:()=>({selectorLabel:Object.values(catalog.definition.outputs).includes('T')?'vector.outputType':'vector.inputType'}),
+    presentation:()=>({typeOf:Object.values(catalog.definition.outputs).includes('T')?'output':'input'}),
     emit:(_n,c)=>({outputs:{out:call.operator+'('+call.ports.map(key=>c.input(key)).join(', ')+')'}})};
 }
 /** The one node that refers to a declaration (design-interview Q45; human 2026-10-09): what it

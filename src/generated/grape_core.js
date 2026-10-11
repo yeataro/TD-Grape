@@ -1938,7 +1938,7 @@ function numericCall(catalog, options = {}) {
                 delete n.params.inputTypes;
             return reshapeDefaults(n, before, ports(n));
         },
-        presentation: () => ({ selectorLabel: Object.values(catalog.definition.outputs).includes('T') ? 'vector.outputType' : 'vector.inputType' }),
+        presentation: () => ({ typeOf: Object.values(catalog.definition.outputs).includes('T') ? 'output' : 'input' }),
         emit: (_n, c) => ({ outputs: { out: call.operator + '(' + call.ports.map(key => c.input(key)).join(', ') + ')' } }) };
 }
 /** The one node that refers to a declaration (design-interview Q45; human 2026-10-09): what it
@@ -2166,7 +2166,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: ['bvec2', 'bvec3', 'bvec4'],
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', 'bool')],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'all(' + c.input('value') + ')' } })
 });
 
@@ -2220,7 +2220,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: ['bvec2', 'bvec3', 'bvec4'],
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', 'bool')],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'any(' + c.input('value') + ')' } })
 });
 
@@ -2508,7 +2508,7 @@ exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
         },
         // One operator menu, at the top of the body as legacy (human 2026-10-09: it was shown twice).
         // 一個運算選單，放在本體開頭，同舊產品（人類：原本出現兩次）。
-        presentation: n => { var _a; return ({ selectorLabel: 'vector.inputType', inlineControls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))] }); },
+        presentation: n => { var _a; return ({ typeOf: 'input', inlineControls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))] }); },
         emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
     }), colorGroup: 'logic' };
 
@@ -2829,7 +2829,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors,
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'equal(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -3005,7 +3005,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'greaterThan(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -3060,7 +3060,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'greaterThanEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -3367,7 +3367,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'lessThan(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -3422,7 +3422,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'lessThanEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -3848,7 +3848,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: ['bvec2', 'bvec3', 'bvec4'],
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', t)],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'not(' + c.input('value') + ')' } })
 });
 
@@ -3903,7 +3903,7 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors,
     ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'notEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
@@ -4707,7 +4707,7 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
         const t = String(n.params.type), selected = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
         const letters = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), node_sdk_1.values.count(t)), letter = (axis) => { var _a; return (_a = letters[axes.indexOf(axis)]) !== null && _a !== void 0 ? _a : axis.toUpperCase(); };
         const places = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), 4); // the output's places, up to four 輸出的位置，最多四個
-        return { selectorLabel: 'vector.inputType',
+        return { typeOf: 'input',
             // The output reads as the mask in the node's letters, e.g. "RG" (legacy graph_ui.js:1299). 輸出照遮罩、用節點的字母。
             portLabels: { outputs: { out: [...selected].map(letter).join('') } },
             components: { outputs: { out: [...selected].map(axis => axes.indexOf(axis)) } },
@@ -5201,7 +5201,7 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     // 每個輸出是一個分量，名稱與顏色照節點的名稱樣式（照舊產品）。
     presentation: n => {
         const t = String(n.params.type), keys = 'xyzw'.slice(0, node_sdk_1.values.count(t)).split(''), letters = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), keys.length);
-        return { selectorLabel: 'vector.inputType', portLabels: { outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]])) },
+        return { typeOf: 'input', portLabels: { outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]])) },
             components: { outputs: Object.fromEntries(keys.map((k, i) => [k, [i]])) } };
     },
     emit: (n, c) => ({ outputs: Object.fromEntries('xyzw'.slice(0, node_sdk_1.values.count(String(n.params.type))).split('').map(p => [p, '(' + c.input('value') + ').' + p])) })
@@ -6801,7 +6801,7 @@ function typedNode(catalog, spec) {
         // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。
         presentation: n => {
             var _a;
-            return ({ selectorLabel: 'vector.outputType', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n),
+            return ({ typeOf: 'output', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n),
                 ...(n.params.fixedType ? { label: String(n.params.fixedType), literalLabel: true, typeLocked: true } : {}) });
         }
     };
@@ -7033,7 +7033,7 @@ function vectorAssembly(catalog, inherit) {
         // 每個分量輸入顯示它涵蓋的字母，例如分組時「RG」（照舊產品）。
         presentation: n => {
             const parts = layout(n), letters = (0, component_names_1.componentLetters)((0, component_names_1.storedOr)(n, 'xyzw'), value_nodes_1.values.count(String(n.params.type)));
-            return { selectorLabel: 'vector.outputType',
+            return { typeOf: 'output',
                 portLabels: { inputs: Object.fromEntries(parts.map(p => [p.key, letters.slice(p.start, p.start + p.size)])) },
                 components: { inputs: Object.fromEntries(parts.map(p => [p.key, Array.from({ length: p.size }, (_, i) => p.start + i)])) } };
         },

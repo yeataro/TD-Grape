@@ -46,6 +46,6 @@ const catalog = {
 export default typedNode(catalog, {
   types: ['bvec2', 'bvec3', 'bvec4'],
   ports: t => [input('value', t), output('out', 'bool')],
-  presentation: () => ({selectorLabel: 'vector.inputType'}),
+  presentation: () => ({typeOf: 'input'}),
   emit: (_n, c) => ({outputs: {out: 'all(' + c.input('value') + ')'}})
 });

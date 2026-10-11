@@ -58,6 +58,10 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.81.1 型別選單照規則二：標題列永遠是輸出，選輸入的在卡片和參數面板放「輸入型別」**（人類 10-11：大部分下拉選的是輸出、只有邏輯類不是；選輸入的要特別標；選規則二；放在節點卡片本身，參數面板也一樣；design-interview Q73）：
+  - 核心：`NodePresentation.selectorLabel`（只是一段文字）換成 `typeOf: 'input' | 'output'`（型別選單選哪一端，預設 output）；15 個模組照原本的宣告換過去（邏輯類、Swizzle、Split、Dot／Length 這類輸出固定的是 input）。用不到的節點文字 `vector.inputType` 拿掉。
+  - 畫面：`NodeCard.tsx` 的 `TypeChoice`（型別選單）、`TypeRow`（帶名稱的一列）、`picksInput`、`hasTypeChoice`，卡片與參數面板共用。選輸入的節點：標題列只顯示輸出型別，卡片本體第一列（起點節點在輸出之後）放「輸入型別」；選輸出的節點：標題列照舊是選單。參數面板原本的「運算型別」改成照這個寫「輸入型別」或「輸出型別」。
+  - 驗證：core 153、editor 115、check:core、check:editor；TD 重載後在 Grape_TOP_test：Swizzle 標題列 vec3（不能點）、卡片「輸入型別 vec2」；Dot Product 標題 float、「輸入型別 vec3」；Split 標題 float、「輸入型別 vec4」；Combine 標題列仍是選單；參數面板 Swizzle 第一列「輸入型別」。
 - **Refactor.81 Swizzle 拿掉 −／＋，分量選單後面多一格空的**（人類 10-11：加減不重要、重要的是分量；加減按鈕拿掉，讓分量可以動態選擇；跟 auto 無關；先這樣試試看；design-interview Q73）：每個分量選單多一個「—」；最後面多一格空的選單（不到四個時），在那裡選分量就加一個；在選單選「—」就拿掉那個分量、後面往前補；只剩一個時沒有「—」，核心也擋（Keep at least one component）。模組命令只剩 `mask`（加、改、拿掉都走它），`add`／`remove` 拿掉。新行為（舊產品有 −／＋）。驗證：core 153（改寫 Swizzle 測試：選單、空選單、「—」、最後一個、RGBA）、editor 115、check:core；TD 重載後在 Grape_TOP_test 的 Swizzle（YYY、vec3）用真的滑鼠在空的 W 選 X：輸出變 YYYX、vec4（r1225），Undo 回 YYY、vec3（r1226）。
 - **Refactor.80.4 常用值選單不再撐到 260px**（人類 10-11 截圖：不知道為什麼這麼寬，是英文的關係嗎）：不是英文。選單預設最窄 260px（`.dropdown-menu` 的 `min-width`，給項目很長的選單）；下拉選擇與縮放選單都用「貼合」（`fit`：最窄同按鈕寬，其餘照內容），右鍵的常用值選單（單格 `NumberField`、整組 `ValueFields`）漏了。補上後照內容寬。驗證：editor 115、check:editor；TD 重載後在內建瀏覽器對數值框叫出常用值選單：寬 77px（原本 260），項目 1／0.5／0／−0.5／−1，Esc 關閉。
 - **Refactor.80.3 加減按鈕成組等寬；Swizzle 選單用分量字母命名**（人類 10-11：加減按鈕不管是什麼都整合、有共用能力就用；寬度要等寬、齊輸入框與下拉框的左邊，或排一個舒適的版；卡片上擠的放到下一排，會破壞一行的原則要說；用 1234 當標題很怪，應該用 xyzw 有顏色）：

@@ -70,7 +70,7 @@ export function vectorAssembly(catalog:CatalogRow,inherit:boolean):NodeModule {
     // 每個分量輸入顯示它涵蓋的字母，例如分組時「RG」（照舊產品）。
     presentation:n=>{
       const parts=layout(n),letters=componentLetters(storedOr(n,'xyzw'),values.count(String(n.params.type)));
-      return {selectorLabel:'vector.outputType',
+      return {typeOf:'output',
         portLabels:{inputs:Object.fromEntries(parts.map(p=>[p.key,letters.slice(p.start,p.start+p.size)]))},
         components:{inputs:Object.fromEntries(parts.map(p=>[p.key,Array.from({length:p.size},(_,i)=>p.start+i)]))}};
     },

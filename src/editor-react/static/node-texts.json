@@ -37,6 +37,5 @@
   "sources.textures": "Texture Inputs",
   "sources.time": "Time",
   "vector.componentOrder": "Component order",
-  "vector.inputType": "Input type",
   "vector.outputType": "Output type"
 }

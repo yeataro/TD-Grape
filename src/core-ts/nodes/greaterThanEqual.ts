@@ -47,6 +47,6 @@ const catalog = {
 export default typedNode(catalog, {
   types: values.vectors.filter(t => values.family(t) !== 'bool'),
   ports: t => [input('a', t), input('b', t), output('out', values.shaped('bool', values.count(t)))],
-  presentation: () => ({selectorLabel: 'vector.inputType'}),
+  presentation: () => ({typeOf: 'input'}),
   emit: (_n, c) => ({outputs: {out: 'greaterThanEqual(' + c.input('a') + ', ' + c.input('b') + ')'}})
 });

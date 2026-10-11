@@ -64,7 +64,7 @@ export default typedNode(catalog, {
     const t = String(n.params.type), selected = mask(t,n.params.mask ?? 'xy');
     const letters = componentLetters(storedOr(n, 'xyzw'), values.count(t)), letter = (axis: string) => letters[axes.indexOf(axis)] ?? axis.toUpperCase();
     const places = componentLetters(storedOr(n, 'xyzw'), 4); // the output's places, up to four 輸出的位置，最多四個
-    return {selectorLabel: 'vector.inputType',
+    return {typeOf: 'input',
       // The output reads as the mask in the node's letters, e.g. "RG" (legacy graph_ui.js:1299). 輸出照遮罩、用節點的字母。
       portLabels: {outputs: {out: [...selected].map(letter).join('')}},
       components: {outputs: {out: [...selected].map(axis => axes.indexOf(axis))}},
