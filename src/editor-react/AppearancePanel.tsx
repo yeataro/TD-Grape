@@ -18,7 +18,6 @@ const trials = [
   ['wireGlow', tr('appearance.wireGlow', 'Glow: wires')],
   ['portGlow', tr('appearance.portGlow', 'Glow: wired ports')],
   ['logoGlow', tr('appearance.logoGlow', 'Glow: logo')],
-  ['wireGradient', tr('appearance.wireGradient', 'Type conversion wires: gradient between the two type colours')],
 ] as const;
 
 function TuningRow({ tunable }: { tunable: Tunable }) {
