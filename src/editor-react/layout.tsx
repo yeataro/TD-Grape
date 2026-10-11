@@ -226,8 +226,8 @@ function PanelMenu({ title, items }: { title: Message; items: () => readonly Men
   const [open, setOpen] = useState(false), [, redraw] = useReducer((n: number) => n + 1, 0), button = useRef<HTMLButtonElement>(null);
   const label = say(tr('layout.panelMenu', '{panel} options', { panel: say(title) }));
   return <>
-    <button ref={button} type="button" className="icon-button narrow panel-menu" aria-label={label} title={label} aria-haspopup="menu"
-      aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="chevronDown" /></button>
+    <button ref={button} type="button" className="icon-button panel-menu" aria-label={label} title={label} aria-haspopup="menu"
+      aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="panelMenu" /></button>
     {open && button.current && <DropdownMenu anchor={button.current} label={label} onClose={() => setOpen(false)}
       items={items().map(item => ({ ...item, select: () => { item.select(); redraw(); } }))} />}
   </>;

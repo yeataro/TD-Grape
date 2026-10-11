@@ -331,7 +331,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    每個分頁在一格裡，格子分配寬度；顯示中的那格右上角還放它面板的選單（R.83）。 */
 .tab-slot { position: relative; display: flex; align-items: flex-end; flex: 1; min-width: 0; height: 100%; }
 .tab-slot.shown { z-index: 1; }
-.tab-slot.with-menu .panel-tab { padding-right: calc(var(--icon-button-narrow) + 2px); }
+/* Three lines, as wide as any icon button (Refactor.83.1, human 2026-10-11: not too narrow; it is closed most of the time).
+   三條橫線，和一般圖示按鈕一樣寬（R.83.1，人類：不要太窄，平常是收著的）。 */
+.tab-slot.with-menu .panel-tab { padding-right: calc(var(--icon-button) + 2px); }
 .panel-menu { position: absolute; top: 1px; right: 1px; height: calc(100% - 2px); }
 .tab-pane:not(.collapsed) .panel-tab[aria-selected="true"] { position: relative; height: calc(100% + 1px); margin-bottom: -1px; }
 /* The shown tab takes half the strip so its name fits; the others share the rest (human 2026-10-09: "Shared Sources" never

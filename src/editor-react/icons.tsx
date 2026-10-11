@@ -22,6 +22,8 @@ const paths = {
   // More tools, folded into a menu (legacy #graphmore, selection_ui.js:525). 收進選單的其他工具（舊產品 #graphmore）。
   more: <path d="M3 5h16M3 10h16M3 15h8m3 3 4 4 4-4" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  // A panel's own menu, three lines (Refactor.83.1, human 2026-10-11). 面板自己的選單，三條橫線（R.83.1，人類）。
+  panelMenu: <path d="M5 7h14M5 12h14M5 17h14" />,
   // Snap as Blender's magnet (human 2026-10-09); the settings gear from the legacy foot bar. 磁鐵（Blender）、齒輪（舊產品）。
   snap: <path d="M5 4v7a7 7 0 0 0 14 0V4h-4v7a3 3 0 0 1-6 0V4Z M5 8h4m6 0h4" />,
   settings: <><path d="m9.5 3-.5 2-2 .9-1.8-.6-2 3.4 1.5 1.4v2.8l-1.5 1.4 2 3.4 1.8-.6 2 .9.5 2h4l.5-2 2-.9 1.8.6 2-3.4-1.5-1.4v-2.8l1.5-1.4-2-3.4-1.8.6-2-.9-.5-2Z" /><circle cx="11.5" cy="11.5" r="3" /></>,
