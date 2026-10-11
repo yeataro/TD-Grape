@@ -10,6 +10,23 @@ import { frameNodes } from './viewport';
 import { glslErrors } from './glsl_errors';
 import { ScrollFade } from './controls';
 import type { EditorState } from './editor';
+import type { MenuItem } from './DropdownMenu';
+import { readPreference, writePreference } from './preferences';
+
+// Live trace (Refactor.83, human 2026-10-11; new, legacy's GLSL tab did not follow the selection, app.js:1663): the primary
+// node's names are marked and its lines lit as when hovered. On by default; a personal preference, switched from the panel's
+// menu. 即時追蹤（R.83，人類；新行為，舊產品的 GLSL 分頁不跟選取）：主要選取節點的名字標出來、它的行像滑過時亮起。預設開；個人偏好，
+// 在面板選單切換。
+const TRACE = 'glsl.liveTrace';
+let tracing = readPreference(TRACE) !== 'off';
+const traceListeners = new Set<() => void>();
+const traceSubscribe = (listener: () => void) => { traceListeners.add(listener); return () => { traceListeners.delete(listener); }; };
+const traceSnapshot = () => tracing;
+/** The GLSL panel's menu (Refactor.83). GLSL 面板的選單（R.83）。 */
+export const glslMenu = (): readonly MenuItem[] => [{ key: 'liveTrace', checkbox: true, checked: tracing,
+  label: say(tr('glsl.liveTrace', 'Live trace')),
+  title: say(tr('glsl.liveTraceHint', "Mark the selected node's names and light its lines")),
+  select: () => { tracing = !tracing; writePreference(TRACE, tracing ? 'on' : 'off'); traceListeners.forEach(listener => listener()); } }];
 
 // Prism's token kinds, shown in the legacy GLSL colours (legacy style.css:480; Refactor.63, human 2026-10-10: a light
 // library, not our own highlighter). Prism counts types as keywords; a keyword that is a type by the legacy list
@@ -63,6 +80,11 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
   const marked = useMemo(() => new Map(errors.map(error => [error.line, error.text])), [errors]);
   const box = useRef<HTMLDivElement>(null);
   const focus = useSyncExternalStore(session.glslFocusSubscribe, session.glslFocusSnapshot);
+  // Re-drawn only when the primary node changes (a box selection settles once on release, a node drag keeps it), so nothing
+  // here runs on every move (EDITOR_UI_RULES, continuous interactions). 只在主要選取換人時重畫（框選放開時才定、拖節點不改），
+  // 連續互動時不會每一下都跑（畫面規則「連續互動」）。
+  const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
+  const traced = useSyncExternalStore(traceSubscribe, traceSnapshot) ? primary : null;
   const scrollTo = (line: number) => box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`)?.scrollIntoView({ block: 'center' });
   useEffect(() => { if (focus.line) scrollTo(focus.line); }, [focus]);
   const goToNode = (id: string) => { session.selectNode(id); frameNodes(flow, [id]); };
@@ -77,7 +99,7 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
   const link = (name: string, key: number) => {
     const node = glslVariables[name], declaration = glslDeclarations[name];
     return node !== undefined
-      ? <button key={key} type="button" className="glsl-link" onClick={() => goToNode(node)}
+      ? <button key={key} type="button" className={'glsl-link' + (node === traced ? ' traced' : '')} onClick={() => goToNode(node)}
         title={say(tr('glsl.goToVariable', 'Select the node {node}', { node }))}>{name}</button>
       : <button key={key} type="button" className="glsl-link" onClick={() => goToReferences(declaration!)}
         title={say(tr('glsl.selectReferences', 'Select every node using {name}', { name }))}>{name}</button>;
@@ -102,7 +124,7 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
     </div>}
     <ScrollFade className="glsl-scroll"><pre className="code-view glsl-code">{lines.map((pieces, index) => {
       const line = index + 1, node = nodeOf.get(line), error = marked.get(line);
-      return <div key={line} data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focus.line === line ? ' focused' : '')}
+      return <div key={line} data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focus.line === line ? ' focused' : '') + (node !== undefined && node === traced ? ' traced' : '')}
         title={error}>
         {node ? <button type="button" className="glsl-gutter" onClick={() => goToNode(node)}
           title={say(tr('glsl.goToNode', 'Select the node that wrote this line ({node})', { node }))}>{line}</button>

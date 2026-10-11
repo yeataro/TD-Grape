@@ -4,7 +4,8 @@ import type { AddChoice } from './add_entries';
 import type { Side } from './layout_tree';
 import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
-import { GlslPanel } from './GlslPanel';
+import { GlslPanel, glslMenu } from './GlslPanel';
+import type { MenuItem } from './DropdownMenu';
 import { AppearancePanel } from './AppearancePanel';
 import { ParamsPanel } from './ParamsPanel';
 import { tr, say, type Message } from './text';
@@ -18,7 +19,8 @@ import { tr, say, type Message } from './text';
 // 參數面板在右邊（R.76），右側一開始顯示它。
 /** What a panel's content is made from: the graph being edited (Q47 4). 面板內容的來源：正在編輯的圖。 */
 export type PanelInput = { session: EditorSession | null; state: EditorState; choices: readonly AddChoice[]; add(choice: AddChoice): void };
-type PanelRow = { title: Message; side: Side; first?: true; content(input: PanelInput): ReactNode };
+/** `menu`: the panel's own menu, on its tab's corner while shown (Refactor.83). menu：面板自己的選單，顯示時在分頁右上角（R.83）。 */
+export type PanelRow = { title: Message; side: Side; first?: true; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
 
 export const PANELS = {
   sources: { title: tr('sources.title', 'Shared Sources'), side: 'left', content: ({ session, state }) => session
@@ -31,7 +33,7 @@ export const PANELS = {
   // GLSL 面板把行與名字連到節點，需要正在編輯的圖（63.3：沒有圖時曾讓整頁壞掉）。
   glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ session, state }) => session
     ? <GlslPanel glsl={state.glsl} glslMap={state.glslMap} glslVariables={state.glslVariables} glslDeclarations={state.glslDeclarations} stuck={state.stuck} />
-    : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p> },
+    : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p>, menu: glslMenu },
   // The Parameter panel (Refactor.76): the current node. 參數面板（R.76）：目前的節點。
   params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, content: ({ session, state }) => session
     ? <ParamsPanel state={state} />

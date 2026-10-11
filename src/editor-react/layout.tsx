@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode,
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode,
   type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { say, tr, type Message } from './text';
@@ -19,7 +19,9 @@ import type { Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
 
 export type { Side } from './layout_tree';
 /** What a tab pane shows for one panel. 一個面板在分頁窗格裡顯示什麼。 */
-export type PanelView = { title: Message; content: ReactNode };
+/** A panel as the layout sees it: its name, its content, and its own menu if it has one (Refactor.83): the panel decides the items,
+ * the layout only gives them a place. 版面看到的面板：名字、內容，以及它自己的選單（R.83）：項目由面板決定，版面只給位置。 */
+export type PanelView = { title: Message; content: ReactNode; menu?: () => readonly MenuItem[] };
 
 const defaults: tree.PanelDefaults = (Object.entries(PANELS) as [string, { side: Side; first?: true }][]).map(([id, row]) => [id, row.side, !!row.first]);
 function stored(): LayoutData {
@@ -202,11 +204,33 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
         title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
         onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
       {/* A tab is also the handle that moves its panel (legacy: drag the panel title). 分頁也是搬面板的把手（舊產品：拖面板標題）。 */}
-      <div className="panel-tabs" role="tablist">{ids.map(id => <button key={id} role="tab" aria-selected={id === active} data-panel={id}
-        className="panel-tab" onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>)}</div>
+      {/* The shown tab carries its panel's menu on its corner (Refactor.83, human 2026-10-11: the shown tab already takes half the bar,
+          so no room is taken; legacy put a pop-out button on its tabs, inspector.js:2245). The button sits beside the tab, not in it
+          (a button cannot hold one), so pressing it never starts a panel move. 選中的分頁右上角放它面板的選單（R.83，人類：選中的分頁本來
+          就佔一半，不多佔空間；舊產品在分頁上放過彈出按鈕）。按鈕在分頁旁邊、不在裡面（按鈕裡不能放按鈕），按它不會開始搬面板。 */}
+      <div className="panel-tabs" role="tablist">{ids.map(id => {
+        const menu = id === active && !collapsed ? panels[id]?.menu : undefined;
+        return <div key={id} role="presentation" className={'tab-slot' + (id === active ? ' shown' : '') + (menu ? ' with-menu' : '')}>
+          <button role="tab" aria-selected={id === active} data-panel={id} className="panel-tab"
+            onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>
+          {menu && <PanelMenu title={panels[id]!.title} items={menu} />}
+        </div>;
+      })}</div>
     </div>
     {!collapsed && <div className="panel-content" role="tabpanel">{panels[active]?.content}</div>}
   </section>;
+}
+
+/** A panel's own menu (Refactor.83). An on/off item stays open and shows its new state at once. 面板自己的選單（R.83）。開關項目選了不關、馬上顯示新狀態。 */
+function PanelMenu({ title, items }: { title: Message; items: () => readonly MenuItem[] }) {
+  const [open, setOpen] = useState(false), [, redraw] = useReducer((n: number) => n + 1, 0), button = useRef<HTMLButtonElement>(null);
+  const label = say(tr('layout.panelMenu', '{panel} options', { panel: say(title) }));
+  return <>
+    <button ref={button} type="button" className="icon-button narrow panel-menu" aria-label={label} title={label} aria-haspopup="menu"
+      aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="chevronDown" /></button>
+    {open && button.current && <DropdownMenu anchor={button.current} label={label} onClose={() => setOpen(false)}
+      items={items().map(item => ({ ...item, select: () => { item.select(); redraw(); } }))} />}
+  </>;
 }
 
 // Where a panel would go, worked out from what is under the pointer (legacy inspector.js:2314; human 2026-10-10, Resolume

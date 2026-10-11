@@ -21,7 +21,7 @@ import { tr, say, TextError, errorText, language, languageSubscribe, type Messag
 import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
 import { LayoutView, useLayout, type Layout, type PanelView } from './layout';
-import { PANELS, type PanelInput } from './panels';
+import { PANELS, type PanelInput, type PanelRow } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, type CanvasPrefs } from './bars';
 import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
@@ -405,7 +405,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const add = useCallback((choice: AddChoice) => adding.current(choice, middle()), []);
   const panels = useMemo<Record<string, PanelView>>(() => {
     const input: PanelInput = { session, state, choices, add };
-    return Object.fromEntries(Object.entries(PANELS).map(([id, row]) => [id, { title: row.title, content: row.content(input) }]));
+    return Object.fromEntries((Object.entries(PANELS) as [string, PanelRow][]).map(([id, row]) => [id, { title: row.title, content: row.content(input), menu: row.menu }]));
   }, [session, state, choices, add, text]);
   // The location bar sits over the canvas; when its file or path would be cut there, it moves to a row of its own under the
   // title bar, as the legacy one always was, and comes back once the canvas can show it whole again, with a little to spare

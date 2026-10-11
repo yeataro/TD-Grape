@@ -326,11 +326,17 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 400; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); font-weight: 600; }
 .panel-tab { height: 100%; border: 1px solid var(--border); border-bottom: 0; }
-.panel-tab + .panel-tab { margin-left: -1px; } /* neighbours share a line 相鄰的分頁共用一條線 */
+.tab-slot + .tab-slot { margin-left: -1px; } /* neighbours share a line 相鄰的分頁共用一條線 */
+/* Each tab sits in a slot that takes its share of the bar; the shown one also holds its panel's menu on its corner (Refactor.83).
+   每個分頁在一格裡，格子分配寬度；顯示中的那格右上角還放它面板的選單（R.83）。 */
+.tab-slot { position: relative; display: flex; align-items: flex-end; flex: 1; min-width: 0; height: 100%; }
+.tab-slot.shown { z-index: 1; }
+.tab-slot.with-menu .panel-tab { padding-right: calc(var(--icon-button-narrow) + 2px); }
+.panel-menu { position: absolute; top: 1px; right: 1px; height: calc(100% - 2px); }
 .tab-pane:not(.collapsed) .panel-tab[aria-selected="true"] { position: relative; height: calc(100% + 1px); margin-bottom: -1px; }
 /* The shown tab takes half the strip so its name fits; the others share the rest (human 2026-10-09: "Shared Sources" never
    showed whole). Alone, it takes all. 顯示中的分頁佔一半，名字放得下；其他平分剩下的（人類：「共用來源」永遠顯示不完整）。只有一個就佔滿。 */
-.panel-tab[aria-selected="true"]:not(:only-child) { flex: 0 0 50%; }
+.tab-slot.shown:not(:only-child) { flex: 0 0 50%; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; border: 1px solid var(--border); background: var(--surface-zone); }
 /* A scrolling area with edge fades (controls ScrollFade, Refactor.63.4): a fade shows on a side with hidden content. The fades
    start from the surface behind (--scroll-fade-from, the zone unless a user says otherwise).
@@ -350,8 +356,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    lighter, lines TD reported marked. GLSL 面板：行號欄、Prism 上色、滑鼠或鍵盤所在的行亮一點點、TD 回報的行標出來。 */
 .glsl-view { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .glsl-code .glsl-line { display: flex; }
-.glsl-code .glsl-line:is(:hover, :focus-within, .focused) { background: var(--code-line-hover); }
+/* The primary node's lines are lit as a hovered one (Live trace, Refactor.83). 主要選取節點的行和滑過時一樣亮（即時追蹤，R.83）。 */
+.glsl-code .glsl-line:is(:hover, :focus-within, .focused, .traced) { background: var(--code-line-hover); }
 .glsl-code .glsl-line.error { background: var(--code-line-error); }
+/* An error line's number is red too; names are never (human 2026-10-11: red names would spread to the lines using them and
+   point at a culprit, against "nodes are not marked", 10-10). 錯誤行的行號也是紅的；名字不標紅（人類：會散到用到它的行、也像在指兇手）。 */
+.glsl-code .glsl-line.error .glsl-gutter { color: var(--status-error); }
+/* The primary node's names (Live trace, Refactor.83): the selection green. 主要選取節點的名字：選取綠（即時追蹤，R.83）。 */
+.glsl-link.traced { color: var(--select); }
 .glsl-gutter { flex: none; min-width: 3.5ch; padding: 0 1ch 0 0; border: 0; background: none; color: var(--text-faint);
   font: inherit; text-align: right; user-select: none; }
 button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
