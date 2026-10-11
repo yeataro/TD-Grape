@@ -56,9 +56,15 @@ export type Layout = LayoutData & {
   setFloat(id: string, patch: { width?: number; height?: number; collapsed?: boolean }): void; close(id: string): void;
   /** Panels that float in one corner only (the panel table's `corner`). 只浮在某一角的面板（面板表的 corner）。 */
   homes: tree.Homes;
+  /** Focus graph (Refactor.94; legacy app.js:1465-1486): only the network, its toolbar and the floating panels; the title, location
+   * and foot bars and the panes are put away. A view of the moment, as legacy: never stored, never undone, gone on reload.
+   * 專注編輯（R.94；照舊產品）：只有網路區、它的功能列與浮動面板；標題列、網址列、底列與窗格收起。當下的檢視，同舊產品：不存、不進復原、
+   * 重新整理就沒了。 */
+  focused: boolean; setFocused(on: boolean | ((was: boolean) => boolean)): void;
 };
 export function useLayout(): Layout {
   const [data, setData] = useState(stored), [apart, setApart] = useState(() => readPreference('floating.apart') === 'on');
+  const [focused, setFocused] = useState(false);
   // Written shortly after the last change, so dragging a handle does not write on every move.
   // 停止變動後才寫入，拖把手時不會每一步都寫。
   useEffect(() => {
@@ -89,7 +95,8 @@ export function useLayout(): Layout {
     mergeFloat: (from, frame, index) => setData(old => tree.mergeFloat(old, from, frame, index)),
     dockFrame: (frame, drop) => setData(old => tree.dockFrame(old, frame, drop)),
     apart, setApart: on => { setApart(on); writePreference('floating.apart', on ? 'on' : 'off'); },
-  }), [data, apart]);
+    focused, setFocused,
+  }), [data, apart, focused]);
 }
 
 /** A drag handle: drawn thin, grabbed by a wider area (human 2026-10-09). Reports the distance moved. `edge` puts it on the
@@ -171,7 +178,9 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   const { layout } = context, root = !path.length, element = useRef<HTMLDivElement>(null);
   const holdsCanvas = tree.hasCanvas(pane), centre = pane.children.findIndex(tree.hasCanvas), row = pane.direction === 'row';
   const closed = (index: number) => { const side = root ? tree.sideOf(layout.root, index) : null; return !!side && layout.closed[side]; };
-  const visible = pane.children.map((child, index) => ({ child, index })).filter(({ child, index }) => tree.shown(child, tree.away(layout)) && !closed(index));
+  // Focus graph draws only the part holding the canvas (Refactor.94). 專注編輯只畫放著畫布的那一格（R.94）。
+  const visible = pane.children.map((child, index) => ({ child, index }))
+    .filter(({ child, index }) => tree.shown(child, tree.away(layout)) && !closed(index) && (!layout.focused || tree.hasCanvas(child)));
   const begin = useRef({ sizes: [] as number[], limit: 0, total: 0, across: 1 });
   const length = () => (row ? element.current?.clientWidth : element.current?.clientHeight) || 1;
   // Next to the canvas, a part is pixels: it stays between its minimum and what leaves the canvas its own; elsewhere parts

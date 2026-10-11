@@ -64,7 +64,9 @@ export function CanvasMenu({ request, session, state, layout, onCreate, onClose 
     { key: 'linkLines', group: 5, label: tr('canvasMenu.linkLines', 'Show Link lines'), hint: 'X', checked: false },
     { key: 'home', group: 5, icon: 'home', label: tr('canvasMenu.home', 'Home'), hint: 'H', run: () => frameNodes(flow) },
     ...count ? [{ key: 'frame', group: 5, icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), hint: 'F', run: () => frameNodes(flow, ids) }] as Row[] : [],
-    { key: 'focus', group: 5, icon: 'focus', label: tr('canvasMenu.focus', 'Focus graph'), toggle: true, checked: false },
+    // Its name says what choosing it does (legacy view.restoreLayout). 名字說選了會怎樣（照舊產品）。
+    { key: 'focus', group: 5, icon: layout.focused ? 'unfocus' : 'focus', label: layout.focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvasMenu.focus', 'Focus graph'),
+      toggle: true, checked: layout.focused, run: () => layout.setFocused(on => !on) },
     // The browser's own full screen, as the foot bar's; not offered where the browser has none (an iPhone). 瀏覽器自己的全螢幕，同底列；
     // 瀏覽器沒有時（iPhone）不能按。
     { key: 'fullscreen', group: 5, icon: 'fullscreen', label: fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'),

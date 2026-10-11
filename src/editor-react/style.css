@@ -1049,6 +1049,11 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .grape-node .hint, .grape-node .ghost-note { contain: inline-size; }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
 .react-flow__controls button:hover { background: var(--surface-control-hover); }
+/* Our icons in React Flow's control buttons (Home, Focus graph, full screen; Refactor.94): our stroke style and size, not its filled
+   12px; pressed as our tool buttons. React Flow 控制按鈕裡用我們的圖示（Home、專注編輯、全螢幕；R.94）：我們的線條與大小，不用它的填色
+   12px；按下時同我們的工具按鈕。 */
+.react-flow__controls-button svg.icon { width: var(--icon-size); height: var(--icon-size); max-width: none; max-height: none; fill: none; }
+.react-flow__controls button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
 .startup-error { margin: auto; max-width: 620px; padding: 35px; }
 
 .value-ladder { position: fixed; z-index: 100; border: 1px solid var(--border-hover); border-radius: 6px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); pointer-events: none; user-select: none; font-size: var(--font-base); line-height: var(--line-base); font-variant-numeric: tabular-nums; }

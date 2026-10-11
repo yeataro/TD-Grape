@@ -32,6 +32,7 @@ const paths = {
   convertWires: <path d="M3 6h14m-4-3 4 3-4 3M3 18h14m-4-3 4 3-4 3" />,
   home: <><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" /><rect x="8.5" y="9.5" width="7" height="5" rx="1.2" /></>,
   focus: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 12H6m2-2-2 2 2 2M14 12h4m-2-2 2 2-2 2" /></>,
+  unfocus: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M6 12h4M8 10l2 2-2 2M18 12h-4m2-2-2 2 2 2" /></>,
   floatingPanel: <path d="M4 3h16v18H4zM4 8h16M8 12h8M8 16h5" />,
   arrowLeft: <path d="M20 12H4m6-6-6 6 6 6" />,
   arrowRight: <path d="M4 12h16m-6-6 6 6-6 6" />,

@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, ReactFlowProvider, Background, Controls, useStore, useReactFlow, useConnection, getBezierPath,
+import { ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
 import { GhostEdge } from './GhostMark';
 import { ConvertEdge } from './ConvertEdge';
@@ -24,7 +24,8 @@ import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
 import { LayoutView, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput, type PanelRow } from './panels';
-import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, type CanvasPrefs } from './bars';
+import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, useFullscreen, type CanvasPrefs } from './bars';
+import { Icon } from './icons';
 import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
@@ -138,12 +139,13 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void; onMenu(open: MenuOpen): void;
+  focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void;
 }) {
-  const options = useOptions(), flow = useReactFlow();
+  const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
   // A right-click (or long press) on a port opens Create node for that port, there, instead of the menu (legacy graph_ui.js:2476);
   // elsewhere the menu. 在接孔上按右鍵（或長按）：在那裡打開只列接得上的新增節點，不開選單（照舊產品）；其他地方開選單。
   const menu = useCallback((open: MenuOpen) => {
@@ -271,7 +273,25 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           minus (Refactor.83.3, human 2026-10-11: crowded, and not needed to edit; legacy had none, index.html:57): wheel, trackpad
           and pinch still zoom, and the number's menu sets it. React Flow 自己的視角控制，加上目前縮放百分比（人類 10-09：用預設即可），
           拿掉加減號（R.83.3，人類 10-11：太擠、編輯用不到；舊產品沒有）：滾輪、觸控板、雙指照樣縮放，縮放數字的選單也能設。 */}
-      <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false}><ZoomReadout /></Controls>
+      {/* Home is ours, not React Flow's fit view (Refactor.94, human 2026-10-12: it looked the same as full screen): the four corners
+          with a small node (human 2026-10-11), the same framing as H, with our words. Home 用我們的、不用 React Flow 的看見全部（R.94，
+          人類：和全螢幕長得一模一樣）：四角框加小節點（人類 10-11），和 H 同一個對準，說明用我們的字。 */}
+      <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false} showFitView={false}>
+        <ControlButton className="home" onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
+          title={say(tr('canvas.homeHint', 'Home (H): show the whole network'))}><Icon name="home" /></ControlButton>
+        <ZoomReadout />
+        {/* Focus graph, after the zoom as legacy (index.html:57; human 2026-10-11: icon D, Ctrl+Enter, Esc leaves); while on, full screen
+            comes here too, the foot bar being away (legacy app.js:1482). 專注編輯，照舊產品放在縮放後面（人類 10-11：圖示 D、Ctrl＋Enter、
+            Esc 離開）；開著時全螢幕也搬到這裡，因為底列不在（照舊產品）。 */}
+        <ControlButton className="focus-graph" aria-pressed={focused} onClick={() => onFocus(on => !on)}
+          aria-label={say(focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvas.focus', 'Focus graph'))}
+          title={say(focused ? tr('canvas.restoreHint', 'Restore layout (Ctrl+Enter or Esc)') : tr('canvas.focusHint', 'Focus graph (Ctrl+Enter): only the network and its toolbar'))}>
+          <Icon name={focused ? 'unfocus' : 'focus'} /></ControlButton>
+        {focused && <ControlButton aria-pressed={fullscreen} disabled={!document.fullscreenEnabled}
+          aria-label={say(fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'))}
+          title={say(fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'))}
+          onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())}><Icon name="fullscreen" /></ControlButton>}
+      </Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       <SelectionFrame nodes={projection.nodes} />
       <FloatingToolbar nodes={projection.nodes} edges={edges} />
@@ -410,6 +430,14 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
         const host = document.querySelector<HTMLElement>('.right-select-host');
         if (host) { event.preventDefault(); onMenu({ ...middle(), touch: false, host }); }
       }
+      // Ctrl+Enter (Cmd+Enter) turns Focus graph on or off, Esc leaves it, on the network or with nothing focused (legacy
+      // graph_ui.js:2522; Esc: human 2026-10-11). An Esc that closes a menu or ends a drag is taken before it gets here.
+      // Ctrl＋Enter（Cmd＋Enter）開關專注編輯、Esc 離開，在網路區或沒有焦點時（照舊產品；Esc：人類 10-11）。關選單、結束拖曳的 Esc 在這之前就被接走。
+      else if (((event.key === 'Enter' && (event.ctrlKey !== event.metaKey) && !event.altKey && !event.shiftKey) || (event.key === 'Escape' && layout.focused && !event.defaultPrevented))
+        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
+        event.preventDefault();
+        if (!event.repeat) layout.setFocused(on => event.key === 'Enter' ? !on : false);
+      }
       // F frames the selection (all when none), H frames all, on the network only (legacy graph_ui.js:2545, selection_ui.js:92).
       // F 對準選取（沒選就全部）、H 對準全部，只在網路區（同舊產品）。
       else if (!draft && ['f', 'h'].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
@@ -429,7 +457,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     addEventListener('dragover', dragging); addEventListener('drop', dragging);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys);
       removeEventListener('dragover', dragging); removeEventListener('drop', dragging); };
-  }, [session, draft]);
+  }, [session, draft, layout.focused]);
   // Trial (Refactor.63.6, human 2026-10-10): the nodes that wrote a line TD reported, only while this is the GLSL that failed
   // (legacy: only exact lines, only before the graph changes). Worked out only with the setting on and a failure.
   // 試驗：TD 回報的錯誤行是哪些節點寫的；只在目前就是失敗的那份 GLSL 時（舊產品：只認確定的行、圖改過就不標）。設定開著且有失敗才算。
@@ -462,13 +490,13 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // The network is the canvas pane of the layout: one fixed part, never moved or closed (Refactor.68).
   // 網路區是版面裡的畫布那一格：固定、不能移動或關閉。
   const network = <section className="network" ref={networkElement} aria-label={say(tr('network.label', 'Network'))}>
-        {!above && <LocationBar layout={layout} file={file} target={where} onCramped={() => { whole.current = 0; setAbove(true); }} />}
+        {!above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onCramped={() => { whole.current = 0; setAbove(true); }} />}
         <div className="canvas">
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} />
+            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
@@ -511,9 +539,9 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
-    {above && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}
+    {above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}
     <LayoutView layout={layout} panels={panels} canvas={network} />
-    <FootBar session={session} waiting={waiting.message} prefs={prefs} project={td?.file} onAppearance={() => layout.show('appearance')} apart={layout.apart} onApart={layout.setApart} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
+    {!layout.focused && <FootBar session={session} waiting={waiting.message} prefs={prefs} project={td?.file} onAppearance={() => layout.show('appearance')} apart={layout.apart} onApart={layout.setApart} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />}
   </TextContext.Provider></SessionContext.Provider>;
 }
 
@@ -577,7 +605,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   };
   const applyAndGo = async () => { await session!.flush(); if (!session!.snapshot().dirty) go(pending); };
   return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
-    {layout.titleBar && <TitleBar session={session} version={version} />}
+    {layout.titleBar && !layout.focused && <TitleBar session={session} version={version} />}
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).
         每個階段同一個外框；新的 session 有自己的編輯狀態（草稿依 Grape OP 分開）。 */}
     <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} layout={layout} text={text} td={td} opened={opened}
