@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
+import { ReactFlow, ReactFlowProvider, Background, Controls, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
 import { GhostEdge } from './GhostMark';
 import { ConvertEdge } from './ConvertEdge';
@@ -136,9 +136,9 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, stage, onCreate, onDropChoice }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
-  errorNodes: ReadonlySet<string> | null; stage: string;
+  errorNodes: ReadonlySet<string> | null;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
   const options = useOptions(), flow = useReactFlow();
@@ -253,9 +253,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           and pinch still zoom, and the number's menu sets it. React Flow 自己的視角控制，加上目前縮放百分比（人類 10-09：用預設即可），
           拿掉加減號（R.83.3，人類 10-11：太擠、編輯用不到；舊產品沒有）：滾輪、觸控板、雙指照樣縮放，縮放數字的選單也能設。 */}
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false}><ZoomReadout /></Controls>
-      <Panel position="bottom-left" className="canvas-caption"><strong>{stage}</strong>
-        <span>{say(tr('canvas.nodeCount', '{count} node(s)', { count: projection.nodes.length }))}</span>
-        <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
+      {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
@@ -431,7 +429,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
+            onCreate={onCreate} onDropChoice={onDropChoice} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
