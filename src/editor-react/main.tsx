@@ -154,16 +154,24 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
   // 2026-10-09). Only the input end moves. 從輸入端拿起線用 React Flow 自己的重接線（像 Blender）；只有輸入端能動。
   // While a wire is dragged over an input, preview what dropping it would change (Refactor.57, as the legacy editor):
-  // the inputs it merges away light up, the wires it replaces fade. Asked only when the hovered port changes.
-  // 拖線停在輸入上時預告放開會改變什麼（照舊產品）：會被併掉的輸入亮起、會被換掉的線變淡。只在停的接孔換了時問。
+  // the inputs it merges away light up, the wires it replaces turn into wires that do not count (R.78). Asked only when
+  // the hovered place changes. 拖線停在輸入上時預告放開會改變什麼（照舊產品）：會被併掉的輸入亮起、會被換掉的線變成不算數的線
+  // （R.78）。只在停的地方換了時問。
+  // Dragged from an input onto empty canvas, releasing pulls its wire (onConnectEnd below), so that is previewed too
+  // (Refactor.78.1). A wire picked up by its end is hidden by React Flow while it moves, so it has nothing to show.
+  // 從輸入拉到空白處，放開會拔線（下面的 onConnectEnd），也預告（R.78.1）。抓著線端拿起的線，移動中 React Flow 本來就不畫，不用預告。
   const over = useConnection(state => {
+    if (state.inProgress && !state.toHandle && state.fromHandle?.type === 'target' && state.fromHandle.id)
+      return ['pull', state.fromHandle.nodeId, state.fromHandle.id].join('\n');
     if (!state.inProgress || !state.toHandle || !state.fromHandle) return '';
     const [out, input] = state.fromHandle.type === 'source' ? [state.fromHandle, state.toHandle] : [state.toHandle, state.fromHandle];
     return out.type === 'source' && input.type === 'target' ? [out.nodeId, out.id, input.nodeId, input.id].join('\n') : '';
   });
   const preview = useMemo(() => {
     if (!over) return null;
-    const [source, sourceHandle, target, targetHandle] = over.split('\n');
+    const parts = over.split('\n');
+    if (parts.length === 3) return session.pullPreview(parts[1]!, parts[2]!);
+    const [source, sourceHandle, target, targetHandle] = parts;
     return session.wirePreview({ source: source!, sourceHandle: sourceHandle!, target: target!, targetHandle: targetHandle! });
   }, [over, session, projection]);
   const replaced = useMemo(() => new Set(preview?.replaced), [preview]);

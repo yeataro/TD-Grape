@@ -54,6 +54,7 @@
   "appearance.wireGradient": "轉型的線：兩端型別色漸層",
   "appearance.wireGradientBlend": "漸層混色",
   "appearance.wireReadySolid": "拖曳中的線停在接得上的接孔時變實線",
+  "appearance.wireReadyUnder": "拖曳中的線停在接得上的接孔時放到節點下面",
   "canvas.hint": "由左至右，組合你的 Shader。",
   "canvas.nodeCount": "{count} 個節點",
   "canvas.zoom": "縮放",

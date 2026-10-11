@@ -71,14 +71,17 @@ export type Effect = keyof typeof effects;
 // 決定後留下選中的、拿掉開關。
 // Outer glows (human 2026-10-09; legacy's cool styles, without their moving glow): each in the thing's own colour.
 // 外光暈（人類；舊產品 cool 風格，不含光暈動畫）：各用自己的顏色。
-export type ShadowTrial = 'layers' | 'canvas' | 'cards' | 'glow' | 'selectGlow' | 'titleGlow' | 'titleBarGlow' | 'highlightGlow' | 'wireGlow' | 'portGlow' | 'logoGlow' | 'wireGradient' | 'wireReadySolid';
+export type ShadowTrial = 'layers' | 'canvas' | 'cards' | 'glow' | 'selectGlow' | 'titleGlow' | 'titleBarGlow' | 'highlightGlow' | 'wireGlow' | 'portGlow' | 'logoGlow' | 'wireGradient' | 'wireReadySolid' | 'wireReadyUnder';
 const shadowDefaults: Record<ShadowTrial, boolean> = { layers: false, canvas: true, cards: false, glow: false,
   selectGlow: false, titleGlow: false, titleBarGlow: false, highlightGlow: false, wireGlow: false, portGlow: false, logoGlow: false,
   // A wire that converts types runs from one end's type colour to the other's (Refactor.77.1, trial). 轉型的線用兩端型別色漸變（R.77.1，試驗）。
   wireGradient: false,
   // A dragged wire turns solid over a port it can connect to (Refactor.78, legacy; on by default, a trial the gear can undo).
   // 拖曳中的線停在接得上的接孔上變實線（R.78，照舊產品；預設開，試驗，齒輪可關）。
-  wireReadySolid: true };
+  wireReadySolid: true,
+  // ...and goes under the nodes (Refactor.78.1, on by default; a switch so the repaint can be compared, human 2026-10-11).
+  // ……並放到節點下面（R.78.1，預設開；做成開關好比對重畫，人類）。
+  wireReadyUnder: true };
 const shadows = Object.fromEntries((Object.keys(shadowDefaults) as ShadowTrial[]).map(key => [key,
   browser ? readChoice('appearance.shadow.' + key, ['on', 'off'], shadowDefaults[key] ? 'on' : 'off') === 'on' : shadowDefaults[key]])) as Record<ShadowTrial, boolean>;
 const listeners = new Set<() => void>();

@@ -66,6 +66,11 @@ function wire(net: Network, c: Connection | FlowEdge) {
   }
   net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
 }
+// Pull an input's wire; the release and its preview share it (Refactor.78.1). 拔掉一個輸入的線；放開與預告共用（R.78.1）。
+function unwire(net: Network, node: string, port: string) {
+  const edges = net.node(node).port('input', port).edges;
+  if (edges.length) net.disconnectAll(edges);
+}
 
 // The core reports limits as data (CapacityError.measures); this layer words them (Q34: core sends data, the UI words it).
 // 核心以資料回報上限；用語由這一層決定。
@@ -575,6 +580,25 @@ export class Editor {
     } catch (error) { if (!(error instanceof Rehearsed)) return null; }
     return found && ((found as { merged: string[] }).merged.length || (found as { replaced: string[] }).replaced.length) ? found : null;
   };
+  /** What releasing a wire dragged from this input onto empty canvas would change: the input's wire is pulled (Q33), so that
+   * wire shows as about to go (Refactor.78.1, human 2026-10-11: treat it as a wire about to be replaced; new, the legacy editor
+   * only wrote a hint). Rehearsed with the release's own edit. null: the input has no wire.
+   * 從這個輸入拉到空白處放開會改變什麼：拔掉它的線（Q33），那條線預告為即將不見（R.78.1，人類：和即將被換掉的線一樣；
+   * 新的，舊產品只寫提示）。用放開時同一個修改預演；null＝這個輸入沒有線。 */
+  pullPreview = (node: string, port: string): WirePreview | null => {
+    const edges = this.document.networks.get('pixel')!.data.edges.map(edge => edge.id);
+    let replaced: string[] = [];
+    try {
+      this.document.change(candidate => {
+        const after = candidate.networks.get('pixel')!;
+        unwire(after, node, port);
+        const still = new Set(after.data.edges.map(edge => edge.id));
+        replaced = edges.filter(id => !still.has(id));
+        throw new Rehearsed();
+      });
+    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
+    return replaced.length ? { node, port, type: '', merged: [], replaced } : null;
+  };
   /** A wire picked up from an input and dropped on another input moves there (Refactor.54; human 2026-10-09:
    * yes, move it, as Blender). One step, one Undo. 從輸入拿起的線放到另一個輸入：搬過去（人類：要，像 Blender）。 */
   moveWire = (edgeId: string, to: { node: string; port: string }) => this.transact(tr('edit.wireMoved', 'Wire moved'), net => {
@@ -587,10 +611,7 @@ export class Editor {
   });
   // Dragging from a connected input onto empty canvas pulls its wire (legacy behaviour, Q33).
   // 從有接線的輸入拉到空白處＝拔線（舊產品行為）。
-  disconnectInput = (node: string, port: string) => this.transact(tr('edit.unwired', 'Wire removed'), net => {
-    const edges = net.node(node).port('input', port).edges;
-    if (edges.length) net.disconnectAll(edges);
-  });
+  disconnectInput = (node: string, port: string) => this.transact(tr('edit.unwired', 'Wire removed'), net => unwire(net, node, port));
   // Delete skips nodes the core keeps (Color Output) and those nodes' unselected wires; the rest goes.
   // 刪除時跳過核心不准刪的節點（Color Output）及其未被選取的接線，其餘照刪。
   beforeDelete = async ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {

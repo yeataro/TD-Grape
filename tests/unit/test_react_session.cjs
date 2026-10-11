@@ -1501,6 +1501,14 @@ test('a wire preview names the inputs it merges and the wires it replaces, exact
   const intoB = session.graph().stages.pixel.edges.find(edge => edge.to[0] === 'sum' && edge.to[1] === 'b').id;
   assert.deepEqual(clone(session.wirePreview({ source: 'b', sourceHandle: 'out', target: 'sum', targetHandle: 'b' })),
     { node: 'sum', port: 'b', type: 'float', merged: [], replaced: [intoB] });
+  // From that input onto empty canvas, the pull is previewed by the release's own edit (Refactor.78.1); nothing changes
+  // until released. 從那個輸入拉到空白處：用放開時同一個修改預告拔線（R.78.1）；放開前什麼都不變。
+  const wired = clone(session.graph());
+  assert.deepEqual(clone(session.pullPreview('sum', 'b')), { node: 'sum', port: 'b', type: '', merged: [], replaced: [intoB] });
+  assert.equal(session.pullPreview('sum', 'a'), null, 'an empty input has no wire to pull');
+  assert.deepEqual(clone(session.graph()), wired);
+  session.disconnectInput('sum', 'b');
+  assert.ok(!session.graph().stages.pixel.edges.some(edge => edge.id === intoB), 'the release pulls the previewed wire');
 });
 
 test('a picked-up wire moves to another input in one step', t => {

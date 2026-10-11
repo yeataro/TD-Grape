@@ -735,6 +735,12 @@ span.image-label:hover { background: var(--image-label); }
    keeps it dashed. 拖曳中的線：虛線，停在接得上的接孔上變實線（R.78；照舊產品），齒輪可改成全程虛線。 */
 .react-flow__connectionline .wire-drag { stroke-dasharray: 5 4; }
 :root[data-shadow-wire-ready-solid="on"] .react-flow__connectionline .ready > .wire-drag { stroke-dasharray: none; }
+/* Over a port it can connect to, the dragged wire goes under the nodes, as a wired one: the ports cover its ends
+   (Refactor.78.1, human 2026-10-11). React Flow keeps it above every node (its z-index 1001), so this overrides React Flow
+   for that state only; looking for a port, it stays on top. A gear trial (compare the repaint). 停在接得上的接孔上時，拖曳的線
+   放到節點下面、和接好的線同一層，接孔蓋住線頭（R.78.1，人類）。React Flow 讓它一直在所有節點上面（它的 z-index 1001），這裡只在
+   這個狀態覆蓋；找接孔時仍在上面。齒輪試驗開關（比對重畫）。 */
+:root[data-shadow-wire-ready-under="on"] svg.react-flow__connectionline:has(.ready) { z-index: auto; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
 .react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
 /* Component tint (Refactor.59; legacy style.css:146-149, 1840-1846; one switch, Q67): a port that stands for one
