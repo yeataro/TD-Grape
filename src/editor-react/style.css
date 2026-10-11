@@ -295,7 +295,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .network-bar { display: flex; justify-content: space-between; gap: var(--float-gap); }
 .network-bar-tools { display: flex; gap: var(--float-gap); }
 .network-bar-group { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 8px; pointer-events: auto;
-  background: var(--surface-floating); border: 1px solid var(--border); }
+  background: var(--surface-floating); border: 1px solid var(--border);
+  /* It floats over the canvas, so it casts the floating panels' shadow (Refactor.89.5, human 2026-10-12); the layered shadow trial,
+     when on, has its own. 它浮在畫布上，所以有和浮動面板一樣的陰影（R.89.5，人類 10-12）；層疊微陰影試驗開著時用它自己的。 */
+  --layer-cast: 0 8px 24px var(--shadow); }
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
 /* One height for the whole toolbar (Refactor.83.6, human 2026-10-11: too tall, and the stage switch should line up with it; legacy
    gave its stage and tool buttons one height, 32px standard / 38px comfortable, style.css:961, 1524): a word button is as tall as
