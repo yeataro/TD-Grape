@@ -634,11 +634,11 @@ export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edg
       .map(o => end(o) + gap)) - start(f)));
     if (high < low) { high = 0; low = 0; }
     let move = clamp(d * (side === 'end' ? 1 : -1), low, high);
-    // One panel alone: within `reach` of another panel's edge line on this axis, its edge lines up there, if it may go there
-    // (Refactor.88.2, human 2026-10-12: sizing one panel, it can take another's width or height; just that line).
-    // 只有一個面板時：離別的面板在這個方向的邊線 reach 以內，就對齊過去，前提是走得到（R.88.2，人類 10-12：調單一個面板時，可以對齊別人的寬或高，
-    // 就那條線）。
-    if (reach && !far.size) {
+    // Within `reach` of the edge line of a panel not moving with it, on this axis, the edge (or the seam) lines up there, if it may
+    // go there (Refactor.88.2, human 2026-10-12: it can take another's width or height, just that line; 88.3: a seam too).
+    // 離不跟著動的面板在這個方向的邊線 reach 以內，邊（或縫）就對齊過去，前提是走得到（R.88.2，人類 10-12：可以對齊別人的寬或高，就那條線；
+    // 88.3：縫也一樣）。
+    if (reach) {
       const at = end(id) + move, lines = others.flatMap(o => [start(o), end(o)]);
       const line = lines.filter(each => Math.abs(each - at) <= reach && each - end(id) >= low && each - end(id) <= high)
         .sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
