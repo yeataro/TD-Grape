@@ -205,7 +205,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   const expand = count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
     aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
     <Icon name="chevronDown" /></button>;
-  const popups = <>{presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} onClose={() => setPresets(false)}
+  const popups = <>{presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} fit onClose={() => setPresets(false)}
       items={choices.map(choice => ({ key: choice.key, label: choice.label, checked: choice.checked, select: () => commit(choice.value) }))} />}
     {group.view}</>;
   if (columns) return <>

@@ -158,7 +158,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
           typing.current = false; skipBlur.current = true; setError(''); setDraft(String(value)); event.currentTarget.blur();
         }
       }} />
-    {presets && input.current && <DropdownMenu anchor={input.current} label={say(tr('number.presets', 'Common values'))} onClose={() => setPresets(false)}
+    {presets && input.current && <DropdownMenu anchor={input.current} label={say(tr('number.presets', 'Common values'))} fit onClose={() => setPresets(false)}
       items={choices.map(choice => ({ key: String(choice.value), checked: Number(draft) === choice.value,
         label: choice.isDefault ? say(tr('number.presetDefault', '{value} (default)', { value: String(choice.value) })) : String(choice.value),
         select: () => { const next = normalize(choice.value); setDraft(String(next)); if (next !== value) commit(next); } }))} />}
