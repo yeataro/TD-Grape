@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.81.2 Swizzle 接上線時，輸入跟著線的大小**（人類 10-11：選的是輸出，輸入要自動；design-interview Q73）：用模組自己的接線調整（同 Combine 的機制，不等靜態 auto）。接上 vec2／3／4 就把輸入型別改成那個大小，種類（float／int／uint／bool）照舊，線上轉型處理；分量不變，所以輸出不變（規劃本來就核對接線調整不能改輸出）；選到的分量新大小沒有時擋下（例如 vec3 沒有 W）。`typedNode` 多一個 `wire` 轉接（共用，其他型別節點以後也能用）。新行為（舊產品要手動選）。驗證：core 154（新：vec4 接進 vec2 的 Swizzle 變 vec4、輸出仍 xy；vec3 接進用到 W 的被擋；ivec4 接進仍是 float 的 vec4）、editor 115、check:core；拉線新增完整稽核 `npm run test:wire-drop` 通過（1060 列）；TD 重載後在 Grape_TOP_test 把 vec4 節點拖到 Swizzle 的 value：輸入型別 vec2 → vec4、輸出仍 YYY vec3（r1227），Undo 回 vec2（r1228）。
 - **Refactor.81.1 型別選單照規則二：標題列永遠是輸出，選輸入的在卡片和參數面板放「輸入型別」**（人類 10-11：大部分下拉選的是輸出、只有邏輯類不是；選輸入的要特別標；選規則二；放在節點卡片本身，參數面板也一樣；design-interview Q73）：
   - 核心：`NodePresentation.selectorLabel`（只是一段文字）換成 `typeOf: 'input' | 'output'`（型別選單選哪一端，預設 output）；15 個模組照原本的宣告換過去（邏輯類、Swizzle、Split、Dot／Length 這類輸出固定的是 input）。用不到的節點文字 `vector.inputType` 拿掉。
   - 畫面：`NodeCard.tsx` 的 `TypeChoice`（型別選單）、`TypeRow`（帶名稱的一列）、`picksInput`、`hasTypeChoice`，卡片與參數面板共用。選輸入的節點：標題列只顯示輸出型別，卡片本體第一列（起點節點在輸出之後）放「輸入型別」；選輸出的節點：標題列照舊是選單。參數面板原本的「運算型別」改成照這個寫「輸入型別」或「輸出型別」。

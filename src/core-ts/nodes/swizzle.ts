@@ -60,6 +60,19 @@ export default typedNode(catalog, {
   },
   ports: (t, n) => [input('value',t),output('out',values.shaped(values.family(t),mask(t,n.params.mask ?? 'xy').length))],
   inheritsComponentNames: true,
+  // Wired, the input takes the wire's size (Refactor.81.2, design-interview Q73): what you choose is the output (its components),
+  // the input is whatever comes in. The components stay, so the output stays; a chosen component the new size lacks refuses the
+  // wire (say W on a vec3). int and float stay as they are: the wire converts, and changing them would change the output (Q71).
+  // 接上線時，輸入改成線的大小（R.81.2，Q73）：選的是輸出（分量），輸入接什麼就是什麼。分量不變，輸出也不變；選到的分量新大小沒有時
+  // 擋下（例如 vec3 沒有 W）。int、float 不換：線上會轉，換了會改輸出（Q71）。
+  wire: (n, key, source) => {
+    if (key === 'value' && values.vectors.includes(source)) {
+      const t = values.shaped(values.family(String(n.params.type)), values.count(source));
+      mask(t, n.params.mask ?? 'xy');
+      n.params.type = t;
+    }
+    return {node: n, replaceInputs: ['value']};
+  },
   presentation: n => {
     const t = String(n.params.type), selected = mask(t,n.params.mask ?? 'xy');
     const letters = componentLetters(storedOr(n, 'xyzw'), values.count(t)), letter = (axis: string) => letters[axes.indexOf(axis)] ?? axis.toUpperCase();

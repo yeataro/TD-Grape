@@ -4702,6 +4702,20 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     },
     ports: (t, n) => { var _a; return [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped(node_sdk_1.values.family(t), mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy').length))]; },
     inheritsComponentNames: true,
+    // Wired, the input takes the wire's size (Refactor.81.2, design-interview Q73): what you choose is the output (its components),
+    // the input is whatever comes in. The components stay, so the output stays; a chosen component the new size lacks refuses the
+    // wire (say W on a vec3). int and float stay as they are: the wire converts, and changing them would change the output (Q71).
+    // 接上線時，輸入改成線的大小（R.81.2，Q73）：選的是輸出（分量），輸入接什麼就是什麼。分量不變，輸出也不變；選到的分量新大小沒有時
+    // 擋下（例如 vec3 沒有 W）。int、float 不換：線上會轉，換了會改輸出（Q71）。
+    wire: (n, key, source) => {
+        var _a;
+        if (key === 'value' && node_sdk_1.values.vectors.includes(source)) {
+            const t = node_sdk_1.values.shaped(node_sdk_1.values.family(String(n.params.type)), node_sdk_1.values.count(source));
+            mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
+            n.params.type = t;
+        }
+        return { node: n, replaceInputs: ['value'] };
+    },
     presentation: n => {
         var _a;
         const t = String(n.params.type), selected = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
@@ -6796,6 +6810,7 @@ function typedNode(catalog, spec) {
         validate: (n, c) => { var _a; if (n.params.fixedType && n.params.fixedType !== selected(n))
             throw Error('Fixed node type'); ports(n); (_a = spec.validate) === null || _a === void 0 ? void 0 : _a.call(spec, n, c); },
         edit: spec.edit, emit: spec.emit, creations: spec.creations, componentNames: spec.componentNames, inheritsComponentNames: spec.inheritsComponentNames,
+        ...(spec.wire ? { wire: spec.wire } : {}),
         ...(spec.fixed ? { entries: () => [{ key: '', label: catalog.definition.label, params: {} },
                 ...spec.types.map(t => ({ key: t, label: t, literal: true, params: { type: t, fixedType: t, ...spec.fixed(t) } }))] } : {}),
         // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。

@@ -99,3 +99,17 @@ test('Swizzle chooses its components in menus: an empty one adds, "—" takes on
  assert.equal(masked('plain',{index:1,value:''}),'wx','"—" takes it out, the rest move up');
  assert.throws(()=>masked('one',{index:0,value:''}),/at least one/);
 });
+// Refactor.81.2 (design-interview Q73): wired, Swizzle's input takes the wire's size; its components and output stay; a component
+// the new size lacks refuses the wire; int and float stay (the wire converts). R.81.2（Q73）：接上線時 Swizzle 的輸入改成線的大小；
+// 分量與輸出不變；新大小沒有的分量會擋下；int、float 不換（線上轉）。
+test('a wire into Swizzle sets its input size and leaves its output alone',()=>{
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[
+  node('wide','vec4',{value:[0,0,0,0]}),node('small','vec3',{value:[0,0,0]}),node('whole','vector',{type:'ivec4',components:[0,0,0,0]}),
+  node('pick','swizzle',{type:'vec2',mask:'xy'}),node('far','swizzle',{type:'vec4',mask:'xw'})],edges:[]}}};
+ const doc=new GraphDocument(graph,registry);
+ const wire=(from,to)=>doc.change(d=>{const n=d.networks.get('pixel');n.connect(n.node(from).port('output','out'),n.node(to).port('input','value'),values.policy);});
+ const after=(step,id)=>step.after.stages.pixel.nodes.find(n=>n.id===id).params;
+ assert.deepEqual(after(wire('wide','pick'),'pick'),{type:'vec4',mask:'xy'},'vec4 in: the input is vec4, the output still xy');
+ assert.throws(()=>wire('small','far'),/existing vector components/,'vec3 has no W');
+ assert.equal(after(wire('whole','pick'),'pick').type,'vec4','int in: still a float Swizzle, the wire converts');
+});

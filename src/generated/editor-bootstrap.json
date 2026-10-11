@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "ae304b2e5d5a6e85741f431eef384c4c55756e1e5a99678d4b47e1374b3f4ce5",
+  "catalogHash": "d7c7a6776add6f0d2e7339321b93d1205d9fe348e3bba59b16191e647c56423d",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -11750,17 +11750,11 @@
           },
           "vec3": {
             "port": "value",
-            "type": "vec3",
-            "configure": {
-              "type": "vec3"
-            }
+            "type": "vec3"
           },
           "vec4": {
             "port": "value",
-            "type": "vec4",
-            "configure": {
-              "type": "vec4"
-            }
+            "type": "vec4"
           },
           "int": {
             "port": "value",
@@ -11777,14 +11771,14 @@
             "port": "value",
             "type": "ivec3",
             "configure": {
-              "type": "ivec3"
+              "type": "ivec2"
             }
           },
           "ivec4": {
             "port": "value",
             "type": "ivec4",
             "configure": {
-              "type": "ivec4"
+              "type": "ivec2"
             }
           },
           "uint": {
@@ -11802,14 +11796,14 @@
             "port": "value",
             "type": "uvec3",
             "configure": {
-              "type": "uvec3"
+              "type": "uvec2"
             }
           },
           "uvec4": {
             "port": "value",
             "type": "uvec4",
             "configure": {
-              "type": "uvec4"
+              "type": "uvec2"
             }
           },
           "bool": {
@@ -11830,14 +11824,14 @@
             "port": "value",
             "type": "bvec3",
             "configure": {
-              "type": "bvec3"
+              "type": "bvec2"
             }
           },
           "bvec4": {
             "port": "value",
             "type": "bvec4",
             "configure": {
-              "type": "bvec4"
+              "type": "bvec2"
             }
           }
         },
