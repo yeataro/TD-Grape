@@ -783,12 +783,15 @@ svg.react-flow__connectionline:has(.ready) { z-index: auto; }
 :is(.value-expand, .expand-toggle) { flex: 0 0 auto; display: grid; place-items: center; width: var(--expand-width); height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 :is(.value-expand, .expand-toggle) .icon { width: 12px; height: 12px; transform: rotate(-90deg); }
 :is(.value-expand, .expand-toggle)[aria-expanded="true"] .icon { transform: none; }
-.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr));
+/* A bool box holds "false" and its menu arrow: a little wider than a number box (Refactor.81.5, human 2026-10-11: "f…" was cut;
+   just make this kind a bit wider). bool 的框要放得下「false」和選單箭頭，比數值框寬一點（R.81.5，人類：「f…」被截；這一種寬一點就好）。 */
+.value-fields[data-family="bool"] { --field-extra: var(--io-bool-extra); }
+.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(calc(var(--io-field-min) + var(--field-extra, 0px)), 1fr));
   gap: calc(var(--io-row) - var(--io-field)) var(--io-field-gap); }
 /* Expanded keeps the collapsed width, so the node does not narrow (human 2026-10-09): the same numbers as the row of
    boxes side by side. 展開時保持收起時的寬度，節點不會變窄（人類）：和並排時用同一組數字。 */
 .value-group.expanded .value-fields { grid-template-columns: minmax(0, 1fr);
-  min-width: calc(var(--components, 1) * var(--io-field-min) + (var(--components, 1) - 1) * var(--io-field-gap)); }
+  min-width: calc(var(--components, 1) * (var(--io-field-min) + var(--field-extra, 0px)) + (var(--components, 1) - 1) * var(--io-field-gap)); }
 /* A box's own default width (about 20 characters for a browser input) never widens the node; only --io-field-min does.
    框自己的預設寬度（瀏覽器輸入框約 20 字）不撐寬節點；只有 --io-field-min 算數。 */
 .value-field { position: relative; display: block; min-width: 0; contain: inline-size; }

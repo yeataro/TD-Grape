@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.81.5 bool 的數值框寬一點，放得下 false**（人類 10-11 截圖：not、any、all 的 true／false 選單只剩「f…」「fal…」；不要勾選框、要清楚；這一種寬一點就好）：bool 的框最窄 = 一般數值框最窄（`--io-field-min`）＋`--io-bool-extra`（22px，sizes.css）；`.value-fields` 帶 `data-family`，只有 bool 加寬，其他數值框不變；分量字母開或關都適用。（先試了勾選框，人類說不要，未提交就退回。）驗證：editor 115、check:editor；TD 重載後在新建的 Grape_TOP_logic 量 any、all、not 的 bool 框：83px（分量字母開；關時 72px），「false」完整、沒有截斷。
 - **Refactor.81.4 not 在標題列選型別；Convert 的輸入型別用共用那一列**（人類 10-11：型別選單排查後這兩項可以做；workspace `work/refactor/type-menus-2026-10-11.md`；Q73「自動選型找哪個位置」）：
   - not：輸入輸出永遠同型別，屬「輸入＝輸出」，`typeOf` 回到預設（輸出）：標題列直接下拉、沒有「輸入型別」那一列；auto 以後也改標題列這個。
   - Convert：輸入型別原本是模組自己的控制項，畫在接孔之後；新增 `NodePresentation.inputSelector`（對應輸出的 `selector`，模組自己給選項，因為 Convert 的輸入選項要看輸出），畫成共用的「輸入型別」一列，位置和其他節點一樣在最上面。`TypeChoice` 兩端都先看模組自己的選單。

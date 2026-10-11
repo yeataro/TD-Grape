@@ -212,7 +212,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     <div className="value-line">
       {expand}{leading}<span className="value-type nodrag nopan" data-toggle={toggle ? '' : undefined} {...press}>{typeText ?? type}</span>
       <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
-        <div className="value-fields" style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>
+        <div className="value-fields" data-family={family} style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>
     </div>
     {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
       <span className="value-caption"><span className="component-letter letter-slot" data-component={i}>{names[i]}</span></span>
@@ -226,7 +226,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     {leading}
     <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
     {expand}
-    <div className="value-fields" style={{ '--components': count } as CSSProperties}>
+    <div className="value-fields" data-family={family} style={{ '--components': count } as CSSProperties}>
       {list.map((item, i) => field(item, i, true))}
       {expanded && swatch}
     </div>
