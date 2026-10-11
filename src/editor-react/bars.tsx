@@ -9,6 +9,7 @@ import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, com
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
+import { withShortcut } from './shortcuts';
 import { CalmGate } from './calm';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
@@ -378,7 +379,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       {/* Trial (Refactor.58.2): the wheel glides; off gives the wheel back to React Flow. 試驗：滾輪平滑；關掉就還給 React Flow。 */}
       <label className="check"><input type="checkbox" checked={prefs.damping} onChange={event => prefs.set({ damping: event.target.checked })} />{say(tr('toolbar.damping', 'Canvas damping'))}</label>
       {/* Framing glides or jumps; times are fixed (legacy 150 / 333 ms; human: on/off only). 對準時滑動或直接跳；時間固定（人類：只要開關）。 */}
-      <label className="check"><input type="checkbox" checked={prefs.frameGlide} onChange={event => prefs.set({ frameGlide: event.target.checked })} />{say(tr('toolbar.frameGlide', 'Frame transition (F)'))}</label>
+      <label className="check"><input type="checkbox" checked={prefs.frameGlide} onChange={event => prefs.set({ frameGlide: event.target.checked })} />{withShortcut(say(tr('toolbar.frameGlide', 'Frame transition')), 'frame')}</label>
       {/* Trial (Refactor.63.6, human 2026-10-10): outline the nodes that wrote a line TD reported, as the legacy editor did; only
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>

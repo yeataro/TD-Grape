@@ -40,6 +40,7 @@ import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
+import { matches, reactFlowKeys, withShortcut } from './shortcuts';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // A ghost wire carries a small ghost at its middle (Refactor.75.27); React Flow's own wire otherwise. Ghost 線中點帶一隻小幽靈。
@@ -266,7 +267,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       // A wire snaps to a port within 28px (React Flow's own setting; 20 by default). 拉線放開時 28px 內吸附到接孔。
       connectionRadius={28}
       snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
-      minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
+      minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={reactFlowKeys('delete')}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
       {/* React Flow's own view controls, with the zoom as a number (human 2026-10-09: its default is fine), without its plus and
@@ -278,14 +279,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           人類：和全螢幕長得一模一樣）：四角框加小節點（人類 10-11），和 H 同一個對準，說明用我們的字。 */}
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false} showFitView={false}>
         <ControlButton className="home" onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
-          title={say(tr('canvas.homeHint', 'Home (H): show the whole network'))}><Icon name="home" /></ControlButton>
+          title={withShortcut(say(tr('canvas.homeHint', 'Home: show the whole network')), 'home')}><Icon name="home" /></ControlButton>
         <ZoomReadout />
         {/* Focus graph, after the zoom as legacy (index.html:57; human 2026-10-11: icon D, Ctrl+Enter, Esc leaves); while on, full screen
             comes here too, the foot bar being away (legacy app.js:1482). 專注編輯，照舊產品放在縮放後面（人類 10-11：圖示 D、Ctrl＋Enter、
             Esc 離開）；開著時全螢幕也搬到這裡，因為底列不在（照舊產品）。 */}
         <ControlButton className="focus-graph" aria-pressed={focused} onClick={() => onFocus(on => !on)}
           aria-label={say(focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvas.focus', 'Focus graph'))}
-          title={say(focused ? tr('canvas.restoreHint', 'Restore layout (Ctrl+Enter or Esc)') : tr('canvas.focusHint', 'Focus graph (Ctrl+Enter): only the network and its toolbar'))}>
+          title={focused ? withShortcut(say(tr('canvas.restoreLayout', 'Restore layout')), 'focusGraph', 'leaveFocus')
+            : withShortcut(say(tr('canvas.focusHint', 'Focus graph: only the network and its toolbar')), 'focusGraph')}>
           <Icon name={focused ? 'unfocus' : 'focus'} /></ControlButton>
         {focused && <ControlButton aria-pressed={fullscreen} disabled={!document.fullscreenEnabled}
           aria-label={say(fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'))}
@@ -404,47 +406,36 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   useEffect(() => {
     if (!session) return;
     const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty && !resetting.current) { event.preventDefault(); event.returnValue = ''; } };
+    // The editor's commands, their keys from the one table (shortcuts.ts, Refactor.95); where each applies is decided here.
+    // 編輯器的指令，鍵都從那一張表來（shortcuts.ts，R.95）；在哪裡生效在這裡決定。
     const keys = (event: KeyboardEvent) => {
       const element = event.target as HTMLElement;
       if (element.closest('input,select,textarea,[contenteditable="true"]')) return;
-      if (!draft && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); session.history(event.shiftKey); }
-      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560), only while the keyboard focus is
-      // on the network or on nothing, as the legacy editor (graph_ui.js:2518); elsewhere (a panel, a menu) Tab moves the
-      // focus as usual (human 2026-10-09: keyboard use in panels). Tab 在網路區中間偏上打開新增節點；只在鍵盤焦點在網路區或
-      // 什麼都沒選到時，同舊產品；在面板、選單裡 Tab 照常移動焦點（人類：面板要能用鍵盤）。
-      else if (!draft && event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey
-        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
-        event.preventDefault(); setCreating({ screen: middle() });
-      }
-      // P floats the Parameter panel from whatever state, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network,
-      // in a floating panel or with nothing focused; never while typing (above). P 讓參數面板從任何狀態浮出來，或送回去（照舊產品；人類 10-11）：
-      // 在網路區、浮動面板裡或沒有焦點時；打字時不算（上面）。
-      else if (event.key.toLowerCase() === 'p' && !event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
-        && (element === document.body || element === document.documentElement || element.closest('.react-flow, .floating-area'))) {
-        event.preventDefault(); layout.toggleFloat('params');
-      }
-      // The menu key or Shift+F10 opens the right-click menu in the upper middle of the network, for the selection (legacy
-      // graph_ui.js:2559). 選單鍵或 Shift＋F10 在網路區中間偏上打開右鍵選單，對著選取（照舊產品）。
-      else if (!draft && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey))
-        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
+      // On the network or on nothing, as legacy (graph_ui.js:2518); elsewhere (a panel, a menu) keys do what they do there
+      // (human 2026-10-09: keyboard use in panels). 在網路區或沒有焦點時，同舊產品；在面板、選單裡按鍵照那裡的意思（人類：面板要能用鍵盤）。
+      const network = element === document.body || element === document.documentElement || !!element.closest('.react-flow');
+      const run = (action: () => void) => { event.preventDefault(); action(); };
+      if (!draft && matches('undo', event)) run(() => session.history(false));
+      else if (!draft && matches('redo', event)) run(() => session.history(true));
+      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560). Tab 在網路區中間偏上打開新增節點（照舊產品）。
+      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle() }));
+      // P floats the Parameter panel, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network, in a floating
+      // panel or with nothing focused. P 讓參數面板浮出來，或送回去（照舊產品；人類 10-11）：在網路區、浮動面板裡或沒有焦點時。
+      else if ((network || element.closest('.floating-area')) && matches('floatingParameter', event)) run(() => { if (!event.repeat) layout.toggleFloat('params'); });
+      // The right-click menu in the upper middle of the network, for the selection (legacy graph_ui.js:2559). 在網路區中間偏上打開右鍵選單，
+      // 對著選取（照舊產品）。
+      else if (!draft && network && matches('menu', event)) {
         const host = document.querySelector<HTMLElement>('.right-select-host');
-        if (host) { event.preventDefault(); onMenu({ ...middle(), touch: false, host }); }
+        if (host) run(() => onMenu({ ...middle(), touch: false, host }));
       }
-      // Ctrl+Enter (Cmd+Enter) turns Focus graph on or off, Esc leaves it, on the network or with nothing focused (legacy
-      // graph_ui.js:2522; Esc: human 2026-10-11). An Esc that closes a menu or ends a drag is taken before it gets here.
-      // Ctrl＋Enter（Cmd＋Enter）開關專注編輯、Esc 離開，在網路區或沒有焦點時（照舊產品；Esc：人類 10-11）。關選單、結束拖曳的 Esc 在這之前就被接走。
-      else if (((event.key === 'Enter' && (event.ctrlKey !== event.metaKey) && !event.altKey && !event.shiftKey) || (event.key === 'Escape' && layout.focused && !event.defaultPrevented))
-        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
-        event.preventDefault();
-        if (!event.repeat) layout.setFocused(on => event.key === 'Enter' ? !on : false);
-      }
-      // F frames the selection (all when none), H frames all, on the network only (legacy graph_ui.js:2545, selection_ui.js:92).
-      // F 對準選取（沒選就全部）、H 對準全部，只在網路區（同舊產品）。
-      else if (!draft && ['f', 'h'].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
-        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
-        event.preventDefault();
-        frameNodes(flow, event.key.toLowerCase() === 'f' ? flow.getNodes().filter(node => node.selected).map(node => node.id) : undefined);
-      }
+      // Focus graph on and off (legacy graph_ui.js:2522); Esc leaves it (human 2026-10-11). An Esc that closes a menu or ends a drag
+      // is taken before it gets here. 專注編輯開關（照舊產品）；Esc 離開（人類 10-11）。關選單、結束拖曳的 Esc 在這之前就被接走。
+      else if (network && matches('focusGraph', event)) run(() => { if (!event.repeat) layout.setFocused(on => !on); });
+      else if (network && layout.focused && !event.defaultPrevented && matches('leaveFocus', event)) run(() => layout.setFocused(false));
+      // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、
+      // H 對準全部（照舊產品）。
+      else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, flow.getNodes().filter(node => node.selected).map(node => node.id)));
+      else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
     };
     // While one of our sources or nodes is dragged, the pointer shows "add" everywhere, never "not allowed" (human
     // 2026-10-09); only the canvas takes the drop, elsewhere nothing happens. 拖我們的來源或節點時，到哪裡都顯示「新增」、
