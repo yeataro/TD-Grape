@@ -984,7 +984,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    列維持自己的高度、從上往下排，面板多高都一樣（人類 10-11：調大小時排版很可怕）。 */
 .params-card.floating > :is(.node-body, .params-settings) { align-content: start; }
 .params-card.floating .params-title { gap: 4px; padding-left: 4px; padding-right: 4px; cursor: grab; touch-action: none; }
-.params-card.floating .params-title :is(.pane-collapse, .panel-menu, .floating-close) { position: static; flex: none; height: var(--io-field); color: inherit; }
+.params-card.floating .params-title :is(.pane-collapse, .floating-close) { position: static; flex: none; height: var(--io-field); color: inherit; }
 .params-card.floating .params-title .pane-collapse .icon { width: 12px; height: 12px; }
 /* Floating, each input's port, a wire can be dropped on (Refactor.85; legacy style.css:905–910): the row's type colour, filled while
    wired; lit while a wire is dragged. It sits on the card's left edge as a node's does (Refactor.86.2, human 2026-10-11; legacy put

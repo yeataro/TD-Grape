@@ -412,9 +412,10 @@ function floatHint(layout: Layout, panel: string, x: number, y: number, geometry
   return { drop: { kind: 'float', place: tree.placeAt(box, width, height) }, mark: { kind: 'ghost', left: area.left + box.x, top: area.top + box.y, width: box.width, height: box.height } };
 }
 
-/** Moving a panel by its tab (legacy inspector.js:2296): a drag starts after 6px; the panel's name follows the pointer;
- * the mark shows where it would go, red with the reason where it cannot; Esc or a drop elsewhere changes nothing.
- * 拖分頁搬面板（舊產品）：移動 6px 才開始；面板名跟著游標；提示畫出會放在哪，放不下時是紅的並說原因；Esc 或放在別處什麼都不變。 */
+/** Moving a panel by its tab or a floating panel's title (legacy inspector.js:2296): a drag starts after 6px; the panel's name
+ * follows the pointer; the mark shows where it would go, red with the reason where it cannot; Esc or a drop elsewhere changes
+ * nothing. A free panel over the floating area moves itself instead (Refactor.88). 拖分頁或浮動面板的標題搬面板（舊產品）：移動 6px
+ * 才開始；面板名跟著游標；提示畫出會放在哪，放不下時是紅的並說原因；Esc 或放在別處什麼都不變。自由浮動的面板在浮動範圍上時改成自己移動（R.88）。 */
 function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels: Record<string, PanelView>; start: MutableRefObject<Drag>;
   geometry: MutableRefObject<Geometry | null> }) {
   const [drag, setDrag] = useState<{ panel: string; x: number; y: number; hint: Hint } | null>(null);
@@ -506,11 +507,11 @@ function panelMenu(layout: Layout, id: string, view: PanelView | undefined): () 
   };
 }
 
-/** The floating panels (Refactor.84; work/refactor/floating-panels-scope-2026-10-11.md): over the network, in its four corners,
- * between the toolbar and the canvas controls, the floating gap off every edge (legacy inspector.js:2139). Measured when the
- * network, the toolbar or the canvas controls change size, not while anything moves. Below the notices on the network's top.
- * 浮動面板（R.84）：浮在網路區上、四個角，介於功能列與畫布控制項之間，每條邊留浮動間隙（照舊產品）。網路區、功能列或畫布控制項
- * 改變大小時才量，不是拖動時量。在網路區上緣的提示之下。 */
+/** The floating panels (Refactor.84, 88; work/refactor/floating-free-scope-2026-10-12.md): over the network, between the toolbar
+ * and the canvas controls, the floating gap off every edge (legacy inspector.js:2139); a panel with a home in its corner, the others
+ * where they were put. Measured when the network, the toolbar or the canvas controls change size, not while anything moves. Below
+ * the notices on the network's top. 浮動面板（R.84、88）：浮在網路區上，介於功能列與畫布控制項之間，每條邊留浮動間隙（照舊產品）；有家的
+ * 在它的角，其他的在放下的地方。網路區、功能列或畫布控制項改變大小時才量，不是拖動時量。在網路區上緣的提示之下。 */
 export function FloatingPanels({ layout, panels, host, geometry }: { layout: Layout; panels: Record<string, PanelView>; host: HTMLElement;
   geometry: MutableRefObject<Geometry | null> }) {
   const [area, setArea] = useState<{ left: number; top: number; width: number; height: number; gap: number; title: number } | null>(null);
@@ -600,7 +601,9 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
   const size = (edge: tree.FloatEdge, dx: number, dy: number) => {
     const sized = tree.sizeFloats(start.current, id, edge, dx, dy, area.width, area.height, area.gap, free ? fixed() : Object.keys(rects).filter(key => key !== id), SNAP_SIZE);
     if (!free) { layout.setFloat(id, { ...(edge.x ? { width: sized[id]!.width } : {}), ...(edge.y ? { height: sized[id]!.height } : {}) }); return; }
-    layout.placeFloats(Object.fromEntries(Object.keys(sized).filter(key => layout.floating[key] === 'free' && sized[key] !== start.current[key])
+    // Only the panels that changed, so the others keep their turn when room runs short. 只寫變了的面板，其他的在空間不夠時保持原本的先後。
+    const changed = (key: string) => (['x', 'y', 'width', 'height'] as const).some(side => sized[key]![side] !== start.current[key]![side]);
+    layout.placeFloats(Object.fromEntries(Object.keys(sized).filter(key => layout.floating[key] === 'free' && changed(key))
       .map(key => [key, tree.placeAt(sized[key]!, area.width, area.height, layout.floats[key])])));
   };
   const begin = () => { start.current = rects; };
@@ -650,7 +653,8 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
 function FloatHandle({ edge, label, onStart, onMove, onEnter, onLeave }: { edge: tree.FloatEdge; label: Message; onStart(): void; onMove(dx: number, dy: number): void;
   onEnter(): void; onLeave(): void }) {
   const start = useRef<{ x: number; y: number } | null>(null);
-  const end = () => { start.current = null; onLeave(); };
+  // Let go: the outline stays while the hand is still on the handle. 放開：手還在把手上時淡框留著。
+  const end = (event: ReactPointerEvent<HTMLDivElement>) => { start.current = null; if (!event.currentTarget.matches(':hover')) onLeave(); };
   const place = (edge.y === 'start' ? 'n' : edge.y === 'end' ? 's' : '') + (edge.x === 'start' ? 'w' : edge.x === 'end' ? 'e' : '');
   return <div className={'float-handle ' + place} role="separator" aria-label={say(label)}
     onPointerDown={event => {

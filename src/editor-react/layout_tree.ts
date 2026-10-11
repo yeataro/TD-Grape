@@ -400,7 +400,7 @@ export function hidePanel(layout: LayoutData, panel: string): LayoutData {
 // dragging it into the layout. 浮動分兩種（R.88，人類 10-12：浮動靠拖拉、不彈回；參數面板維持原樣）。有家的面板（面板表的 corner：
 // 參數面板）浮在那一角、可以回到原本的地方（P，R.84–86）。其他面板自由浮動：離開版面樹、放在哪就在哪，只有拖進版面才再停靠。
 
-/** A free panel's place: its corner, and how far it is from that corner's two edges. 自由浮動面板的位置：它的角，以及離那個角兩條邊多遠。 */
+/** Whether a place is a free panel's: it has how far from its corner's two edges. 這個位置是不是自由浮動面板的：有離它的角兩條邊多遠。 */
 export const isFree = (place: FloatPlace | undefined): boolean => place?.x !== undefined && place.y !== undefined;
 /** Float a panel in its home corner (P, Refactor.84): it keeps whether it was in the tree or closed, to go back to. Only a panel with
  * a home; the others float by dragging. 讓有家的面板浮在它的角（P，R.84）：記住浮起來前在版面裡還是關著，回去時用。只給有家的面板；
@@ -436,17 +436,20 @@ export const toggleFloat = (layout: LayoutData, panel: string, homes: Homes) =>
 export function keepHomes(layout: LayoutData, homes: Homes): LayoutData {
   let next = layout;
   for (const id of Object.keys(layout.floating)) {
-    const place = next.floats[id]!;
-    if (homes[id]) { if (layout.floating[id] === 'free') { const { [id]: _, ...rest } = next.floating; next = addToSide({ ...next, floating: rest }, id, homes[id]!.endsWith('left') ? 'left' : 'right'); } else if (place.corner !== homes[id]) next = { ...next, floats: { ...next.floats, [id]: { ...place, corner: homes[id]! } } }; }
-    else if (layout.floating[id] !== 'free') next = floatOut(next, id, { ...place, x: 0, y: 0 });
+    const place = next.floats[id]!, home = homes[id], free = layout.floating[id] === 'free';
+    // A panel with a home stored free: back to its side, it floats only at home. 有家的卻存成自由浮動：回到它那一側，它只浮在家。
+    if (home && free) { const { [id]: _, ...rest } = next.floating; next = addToSide({ ...next, floating: rest }, id, home.endsWith('left') ? 'left' : 'right'); }
+    // A panel with a home in another corner: home. 有家的在別的角：回家。
+    else if (home && place.corner !== home) next = { ...next, floats: { ...next.floats, [id]: { ...place, corner: home } } };
+    // Any other panel in a corner (before R.88): free, from that corner. 其他在角落的（R.88 之前）：自由浮動，從那個角開始。
+    else if (!home && !free) next = floatOut(next, id, { ...place, x: 0, y: 0 });
   }
   return next;
 }
 /** Float a panel free where it was dropped (Refactor.88): out of the tree, at `place`. 讓面板自由浮動在放下的地方（R.88）：離開版面樹、
  * 放在 place。 */
 export function floatOut(layout: LayoutData, panel: string, place: FloatPlace): LayoutData {
-  const from = layout.floating[panel];
-  const next = from === 'free' ? layout : remove(from ? { ...layout, floating: Object.fromEntries(Object.entries(layout.floating).filter(([id]) => id !== panel)) } : layout, panel);
+  const next = layout.floating[panel] === 'free' ? layout : remove(layout, panel);
   return { ...next, hidden: next.hidden.filter(id => id !== panel), floating: { ...next.floating, [panel]: 'free' }, floats: { ...next.floats, [panel]: place } };
 }
 /** Keep where free panels now are (moved or sized together); the ones just placed go first, so where they were put wins when
