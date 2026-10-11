@@ -341,6 +341,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    選單）用來拖，下面是可捲動的內容。調大小的邊一半在外面，所以面板本身不裁切。 */
 .canvas-host { position: relative; }
 .floating-area { position: absolute; z-index: 5; pointer-events: none; }
+/* The rows no panel floats into, shown only while a panel is dragged (Refactor.91, a trial): grey diagonal lines, rounded, quiet; under
+   the toolbar and the canvas controls. 面板不會浮進去的那兩排，只在拖面板時顯示（R.91，試做）：灰色斜線、圓角、不搶眼；在工具列與畫布控制項下面。 */
+.float-zone { display: none; position: absolute; left: 0; right: 0; border-radius: 8px; pointer-events: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text-muted) 14%, transparent) 0 2px, transparent 2px 9px); }
+:root.moving-panel .float-zone { display: block; }
 .floating-panel { position: absolute; display: flex; flex-direction: column; min-width: 0; pointer-events: auto;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-zone);
   /* Its glass is its own, darker than a menu's; solid, a pane's colour (Refactor.89.3–89.4, human 2026-10-12).

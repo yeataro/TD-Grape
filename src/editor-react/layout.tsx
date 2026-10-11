@@ -568,7 +568,10 @@ function panelMenu(layout: Layout, id: string, view: PanelView | undefined): () 
  * 在它的角，其他的在放下的地方。網路區、功能列或畫布控制項改變大小時才量，不是拖動時量。在網路區上緣的提示之下。 */
 export function FloatingPanels({ layout, panels, host, geometry }: { layout: Layout; panels: Record<string, PanelView>; host: HTMLElement;
   geometry: MutableRefObject<Geometry | null> }) {
-  const [area, setArea] = useState<{ left: number; top: number; width: number; height: number; gap: number; title: number } | null>(null);
+  // `zones`: the toolbar's and the canvas controls' rows, where no panel floats, as offsets from the area (Refactor.91).
+  // zones：工具列那一排與畫布控制項那一排，面板不會浮進去，用相對於範圍的位置記（R.91）。
+  const [area, setArea] = useState<{ left: number; top: number; width: number; height: number; gap: number; title: number;
+    zones: { top: number; height: number }[] } | null>(null);
   useLayoutEffect(() => {
     const measure = () => {
       const canvas = host.querySelector('.canvas'), bar = host.querySelector('.network-bar-slot'), controls = host.querySelector('.react-flow__controls');
@@ -576,7 +579,8 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
       const style = getComputedStyle(document.documentElement), gap = parseFloat(style.getPropertyValue('--float-gap')) || 8;
       const title = parseFloat(style.getPropertyValue('--bar-height')) || 28, origin = host.getBoundingClientRect(), box = canvas.getBoundingClientRect();
       const top = (bar ? bar.getBoundingClientRect().bottom : box.top) + gap, bottom = (controls ? controls.getBoundingClientRect().top : box.bottom) - gap;
-      setArea({ left: box.left - origin.left + gap, top: top - origin.top, width: Math.max(0, box.width - 2 * gap), height: Math.max(0, bottom - top), gap, title });
+      const zones = [bar, controls].flatMap(part => { const r = part?.getBoundingClientRect(); return r && r.height ? [{ top: r.top - top, height: r.height }] : []; });
+      setArea({ left: box.left - origin.left + gap, top: top - origin.top, width: Math.max(0, box.width - 2 * gap), height: Math.max(0, bottom - top), gap, title, zones });
     };
     measure();
     const watch = new ResizeObserver(measure);
@@ -639,6 +643,9 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
     {Object.keys(layout.floating).reverse().map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[tree.activeOf(layout, id)]} panels={panels} rect={rects[id]!} area={area}
       rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} sizing={!!seam?.ids.includes(id)} showSizing={setSeam} />)}
     {line && <div className={line.className} style={line.style} />}
+    {/* While a panel is dragged, the rows no panel floats into, quietly drawn (Refactor.91, human 2026-10-12: a trial, a placeholder).
+        拖面板時，面板不會浮進去的那兩排，安靜地畫出來（R.91，人類 10-12：試做，佔位的效果）。 */}
+    {area.zones.map((zone, index) => <div key={index} className="float-zone" style={{ top: zone.top, height: zone.height }} />)}
   </div>;
 }
 
