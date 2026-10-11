@@ -288,3 +288,10 @@ test('floating again: its last corner and size, opened', () => {
   layout = tree.popOut(tree.backToA(layout, 'glsl'), 'glsl');
   assert.deepEqual(layout.floats.glsl, { corner: 'bottom-right', width: 400, height: tree.FLOAT_HEIGHT });
 });
+
+test('going back from floating leaves the sides as they are (Refactor.86)', () => {
+  let layout = { ...fresh(), closed: { left: false, right: true } };
+  layout = tree.backToA(tree.popOut(layout, 'appearance'), 'appearance');
+  assert.deepEqual(layout.closed, { left: false, right: true }, 'the right side stays closed, as before it floated');
+  assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance');
+});

@@ -1,4 +1,4 @@
-import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { Editor as EditorSession } from './editor';
 
 // What the editing view hands down to everything drawn inside it (cards, panels): the session of the graph being
@@ -16,6 +16,8 @@ export const ErrorNodesContext = createContext<ReadonlySet<string> | null>(null)
 /** What the layout hands a floating panel that draws its own frame (Refactor.85, the Parameter panel as a node card): whether
  * it is collapsed, the triangle and the menu and close buttons to put in its head, and the drag that moves it.
  * 版面交給自己畫外殼的浮動面板的東西（R.85，參數面板做成節點卡）：是否收起、放在頭上的三角形與選單、關閉按鈕，以及搬它的拖曳。 */
-export type Floating = { collapsed: boolean; fold: ReactNode; controls: ReactNode; drag(event: ReactPointerEvent): void };
+export type Floating = { collapsed: boolean; fold: ReactNode; controls: ReactNode; drag(event: ReactPointerEvent): void;
+  /** Right-click on its head opens its menu (human 2026-10-11). 在它的頭上按右鍵打開選單（人類 10-11）。 */
+  openMenu(event: ReactMouseEvent<HTMLElement>): void };
 export const FloatingContext = createContext<Floating | null>(null);
 export const useSession = () => useContext(SessionContext)!;

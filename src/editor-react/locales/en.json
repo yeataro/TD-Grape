@@ -191,6 +191,7 @@
   "layout.rightZone": "Right panels",
   "layout.sideEmpty": "No panels on this side",
   "layout.titleBar": "Title bar",
+  "layout.unfloat": "Stop floating",
   "light.applied": "Graph applied",
   "light.busy": "TD not responding",
   "light.checking": "Checking…",

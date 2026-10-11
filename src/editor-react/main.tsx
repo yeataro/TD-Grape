@@ -380,6 +380,13 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
         && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
         event.preventDefault(); setCreating({ screen: middle() });
       }
+      // P floats the Parameter panel from whatever state, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network,
+      // in a floating panel or with nothing focused; never while typing (above). P 讓參數面板從任何狀態浮出來，或送回去（照舊產品；人類 10-11）：
+      // 在網路區、浮動面板裡或沒有焦點時；打字時不算（上面）。
+      else if (event.key.toLowerCase() === 'p' && !event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
+        && (element === document.body || element === document.documentElement || element.closest('.react-flow, .floating-area'))) {
+        event.preventDefault(); layout.toggleFloat('params');
+      }
       // F frames the selection (all when none), H frames all, on the network only (legacy graph_ui.js:2545, selection_ui.js:92).
       // F 對準選取（沒選就全部）、H 對準全部，只在網路區（同舊產品）。
       else if (!draft && ['f', 'h'].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey

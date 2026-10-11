@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type MutableRefObject, type ReactNode,
-  type PointerEvent as ReactPointerEvent } from 'react';
+  type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { say, tr, type Message } from './text';
 import { PANELS } from './panels';
@@ -216,7 +216,7 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
 }
 
 function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { kind: 'tabs' }>; path: number[]; context: Context; stacked: boolean }) {
-  const drag = useContext(DragContext), { layout, panels } = context;
+  const drag = useContext(DragContext), { layout, panels } = context, [menuAt, openMenu, closeMenu] = useMenuAt();
   const away = tree.away(layout), ids = pane.panels.filter(id => !away.includes(id)), active = ids.includes(pane.active) ? pane.active : ids[0]!;
   const collapsed = !!pane.collapsed;
   return <section className={'tab-pane' + (collapsed ? ' collapsed' : '')} aria-label={say(panels[active]?.title ?? '')}>
@@ -240,26 +240,40 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
             aria-label={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
             title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
             onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
-          <button role="tab" aria-selected={id === active} data-panel={id} className="panel-tab"
+          <button role="tab" aria-selected={id === active} data-panel={id} className="panel-tab" onContextMenu={openMenu}
             onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>
           {menu && <PanelMenu title={panels[id]!.title} items={menu} />}
         </div>;
       })}</div>
     </div>
     {!collapsed && <div className="panel-content" role="tabpanel">{panels[active]?.content}</div>}
+    {menuAt?.dataset.panel && <PanelMenuPopup title={panels[menuAt.dataset.panel]?.title ?? tr('layout.panel', 'Panel')}
+      items={panelMenu(layout, menuAt.dataset.panel, panels[menuAt.dataset.panel])} anchor={menuAt} onClose={closeMenu} />}
   </section>;
 }
 
 /** A panel's own menu (Refactor.83). An on/off item stays open and shows its new state at once. 面板自己的選單（R.83）。開關項目選了不關、馬上顯示新狀態。 */
 function PanelMenu({ title, items }: { title: Message; items: () => readonly MenuItem[] }) {
-  const [open, setOpen] = useState(false), [, redraw] = useReducer((n: number) => n + 1, 0), button = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false), button = useRef<HTMLButtonElement>(null);
   const label = say(tr('layout.panelMenu', '{panel} options', { panel: say(title) }));
   return <>
     <button ref={button} type="button" className="icon-button panel-menu" aria-label={label} title={label} aria-haspopup="menu"
       aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="panelMenu" /></button>
-    {open && button.current && <DropdownMenu anchor={button.current} label={label} onClose={() => setOpen(false)}
-      items={items().map(item => ({ ...item, select: () => { item.select(); redraw(); } }))} />}
+    {open && button.current && <PanelMenuPopup title={title} items={items} anchor={button.current} onClose={() => setOpen(false)} />}
   </>;
+}
+/** A panel's menu, opened from ≡ or by right-clicking the panel's tab or title (human 2026-10-11: two ways in, right-click for every
+ * panel, ≡ the one you see). An on/off item stays open and shows its new state at once. 面板的選單，從 ≡ 或在面板的分頁、標題上按右鍵
+ * 打開（人類 10-11：兩個入口，右鍵每個面板都有，≡ 是看得到的那個）。開關項目選了不關、馬上顯示新狀態。 */
+function PanelMenuPopup({ title, items, anchor, onClose }: { title: Message; items: () => readonly MenuItem[]; anchor: HTMLElement; onClose(): void }) {
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  return <DropdownMenu anchor={anchor} label={say(tr('layout.panelMenu', '{panel} options', { panel: say(title) }))} onClose={onClose}
+    items={items().map(item => ({ ...item, select: () => { item.select(); redraw(); } }))} />;
+}
+/** Right-click opens the panel's menu under what was clicked. 按右鍵在按到的地方下面打開面板選單。 */
+function useMenuAt(): [HTMLElement | null, (event: ReactMouseEvent<HTMLElement>) => void, () => void] {
+  const [at, setAt] = useState<HTMLElement | null>(null);
+  return [at, event => { event.preventDefault(); setAt(event.currentTarget); }, () => setAt(null)];
 }
 
 // Where a panel would go, worked out from what is under the pointer (legacy inspector.js:2314; human 2026-10-10, Resolume
@@ -520,8 +534,12 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
   // A panel with its own frame (the Parameter panel's node card, Refactor.85) gets the triangle, the menu and close, and the
   // drag, and draws the rest; collapsed, it is as tall as its head. 自己畫外殼的面板（參數面板的節點卡，R.85）拿到三角形、選單與
   // 關閉、拖曳，其他自己畫；收起時和它的頭一樣高。
-  const close = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.closePanel', 'Close panel'))}
-    title={say(tr('layout.closePanel', 'Close panel'))} onClick={() => layout.close(id)}><Icon name="close" /></button>;
+  // The Parameter panel's cross: not closing, it stops floating, back to where it was (human 2026-10-11; for now it keeps only this,
+  // its menu by right-click). 參數面板的叉叉：不是關閉，是取消浮動、回到原本的狀態（人類 10-11；目前只留它，選單用右鍵）。
+  const unfloat = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.unfloat', 'Stop floating'))}
+    title={say(tr('layout.unfloat', 'Stop floating'))} onClick={() => layout.toggleFloat(id)}><Icon name="close" /></button>;
+  const [menuAt, openMenu, closeMenu] = useMenuAt();
+  const popup = menuAt && <PanelMenuPopup title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} anchor={menuAt} onClose={closeMenu} />;
   // The edge that sizes its width, every floating panel alike (pushing the one across its row, R.84). 調寬度的邊，每個浮動面板都一樣
   // （推擠同一列對面的，R.84）。
   const widthEdge = !rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
@@ -539,18 +557,20 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
   }, [own]);
   if (own) return <section ref={frame} className={'floating-panel own-frame' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
     style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
-    <FloatingContext.Provider value={{ collapsed: rect.collapsed, fold, controls: <>{menu}{close}</>, drag: event => drag.current(event, id) }}>
+    <FloatingContext.Provider value={{ collapsed: rect.collapsed, fold, controls: unfloat, drag: event => drag.current(event, id), openMenu }}>
       {view?.content}</FloatingContext.Provider>
+    {popup}
     {widthEdge}
   </section>;
   return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
-    <div className="floating-head" onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
+    <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
       {fold}
       <span className="floating-title">{title}</span>
       {menu}
     </div>
     {!rect.collapsed && <div className="panel-content">{view?.content}</div>}
+    {popup}
     {widthEdge}
     {!rect.collapsed && <ResizeHandle axis="y" edge={top ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
       onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
