@@ -5,6 +5,7 @@ import { say, tr, type Message } from './text';
 import { IconButton } from './controls';
 import type { IconName } from './icons';
 import { frameNodes } from './viewport';
+import type { CopyPaste } from './copy_paste';
 
 // The floating toolbar (浮動工具列, Refactor.92; human 2026-10-12; legacy selection_ui.js:106-176, 415-466): the actions on what is
 // selected, floating by the selection. Always on, for one node or several (human: the new product settles on "single and
@@ -23,7 +24,7 @@ const OFF_SELECTION = 12, OFF_SIDE = 8;
 
 type Tool = { key: string; icon: IconName; label: Message; run?: () => void; disabled?: boolean; danger?: boolean };
 
-export function FloatingToolbar({ nodes, edges }: { nodes: readonly FlowNode[]; edges: readonly FlowEdge[] }) {
+export function FloatingToolbar({ nodes, edges, clip }: { nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste }) {
   const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
   const selected = nodes.filter(node => node.selected), ids = selected.map(node => node.id);
   // The selection's bounds on screen: worked out from React Flow's measured nodes and its view, as a key so the bar draws again only
@@ -55,8 +56,9 @@ export function FloatingToolbar({ nodes, edges }: { nodes: readonly FlowNode[]; 
   const many = ids.length > 1, wires = edges.filter(edge => edge.selected);
   // Legacy's order and groups (selection_ui.js:433-439): what edits the selection, then what arranges it. 舊產品的順序與分組。
   const edit: Tool[] = [
-    { key: 'copy', icon: 'copy', label: tr('selection.copy', 'Copy') },
-    { key: 'paste', icon: 'paste', label: tr('selection.paste', 'Paste') },
+    // Paste from here lands a third into the canvas (legacy graph_ui.js:2811). 從這裡貼上，貼在畫布三分之一處（照舊產品）。
+    { key: 'copy', icon: 'copy', label: tr('selection.copy', 'Copy'), run: clip.copy, disabled: !clip.canCopy(selected) },
+    { key: 'paste', icon: 'paste', label: tr('selection.paste', 'Paste'), run: () => clip.paste() },
     // React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。
     { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), run: () => void flow.deleteElements({ nodes: selected, edges: wires }) },
   ];

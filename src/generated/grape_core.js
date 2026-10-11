@@ -26,6 +26,7 @@ const node_sdk_1 = require("./node_sdk");
 const component_names_1 = require("./component_names");
 const upgrades_1 = require("./upgrades");
 const node_names_1 = require("./node_names");
+const clipboard_1 = require("./clipboard");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -88,7 +89,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner };
 
 },
 "capacity":function(require,module,exports){
@@ -249,6 +250,88 @@ function changesBetween(before, after, registry) {
     }
     // Include persisted sequence/unknown fields even when no view needs repaint.
     return { changed: !equal(before, after), global, definitions, networks: changes };
+}
+
+},
+"clipboard":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.copyNodes = copyNodes;
+exports.readClip = readClip;
+exports.pasteClip = pasteClip;
+exports.clipCorner = clipCorner;
+const model_1 = require("./model");
+const node_names_1 = require("./node_names");
+const structure_1 = require("./structure");
+/** The copy of some nodes of the top-level pixel network, or null when none of them can be copied (the Color Output cannot:
+ * there is one per stage, legacy canDeleteNode). 頂層 pixel 網路裡一些節點的複製；一個都不能複製時是 null（Color Output 不能：每個
+ * Stage 只有一個，照舊產品）。 */
+function copyNodes(graph, ids, source) {
+    const data = graph.document, network = data.stages.pixel, chosen = new Set(ids);
+    if (!network)
+        return null;
+    const nodes = network.nodes.filter(node => chosen.has(node.id) && (0, structure_1.removable)(graph.registry.get(node.nodeType)));
+    if (!nodes.length)
+        return null;
+    const kept = new Set(nodes.map(node => node.id));
+    const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
+    const used = new Set(nodes.flatMap(node => { var _a, _b; const id = (_b = (_a = graph.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedDeclaration) === null || _b === void 0 ? void 0 : _b.call(_a, node); return id ? [id] : []; }));
+    return (0, model_1.copy)({ format: model_1.GRAPH_FORMAT, version: model_1.GRAPH_VERSION, target: data.target, declarations: data.declarations.filter(d => used.has(d.id)),
+        stages: { pixel: { nodes, edges } }, source });
+}
+/** Read what the clipboard holds: a copy, or null when it is not one of ours (any other text). 讀剪貼簿：是我們的複製就回傳，不是就 null。 */
+function readClip(text) {
+    var _a;
+    let value;
+    try {
+        value = JSON.parse(text);
+    }
+    catch (_b) {
+        return null;
+    }
+    const clip = value;
+    if ((0, model_1.formatProblem)(value) || typeof (clip === null || clip === void 0 ? void 0 : clip.source) !== 'string')
+        return null;
+    const pixel = (_a = clip.stages) === null || _a === void 0 ? void 0 : _a.pixel;
+    return pixel && Array.isArray(pixel.nodes) && Array.isArray(pixel.edges) ? clip : null;
+}
+/** Paste a copy into the top-level pixel network of an editable candidate (inside GraphDocument.change), its top-left node corner
+ * at `at`; returns the new nodes' IDs in their copied order. A declaration that is gone since it was copied comes back when its
+ * ID and name are still free; otherwise its nodes become ghosts, as on opening. Named nodes take the next free name.
+ * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
+ * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。 */
+function pasteClip(candidate, clip, at, newId) {
+    const network = candidate.networks.get('pixel');
+    if (!network)
+        throw Error('No pixel network to paste into');
+    for (const declaration of clip.declarations) {
+        if (candidate.document.declarations.some(d => d.id === declaration.id))
+            continue;
+        try {
+            candidate.addDeclaration((0, model_1.copy)(declaration));
+        }
+        catch ( /* its nodes stay ghosts 它的節點維持 Ghost */_a) { /* its nodes stay ghosts 它的節點維持 Ghost */ }
+    }
+    const nodes = clip.stages.pixel.nodes, x = Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.x) !== null && _b !== void 0 ? _b : 0); })), y = Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.y) !== null && _b !== void 0 ? _b : 0); }));
+    const ids = new Map(nodes.map(node => [node.id, newId()])), taken = (0, node_names_1.namesIn)(network.data);
+    const pasted = nodes.map(node => {
+        var _a, _b, _c, _d, _e;
+        const fresh = { ...(0, model_1.copy)(node), id: ids.get(node.id), ui: { ...(0, model_1.copy)((_a = node.ui) !== null && _a !== void 0 ? _a : {}), x: Number((_c = (_b = node.ui) === null || _b === void 0 ? void 0 : _b.x) !== null && _c !== void 0 ? _c : 0) - x + at.x, y: Number((_e = (_d = node.ui) === null || _d === void 0 ? void 0 : _d.y) !== null && _e !== void 0 ? _e : 0) - y + at.y } };
+        if (node.name !== undefined && (0, node_names_1.takesName)(candidate.registry, node.nodeType)) {
+            fresh.name = (0, node_names_1.freeName)(node.name, taken);
+            taken.add(fresh.name);
+        }
+        return fresh;
+    });
+    const edges = clip.stages.pixel.edges.filter(edge => ids.has(edge.from[0]) && ids.has(edge.to[0]))
+        .map(edge => ({ ...(0, model_1.copy)(edge), id: '', from: [ids.get(edge.from[0]), edge.from[1]], to: [ids.get(edge.to[0]), edge.to[1]] }));
+    network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
+    return pasted.map(node => node.id);
+}
+/** Where the copied nodes start: their top-left corner, for Duplicate's offset. 複製的節點從哪裡開始：左上角，給複製副本位移用。 */
+function clipCorner(clip) {
+    const nodes = clip.stages.pixel.nodes;
+    return { x: Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.x) !== null && _b !== void 0 ? _b : 0); })), y: Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.y) !== null && _b !== void 0 ? _b : 0); })) };
 }
 
 },

@@ -41,6 +41,7 @@ import type { Projection, FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
+import { useCopyPaste, type CopyPaste } from './copy_paste';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // A ghost wire carries a small ghost at its middle (Refactor.75.27); React Flow's own wire otherwise. Ghost 線中點帶一隻小幽靈。
@@ -140,11 +141,11 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus, clip }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void; onMenu(open: MenuOpen): void;
-  focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void;
+  focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste;
 }) {
   const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
   // A right-click (or long press) on a port opens Create node for that port, there, instead of the menu (legacy graph_ui.js:2476);
@@ -296,7 +297,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       </Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       <SelectionFrame nodes={projection.nodes} />
-      <FloatingToolbar nodes={projection.nodes} edges={edges} />
+      <FloatingToolbar nodes={projection.nodes} edges={edges} clip={clip} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
@@ -403,10 +404,13 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     resetting.current = true;
     location.reload();
   };
+  // Copy, paste and duplicate (Refactor.96). 複製、貼上、複製副本（R.96）。
+  const clip = useCopyPaste(session, prefs.snap, GRID, !!draft);
   useEffect(() => {
     if (!session) return;
     const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty && !resetting.current) { event.preventDefault(); event.returnValue = ''; } };
-    // The editor's commands, their keys from the one table (shortcuts.ts, Refactor.95); where each applies is decided here.
+    // The editor's commands, their keys from the one table (shortcuts.ts, Refactor.95); where each applies is decided here. Copy and
+    // paste come as the browser's own events (copy_paste.ts). 編輯器的指令（複製、貼上走瀏覽器自己的事件，copy_paste.ts）。
     // 編輯器的指令，鍵都從那一張表來（shortcuts.ts，R.95）；在哪裡生效在這裡決定。
     const keys = (event: KeyboardEvent) => {
       const element = event.target as HTMLElement;
@@ -434,6 +438,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       else if (network && layout.focused && !event.defaultPrevented && matches('leaveFocus', event)) run(() => layout.setFocused(false));
       // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、
       // H 對準全部（照舊產品）。
+      // Duplicate the selection (legacy graph_ui.js:2568; the browser's bookmark is not opened). 複製副本（照舊產品；不開瀏覽器的書籤）。
+      else if (!draft && network && matches('duplicate', event)) run(clip.duplicate);
       else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, flow.getNodes().filter(node => node.selected).map(node => node.id)));
       else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
     };
@@ -448,7 +454,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     addEventListener('dragover', dragging); addEventListener('drop', dragging);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys);
       removeEventListener('dragover', dragging); removeEventListener('drop', dragging); };
-  }, [session, draft, layout.focused]);
+  }, [session, draft, layout.focused, clip]);
   // Trial (Refactor.63.6, human 2026-10-10): the nodes that wrote a line TD reported, only while this is the GLSL that failed
   // (legacy: only exact lines, only before the graph changes). Worked out only with the setting on and a failure.
   // 試驗：TD 回報的錯誤行是哪些節點寫的；只在目前就是失敗的那份 GLSL 時（舊產品：只認確定的行、圖改過就不標）。設定開著且有失敗才算。
@@ -487,7 +493,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} />
+            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
@@ -524,7 +530,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
-        {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} onClose={closeMenu}
+        {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} clip={clip} onClose={closeMenu}
           onCreate={at => setCreating({ screen: at })} />}
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}

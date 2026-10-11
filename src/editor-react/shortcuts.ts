@@ -19,6 +19,8 @@ export const SHORTCUTS = {
   undo: { section: 'edit', keys: ['Mod+Z'] },
   redo: { section: 'edit', keys: ['Mod+Shift+Z'] },
   add: { section: 'edit', keys: ['Tab'] },
+  /** Copy and paste arrive as the browser's own copy and paste events, which follow these keys (copy_paste.ts). 複製、貼上由瀏覽器
+   * 自己的複製、貼上事件送來，按的就是這兩個鍵（copy_paste.ts）。 */
   copy: { section: 'edit', keys: ['Mod+C'] },
   paste: { section: 'edit', keys: ['Mod+V'] },
   duplicate: { section: 'edit', keys: ['Mod+D'] },

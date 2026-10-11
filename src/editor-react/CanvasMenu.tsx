@@ -7,6 +7,7 @@ import type { Layout } from './layout';
 import { frameNodes } from './viewport';
 import { useFullscreen } from './bars';
 import { shortcutText, type Shortcut } from './shortcuts';
+import type { CopyPaste } from './copy_paste';
 
 // The right-click menu of the network (Refactor.93; human 2026-10-12: legacy's logic — what shows when, which have icons, which
 // are checked — legacy graph_ui.js:2939-3052; content-wide, in our look). Opened by a right press and release that did not move
@@ -27,8 +28,8 @@ export const selectionKey = (state: EditorState) => [...state.projection.nodes.f
 
 type Row = { key: string; label: Message; icon?: IconName; keys?: Shortcut; hint?: string; run?: () => void; disabled?: boolean; checked?: boolean; toggle?: boolean; group: number };
 
-export function CanvasMenu({ request, session, state, layout, onCreate, onClose }: {
-  request: CanvasMenuRequest; session: EditorSession; state: EditorState; layout: Layout;
+export function CanvasMenu({ request, session, state, layout, clip, onCreate, onClose }: {
+  request: CanvasMenuRequest; session: EditorSession; state: EditorState; layout: Layout; clip: CopyPaste;
   onCreate(at: { x: number; y: number }): void; onClose(): void;
 }) {
   const flow = useReactFlow(), fullscreen = useFullscreen();
@@ -52,9 +53,10 @@ export function CanvasMenu({ request, session, state, layout, onCreate, onClose 
     // (make independent, rename, move into or out of a group) are not shown, as legacy hides them then. 節點的選單，對著選取（照舊產品）。
     // 子圖與群組相關、現在還不可能出現的（建立獨立副本、重新命名、移入移出群組）不顯示，舊產品這時也不顯示。
     { key: 'add', group: 1, icon: 'plus', label: tr('canvasMenu.nodes', 'Nodes'), keys: 'add', run: () => onCreate(request) },
-    { key: 'copy', group: 2, icon: 'copy', label: tr('selection.copy', 'Copy'), keys: 'copy' },
-    { key: 'paste', group: 2, icon: 'paste', label: tr('selection.paste', 'Paste'), keys: 'paste' },
-    { key: 'duplicate', group: 2, icon: 'duplicate', label: tr('canvasMenu.duplicate', 'Duplicate'), keys: 'duplicate' },
+    // Paste lands where the menu opened (legacy graph_ui.js:2969). 貼在打開選單的地方（照舊產品）。
+    { key: 'copy', group: 2, icon: 'copy', label: tr('selection.copy', 'Copy'), keys: 'copy', disabled: !clip.canCopy(nodes), run: clip.copy },
+    { key: 'paste', group: 2, icon: 'paste', label: tr('selection.paste', 'Paste'), keys: 'paste', run: () => clip.paste(request) },
+    { key: 'duplicate', group: 2, icon: 'duplicate', label: tr('canvasMenu.duplicate', 'Duplicate'), keys: 'duplicate', disabled: !clip.canCopy(nodes), run: clip.duplicate },
     ...count ? [
       { key: 'collapse', group: 3, icon: 'collapseCards', label: tr('selection.collapse', 'Collapse nodes') },
       { key: 'expand', group: 3, icon: 'expandCards', label: tr('selection.expand', 'Expand nodes') },

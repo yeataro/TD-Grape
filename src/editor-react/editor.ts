@@ -1,6 +1,6 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
-  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle } from './core';
+  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
@@ -30,6 +30,8 @@ export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
  * 線接到新節點的哪裡、用什麼設定建立（R.77）。 */
 export type WireFit = Bootstrap['typeContract']['wireDrop'][string]['output'][string];
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
+/** How far Duplicate puts the copy, right and down (legacy graph_ui.js:2429). 複製副本放多遠，往右下（照舊產品）。 */
+const DUPLICATE_OFFSET = 48;
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
 // 把新節點放進文件：新增的唯一路徑，也用在丟棄的候選文件上預演。
 // A preset Uniform's declaration, created the first time it is needed (Q61; Create in the Sources panel, Q61 supplement).
@@ -651,6 +653,32 @@ export class Editor {
       edges: edges.filter(edge => edge.selected || !(kept.has(edge.source) || kept.has(edge.target))) };
   };
   private keptNote?: Message;
+  /** Copy, paste and duplicate (Refactor.96; core clipboard.ts): a copy of the selected nodes, or null when none can be copied.
+   * 複製、貼上、複製副本（R.96；核心 clipboard.ts）：選取節點的複製，一個都不能複製時是 null。 */
+  copyNodes = (ids: Iterable<string>) => core.copyNodes(this.document, ids, this.host.target);
+  /** Paste a copy with its top-left at `at` (flow coordinates); the pasted nodes become the selection, the last one primary (legacy
+   * graph_ui.js:2823). Only a copy from this Grape OP for now (human 2026-10-12). Whether it was pasted. 把複製貼上、左上角在 at
+   * （畫布座標）；貼上的節點變成選取，最後一個是主要選取（照舊產品）。目前只接受這個 Grape OP 的複製（人類 10-12）。回傳有沒有貼上。 */
+  paste = (clip: Clip, at: XYPosition, label: Message = tr('edit.pasted', 'Pasted')) => {
+    if (clip.source !== this.host.target) {
+      this.warn(tr('edit.pasteOtherOp', 'Pasting nodes copied from another Grape OP is not available yet.'));
+      return false;
+    }
+    let ids: string[] = [];
+    const version = this.state.version;
+    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId); });
+    if (this.state.version === version || !ids.length) return false;
+    this.boxSelect(new Set(ids), [...ids].reverse());
+    return true;
+  };
+  /** Duplicate: a copy of the selection pasted 48px right and down of it, wires between them kept (legacy graph_ui.js:2424).
+   * 複製副本：選取的複製貼在它右下各 48px，其間的線保留（照舊產品）。 */
+  duplicate = (ids: Iterable<string>) => {
+    const clip = this.copyNodes(ids);
+    if (!clip) return false;
+    const corner = core.clipCorner(clip);
+    return this.paste(clip, { x: corner.x + DUPLICATE_OFFSET, y: corner.y + DUPLICATE_OFFSET }, tr('edit.duplicated', 'Duplicated'));
+  };
   remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact(this.keptNote ?? tr('edit.deleted', 'Selected items deleted'), net => {
     this.keptNote = undefined;
     const ids = new Set(edges.map(edge => edge.id));
