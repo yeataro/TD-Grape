@@ -147,7 +147,13 @@ a { color: var(--accent); }
 /* Glass on every panel and menu opened from a bar, none inside a pane (Refactor.75.22, 75.24, human 2026-10-11): what is behind
    shows through, blurred. Follows the system's "reduce transparency" unless the gear says always on or off.
    玻璃效果：列上打開的面板與選單全部，窗格裡的都不要（R.75.22、75.24，人類）：透出模糊的後方。跟隨系統的「減少透明度」，除非齒輪指定一律開或關。 */
-:root:is([data-glass="system"], [data-glass="on"]) .glass { background: var(--surface-glass); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
+/* Its colour is the thing's own (`--glass-base`, raised by default; Refactor.89.3) drawn toward the canvas's dark the less see-through
+   it is, then made see-through by `--glass-clear` (human 2026-10-12: the more opaque, the darker; see-through, it may be lighter), so
+   it looks about as dark at any setting and only lets more or less through. 底色是它自己的（--glass-base，預設浮起的底色；R.89.3），越不透明
+   就越往畫布的深色混，再用 --glass-clear 決定多透明（人類 10-12：越不透明顏色越深，越透明可以淺一點），所以怎麼調看起來都差不多深，只是透出多少不同。 */
+:root:is([data-glass="system"], [data-glass="on"]) .glass {
+  background: color-mix(in srgb, color-mix(in srgb, var(--glass-base, var(--surface-raised)) var(--glass-clear), var(--surface-canvas)) calc(100% - var(--glass-clear)), transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
 @media (prefers-reduced-transparency: reduce) {
   :root[data-glass="system"] .glass { background: var(--surface-raised); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 /* The foot bar sits a little tighter than the other bars (R.70.1, human 2026-10-10). 底列比其他列排得緊一點（人類）。 */
@@ -336,6 +342,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .floating-area { position: absolute; z-index: 5; pointer-events: none; }
 .floating-panel { position: absolute; display: flex; flex-direction: column; min-width: 0; pointer-events: auto;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface-zone);
+  /* Its glass is a pane's colour, darker than a menu's (Refactor.89.3, human 2026-10-12: floating panels can be darker).
+     它的玻璃用窗格的底色，比選單深（R.89.3，人類 10-12：浮動面板可以深一點）。 */
+  --glass-base: var(--surface-zone);
   /* It floats, so it casts a shadow as a menu does (Refactor.89.2, human 2026-10-12: floating panels should have one); the layered
      shadow trial, when on, has its own. 浮著的東西有陰影，和選單一樣（R.89.2，人類 10-12：浮動面板本身應該要有陰影）；層疊微陰影試驗開著時用它自己的。 */
   box-shadow: 0 8px 24px var(--shadow); }

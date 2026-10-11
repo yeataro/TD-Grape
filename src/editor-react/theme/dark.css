@@ -198,7 +198,6 @@
   /* How see-through its colour is (R.89.2, human 2026-10-12: too much glass, less see-through, the blur kept; a slider in Appearance,
      25 by default). 底色多透明（R.89.2，人類 10-12：太玻璃，改得不那麼透、模糊保留；外觀面板有滑桿，預設 25）。 */
   --glass-clear: 25%;
-  --surface-glass: color-mix(in srgb, var(--surface-raised) calc(100% - var(--glass-clear)), transparent);
   /* Scrollbars as the legacy dark theme (style.css:299), on every scroll area (human 2026-10-09).
      捲軸照舊產品深色主題，套到所有捲動區（人類）。 */
   --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-zone));
