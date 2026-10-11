@@ -248,9 +248,11 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
-      {/* React Flow's own zoom controls, with the zoom as a number (human 2026-10-09: its default is fine).
-          React Flow 自己的縮放控制，加上目前縮放百分比（人類：用它的預設即可）。 */}
-      <Controls position="bottom-right" orientation="horizontal" showInteractive={false}><ZoomReadout /></Controls>
+      {/* React Flow's own view controls, with the zoom as a number (human 2026-10-09: its default is fine), without its plus and
+          minus (Refactor.83.3, human 2026-10-11: crowded, and not needed to edit; legacy had none, index.html:57): wheel, trackpad
+          and pinch still zoom, and the number's menu sets it. React Flow 自己的視角控制，加上目前縮放百分比（人類 10-09：用預設即可），
+          拿掉加減號（R.83.3，人類 10-11：太擠、編輯用不到；舊產品沒有）：滾輪、觸控板、雙指照樣縮放，縮放數字的選單也能設。 */}
+      <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false}><ZoomReadout /></Controls>
       <Panel position="bottom-left" className="canvas-caption"><strong>{stage}</strong>
         <span>{say(tr('canvas.nodeCount', '{count} node(s)', { count: projection.nodes.length }))}</span>
         <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
