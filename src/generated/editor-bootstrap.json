@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "3eab9e4c6c573865bf5b080d9250836990b5af3a7be16a1452060fbce3c59386",
+  "catalogHash": "3a3d2b1ac32664ed3765b94063534e8d4f278a364b03d6fe44c1f1d8a14c2dcc",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -218,6 +218,35 @@
       "inputDefaults": {},
       "descriptionKey": "help.any",
       "definitionUuid": "sgrape.builtin.any",
+      "targets": [
+        "top",
+        "mat"
+      ]
+    },
+    {
+      "key": "boolean_operation",
+      "label": "Boolean Operation",
+      "inputs": {
+        "a": "bool",
+        "b": "bool"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "bool",
+        "operator": "&&"
+      },
+      "inputDefaults": {
+        "a": false,
+        "b": false
+      },
+      "descriptionKey": "help.boolean_operation",
+      "definitionUuid": "sgrape.builtin.boolean_operation",
       "targets": [
         "top",
         "mat"
@@ -2038,6 +2067,51 @@
             },
             "outputs": {
               "out": "bool"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.boolean_operation": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "bool",
+            "inputs": {
+              "a": "bool",
+              "b": "bool"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "a": "bvec2",
+              "b": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "a": "bvec3",
+              "b": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "a": "bvec4",
+              "b": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
             }
           }
         ]
@@ -6603,6 +6677,62 @@
           "bvec4": {
             "port": "out",
             "type": "bool"
+          }
+        }
+      },
+      "sgrape.builtin.boolean_operation:": {
+        "output": {
+          "bool": {
+            "port": "a",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "a",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "a",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "a",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
+          }
+        },
+        "input": {
+          "bool": {
+            "port": "out",
+            "type": "bool"
+          },
+          "bvec2": {
+            "port": "out",
+            "type": "bvec2",
+            "configure": {
+              "type": "bvec2"
+            }
+          },
+          "bvec3": {
+            "port": "out",
+            "type": "bvec3",
+            "configure": {
+              "type": "bvec3"
+            }
+          },
+          "bvec4": {
+            "port": "out",
+            "type": "bvec4",
+            "configure": {
+              "type": "bvec4"
+            }
           }
         }
       },

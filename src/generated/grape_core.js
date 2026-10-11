@@ -30,6 +30,7 @@ const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
 const any_1 = require("./nodes/any");
+const boolean_operation_1 = require("./nodes/boolean_operation");
 const ceil_1 = require("./nodes/ceil");
 const clamp_1 = require("./nodes/clamp");
 const color_1 = require("./nodes/color");
@@ -85,7 +86,7 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT };
 
@@ -2222,6 +2223,103 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', 'bool')],
     presentation: () => ({ typeOf: 'input' }),
     emit: (_n, c) => ({ outputs: { out: 'any(' + c.input('value') + ')' } })
+});
+
+},
+"nodes/boolean_operation":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "boolean_operation",
+        "label": "Boolean Operation",
+        "inputs": {
+            "a": "bool",
+            "b": "bool"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "bool",
+            "operator": "&&"
+        },
+        "inputDefaults": {
+            "a": false,
+            "b": false
+        },
+        "descriptionKey": "help.boolean_operation",
+        "definitionUuid": "sgrape.builtin.boolean_operation",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "boolean_operation",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "and",
+            "or",
+            "xor",
+            "&&",
+            "||",
+            "^^",
+            "boolean",
+            "bool",
+            "布林運算"
+        ],
+        "glslName": "&&, ||, ^^",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+const operators = ['&&', '||', '^^'];
+// Shown as words, the legacy node names' (human 2026-10-11); the graph keeps the GLSL operator. 選單顯示英文字（同舊產品節點名，人類）；圖裡存 GLSL 運算子。
+const words = { '&&': 'AND', '||': 'OR', '^^': 'XOR' };
+const control = (operator) => ({
+    kind: 'select', key: 'operator', label: 'booleanOperation.operator', command: 'operator', value: operator,
+    options: operators.map(value => ({ value, label: 'A ' + words[value] + ' B', literal: true }))
+});
+const operatorOf = (n) => { var _a; return String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '&&'); };
+// Legacy Boolean And / Or / Xor as one node with an operator menu, laid out as Compare (Refactor.82, human 2026-10-11).
+// Bool vectors too, component by component (new; legacy took single bools; human: the family is fixed and in = out, so
+// it stays simple). GLSL's &&, || and ^^ take no vectors, so a vector is rebuilt from its components. The title's menu
+// chooses the type, as for not (Q73). 舊產品的 Boolean And／Or／Xor 合成一個節點、用選單選運算，版面同 Compare（R.82，人類）。
+// 也收 bool 向量、逐分量算（新行為；舊產品只收單一 bool；人類：家族固定、進出同型別，所以單純）。GLSL 的 &&、||、^^
+// 不收向量，所以向量逐分量拆開再組回。標題列選型別，同 not（Q73）。
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['bool', 'bvec2', 'bvec3', 'bvec4'],
+    ports: t => [(0, node_sdk_1.input)('a', t, false), (0, node_sdk_1.input)('b', t, false), (0, node_sdk_1.output)('out', t)],
+    validate: n => { if (!operators.includes(operatorOf(n)))
+        throw Error('Invalid boolean operator'); },
+    edit: (n, command, data) => {
+        const value = String((0, node_sdk_1.payload)(data));
+        if (command !== 'operator' || !operators.includes(value))
+            throw Error('Invalid boolean operator');
+        n.params.operator = value;
+        return n;
+    },
+    presentation: n => ({ inlineControls: [control(operatorOf(n))] }),
+    emit: (n, c) => {
+        var _a;
+        const t = String((_a = n.params.type) !== null && _a !== void 0 ? _a : 'bool'), op = ' ' + operatorOf(n) + ' ', a = c.input('a'), b = c.input('b');
+        if (t === 'bool')
+            return { outputs: { out: '(' + a + op + b + ')' } };
+        const parts = 'xyzw'.slice(0, node_sdk_1.values.count(t)).split('').map(k => a + '.' + k + op + b + '.' + k);
+        return { outputs: { out: t + '(' + parts.join(', ') + ')' } };
+    }
 });
 
 },

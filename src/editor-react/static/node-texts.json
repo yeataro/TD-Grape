@@ -1,4 +1,5 @@
 {
+  "booleanOperation.operator": "Operation",
   "compare.operator": "Comparison",
   "convert.fromType": "Input type",
   "convert.toType": "Output type",

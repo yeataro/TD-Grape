@@ -69,7 +69,7 @@ export const supportedDefinitions = [
   'sqrt', 'sin', 'cos', 'min', 'max', 'clamp', 'mix', 'smoothstep', 'dot', 'length', 'normalize',
   // comparison and logic
   'compare', 'equal', 'notEqual', 'lessThan', 'lessThanEqual', 'greaterThan', 'greaterThanEqual',
-  'any', 'all', 'not', 'if', 'isnan', 'isinf',
+  'any', 'all', 'not', 'if', 'isnan', 'isinf', 'boolean_operation',
   // vector and colour structure
   'split', 'vector_split', 'rgba', 'router', 'combine', 'replace', 'swizzle', 'convert',
   // shared sources (Refactor.40: global constants; Refactor.41: TD built-in values)

@@ -26,6 +26,8 @@ function logicCases(){
  }
  for(const key of ['any','all','not'])for(const type of ['bvec2','bvec3','bvec4'])
   add(key,type,[node('source','scalar',{type:'bool',value:true}),node('operation',key,{type})],[edge('source','operation','out','value')],'operation',key==='not'?type:'bool');
+ for(const operator of ['&&','||','^^'])for(const type of ['bool','bvec2','bvec3','bvec4'])for(const [a,b] of [[false,false],[true,false],[true,true]])
+  add('boolean_operation',type,[{...node('operation','boolean_operation',{type,operator}),inputValues:{a:values.fill(a,type),b:values.fill(b,type)}}],[],'operation',type);
  return rows;
 }
 module.exports={logicCases,finish};
