@@ -37,6 +37,8 @@ export type Layout = LayoutData & {
   hasPanels(side: Side): boolean;
   /** Bring a panel forward: shown, its tab chosen, its side opened. 把面板叫到前面：顯示、選中、打開所在那一側。 */
   show(id: string): void; togglePanel(id: string): void; reset(): void;
+  /** Shown, or folded as its triangle would when in view (the GLSL button, Refactor.86.4). 叫出來，看得到時就照它的三角形收起（GLSL 按鈕，R.86.4）。 */
+  showOrFold(id: string): void;
   activate(path: Path, id: string): void; resize(path: Path, sizes: number[]): void; move(id: string, drop: Drop): void;
   /** Collapse a stacked tab pane to its tab bar, or open it (Refactor.80). 把疊著的分頁窗格收成分頁列，或打開（R.80）。 */
   collapse(path: Path, collapsed: boolean): void;
@@ -71,6 +73,7 @@ export function useLayout(): Layout {
     closeSide: side => setData(old => old.closed[side] ? old : { ...old, closed: { ...old.closed, [side]: true } }),
     hasPanels: side => tree.sideHasPanels(data, side),
     show: id => setData(old => tree.showPanel(old, id)),
+    showOrFold: id => setData(old => tree.showOrFold(old, id)),
     togglePanel: id => setData(old => old.hidden.includes(id) ? tree.showPanel(old, id) : tree.hidePanel(old, id)),
     reset: () => setData(old => ({ ...tree.defaultLayout(defaults), titleBar: old.titleBar })),
     activate: (path, id) => setData(old => tree.activate(old, path, id)),

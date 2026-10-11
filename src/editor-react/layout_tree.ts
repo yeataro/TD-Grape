@@ -329,6 +329,18 @@ function finish(layout: LayoutData, panel: string, side: Side | null): LayoutDat
  * 2026-10-11, floating-panels question 9). 把面板叫到前面：顯示、選中、打開所在的那一側；浮動的留在原地、展開（人類 10-11，第 9 題）。 */
 export const showPanel = (layout: LayoutData, panel: string) => layout.floating[panel]
   ? setFloat(layout, panel, { collapsed: false }) : finish(copy(layout), panel, null);
+/** A button that calls a panel up (the toolbar's GLSL, Refactor.86.4; human 2026-10-11: pressed again while the panel is in
+ * view, it does what that panel's collapse triangle does there): floating, it folds or opens; docked in view and stacked, its
+ * pane collapses to its tab bar; docked in view with no triangle, it stays as it is; out of view, it is brought forward.
+ * 叫出面板的按鈕（功能列的 GLSL，R.86.4；人類 10-11：面板看得到時再按一次，等於按它當下的收合三角形）：浮動的收起或打開；停靠、看得到、
+ * 上下疊著的，那一格收成分頁列；停靠、看得到、沒有三角形的，維持原樣；看不到的，叫到前面。 */
+export function showOrFold(layout: LayoutData, panel: string): LayoutData {
+  if (layout.floating[panel]) return setFloat(layout, panel, { collapsed: !layout.floats[panel]?.collapsed });
+  const placed = paneOf(layout.root, panel), side = placed && layout.root.kind === 'split' ? sideOf(layout.root, placed.path[0]!) : null;
+  const inView = placed && !layout.hidden.includes(panel) && placed.pane.active === panel && !placed.pane.collapsed && !(side && layout.closed[side]);
+  if (!inView) return showPanel(layout, panel);
+  return stacked(layout.root, placed.path) ? setCollapsed(layout, placed.path, true) : layout;
+}
 /** Close a panel: it is hidden, and no longer floats (human 2026-10-11: closing is closing). 關閉面板：藏起來，也不再浮動（人類：關閉就是關閉）。 */
 export function hidePanel(layout: LayoutData, panel: string): LayoutData {
   const { [panel]: _, ...floating } = layout.floating;

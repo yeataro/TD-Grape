@@ -456,7 +456,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               canvas edge). 浮在網路區上緣的東西，用同一個間距往下排：功能列，然後是提示（找到草稿是警告、衝突）
               （人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
           <div className="network-overlay">
-          <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} /></div>
+          <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.showOrFold('glsl')} /></div>
           {session && draft && <div className="floating-notice warning" role="group" aria-label={say(tr('draft.label', 'Earlier draft'))}>
             <span>{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}</span>
             {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}

@@ -295,3 +295,23 @@ test('going back from floating leaves the sides as they are (Refactor.86)', () =
   assert.deepEqual(layout.closed, { left: false, right: true }, 'the right side stays closed, as before it floated');
   assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance');
 });
+
+test('the GLSL button: in view it does what the triangle does there; otherwise it brings the panel forward (Refactor.86.4)', () => {
+  // A tab behind another: brought forward, nothing folds. 在別的分頁後面：叫到前面，什麼都不收。
+  let layout = tree.showOrFold(fresh(), 'glsl');
+  assert.equal(tree.paneOf(layout.root, 'glsl').pane.active, 'glsl');
+  // In view, alone on its side (no triangle): stays as it is. 看得到、單獨一格（沒有三角形）：維持原樣。
+  assert.equal(tree.showOrFold(layout, 'glsl'), layout);
+  // Its side closed: opened. 所在那一側收起：打開。
+  assert.equal(tree.showOrFold({ ...layout, closed: { left: true, right: false } }, 'glsl').closed.left, false);
+  // Stacked under another pane: folds to its tab bar, then opens again. 疊在另一格下面：收成分頁列，再按打開。
+  layout = tree.movePanel(fresh(), 'glsl', { kind: 'beside', pane: where(fresh(), 'sources'), edge: 'bottom' });
+  layout = tree.showOrFold(layout, 'glsl');
+  assert.equal(tree.paneOf(layout.root, 'glsl').pane.collapsed, true);
+  assert.equal(tree.paneOf(tree.showOrFold(layout, 'glsl').root, 'glsl').pane.collapsed, undefined);
+  // Floating: folds, then opens. 浮動：收起，再按打開。
+  layout = tree.popOut(fresh(), 'glsl');
+  layout = tree.showOrFold(layout, 'glsl');
+  assert.equal(layout.floats.glsl.collapsed, true);
+  assert.ok(!tree.showOrFold(layout, 'glsl').floats.glsl.collapsed);
+});
