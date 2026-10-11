@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
 import { GhostEdge } from './GhostMark';
+import { ConvertEdge } from './ConvertEdge';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './theme/td.css';
@@ -39,7 +40,7 @@ import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './vi
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // A ghost wire carries a small ghost at its middle (Refactor.75.27); React Flow's own wire otherwise. Ghost 線中點帶一隻小幽靈。
-const edgeTypes: EdgeTypes = { ghost: GhostEdge };
+const edgeTypes: EdgeTypes = { ghost: GhostEdge, convert: ConvertEdge };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
 // works. No target, or one the project does not have, is a normal state of the shell (Refactor.51).
 // 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。

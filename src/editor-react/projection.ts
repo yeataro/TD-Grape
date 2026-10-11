@@ -96,9 +96,11 @@ export function project(document: GraphDocument, previous: Projection, contract:
     const className = !ghost && components?.length === 1 ? 'component-' + components[0] : undefined;
     if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] && old.className === className &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
-    // A ghost wire is drawn by its own type, a ghost at its middle (Refactor.75.27). Ghost 線用自己的類型畫，中點一隻幽靈。
-    return { ...old, id: edge.id, type: ghost ? 'ghost' : undefined, source: saved.from[0], sourceHandle: saved.from[1], className,
-      target: saved.to[0], targetHandle: saved.to[1], style, label,
+    // A ghost wire is drawn by its own type, a ghost at its middle (Refactor.75.27); a wire that converts types by its own
+    // too, carrying the target's type colour (Refactor.77.1, the gradient trial). Ghost 線用自己的類型畫，中點一隻幽靈；
+    // 轉型的線也用自己的類型，帶著下游的型別色（R.77.1，漸層試驗）。
+    return { ...old, id: edge.id, type: ghost ? 'ghost' : label ? 'convert' : undefined, source: saved.from[0], sourceHandle: saved.from[1], className,
+      target: saved.to[0], targetHandle: saved.to[1], style, label, data: label ? { to: typeColor(targetType) } : undefined,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
   const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges) };
