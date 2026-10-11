@@ -611,7 +611,7 @@ export function seamOf(rects: Readonly<Record<string, Box>>, id: string, edge: F
  * 或離別的面板 gap 為止；不推。那條邊是縫時（對面隔 gap 有面板、彼此有重疊）就是分隔線：縫上的面板一起動，一邊變大一邊變小，各自到最小值，
  * 直到有面板被拖開。從開始拖的那一刻的位置算（人類：只在那時算，平常不耗成本）。fixed：只是擋路的面板（參數面板、收起的）。 */
 export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edge: FloatEdge, dx: number, dy: number, width: number, height: number,
-  gap: number, fixed: readonly string[] = []): Record<string, Box> {
+  gap: number, fixed: readonly string[] = [], reach = 0): Record<string, Box> {
   let boxes: Record<string, Box> = { ...rects };
   for (const axis of ['x', 'y'] as const) {
     const side = edge[axis];
@@ -633,7 +633,17 @@ export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edg
     let low = Math.max(...[...near_].map(n => least - length(n)), ...[...far].map(f => Math.max(0, ...others.filter(o => facing(mirrored[f]!, mirrored[o]!, axis, gap) && end(o) <= start(f) - gap + near)
       .map(o => end(o) + gap)) - start(f)));
     if (high < low) { high = 0; low = 0; }
-    const move = clamp(d * (side === 'end' ? 1 : -1), low, high);
+    let move = clamp(d * (side === 'end' ? 1 : -1), low, high);
+    // One panel alone: within `reach` of another panel's edge line on this axis, its edge lines up there, if it may go there
+    // (Refactor.88.2, human 2026-10-12: sizing one panel, it can take another's width or height; just that line).
+    // 只有一個面板時：離別的面板在這個方向的邊線 reach 以內，就對齊過去，前提是走得到（R.88.2，人類 10-12：調單一個面板時，可以對齊別人的寬或高，
+    // 就那條線）。
+    if (reach && !far.size) {
+      const at = end(id) + move, lines = others.flatMap(o => [start(o), end(o)]);
+      const line = lines.filter(each => Math.abs(each - at) <= reach && each - end(id) >= low && each - end(id) <= high)
+        .sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
+      if (line !== undefined) move = line - end(id);
+    }
     const sized = { ...mirrored };
     for (const n of near_) { const [s, l] = along(sized[n]!, axis); sized[n] = put(sized[n]!, axis, s, l + move); }
     for (const f of far) { const [s, l] = along(sized[f]!, axis); sized[f] = put(sized[f]!, axis, s + move, l - move); }

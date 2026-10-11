@@ -326,6 +326,12 @@ test('sizing free panels: an edge stops at another; a seam moves both until one 
   // A corner sizes only itself. 角只動自己。
   sized = tree.sizeFloats(rects, 'a', { x: 'end', y: 'end' }, 50, 50, 1000, 600, 8);
   assert.equal(sized.a.width, 300, 'b is in the way: no wider'); assert.equal(sized.b.x, 308); assert.equal(sized.a.height, 350, 'taller, up to d');
+  // Sizing one panel: within reach of another's edge line, it lines up (R.88.2). 調單一個面板：離別人的邊線 reach 以內就對齊（R.88.2）。
+  const pair = { a: { x: 0, y: 0, width: 300, height: 200 }, e: { x: 0, y: 208, width: 340, height: 200 } };
+  assert.equal(tree.sizeFloats(pair, 'a', { x: 'end' }, 30, 0, 1000, 600, 8, [], 16).a.width, 340, 'the same width as the one below');
+  assert.equal(tree.sizeFloats(pair, 'a', { x: 'end' }, 10, 0, 1000, 600, 8, [], 16).a.width, 310, 'no line near: as dragged (its own edge is no line)');
+  assert.equal(tree.sizeFloats(pair, 'a', { x: 'end' }, 70, 0, 1000, 600, 8, [], 16).a.width, 370, 'past reach: as dragged');
+  assert.equal(tree.sizeFloats(rects, 'a', { x: 'end' }, 45, 0, 1000, 600, 8, [], 16).a.width, 345, 'a seam does not snap');
   // Fixed ones are only in the way. 固定的只是擋路。
   sized = tree.sizeFloats(rects, 'a', { x: 'end' }, 50, 0, 1000, 600, 8, ['b', 'c']);
   assert.equal(sized.a.width, 300);

@@ -456,11 +456,13 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .float-handle:is(.nw, .se) { cursor: nwse-resize; } .float-handle:is(.ne, .sw) { cursor: nesw-resize; }
 .float-handle:is(.n, .nw, .ne) { top: calc(var(--handle-grab) / -2); } .float-handle:is(.s, .sw, .se) { bottom: calc(var(--handle-grab) / -2); }
 .float-handle:is(.w, .nw, .sw) { left: calc(var(--handle-grab) / -2); } .float-handle:is(.e, .ne, .se) { right: calc(var(--handle-grab) / -2); }
-/* A seam a hand is on (Refactor.88.1, a trial): its line the whole length, and the panels that will change outlined.
-   手所在的縫（R.88.1，試驗）：線畫滿整條縫，會一起變的面板加一圈框。 */
+/* What a hand on an edge is about to size (Refactor.88.1–88.2): those panels outlined; on a seam, its line the whole length, and
+   the edge's own line not drawn (human 2026-10-12: one mark). 手在邊上時要調的（R.88.1–88.2）：那些面板加一圈框；是縫的話線畫滿整條縫、
+   邊自己的線不畫（人類 10-12：只留一個）。 */
 .float-seam { position: absolute; z-index: 6; pointer-events: none; border-radius: var(--handle-line); background: var(--accent); }
 .float-seam.x { width: calc(var(--handle-line) * 2); translate: -50% 0; } .float-seam.y { height: calc(var(--handle-line) * 2); translate: 0 -50%; }
-.floating-panel.in-seam { outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 1px; }
+.floating-panel.sizing { outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 1px; }
+.floating-area.on-seam .float-handle:is(.n, .s, .e, .w)::after { background: transparent; }
 /* Moving a panel (Refactor.68; human 2026-10-10, Resolume Wire): corner marks on a pane it would join as a tab, a line where a
    new pane would be cut or a tab would go; in our purple, shared with the handles for now (human), red with the reason where
    it cannot go. The panel's name follows the pointer. 搬面板：要合併成分頁的窗格四角亮角框；會切出新窗格或插入分頁的地方一條線；

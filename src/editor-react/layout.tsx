@@ -104,8 +104,12 @@ const DragContext = createContext<MutableRefObject<Drag>>({ current: () => {} })
 /** The floating area as last drawn (its size, gap, title height, and where each panel is), read when a drag starts.
  * 浮動範圍上次畫的樣子（大小、間隙、標題高、每個面板在哪），開始拖曳時讀。 */
 type Geometry = { width: number; height: number; gap: number; title: number; rects: Record<string, tree.FloatRect> };
-/** How near an edge a floating panel snaps to it (Q47 5; a number to tune). 浮動面板離邊多近就吸過去（Q47 第 5 點；可調）。 */
-const SNAP = 12;
+/** The panels a hand on `id`'s edge is about to size; `line`: it is a seam. 手在 id 的邊上時要調的面板；line：是縫。 */
+type Sizing = { ids: string[]; id: string; edge: tree.FloatEdge; line: boolean };
+/** How near an edge a floating panel snaps to it (Q47 5; a number to tune); sizing one panel, how near another's edge line its edge
+ * lines up (Refactor.88.2, human 2026-10-12: 16). 浮動面板離邊多近就吸過去（Q47 第 5 點；可調）；調單一個面板時，它的邊離別人的邊線多近
+ * 就對齊（R.88.2，人類 10-12：16）。 */
+const SNAP = 12, SNAP_SIZE = 16;
 type Context = { layout: Layout; panels: Record<string, PanelView>; canvas: HTMLElement };
 
 /** The whole layout: the tree, and the marks shown while a panel is moved. The network is drawn once, into its own
@@ -529,9 +533,10 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   // its width could be sized; human 2026-10-11): its height is measured, up to what its side leaves it. 自己畫外殼的面板和內容一樣高
   // （參數面板：舊產品每個分頁自動算高度、只能調寬；人類 10-11）：高度用量的，最多到它那一邊留給它的。
   const [measured, setMeasured] = useState<Record<string, number>>({}), drawn = useRef<Geometry | null>(null);
-  // The seam a hand is on, shown before and while dragging (Refactor.88.1, human 2026-10-12: tell that both will change; a trial).
-  // 手所在的縫，拖之前與拖的時候都顯示（R.88.1，人類 10-12：讓人知道會一起變；試驗）。
-  const [seam, setSeam] = useState<{ ids: string[]; id: string; edge: tree.FloatEdge } | null>(null);
+  // What a hand on an edge is about to size, shown before and while dragging (Refactor.88.1–88.2, human 2026-10-12): those panels
+  // outlined; on a seam, its line too. 手在邊上時要調的是哪些，拖之前與拖的時候都顯示（R.88.1–88.2，人類 10-12）：那些面板加淡框；是縫的話
+  // 再加縫的線。
+  const [seam, setSeam] = useState<Sizing | null>(null);
   useLayoutEffect(() => { geometry.current = drawn.current; });
   if (!area) return null;
   const own = Object.keys(layout.floating).filter(id => panels[id]?.frame === 'own');
@@ -549,16 +554,17 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   drawn.current = { width: area.width, height: area.height, gap: area.gap, title: area.title, rects };
   // The seam's line, the whole length of the panels on it, from where they are now (it follows the drag). 縫的線，畫滿縫上所有面板的長度，
   // 照它們現在的位置（拖的時候跟著走）。
-  const line = seam && rects[seam.id] && (() => {
+  const line = seam?.line && rects[seam.id] && (() => {
     const axis = seam.edge.x ? 'x' : 'y', own = rects[seam.id]!, boxes = seam.ids.map(key => rects[key]).filter((box): box is tree.FloatRect => !!box);
     const at = axis === 'x' ? (seam.edge.x === 'end' ? own.x + own.width + area.gap / 2 : own.x - area.gap / 2)
       : (seam.edge.y === 'end' ? own.y + own.height + area.gap / 2 : own.y - area.gap / 2);
     const from = Math.min(...boxes.map(box => axis === 'x' ? box.y : box.x)), to = Math.max(...boxes.map(box => axis === 'x' ? box.y + box.height : box.x + box.width));
     return axis === 'x' ? { className: 'float-seam x', style: { left: at, top: from, height: to - from } } : { className: 'float-seam y', style: { top: at, left: from, width: to - from } };
   })();
-  return <div className="floating-area" style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
+  // On a seam its line is the one mark: the edge's own line goes (human 2026-10-12). 縫上只留縫的線：邊自己的線不畫（人類 10-12）。
+  return <div className={'floating-area' + (line ? ' on-seam' : '')} style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
     {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
-      rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} inSeam={!!seam?.ids.includes(id)} showSeam={setSeam} />)}
+      rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} sizing={!!seam?.ids.includes(id)} showSizing={setSeam} />)}
     {line && <div className={line.className} style={line.style} />}
   </div>;
 }
@@ -568,9 +574,9 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
  * both; a panel with a home: the edge facing the network (legacy inspector.js:2090). 一個浮動面板：標題（三角形、名字、選單；拖它移動或
  * 拖回版面）、內容，以及調大小的邊。自由浮動的：每條邊、每個角（人類 10-12），碰到別的面板就停，兩個之間的縫一起動；有家的：朝網路區的邊
  * （照舊產品）。 */
-function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, inSeam, showSeam }: { id: string; layout: Layout; view: PanelView | undefined;
+function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizing, showSizing }: { id: string; layout: Layout; view: PanelView | undefined;
   rect: tree.FloatRect; area: { width: number; height: number; gap: number; title: number }; rects: Record<string, tree.FloatRect>; cap?: number;
-  measure(height: number): void; inSeam: boolean; showSeam(seam: { ids: string[]; id: string; edge: tree.FloatEdge } | null): void }) {
+  measure(height: number): void; sizing: boolean; showSizing(sizing: Sizing | null): void }) {
   const drag = useContext(DragContext), place = layout.floats[id]!, free = layout.floating[id] === 'free';
   const top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
   const title = say(view?.title ?? id), own = view?.frame === 'own';
@@ -592,23 +598,23 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, inSe
   const start = useRef<Record<string, tree.Box>>({});
   const fixed = () => Object.keys(rects).filter(key => key !== id && (layout.floating[key] !== 'free' || rects[key]!.collapsed));
   const size = (edge: tree.FloatEdge, dx: number, dy: number) => {
-    const sized = tree.sizeFloats(start.current, id, edge, dx, dy, area.width, area.height, area.gap, free ? fixed() : Object.keys(rects).filter(key => key !== id));
+    const sized = tree.sizeFloats(start.current, id, edge, dx, dy, area.width, area.height, area.gap, free ? fixed() : Object.keys(rects).filter(key => key !== id), SNAP_SIZE);
     if (!free) { layout.setFloat(id, { ...(edge.x ? { width: sized[id]!.width } : {}), ...(edge.y ? { height: sized[id]!.height } : {}) }); return; }
     layout.placeFloats(Object.fromEntries(Object.keys(sized).filter(key => layout.floating[key] === 'free' && sized[key] !== start.current[key])
       .map(key => [key, tree.placeAt(sized[key]!, area.width, area.height, layout.floats[key])])));
   };
   const begin = () => { start.current = rects; };
-  // A hand on an edge that is a seam: show every panel on it (Refactor.88.1). 手在一條是縫的邊上：把縫上的面板都標出來（R.88.1）。
+  // A hand on an edge: this panel is about to be sized, or, on a seam, every panel on it (Refactor.88.1–88.2). 手在邊上：這個面板要被
+  // 調大小；是縫的話，縫上的每個面板（R.88.1–88.2）。
   const enter = (edge: tree.FloatEdge) => {
-    if (!free || (edge.x && edge.y)) return;
-    const found = tree.seamOf(rects, id, edge, area.width, area.height, area.gap, fixed());
-    showSeam(found.far.length ? { ids: [...found.near, ...found.far], id, edge } : null);
+    const found = free && !(edge.x && edge.y) ? tree.seamOf(rects, id, edge, area.width, area.height, area.gap, fixed()) : { near: [id], far: [] };
+    showSizing({ ids: [...found.near, ...found.far], id, edge, line: found.far.length > 0 });
   };
   const label = tr('layout.resizeFloat', 'Resize the panel');
   const edges: tree.FloatEdge[] = free ? [{ y: 'start' }, { y: 'end' }, { x: 'start' }, { x: 'end' }, { x: 'start', y: 'start' }, { x: 'end', y: 'start' }, { x: 'start', y: 'end' }, { x: 'end', y: 'end' }]
     : own ? [{ x: left ? 'end' : 'start' }] : [{ x: left ? 'end' : 'start' }, { y: top ? 'end' : 'start' }];
   const handles = !shut && edges.map(edge => <FloatHandle key={(edge.x ?? '') + (edge.y ?? '')} edge={edge} label={label} onStart={begin} onMove={(dx, dy) => size(edge, dx, dy)}
-    onEnter={() => enter(edge)} onLeave={() => showSeam(null)} />);
+    onEnter={() => enter(edge)} onLeave={() => showSizing(null)} />);
   const frame = useRef<HTMLElement>(null);
   // Its height follows its content (measured when the content changes size, not while anything moves elsewhere).
   // 高度跟著內容（內容大小改變時量，不是別處在動時量）。
@@ -619,14 +625,14 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, inSe
     watch.observe(element);
     return () => watch.disconnect();
   }, [own]);
-  if (own) return <section ref={frame} className={'floating-panel own-frame' + (shut ? ' collapsed' : '')} aria-label={title}
+  if (own) return <section ref={frame} className={'floating-panel own-frame' + (shut ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
     <FloatingContext.Provider value={{ collapsed: shut, fold, controls: unfloat, drag: event => drag.current(event, id), openMenu }}>
       {view?.content}</FloatingContext.Provider>
     {popup}
     {handles}
   </section>;
-  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '') + (inSeam ? ' in-seam' : '')} aria-label={title}
+  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
       {fold}
