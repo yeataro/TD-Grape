@@ -45,5 +45,5 @@ const catalog = {
 export default {...staticNode(catalog, {
   ports: () => [input('rgb', 'vec3'), input('alpha', 'float', 1), output('out', 'vec4')],
   emit: (_n, c) => ({outputs: {out: 'vec4(' + c.input('rgb') + ', ' + c.input('alpha') + ')'}})
-}), componentNames: () => 'rgba' as const,
+}), componentNames: () => 'rgba' as const, componentNamesFixed: true as const,
   presentation: () => ({components: {inputs: {alpha: [3]}}})};

@@ -189,7 +189,7 @@ export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!
   &&valueTypes.includes(entry.type)&&!entry.expression.includes('{')&&(entry.outputs??[]).every(o=>valueTypes.includes(o.type));
 export function tdValueNode(catalog:CatalogRow):NodeModule {
   const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
-  return {catalog,role:'value',colorGroup:'runtime',unnamed:true,
+  return {catalog,role:'value',colorGroup:'runtime',unnamed:true,componentNamesFixed:true,
     // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
     componentNames:n=>uvEntries.has(String(n.params.entry))?'uv':'xyzw',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),

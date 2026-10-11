@@ -1,6 +1,6 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
-  type Declaration, type NameProblem, type ObjectValue } from './core';
+  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
@@ -434,21 +434,31 @@ export class Editor {
       net.node(id).update({ name: core.freeName(name, taken) });
     });
   };
-  /** How a node names its vector components, and how many there are at most; null when it has no vector (Refactor.85; human
-   * 2026-10-11: inputs and outputs alike, since input components show here, legacy's did not). 節點怎麼稱呼向量分量、最多幾個；沒有
-   * 向量時是 null（R.85；人類 10-11：輸入輸出都改，因為這裡看得到輸入的分量，舊產品看不到）。 */
-  componentNamesOf = (id: string): { style: string; count: number } | null => {
-    const net = this.document.networks.get('pixel')!, node = net.node(id);
-    if (!node.data) return null;
-    const ports = [...node.inputs, ...node.outputs].map(port => port.type).filter(type => core.values.types.includes(type));
-    const count = Math.max(0, ...ports.map(type => core.values.count(type)));
-    return count > 1 ? { style: core.componentStyle(node.definition, node.data, net.context), count } : null;
+  /** How a node names its vector components, and how many it has; null when its own type is not a vector (Refactor.85; legacy
+   * inspector.js:1358: the node's type, or its source's): a node whose names are fixed by its kind (Split RGBA, Compose RGBA) has
+   * no choice. Inputs and outputs alike (human 2026-10-11: input components show here, legacy's did not).
+   * 節點怎麼稱呼向量分量、有幾個分量；自己的型別不是向量時是 null（R.85；照舊產品：節點的型別，或它引用的來源的型別）：名稱由種類寫死的節點
+   * （Split RGBA、Compose RGBA）沒有選擇。輸入輸出都適用（人類 10-11：這裡看得到輸入的分量，舊產品看不到）。 */
+  componentNamesOf = (id: string): { style: ComponentStyle; count: number } | null => {
+    const net = this.document.networks.get('pixel')!, node = net.node(id), module = node.definition;
+    if (!node.data || !module) return null;
+    if (module.componentNamesFixed) return null;
+    // Its own type: the one chosen, else its source's, else what it gives (a fixed vec3 value). 自己的型別：選的、否則來源的、否則輸出的（固定的 vec3 值）。
+    const source = module.referencedDeclaration?.(node.data);
+    const type = String(node.data.params.type ?? this.document.document.declarations.find(d => d.id === source)?.type ?? node.outputs[0]?.type ?? '');
+    const count = core.values.types.includes(type) ? core.values.count(type) : 0;
+    return count > 1 ? { style: core.componentStyle(module, node.data, net.context), count } : null;
   };
-  /** Name a node's vector components (Refactor.85; legacy inspector.js:1358): appearance only, kept in the graph, one Undo.
-   * 設定節點的分量名稱（R.85；照舊產品）：只是外觀、存在圖裡、一次 Undo。 */
-  setComponentNames = (id: string, style: string) => {
-    if (!core.componentStyles.includes(style as never) || this.componentNamesOf(id)?.style === style) return;
-    this.transact(tr('edit.componentNames', 'Component names changed'), net => net.node(id).update({ ui: { ...net.node(id).data!.ui, componentNames: style } }));
+  /** Name a node's vector components (Refactor.85; legacy inspector.js:1358): appearance only, kept in the graph, one Undo; the
+   * node's own default is kept as nothing, so the graph only records a choice. 設定節點的分量名稱（R.85；照舊產品）：只是外觀、存在
+   * 圖裡、一次 Undo；選回節點自己的預設就不記，圖裡只記真正的選擇。 */
+  setComponentNames = (id: string, style: ComponentStyle) => {
+    if (!core.componentStyles.includes(style) || this.componentNamesOf(id)?.style === style) return;
+    this.transact(tr('edit.componentNames', 'Component names changed'), net => {
+      const node = net.node(id), { componentNames: _, ...ui } = node.data!.ui ?? {};
+      const fallback = core.componentStyle(node.definition, { ...node.data!, ui }, net.context);
+      node.update({ ui: style === fallback ? ui : { ...ui, componentNames: style } });
+    });
   };
   /** A node's note (Refactor.76; the graph's `comment`). 節點的註記（R.76；圖裡的 comment）。 */
   setNote = (id: string, text: string) => {

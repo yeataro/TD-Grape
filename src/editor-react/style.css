@@ -57,6 +57,8 @@ button.danger:not([aria-disabled="true"]):hover { color: var(--status-error); bo
 button.primary[aria-disabled="true"]:hover { background: var(--accent-fill); }
 a { color: var(--accent); }
 .spacer { flex: 1; }
+/* Read by assistive tech, not shown. 給輔助工具讀、不顯示。 */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Editor frame (Refactor.53; floating-panels.md). Every bar is a row of the shared controls; colours and sizes
    come from the theme's purpose tokens only. 編輯器外框：每一列都由共用控制項組成；顏色與尺寸只讀主題的用途變數。 */
@@ -926,11 +928,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .params-wired > .params-link:hover { text-decoration-style: solid; }
 .params-wired > .params-link + button { margin-left: auto; }
-.params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; border-top: 1px solid var(--border-node); }
+.params-note { display: flex; flex-direction: column; gap: 4px; padding: 8px var(--params-pad) 12px; }
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
-.params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.params-note { border-top: 0; } .params-note textarea { min-height: 6em; }
+.params-note textarea { resize: vertical; min-height: 6em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
 .params-pad { padding: 8px var(--params-pad); }
 /* The Parameter panel's tabs (Refactor.85; legacy style.css:917): Parameters, Settings, Notes, the shown one underlined.
    參數面板的分頁（R.85；照舊產品）：參數、設定、註記，顯示中的加底線。 */

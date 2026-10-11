@@ -522,6 +522,11 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
   // 關閉、拖曳，其他自己畫；收起時和它的頭一樣高。
   const close = <button type="button" className="icon-button floating-close" aria-label={say(tr('layout.closePanel', 'Close panel'))}
     title={say(tr('layout.closePanel', 'Close panel'))} onClick={() => layout.close(id)}><Icon name="close" /></button>;
+  // The edge that sizes its width, every floating panel alike (pushing the one across its row, R.84). 調寬度的邊，每個浮動面板都一樣
+  // （推擠同一列對面的，R.84）。
+  const widthEdge = !rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
+    onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
+    onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />;
   const frame = useRef<HTMLElement>(null);
   // Its height follows its content (measured when the content changes size, not while anything moves elsewhere).
   // 高度跟著內容（內容大小改變時量，不是別處在動時量）。
@@ -536,9 +541,7 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
     style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
     <FloatingContext.Provider value={{ collapsed: rect.collapsed, fold, controls: <>{menu}{close}</>, drag: event => drag.current(event, id) }}>
       {view?.content}</FloatingContext.Provider>
-    {!rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
-      onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
-      onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />}
+    {widthEdge}
   </section>;
   return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
@@ -548,9 +551,7 @@ function FloatingPanel({ id, layout, view, rect, area, cap, measure }: { id: str
       {menu}
     </div>
     {!rect.collapsed && <div className="panel-content">{view?.content}</div>}
-    {!rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
-      onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
-      onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />}
+    {widthEdge}
     {!rect.collapsed && <ResizeHandle axis="y" edge={top ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
       onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
       onMove={delta => layout.pushFloat(id, 'height', start.current.height + (top ? delta : -delta), area.height, area.gap, area.title)} />}

@@ -322,9 +322,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.componentLetters = exports.componentStyle = exports.storedOr = exports.componentStyles = void 0;
 /** Component names (Refactor.59; legacy graph_ui.js:1224-1236): a node shows its vector components as X/Y/Z/W,
  * R/G/B/A, S/T/P/Q or U/V. Stored on the node as `ui.componentNames` (appearance only, never compiled, design-interview
- * Q67); when not stored, the node module's default; nothing said, X/Y/Z/W. Switched only in the parameter panel (later).
+ * Q67); when not stored, the node module's default; nothing said, X/Y/Z/W. Switched in the Parameter panel's Settings tab (Refactor.85).
  * 分量名稱：節點把向量分量顯示成 X/Y/Z/W、R/G/B/A、S/T/P/Q 或 U/V。存在節點的 ui.componentNames（只是外觀、不產碼）；
- * 沒存時用節點模組的預設，沒說就是 X/Y/Z/W。只在參數面板切換（之後）。 */
+ * 沒存時用節點模組的預設，沒說就是 X/Y/Z/W。在參數面板的設定分頁切換（R.85）。 */
 exports.componentStyles = ['xyzw', 'rgba', 'stpq', 'uv'];
 const isStyle = (value) => exports.componentStyles.includes(value);
 /** A node's names when its module says `fallback` by default. 模組預設為 fallback 時這個節點的名稱樣式。 */
@@ -2012,7 +2012,7 @@ const usableTdValue = (entry, target) => {
 exports.usableTdValue = usableTdValue;
 function tdValueNode(catalog) {
     const entryOf = (n) => tdValueTable.get(String(n.params.entry));
-    return { catalog, role: 'value', colorGroup: 'runtime', unnamed: true,
+    return { catalog, role: 'value', colorGroup: 'runtime', unnamed: true, componentNamesFixed: true,
         // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
         componentNames: n => uvEntries.has(String(n.params.entry)) ? 'uv' : 'xyzw',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
@@ -4213,7 +4213,7 @@ const catalog = {
 exports.default = { ...(0, node_sdk_1.staticNode)(catalog, {
         ports: () => [(0, node_sdk_1.input)('rgb', 'vec3'), (0, node_sdk_1.input)('alpha', 'float', 1), (0, node_sdk_1.output)('out', 'vec4')],
         emit: (_n, c) => ({ outputs: { out: 'vec4(' + c.input('rgb') + ', ' + c.input('alpha') + ')' } })
-    }), componentNames: () => 'rgba',
+    }), componentNames: () => 'rgba', componentNamesFixed: true,
     presentation: () => ({ components: { inputs: { alpha: [3] } } }) };
 
 },
@@ -4548,7 +4548,7 @@ const catalog = {
 exports.default = { ...(0, node_sdk_1.staticNode)(catalog, {
         ports: () => [(0, node_sdk_1.input)('color', 'vec4'), (0, node_sdk_1.output)('rgb', 'vec3'), ...'rgba'.split('').map(p => (0, node_sdk_1.output)(p, 'float'))],
         emit: (_n, c) => ({ outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p])) })
-    }), componentNames: () => 'rgba',
+    }), componentNames: () => 'rgba', componentNamesFixed: true,
     presentation: () => ({ components: { outputs: { r: [0], g: [1], b: [2], a: [3] } } }) };
 
 },

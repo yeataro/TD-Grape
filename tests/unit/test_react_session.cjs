@@ -1765,3 +1765,16 @@ test('component names: set from the Settings tab, shown on the node, one Undo (R
   session.history(false);
   assert.equal(session.snapshot().projection.nodes.find(n => n.id === id).data.componentStyle, before.style, 'one Undo puts it back');
 });
+
+test('component names follow legacy: only a node whose own type is a vector; the default is not stored (Refactor.85.1)', t => {
+  const { session } = open(t);
+  session.addNode({ nodeType: 'sgrape.builtin.split', params: {} }, { x: 0, y: 0 });
+  const split = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.split').id;
+  assert.equal(session.componentNamesOf(split), null, 'Split RGBA: its names are fixed by its kind');
+  session.addNode({ nodeType: 'sgrape.builtin.vec3', params: {} }, { x: 0, y: 0 });
+  const vec = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.vec3').id;
+  session.setComponentNames(vec, 'rgba');
+  assert.equal(session.snapshot().projection.nodes.find(n => n.id === vec).data.authored.ui.componentNames, 'rgba');
+  session.setComponentNames(vec, 'xyzw');
+  assert.equal('componentNames' in session.snapshot().projection.nodes.find(n => n.id === vec).data.authored.ui, false, 'back to the default: nothing kept');
+});

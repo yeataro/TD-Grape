@@ -33,6 +33,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
 } & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>;
 export type { TdValue } from '../core-ts/td_values';
+export type { ComponentStyle } from '../core-ts/component_names';
 export type { NameProblem } from '../core-ts/declarations';
 export type { Declaration } from '../core-ts/model';
 export type { GhostKind } from '../core-ts/ghosts';

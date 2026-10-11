@@ -48,5 +48,5 @@ const catalog = {
 export default {...staticNode(catalog, {
   ports: () => [input('color', 'vec4'), output('rgb', 'vec3'), ...'rgba'.split('').map(p => output(p, 'float'))],
   emit: (_n, c) => ({outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p]))})
-}), componentNames: () => 'rgba' as const,
+}), componentNames: () => 'rgba' as const, componentNamesFixed: true as const,
   presentation: () => ({components: {outputs: {r: [0], g: [1], b: [2], a: [3]}}})};

@@ -245,7 +245,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
             its place (wiring never changes the height, EDITOR_UI_RULES.md 六). 固定式子只顯示不編輯；貼圖沒有值。接線只藏起值、位置留著。 */}
         {port.fallback !== undefined ? <code className={'port-fallback' + (wired ? ' wired' : '')}>{port.fallback}</code>
           : core.values.types.includes(port.type) && <ValueFields label={`${id} ${port.key}`} type={port.type} wired={wired} defaults={port.default}
-          names={core.componentLetters((data.componentStyle ?? 'xyzw') as never, core.values.count(port.type))}
+          names={core.componentLetters(data.componentStyle ?? 'xyzw', core.values.count(port.type))}
           caption={<>{label} <InputType type={port.type} from={data.conversions?.[port.key]} /></>}
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>; })}

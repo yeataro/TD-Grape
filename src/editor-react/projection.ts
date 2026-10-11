@@ -1,12 +1,12 @@
 import type { Node as RFNode, Edge as RFEdge } from '@xyflow/react';
 import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node,
-  type NodePresentation, type PortSpec, type Bootstrap, type GhostKind, type Declaration } from './core';
+  type NodePresentation, type PortSpec, type Bootstrap, type GhostKind, type Declaration, type ComponentStyle } from './core';
 
 export type FlowNode = RFNode<{
   authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
   /** How the node names vector components, inputs and outputs alike (Refactor.85, human 2026-10-11: we show input components,
    * legacy did not). 節點怎麼稱呼向量分量，輸入輸出都用（R.85，人類 10-11：我們看得到輸入的分量，舊產品看不到）。 */
-  componentStyle?: string;
+  componentStyle?: ComponentStyle;
   /** connected: inputs with a wire; wired: outputs with at least one (port styles, Refactor.54.2). 接了線的輸入／輸出。 */
   inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; wired: string[]; ghost?: GhostKind;
   /** The declaration a reference node points to (its value is shown on the card, Refactor.55.2). 引用宣告節點指向的宣告。 */

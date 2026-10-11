@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { useConnection, useReactFlow } from '@xyflow/react';
-import { core, typeColor } from './core';
+import { core, typeColor, type ComponentStyle } from './core';
 import type { EditorState } from './editor';
 import type { FlowNode } from './projection';
 import { tr, say } from './text';
@@ -74,7 +74,7 @@ function NodeSettings({ id }: { id: string }) {
   return <div className="params-grid params-settings"><label className="control-field">
     <span>{say(tr('params.componentNames', 'Component names'))}</span>
     <Select label={say(tr('params.componentNames', 'Component names'))} value={names.style} options={options}
-      onChange={value => session.setComponentNames(id, value)} /></label></div>;
+      onChange={value => session.setComponentNames(id, value as ComponentStyle)} /></label></div>;
 }
 
 function NodeParameters({ node, state }: { node: FlowNode; state: EditorState }) {
@@ -143,7 +143,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
             <button type="button" onClick={() => session.disconnectInput(id, port.key)}>{say(tr('params.disconnect', 'Disconnect'))}</button></span></>
             : port.fallback !== undefined ? <>{head}<code className="port-fallback">{port.fallback}</code></>
             : core.values.types.includes(port.type) ? <ValueFields label={`${id} ${port.key}`} type={port.type} defaults={port.default} caption={label}
-              names={core.componentLetters((data.componentStyle ?? 'xyzw') as never, core.values.count(port.type))}
+              names={core.componentLetters(data.componentStyle ?? 'xyzw', core.values.count(port.type))}
               value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />
             : head}
         </div>;

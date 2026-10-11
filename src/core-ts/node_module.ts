@@ -98,6 +98,9 @@ export interface NodeModule {
   /** The component names it shows when the node stores none (Refactor.59; component_names.ts). Left out: X/Y/Z/W.
    * 節點沒存時顯示的分量名稱樣式；沒寫＝X/Y/Z/W。 */
   componentNames?(node:Node,context:NodeContext):ComponentStyle;
+  /** Its component names are fixed by what it is (Split RGBA, Compose RGBA, a TD value such as UV): no choice in the Settings tab
+   * (Refactor.85.1). 分量名稱由它是什麼決定（Split RGBA、Compose RGBA、UV 這類 TD 內建值）：設定分頁沒有這個選擇（R.85.1）。 */
+  componentNamesFixed?:true;
   /** Made by dragging a wire, it takes the component names of the node at the other end (legacy graph_ui.js:2346).
    * 由拉線新增時，沿用另一端節點的分量名稱樣式。 */
   readonly inheritsComponentNames?:boolean;

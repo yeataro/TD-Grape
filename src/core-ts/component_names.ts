@@ -3,9 +3,9 @@ import type { NodeModule, NodeContext } from './node_module';
 
 /** Component names (Refactor.59; legacy graph_ui.js:1224-1236): a node shows its vector components as X/Y/Z/W,
  * R/G/B/A, S/T/P/Q or U/V. Stored on the node as `ui.componentNames` (appearance only, never compiled, design-interview
- * Q67); when not stored, the node module's default; nothing said, X/Y/Z/W. Switched only in the parameter panel (later).
+ * Q67); when not stored, the node module's default; nothing said, X/Y/Z/W. Switched in the Parameter panel's Settings tab (Refactor.85).
  * 分量名稱：節點把向量分量顯示成 X/Y/Z/W、R/G/B/A、S/T/P/Q 或 U/V。存在節點的 ui.componentNames（只是外觀、不產碼）；
- * 沒存時用節點模組的預設，沒說就是 X/Y/Z/W。只在參數面板切換（之後）。 */
+ * 沒存時用節點模組的預設，沒說就是 X/Y/Z/W。在參數面板的設定分頁切換（R.85）。 */
 export const componentStyles = ['xyzw', 'rgba', 'stpq', 'uv'] as const;
 export type ComponentStyle = typeof componentStyles[number];
 const isStyle = (value: unknown): value is ComponentStyle => componentStyles.includes(value as ComponentStyle);
