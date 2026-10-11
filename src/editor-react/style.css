@@ -298,7 +298,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    an icon button, and the stage switch is as tall as the tool group (a transparent line stands in for the group's border).
    整條功能列同一個高度（R.83.6，人類：太大，Stage 切換要和它對齊；舊產品 Stage 與工具按鈕同高，標準 32px、舒適 38px）：文字按鈕和圖示按鈕
    一樣高；Stage 切換和工具組一樣高（用透明的線補上工具組的框線）。 */
-.network-bar-group button:not(.icon-button) { height: var(--icon-button); padding: 0 8px; }
+/* A word button in a box looks like the icon buttons beside it: no line of its own, the box is its frame; tinted on hover
+   (Refactor.86.3, human 2026-10-11: why two lines round GLSL). 框裡的文字按鈕和旁邊的圖示按鈕一樣：自己沒有框線，框就是它的外框；
+   滑過時上底色（R.86.3，人類：GLSL 為什麼包兩條線）。 */
+.network-bar-group button:not(.icon-button) { height: var(--icon-button); padding: 0 8px; border-color: transparent; background: none; }
+@media (hover: hover) { .network-bar-group button:not(.icon-button):hover { background: var(--surface-control); } }
 .network-bar-stages .segmented { border: 1px solid transparent; }
 .network-bar-stages .segmented button { height: var(--icon-button); padding: 0 10px; }
 .canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); pointer-events: none; }
