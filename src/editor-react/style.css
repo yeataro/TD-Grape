@@ -732,10 +732,17 @@ span.image-label:hover { background: var(--image-label); }
 :root[data-component-tint="on"] .component-letter[data-component="1"] { color: var(--component-y); }
 :root[data-component-tint="on"] .component-letter[data-component="2"] { color: var(--component-z); }
 :root[data-component-tint="on"] .component-letter[data-component="3"] { color: var(--component-w); }
-:root[data-component-tint="on"] :is(.react-flow__edge.component-0:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-0 > path) { stroke: var(--component-x) !important; color: var(--component-x) !important; }
-:root[data-component-tint="on"] :is(.react-flow__edge.component-1:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-1 > path) { stroke: var(--component-y) !important; color: var(--component-y) !important; }
-:root[data-component-tint="on"] :is(.react-flow__edge.component-2:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-2 > path) { stroke: var(--component-z) !important; color: var(--component-z) !important; }
-:root[data-component-tint="on"] :is(.react-flow__edge.component-3:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-3 > path) { stroke: var(--component-w) !important; color: var(--component-w) !important; }
+/* A wire's own paint comes first (--wire-paint: the type conversion gradient, Refactor.77.3), and the wire learns its
+   start colour (--wire-start) so a gradient begins at the component's colour (human 2026-10-11: both at once).
+   線自帶的顏色優先（--wire-paint：轉型漸層，R.77.3），並讓線知道它的起點色（--wire-start），漸層就從分量色開始（人類：兩個並存）。 */
+:root[data-component-tint="on"] :is(.react-flow__edge.component-0:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-0 > path) { stroke: var(--wire-paint, var(--component-x)) !important; color: var(--component-x) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-1:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-1 > path) { stroke: var(--wire-paint, var(--component-y)) !important; color: var(--component-y) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-2:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-2 > path) { stroke: var(--wire-paint, var(--component-z)) !important; color: var(--component-z) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-3:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-3 > path) { stroke: var(--wire-paint, var(--component-w)) !important; color: var(--component-w) !important; }
+:root[data-component-tint="on"] .react-flow__edge.component-0 { --wire-start: var(--component-x); }
+:root[data-component-tint="on"] .react-flow__edge.component-1 { --wire-start: var(--component-y); }
+:root[data-component-tint="on"] .react-flow__edge.component-2 { --wire-start: var(--component-z); }
+:root[data-component-tint="on"] .react-flow__edge.component-3 { --wire-start: var(--component-w); }
 /* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,
    one component per row. A wired value keeps its place, unseen. Colours only from the --field-* slots.
    數值 widget：各分量並排在一行、分量名稱在框內；展開時一個分量一行。接線的值位置留著、看不到。顏色只用 --field-*。 */
