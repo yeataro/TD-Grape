@@ -667,7 +667,9 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
     {popup}
     {handles}
   </section>;
-  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
+  // Glass, as everything that floats (Refactor.89, human 2026-10-12: under the gear's glass setting). 玻璃，和所有浮著的一樣（R.89，人類 10-12：
+  // 受齒輪的玻璃設定管）。
+  return <section className={'floating-panel glass' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
       {fold}
