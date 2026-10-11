@@ -299,7 +299,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())}><Icon name="fullscreen" /></ControlButton>}
       </Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
-      <SelectionFrame nodes={projection.nodes} />
+      <SelectionFrame nodes={projection.nodes} session={session} />
       <FloatingToolbar nodes={projection.nodes} edges={edges} clip={clip} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;

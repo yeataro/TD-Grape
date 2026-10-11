@@ -328,6 +328,7 @@
   "selection.group": "建立群組框",
   "selection.notYet": "{action}（尚未提供）",
   "selection.paste": "貼上",
+  "selection.spread": "拉開或收攏",
   "selection.subgraph": "選取轉為子圖",
   "selection.toolbar": "浮動工具列",
   "shader.revert": "回到上一個可執行的版本",

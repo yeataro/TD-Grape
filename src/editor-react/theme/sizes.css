@@ -73,7 +73,10 @@
   --glow-merge: 12px;   /* round the rows a dragged wire would merge (R.76.18) 拖線會合併的那幾列外圍 */
   --glow-ports: 8px;
   --glow-logo: 8px;
-  --selection-gap: 10px;   /* the multi-selection frame's distance to the nodes (legacy 6px on 190px nodes; human 2026-10-09: too close) 多選框離節點的距離（舊產品 6px、節點 190px；人類：太近） */
+  --selection-gap: 10px;   /* the multi-selection frame's distance to the nodes, on the screen since R.97 as legacy (legacy 6px; human 2026-10-09: too close) 多選框離節點的距離，R.97 起照舊產品是螢幕距離（舊產品 6px；人類：太近） */
+  --selection-handle: 6px;           /* the multi-selection frame's handle as drawn (legacy 18px less 6px each side) 多選框把手畫出來的大小（照舊產品） */
+  --selection-handle-grab: 18px;     /* where it can be grabbed (legacy) 可抓的範圍（照舊產品） */
+  --selection-handle-grab-touch: 28px; /* to the touch (legacy) 觸控時（照舊產品） */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
   --row-font: var(--font-md);
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */

@@ -627,11 +627,25 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
-/* Multi-selection frame (Refactor.50.3), as the legacy #selectionbounds. 多選框，照舊產品。 */
-/* Sized to the nodes; the gap and the dashed line grow outward, so the line sits --selection-gap from the nodes.
-   大小等於節點範圍；間距與虛線往外長，虛線離節點 --selection-gap。 */
-.selection-frame { position: absolute; left: 0; top: 0; box-sizing: content-box; padding: var(--selection-gap);
+/* Multi-selection frame (Refactor.50.3, 97), as the legacy #selectionbounds (style.css:1012-1026): on the screen, so the line and the
+   gap keep their size at any zoom. Sized to the nodes; the gap and the dashed line grow outward, so the line sits --selection-gap
+   from the nodes. Over the nodes, under the floating toolbar; only its handles take the pointer.
+   多選框（R.50.3、97），照舊產品：畫在螢幕上，縮放時線與間距不變。大小等於節點範圍；間距與虛線往外長，虛線離節點 --selection-gap。
+   在節點上面、浮動工具列下面；只有把手接滑鼠。 */
+.selection-frame { position: absolute; left: 0; top: 0; z-index: 4; box-sizing: content-box; padding: var(--selection-gap);
   margin: calc(-1 * var(--selection-gap) - 1px); border: 1px dashed var(--select-frame); pointer-events: none; }
+/* Its eight handles (legacy): a small square on the line, grabbed by a wider area; filled while hovered or dragged. Bigger to the
+   touch. 八個把手（照舊產品）：線上的小方塊，可抓範圍較大；滑過或拖曳時填滿。觸控時更大。 */
+.selection-handle { position: absolute; width: var(--selection-handle-grab); height: var(--selection-handle-grab); padding: 0; border: 0; border-radius: 0;
+  background: none; transform: translate(-50%, -50%); pointer-events: auto; touch-action: none; }
+.selection-handle::after { content: ''; position: absolute; box-sizing: border-box; left: 50%; top: 50%; width: var(--selection-handle); height: var(--selection-handle);
+  transform: translate(-50%, -50%); border: 1px solid var(--select-frame); border-radius: 1px; background: var(--surface-node); }
+.selection-handle:is(:hover, :active)::after { background: var(--select-frame); }
+.selection-handle[data-handle="nw"] { left: 0; top: 0; cursor: nwse-resize; } .selection-handle[data-handle="n"] { left: 50%; top: 0; cursor: ns-resize; }
+.selection-handle[data-handle="ne"] { left: 100%; top: 0; cursor: nesw-resize; } .selection-handle[data-handle="e"] { left: 100%; top: 50%; cursor: ew-resize; }
+.selection-handle[data-handle="se"] { left: 100%; top: 100%; cursor: nwse-resize; } .selection-handle[data-handle="s"] { left: 50%; top: 100%; cursor: ns-resize; }
+.selection-handle[data-handle="sw"] { left: 0; top: 100%; cursor: nesw-resize; } .selection-handle[data-handle="w"] { left: 0; top: 50%; cursor: ew-resize; }
+@media (pointer: coarse) { .selection-handle { width: var(--selection-handle-grab-touch); height: var(--selection-handle-grab-touch); } }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
 .grape-node.box-in { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: var(--wire-width-hover) !important; }

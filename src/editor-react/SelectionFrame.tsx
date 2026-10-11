@@ -1,21 +1,70 @@
-import { getNodesBounds, ViewportPortal } from '@xyflow/react';
+import { useEffect, useRef, type PointerEvent } from 'react';
+import { getNodesBounds, useReactFlow, useStore, type NodePositionChange } from '@xyflow/react';
 import type { FlowNode } from './projection';
+import type { Editor as EditorSession } from './editor';
+import { say, tr } from './text';
+import { HANDLES, spreadPositions, type Box, type Handle } from './selection_spread';
 
-// Multi-selection frame (Refactor.50.3; human 2026-10-09: shown whenever two or more nodes are selected;
-// in the legacy editor it also showed up unexpectedly, as several rules piled up). Looks like the legacy
-// one (src/editor/selection_ui.js #selectionbounds: 1px dashed, 6px around the nodes). Only a look for
-// now: no handles (resizing is its own round), no pointer events. Drawn in flow coordinates with React
-// Flow's public tools, so it follows moves and zoom; it is worked out again only when the nodes change.
-// 多選框：選兩個以上節點就顯示（人類；舊產品因為疊了好幾條規則，會出現未預期的表現）。樣子照舊產品（1px 虛線、四周 6px）。
-// 目前只有外觀：沒有把手（調大小另一輪）、不吃滑鼠。用 React Flow 的公開工具畫在畫布座標上，跟著移動與縮放；只在節點變了才重算。
-// The distance to the nodes is the theme's --selection-gap (style.css); here only the nodes' own bounds.
-// 框和節點的距離是主題的 --selection-gap（style.css）；這裡只給節點本身的範圍。
+// Multi-selection frame (Refactor.50.3; human 2026-10-09: shown whenever two or more nodes are selected, never for one — legacy
+// showed it unexpectedly, human 2026-10-12). Refactor.97 (human 2026-10-12: too thin, under a pixel when zoomed out; legacy's look
+// and handles): drawn on the screen, not in the flow, so the dashed line stays 1px and its distance to the nodes stays the theme's
+// --selection-gap at any zoom (legacy selection_ui.js:153-161); its eight handles spread the selection apart or draw it together
+// (selection_spread.ts). A drag previews through the session's own node moves and is one change on release (one Undo); Esc puts it
+// back. Hidden while the selection is out of view. 多選框（R.50.3；人類：選兩個以上才顯示，一個不顯示）。R.97（人類：太細、縮小時不到
+// 一像素；樣子與把手照舊產品）：畫在螢幕上、不在畫布裡，虛線永遠 1px、離節點永遠是主題的 --selection-gap（照舊產品）；八個把手把選取拉開
+// 或收攏（selection_spread.ts）。拖曳時用 session 自己的節點移動預覽，放開才算一次修改（一步復原）；Esc 還原。選取看不到時隱藏。
 
-export function SelectionFrame({ nodes }: { nodes: readonly FlowNode[] }) {
-  const selected = nodes.filter(node => node.selected);
-  if (selected.length < 2) return null;
-  const bounds = getNodesBounds(selected);
-  return <ViewportPortal>
-    <div className="selection-frame" style={{ transform: `translate(${bounds.x}px, ${bounds.y}px)`, width: bounds.width, height: bounds.height }} />
-  </ViewportPortal>;
+type Spread = { handle: Handle; pointer: number; x: number; y: number; zoom: number; boxes: Box[]; moved: boolean };
+const THRESHOLD = 3;
+
+export function SelectionFrame({ nodes, session }: { nodes: readonly FlowNode[]; session: EditorSession }) {
+  const flow = useReactFlow(), spread = useRef<Spread | null>(null);
+  const ids = nodes.filter(node => node.selected).map(node => node.id);
+  // The selection's bounds on screen, as a key so the frame draws again only when they change (as the floating toolbar).
+  // 選取在螢幕上的範圍，做成字串，變了才重畫（同浮動工具列）。
+  const key = useStore(state => {
+    if (ids.length < 2) return '';
+    const box = getNodesBounds(ids, { nodeLookup: state.nodeLookup }), [x, y, zoom] = state.transform;
+    return [box.x * zoom + x, box.y * zoom + y, (box.x + box.width) * zoom + x, (box.y + box.height) * zoom + y, state.width, state.height].map(Math.round).join(',');
+  });
+  const move = (positions: Map<string, { x: number; y: number }>, dragging: boolean) =>
+    session.nodeChanges([...positions].map(([id, position]): NodePositionChange => ({ type: 'position', id, position, dragging })));
+  const back = () => { const start = spread.current; spread.current = null; if (start?.moved) move(new Map(start.boxes.map(box => [box.id, { x: box.x, y: box.y }])), true); };
+  // Esc puts the selection back; a wheel (the view moving) does too (legacy selection_ui.js:254-259). Esc 還原；滾輪（畫面在動）也還原（照舊產品）。
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => { if (spread.current && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); back(); } };
+    const wheel = () => { if (spread.current) back(); };
+    addEventListener('keydown', key, true); addEventListener('wheel', wheel, { capture: true, passive: true });
+    return () => { removeEventListener('keydown', key, true); removeEventListener('wheel', wheel, true); };
+  });
+  if (!key) return null;
+  const [left, top, right, bottom, width, height] = key.split(',').map(Number) as [number, number, number, number, number, number];
+  if (right < 0 || left > width || bottom < 0 || top > height) return null;
+  const begin = (event: PointerEvent<HTMLButtonElement>, handle: Handle) => {
+    if (event.button !== 0) return;
+    event.preventDefault(); event.stopPropagation();
+    const boxes = ids.flatMap(id => { const node = flow.getInternalNode(id); return node ? [{ id, x: node.position.x, y: node.position.y,
+      width: node.measured.width ?? 0, height: node.measured.height ?? 0 }] : []; });
+    spread.current = { handle, pointer: event.pointerId, x: event.clientX, y: event.clientY, zoom: flow.getZoom(), boxes, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const drag = (event: PointerEvent<HTMLButtonElement>) => {
+    const start = spread.current;
+    if (!start || event.pointerId !== start.pointer) return;
+    if (!start.moved && Math.hypot(event.clientX - start.x, event.clientY - start.y) < THRESHOLD) return;
+    start.moved = true;
+    move(spreadPositions(start.boxes, start.handle, (event.clientX - start.x) / start.zoom, (event.clientY - start.y) / start.zoom), true);
+  };
+  const end = (event: PointerEvent<HTMLButtonElement>) => {
+    const start = spread.current;
+    if (!start || event.pointerId !== start.pointer) return;
+    spread.current = null;
+    if (start.moved) move(spreadPositions(start.boxes, start.handle, (event.clientX - start.x) / start.zoom, (event.clientY - start.y) / start.zoom), false);
+  };
+  const label = say(tr('selection.spread', 'Spread apart or draw together'));
+  return <div className="selection-frame" style={{ transform: `translate(${left}px, ${top}px)`, width: right - left, height: bottom - top }}>
+    {HANDLES.map(handle => <button key={handle} type="button" tabIndex={-1} className="selection-handle nodrag nopan" data-handle={handle}
+      title={label} aria-label={label} onPointerDown={event => begin(event, handle)} onPointerMove={drag} onPointerUp={end}
+      onPointerCancel={back} onLostPointerCapture={() => { if (spread.current) back(); }} />)}
+  </div>;
 }

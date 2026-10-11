@@ -328,6 +328,7 @@
   "selection.group": "Make group",
   "selection.notYet": "{action} (not available yet)",
   "selection.paste": "Paste",
+  "selection.spread": "Spread apart or draw together",
   "selection.subgraph": "Selection to subgraph",
   "selection.toolbar": "Floating toolbar",
   "shader.revert": "Revert to last good",
