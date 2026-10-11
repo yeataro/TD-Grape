@@ -41,7 +41,7 @@ export function popupPlace(anchor: HTMLElement, width: number, height: number): 
 
 export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
   anchor: HTMLElement; items: readonly MenuItem[]; onClose: () => void; label?: string;
-  /** At least as wide as the anchor instead of the menu width (a select's choices). 至少和叫它的元素一樣寬（選擇器）。 */
+  /** At least as wide as the anchor (a select's choices); otherwise as wide as its content. 至少和叫它的元素一樣寬（選擇器）；否則照內容寬。 */
   fit?: boolean;
   /** One line instead of, or above, the items (loading, empty, error). 項目之外的一行（載入中、空的、錯誤）。 */
   note?: Message | string;
