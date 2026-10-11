@@ -4686,6 +4686,7 @@ const catalog = {
     }
 };
 const axes = 'xyzw';
+const NONE = ''; // the empty menu, "—" 空的選單「—」
 function mask(type, value) {
     if (typeof value !== 'string' || !value.length || value.length > 4 || [...value].some(p => !axes.slice(0, node_sdk_1.values.count(type)).includes(p)))
         throw Error('Choose existing vector components');
@@ -4711,33 +4712,41 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
             portLabels: { outputs: { out: [...selected].map(letter).join('') } },
             components: { outputs: { out: [...selected].map(axis => axes.indexOf(axis)) } },
             // Each menu is named by the output component it fills, in the node's letters and that component's colour (Refactor.80.3,
-            // human 2026-10-11: not 1, 2…); the buttons are a row of their own below (a row stays one line). 每個選單以它填的輸出分量
-            // 命名，用節點的字母與那個分量的顏色（R.80.3，人類：不要 1、2…）；按鈕在下面自成一列（一列維持一行）。
+            // human 2026-10-11: not 1, 2…). One more empty menu follows (while there are fewer than four): choosing a component there
+            // adds it; choosing "—" in a menu takes that component out and the rest move up (Refactor.81, human 2026-10-11: no plus
+            // or minus, what matters is the components). The last one cannot be taken out. 每個選單以它填的輸出分量命名，用節點的字母
+            // 與分量色（R.80.3，人類：不要 1、2…）。後面多一格空的選單（不到四個時）：在那裡選分量就加一個；在選單選「—」就拿掉那個分量，
+            // 後面的往前補（R.81，人類：不要加減，重要的是分量）。最後一個不能拿掉。
             controls: [{
-                    kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [...selected].map((value, index) => {
+                    kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [...selected, ...(selected.length < 4 ? [NONE] : [])].map((value, index) => {
                         var _a;
-                        return ({ kind: 'select', key: 'component' + index, label: (_a = places[index]) !== null && _a !== void 0 ? _a : String(index + 1), literal: true, component: index, command: 'mask', args: { index }, value,
-                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: letter(value), literal: true })) });
+                        return ({ kind: 'select', key: 'component' + index,
+                            label: (_a = places[index]) !== null && _a !== void 0 ? _a : String(index + 1), literal: true, component: index, command: 'mask', args: { index }, value,
+                            options: [...(selected.length > 1 || index === selected.length ? [{ value: NONE, label: '—', literal: true }] : []),
+                                ...[...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: letter(value), literal: true }))] });
                     })
-                }, {
-                    kind: 'row', key: 'maskLength', label: 'vector.componentOrder', children: [
-                        { kind: 'button', key: 'remove', label: '−', literal: true, command: 'remove', disabled: selected.length === 1 },
-                        { kind: 'button', key: 'add', label: '+', literal: true, command: 'add', disabled: selected.length === 4 }
-                    ]
                 }] };
     },
     edit: (n, command, data) => {
         var _a;
         const t = String(n.params.type), previous = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
-        if (command === 'add' && previous.length < 4)
-            n.params.mask = previous + axes[Math.min(previous.length, node_sdk_1.values.count(t) - 1)];
-        else if (command === 'remove' && previous.length > 1)
-            n.params.mask = previous.slice(0, -1);
-        else if (command === 'mask' && data && typeof data === 'object' && !Array.isArray(data)) {
+        if (command === 'mask' && data && typeof data === 'object' && !Array.isArray(data)) {
+            // A component at index i: set it, add it at the end (the empty menu), or take it out ("—"). 第 i 個分量：設定、在最後加上、或拿掉。
             const i = Number(data.index), value = String((0, node_sdk_1.payload)(data));
-            if (!Number.isInteger(i) || i < 0 || i >= previous.length || value.length !== 1)
+            if (!Number.isInteger(i) || i < 0 || i > previous.length || i >= 4)
                 throw Error('Invalid swizzle component');
-            n.params.mask = mask(t, previous.slice(0, i) + value + previous.slice(i + 1));
+            if (value === NONE) {
+                if (i === previous.length)
+                    return n;
+                if (previous.length === 1)
+                    throw Error('Keep at least one component');
+                n.params.mask = previous.slice(0, i) + previous.slice(i + 1);
+            }
+            else {
+                if (value.length !== 1)
+                    throw Error('Invalid swizzle component');
+                n.params.mask = mask(t, previous.slice(0, i) + value + previous.slice(i + 1));
+            }
         }
         else
             throw Error('Invalid swizzle command');
