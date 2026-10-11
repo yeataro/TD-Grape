@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import zhHant from './locales/zh-Hant.json';
 import { tr, isMessage, type Message, type TextParam } from '../core-ts/text';
 import { readPreference, writePreference } from './preferences';
@@ -48,6 +49,9 @@ if (typeof document !== 'undefined') document.documentElement.lang = current;
 const languageListeners = new Set<() => void>();
 export const language = () => current;
 export const languageSubscribe = (listener: () => void) => { languageListeners.add(listener); return () => { languageListeners.delete(listener); }; };
+/** Re-render on a language change: for a memoised part whose props do not change with it (Refactor.79.4).
+ * 語言切換時重繪：給 props 不隨語言改變的 memo 元件用（R.79.4）。 */
+export const useLanguage = () => useSyncExternalStore(languageSubscribe, language);
 export function setLanguage(next: Language) {
   if (next === current) return;
   current = next;

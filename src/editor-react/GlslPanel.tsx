@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import Prism from 'prismjs/components/prism-core';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-glsl';
-import { tr, say } from './text';
+import { tr, say, useLanguage } from './text';
 import { useSession } from './contexts';
 import { frameNodes } from './viewport';
 import { glslErrors } from './glsl_errors';
@@ -49,9 +49,13 @@ function highlight(source: string): Piece[][] {
  * edit since makes the numbers point elsewhere). Nodes themselves are never marked: the line where TD stops is not
  * always where the mistake is (human 2026-10-10). 產生的 GLSL（唯讀），有行號。行號帶回產生那一行的節點；TD 編譯失敗回報的
  * 行會標出來，但只在目前就是失敗的那份 GLSL 時（改過之後行號會指錯）。節點本身不標錯：TD 停下的那一行不一定是錯的源頭（人類）。 */
-export function GlslPanel({ state }: { state: EditorState }) {
+// Memoised: a node drag re-renders the workspace every move, and this panel only follows its own props (Refactor.79.4; EDITOR_UI_RULES, continuous interactions). It takes only the GLSL's own fields. 只拿 GLSL 自己的欄位。
+// memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props（R.79.4；畫面規則「連續互動」）。
+type GlslInput = Pick<EditorState, 'glsl' | 'glslMap' | 'glslVariables' | 'glslDeclarations' | 'stuck'>;
+export const GlslPanel = memo(GlslView);
+function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: GlslInput) {
+  useLanguage();
   const session = useSession(), flow = useReactFlow();
-  const { glsl, glslMap, glslVariables, glslDeclarations, stuck } = state;
   const lines = useMemo(() => highlight(glsl), [glsl]);
   const nodeOf = useMemo(() => new Map(glslMap.map(row => [row.line, row.node])), [glslMap]);
   const failure = stuck?.failure;
@@ -87,7 +91,7 @@ export function GlslPanel({ state }: { state: EditorState }) {
   return <div className="glsl-view" ref={box} aria-label={say(tr('glsl.label', 'Generated GLSL'))}>
     {failure && <div className={'glsl-failure ' + (errors.length ? 'current' : 'earlier')}>
       <p>{say(failure.kind === 'internal'
-        ? tr('glsl.internalError', 'TD-Grape ran into an internal error while applying this Shader; TD keeps running revision {revision}.', { revision: state.stuck?.lastKnownGood?.revision ?? '' })
+        ? tr('glsl.internalError', 'TD-Grape ran into an internal error while applying this Shader; TD keeps running revision {revision}.', { revision: stuck?.lastKnownGood?.revision ?? '' })
         : errors.length ? tr('glsl.compileFailed', 'TD could not compile this GLSL; the lines TD reported are marked in red.')
           : tr('glsl.compileFailedEarlier', 'TD could not compile an earlier version of this GLSL; it has changed since, so the line numbers below may not match.'))}</p>
       {failure.kind !== 'internal' && errors.length > 0 && <p>{say(tr('glsl.clickError', 'Click an error to scroll to its line.'))}</p>}

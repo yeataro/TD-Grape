@@ -12,7 +12,7 @@ import { GhostMark } from './GhostMark';
 import { appearanceSubscribe, currentConvertPorts } from './appearance';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
-import { modesOf } from './declaration_modes';
+import { useModes } from './declaration_modes';
 import type { Declaration } from './core';
 
 /** Choices shown as they are written (type names). 照原樣顯示的選項（型別名）。 */
@@ -43,11 +43,10 @@ export function Control({ id, control, bare = false }: { id: string; control: No
 // Uniform 是它在 TD 所屬的參數頁（Vectors，顏色是 Colors）；常數是「Constant」（人類）。顯示 TD 上的驅動狀態；拖曳中只有
 // Uniform 會送到 TD（常數是編進 Shader 的）。
 export function DeclarationValue({ declaration }: { declaration: Declaration }) {
-  const session = useSession();
-  const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
+  const session = useSession(), modes = useModes(session, declaration);
   return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
     caption={declaration.kind === 'constant' ? say(tr('value.constant', 'Constant')) : declaration.color === true ? 'Colors' : 'Vectors'}
-    color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modesOf(declaration, td)}
+    color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modes}
     commit={value => session.setDeclarationValue(declaration.id, value)}
     preview={value => session.previewDeclarationValue(declaration.id, value)} />;
 }

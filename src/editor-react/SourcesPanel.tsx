@@ -1,13 +1,13 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { memo, useEffect, useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
-import { tr, say, tdValueHint, type Message } from './text';
+import { tr, say, tdValueHint, useLanguage, type Message } from './text';
 import { NameField, SourceCard, UnusedCard, kindGroup } from './SourceCard';
 import { TexturePreview, textureNames } from './TexturePreview';
 import { ValueFields, componentColor } from './ValueFields';
 import { useSession } from './contexts';
 import { Badge, ConfirmDialog, FoldSection, Select } from './controls';
-import { modesOf } from './declaration_modes';
+import { useModes } from './declaration_modes';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
 // no list of its own, it reads the graph's declarations and the TD built-in value table). For now: TOP
@@ -22,21 +22,19 @@ const channelLabel = (type: string) => {
   return <span aria-label={name}>{[...name].map((letter, i) => <span key={i} style={{ color: componentColor(i) }}>{letter}</span>)}</span>;
 };
 
-export function SourcesPanel({ declarations, references }: {
+// Memoised: a node drag re-renders the workspace every move, and this panel only follows its own props (Refactor.79.4; EDITOR_UI_RULES, continuous interactions).
+// memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props（R.79.4；畫面規則「連續互動」）。
+export const SourcesPanel = memo(SourcesList);
+function SourcesList({ declarations, references }: {
   declarations: readonly Declaration[]; references: Readonly<Record<string, number>>;
 }) {
+  useLanguage();
   const session = useSession(), flow = useReactFlow();
-  // TD's states follow on their own, without re-rendering the canvas (Uniform D2). TD 的現況自己更新，不重繪畫布。
-  const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
   const constants = declarations.filter(d => d.kind === 'constant'), inputs = declarations.filter(d => d.kind === 'topInput');
   // Preset Uniforms are listed in the time section. 預設 Uniform 列在時間區。
   const uniforms = declarations.filter(d => d.kind === 'uniform' && d.entry === undefined);
   const presetOf = (entry: string) => declarations.find(d => d.kind === 'uniform' && d.entry === entry);
-  const uniformValue = (declaration: Declaration) => <ValueFields label={`${declaration.name} value`} type={declaration.type}
-    value={declaration.value ?? 0} color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'}
-    modes={modesOf(declaration, td)}
-    commit={value => session.setDeclarationValue(declaration.id, value)}
-    preview={value => session.previewDeclarationValue(declaration.id, value)} />;
+  const uniformValue = (declaration: Declaration) => <UniformValue declaration={declaration} />;
   const center = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
@@ -150,4 +148,14 @@ export function SourcesPanel({ declarations, references }: {
     </SourceCard>)}
     </FoldSection>
   </section>;
+}
+
+// A Uniform's value in the panel. TD's states follow on their own, per Uniform: neither the canvas nor the other rows
+// re-render (Uniform D2; Refactor.79.4). 面板裡 Uniform 的值。TD 的現況各自更新：不重繪畫布，也不重繪其他列（Uniform D2；R.79.4）。
+function UniformValue({ declaration }: { declaration: Declaration }) {
+  const session = useSession(), modes = useModes(session, declaration);
+  return <ValueFields label={`${declaration.name} value`} type={declaration.type}
+    value={declaration.value ?? 0} color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modes}
+    commit={value => session.setDeclarationValue(declaration.id, value)}
+    preview={value => session.previewDeclarationValue(declaration.id, value)} />;
 }

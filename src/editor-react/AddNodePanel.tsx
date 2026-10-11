@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useMemo, useRef, useState } from 'react';
 import { categoryLabel, searchChoices, sourceLabel, topCategories, type AddChoice } from './add_entries';
 import { Badge } from './controls';
 import { Icon } from './icons';
 import { ResizeHandle } from './layout';
-import { say, tr } from './text';
+import { say, tr, useLanguage } from './text';
 
 // The Add Node panel (Refactor.54; floating-panels.md 8, as the legacy left panel): search, the category tree
 // with counts, one row per choice (name, source, +). A click selects it and shows its description below (a
@@ -14,7 +14,11 @@ import { say, tr } from './text';
 export const DRAG_TYPE = 'application/x-grape-choice';
 const hint = tr('addNode.rowHint', 'Click to see its description; drag, double-click or press + to add');
 
-export function AddNodePanel({ choices, onAdd }: { choices: readonly AddChoice[]; onAdd(choice: AddChoice): void }) {
+// Memoised: a node drag re-renders the workspace every move, and this panel only follows its own props (Refactor.79.4; EDITOR_UI_RULES, continuous interactions).
+// memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props（R.79.4；畫面規則「連續互動」）。
+export const AddNodePanel = memo(AddNodeList);
+function AddNodeList({ choices, onAdd }: { choices: readonly AddChoice[]; onAdd(choice: AddChoice): void }) {
+  useLanguage();
   const [query, setQuery] = useState(''), [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [chosen, setChosen] = useState<string | null>(null), [split, setSplit] = useState(.7);
   const body = useRef<HTMLDivElement>(null), start = useRef(split);
