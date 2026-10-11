@@ -38,7 +38,9 @@ input:focus-visible, button:focus-visible { outline: 1px solid var(--accent); ou
 button { padding: var(--button-pad); white-space: nowrap; } /* a button's text never wraps (human 2026-10-09) 按鈕文字不換行（人類） */
 /* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-fill); }
-button { color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
+/* Hover only where a pointer can hover: on a touch screen a tap left the highlight on (Refactor.80.1, human 2026-10-11).
+   滑過的高亮只在能滑過的裝置上：觸控螢幕點一下後高亮會一直留著（R.80.1，人類）。 */
+button { color: var(--text-strong); } @media (hover: hover) { button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); } }
 button:disabled, button[aria-disabled="true"] { opacity: .45; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
 button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
 button.primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
@@ -241,7 +243,7 @@ a { color: var(--accent); }
 .icon-button { display: grid; place-items: center; width: var(--icon-button); height: var(--icon-button); padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
 /* An icon button highlights without a border, on hover or with its menu open (human 2026-10-09); a pressed toggle keeps
    its own border (rules below). 圖示按鈕的高亮沒有框線（滑過或選單打開時，人類）；按下的開關保留自己的框（在下面）。 */
-.icon-button:hover { background: var(--surface-control); color: var(--text); border-color: transparent; }
+@media (hover: hover) { .icon-button:hover { background: var(--surface-control); color: var(--text); border-color: transparent; } }
 .icon-button.narrow { width: var(--icon-button-narrow); }
 .icon-button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
 .icon-button.mode-toggle[aria-pressed="true"] { color: var(--pressed-mode); background: var(--surface-pressed-mode); border-color: var(--pressed-mode); }
@@ -298,42 +300,38 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .split { display: flex; flex: 1; min-width: 0; min-height: 0; }
 .split-row { flex-direction: row; } .split-column { flex-direction: column; }
 .pane-slot { position: relative; display: flex; min-width: 0; min-height: 0; }
-.panel-zone { position: relative; display: flex; min-width: 0; min-height: 0; background: var(--surface-zone); }
-.panel-zone-left { border-right: 1px solid var(--border); }
-.panel-zone-right { border-left: 1px solid var(--border); }
-.panel-zone-top { border-bottom: 1px solid var(--border); }
-.panel-zone-bottom { border-top: 1px solid var(--border); }
-.tab-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.panel-zone { position: relative; display: flex; min-width: 0; min-height: 0; background: var(--surface-canvas); }
+.tab-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--surface-canvas); }
 /* The network is drawn once into its own element, moved into the canvas's part (R.68.4); both just fill it.
    網路區畫進自己的元素、搬進畫布那一格（R.68.4）；兩層都只是填滿。 */
 .canvas-hole, .canvas-host { display: flex; flex: 1; min-width: 0; min-height: 0; }
-/* Two panes side by side or one above the other are divided by the same line as a side and the canvas (R.68.1, human: the
-   boundary did not show). 並排或上下相鄰的兩格之間，用和側欄與畫布之間同樣的線分開（R.68.1，人類：看不出邊界）。 */
-.split-column > .pane-slot + .pane-slot { border-top: 1px solid var(--border); }
-.split-row > .pane-slot + .pane-slot { border-left: 1px solid var(--border); }
-/* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
-.panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); background: var(--surface-canvas); }
-/* The tab bar's row: the collapse triangle (stacked panes, Refactor.80) then the tabs. 分頁列那一排：收合三角形（疊著的窗格，R.80），再來是分頁。 */
-.tab-head { display: flex; flex-shrink: 0; background: var(--surface-canvas); }
-.tab-head > .panel-tabs { flex: 1; min-width: 0; }
-.pane-collapse { height: var(--bar-height); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
-/* Collapsed: only the bar; no tab is open below. 收起：只剩分頁列，沒有分頁往下開口。 */
-.tab-pane.collapsed .panel-tab[aria-selected="true"] { border-bottom-color: var(--border); }
+/* Panes frame themselves (below), so two panes side by side share one line: the later one drops its left line (R.68.1's
+   boundary, drawn by the frames since Refactor.80.1). 窗格自己畫框（下面），並排的兩格共用一條線：後一格不畫左線（R.68.1 的邊界，
+   R.80.1 起由框畫）。 */
+.split-row > .pane-slot + .pane-slot .panel-content { border-left: 0; }
+/* Tabs drawn as in TD (Refactor.80.1, human 2026-10-11): a tab draws its top, left and right; the panel below draws all
+   four sides; the shown tab reaches 1px down over the panel's top line, so the two are one piece; the others sit on that line.
+   The collapse triangle (stacked panes, Refactor.80) stands outside the tabs, with no lines, so it never breaks their frame.
+   The bar is as tall as the location bar beside it, so their lower edges meet (human 2026-10-09).
+   分頁照 TD 的畫法（R.80.1，人類）：分頁畫上、左、右；下面的面板畫上下左右；顯示中的分頁往下蓋過面板頂線 1px，連成一塊；其他分頁
+   坐在那條線上。收合三角形（疊著的窗格，R.80）在分頁外面、不畫線，不破壞分頁的框。這一排和旁邊網址列一樣高，下緣接得上（人類）。 */
+.tab-head { position: relative; z-index: 1; display: flex; align-items: flex-end; flex-shrink: 0; height: var(--bar-height); }
+.panel-tabs { display: flex; align-items: flex-end; flex: 1; min-width: 0; height: 100%; }
+.pane-collapse { height: 100%; }
+/* Collapsed: only the tabs, each closed below. 收起：只剩分頁，每個下面都封起來。 */
+.tab-pane.collapsed .panel-tab { border-bottom: 1px solid var(--border); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
    分頁標題照舊產品：小字、一般粗細，顯示中的才加粗。 */
 .panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left;
   font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 400; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); font-weight: 600; }
-/* As Adobe's panels (human 2026-10-09): each tab draws its own lines. The shown tab is open below, the same colour
-   as its content, so the two are one piece; the lines beside it (the previous tab's divider and its own) outline it. The
-   others are closed below and divided from each other. 參考 Adobe 的面板（人類）：每個分頁自己畫線。顯示中的分頁下面開口、
-   和內容同色，連成一塊；兩旁的線（前一個分頁的分隔線與它自己的）就是外框。其他分頁下面有線、彼此之間有分隔線。 */
-.panel-tab { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.panel-tab[aria-selected="true"] { border-bottom-color: transparent; }
+.panel-tab { height: 100%; border: 1px solid var(--border); border-bottom: 0; }
+.panel-tab + .panel-tab { margin-left: -1px; } /* neighbours share a line 相鄰的分頁共用一條線 */
+.tab-pane:not(.collapsed) .panel-tab[aria-selected="true"] { position: relative; height: calc(100% + 1px); margin-bottom: -1px; }
 /* The shown tab takes half the strip so its name fits; the others share the rest (human 2026-10-09: "Shared Sources" never
    showed whole). Alone, it takes all. 顯示中的分頁佔一半，名字放得下；其他平分剩下的（人類：「共用來源」永遠顯示不完整）。只有一個就佔滿。 */
 .panel-tab[aria-selected="true"]:not(:only-child) { flex: 0 0 50%; }
-.panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
+.panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; border: 1px solid var(--border); background: var(--surface-zone); }
 /* A scrolling area with edge fades (controls ScrollFade, Refactor.63.4): a fade shows on a side with hidden content. The fades
    start from the surface behind (--scroll-fade-from, the zone unless a user says otherwise).
    有邊緣漸層的捲動區：哪一邊有被蓋住的內容就顯示那一邊的漸層；從後面的底色（預設是區域底色）淡到透明。 */
