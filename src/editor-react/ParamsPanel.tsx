@@ -8,7 +8,7 @@ import { Select } from './controls';
 import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext } from './contexts';
 import { frameNodes } from './viewport';
-import { Control, DeclarationValue, PortLabel, listed, single, sourceKinds } from './NodeCard';
+import { Controls, DeclarationValue, PortLabel, listed, single, sourceKinds } from './NodeCard';
 
 // The Parameter panel (Refactor.76, human 2026-10-11; work/refactor/parameter-panel-scope-2026-10-11.md): the current node,
 // drawn like a node card from the same declarations — the head in the node's group colour with its type and its name; every
@@ -84,7 +84,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
           <Select label={`${id} type`} value={view.selector.value} onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /></label>
         : data.types.length > 1 && <label className="control-field"><span>{say(tr('params.operationType', 'Operation type'))}</span>
           <Select label={`${id} type`} value={String(authored.params.type)} onChange={value => session.configure(id, value)} options={listed(data.types)} /></label>)}
-      {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.inlineControls && <Controls id={id} controls={view.inlineControls} />}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => {
@@ -102,7 +102,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
             : head}
         </div>;
       })}
-      {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.controls && <Controls id={id} controls={view.controls} />}
       {view.note && <div className="hint">{view.note.text}</div>}
     </ValueColumns.Provider></div>}
     <NodeNote id={id} note={typeof authored.comment === 'string' ? authored.comment : ''} />

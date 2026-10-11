@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { core, typeColor, type NodeControl, type NodePresentation } from './core';
 import type { FlowNode } from './projection';
@@ -22,14 +22,33 @@ export const listed = (values: readonly string[]) => values.map(value => ({ valu
 // `bare`: a control at the head of the body (what the node points to, e.g. its declaration) shows only its choice, as the
 // legacy editor (human 2026-10-09: the label wasted space and lined up with nothing). The name stays for assistive tech.
 // bare：本體開頭的控制項（節點指向什麼，例如宣告）只顯示選到的值，照舊產品（人類：標籤浪費空間、也對不齊）。名稱仍給輔助工具。
+/** A list of a node's controls. Buttons next to each other are one group of equal widths, wherever a module puts them (Refactor.80.3,
+ * human 2026-10-11: plus and minus buttons the same everywhere): on a card the group fills its line; in the Parameter panel it
+ * starts where the menus start. 節點控制項的清單。相鄰的按鈕是一組、等寬，不管哪個模組放的（R.80.3，人類：加減按鈕到處一樣）：卡片上
+ * 一組佔滿那一行；參數面板裡從選單開始的地方開始。 */
+export function Controls({ id, controls, bare = false }: { id: string; controls: readonly NodeControl[]; bare?: boolean }) {
+  const parts: ReactNode[] = [];
+  for (let i = 0; i < controls.length; i++) {
+    if (controls[i]!.kind !== 'button') { parts.push(<Control key={controls[i]!.key} id={id} control={controls[i]!} bare={bare} />); continue; }
+    const group: NodeControl[] = [];
+    while (i < controls.length && controls[i]!.kind === 'button') group.push(controls[i++]!);
+    i--;
+    parts.push(<div key={'buttons-' + group[0]!.key} className="control-buttons">{group.map(button => <Control key={button.key} id={id} control={button} />)}</div>);
+  }
+  return <>{parts}</>;
+}
+
 export function Control({ id, control, bare = false }: { id: string; control: NodeControl; bare?: boolean }) {
   const session = useSession(), text = useContext(TextContext);
-  const label = control.literal ? control.label : text(control.label);
-  if (control.kind === 'row') return <div className="control-row">{control.children?.map(child => <Control key={child.key} id={id} control={child} />)}</div>;
+  const words = control.literal ? control.label : text(control.label);
+  // A label naming a component takes its colour, as port labels do (Refactor.80.3). 代表分量的標題用分量色，同接孔標籤（R.80.3）。
+  const label = control.component === undefined ? words
+    : <span className="component-letter letter-slot" data-component={control.component}>{words}</span>;
+  if (control.kind === 'row') return <div className="control-row"><Controls id={id} controls={control.children ?? []} /></div>;
   if (control.kind === 'hint') return <div className="hint">{label}</div>;
   if (control.kind === 'button') return <button className="nodrag" disabled={control.disabled}
     onClick={() => session.edit(id, control.command!, control.args ?? {})}>{label}</button>;
-  return <label className="control-field nodrag">{!bare && <span>{label}</span>}<Select label={bare ? label : `${id} ${control.key}`}
+  return <label className="control-field nodrag">{!bare && <span>{label}</span>}<Select label={bare ? words : `${id} ${control.key}`}
     value={String(control.value)} disabled={control.disabled} onChange={value => session.edit(id, control.command!, {
       ...control.args, value: control.numeric ? Number(value) : value })}
     options={control.options?.map(option => ({ value: String(option.value), label: option.literal ? option.label : text(option.label) })) ?? []} /></label>;
@@ -185,7 +204,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {start && outputRows}
-      {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} bare />)}
+      {view.inlineControls && <Controls id={id} controls={view.inlineControls} bare />}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
@@ -208,7 +227,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>; })}
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
-      {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.controls && <Controls id={id} controls={view.controls} />}
       {view.note && <div className="hint">{view.note.text}</div>}
       {!start && outputRows}
     </div>

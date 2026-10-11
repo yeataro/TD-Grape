@@ -41,6 +41,8 @@ export interface NodeControl {
   command?:string;value?:string;numeric?:boolean;args?:ObjectValue;
   options?:readonly {value:string;label:string;literal?:boolean}[];
   children?:readonly NodeControl[];prefix?:string;disabled?:boolean;
+  /** The label names this component (0-3), so the screen colours it as a component (Refactor.80.3). 標題代表這個分量（0-3），畫面照分量上色（R.80.3）。 */
+  component?:number;
 }
 /** One add-menu entry (design-interview Q37 1-5): a shortcut that creates the node with these params.
  * The graph never records which entry made a node. `literal`: the label is shown as is (a type name),

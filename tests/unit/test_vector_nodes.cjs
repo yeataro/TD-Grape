@@ -78,3 +78,15 @@ test('component names: defaults, stored names, labels and components per port',(
  assert.deepEqual(view('rgba').components.outputs,{r:[0],g:[1],b:[2],a:[3]});
  assert.deepEqual([view('mask').portLabels.outputs.out,view('mask').components.outputs.out],['QS',[3,0]]);
 });
+// Refactor.80.3 (human 2026-10-11): Swizzle's menus are named by the output component they fill, in the node's letters and
+// that component's colour; its minus and plus are a row of their own. R.80.3（人類）：Swizzle 的選單以它填的輸出分量命名、
+// 用節點的字母與分量色；減號加號自成一列。
+test('Swizzle names each menu by the output component it fills; its buttons are a row of their own',()=>{
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[
+  node('plain','swizzle',{type:'vec4',mask:'wzx'}),{...node('colour','swizzle',{type:'vec4',mask:'xy'}),ui:{componentNames:'rgba'}}],edges:[]}}};
+ const net=new GraphDocument(graph,registry).networks.get('pixel'),view=id=>net.node(id).definition.presentation(net.node(id).data,net.context);
+ const [menus,buttons]=view('plain').controls;
+ assert.deepEqual(menus.children.map(c=>[c.label,c.component,c.value]),[['X',0,'w'],['Y',1,'z'],['Z',2,'x']]);
+ assert.deepEqual(buttons.children.map(c=>[c.kind,c.command]),[['button','remove'],['button','add']]);
+ assert.deepEqual(view('colour').controls[0].children.map(c=>c.label),['R','G']);
+});

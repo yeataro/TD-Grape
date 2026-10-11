@@ -4705,14 +4705,22 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
         var _a;
         const t = String(n.params.type), selected = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
         const letters = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), node_sdk_1.values.count(t)), letter = (axis) => { var _a; return (_a = letters[axes.indexOf(axis)]) !== null && _a !== void 0 ? _a : axis.toUpperCase(); };
+        const places = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), 4); // the output's places, up to four 輸出的位置，最多四個
         return { selectorLabel: 'vector.inputType',
             // The output reads as the mask in the node's letters, e.g. "RG" (legacy graph_ui.js:1299). 輸出照遮罩、用節點的字母。
             portLabels: { outputs: { out: [...selected].map(letter).join('') } },
             components: { outputs: { out: [...selected].map(axis => axes.indexOf(axis)) } },
+            // Each menu is named by the output component it fills, in the node's letters and that component's colour (Refactor.80.3,
+            // human 2026-10-11: not 1, 2…); the buttons are a row of their own below (a row stays one line). 每個選單以它填的輸出分量
+            // 命名，用節點的字母與那個分量的顏色（R.80.3，人類：不要 1、2…）；按鈕在下面自成一列（一列維持一行）。
             controls: [{
-                    kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [
-                        ...[...selected].map((value, index) => ({ kind: 'select', key: 'component' + index, label: String(index + 1), literal: true, command: 'mask', args: { index }, value,
-                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: letter(value), literal: true })) })),
+                    kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [...selected].map((value, index) => {
+                        var _a;
+                        return ({ kind: 'select', key: 'component' + index, label: (_a = places[index]) !== null && _a !== void 0 ? _a : String(index + 1), literal: true, component: index, command: 'mask', args: { index }, value,
+                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: letter(value), literal: true })) });
+                    })
+                }, {
+                    kind: 'row', key: 'maskLength', label: 'vector.componentOrder', children: [
                         { kind: 'button', key: 'remove', label: '−', literal: true, command: 'remove', disabled: selected.length === 1 },
                         { kind: 'button', key: 'add', label: '+', literal: true, command: 'add', disabled: selected.length === 4 }
                     ]

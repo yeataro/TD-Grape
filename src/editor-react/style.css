@@ -654,7 +654,7 @@ span.image-label:hover { background: var(--image-label); }
 /* Everything in a node body keeps the same side inset (human 2026-10-09: Math's rows and button ran past it).
    節點本體裡的每一種東西左右都留同樣的內距（人類：Math 的控制列與按鈕超出去了）。 */
 /* Everything in a card's body keeps the same side inset as its port rows (Refactor.64.1: the ghost note was missing). 卡片內容一律和接孔列同樣的左右內距（64.1：Ghost 說明漏了）。 */
-.node-body > :is(.value-row, .control-field, .control-row, .hint, .ghost-note, button) { margin: 0 14px; }
+.node-body > :is(.value-row, .control-field, .control-row, .control-buttons, .hint, .ghost-note, button) { margin: 0 14px; }
 .node-body > button { height: var(--io-field); padding: 0 8px; margin-block: var(--io-inset); }
 .node-body > .hint { padding-block: var(--io-inset); }
 /* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
@@ -847,7 +847,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    控制項）都是橫跨四欄的 subgrid，所以全部對齊；名稱太長就截斷。接了線的輸入、色塊型別欄空著；選單佔用型別欄。 */
 .params-grid { display: grid; grid-template-columns: max-content fit-content(40%) max-content minmax(0, 1fr); column-gap: 8px;
   padding-inline: var(--params-pad); }
-.params-grid > :is(.port-row, .value-line, .control-field, .hint, button), .params-grid > .control-row > .control-field, .params-grid > .port-row > .value-line {
+.params-grid > :is(.port-row, .value-line, .control-field, .hint), .params-grid > .control-row > .control-field, .params-grid > .port-row > .value-line {
   grid-column: 1 / -1; margin: 0; }
 .params-grid :is(.port-row, .value-line, .control-field) { display: grid; grid-template-columns: subgrid; padding: 0; min-height: var(--io-row); }
 .params-grid > .control-row { display: contents; }
@@ -858,12 +858,13 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-grid .value-group { grid-column: 4; display: block; }
 .value-caption[data-toggle], .params-grid [data-toggle] { cursor: pointer; }
 .params-grid .value-expand { grid-column: 1; margin-block: var(--io-inset); }
-.params-grid :is(.params-wired, .port-fallback, .value-swatch), .params-grid > button { grid-column: 4; min-width: 0; }
+.params-grid :is(.params-wired, .port-fallback, .value-swatch) { grid-column: 4; min-width: 0; }
 /* A menu has no type, so it starts in the type column, right after its name (human 2026-10-11: no empty cell).
    選單沒有型別，從型別欄開始、緊接名稱（人類：不要空一格）。 */
 .params-grid .control-field > .select-button { grid-column: 3 / -1; min-width: 0; }
 .params-grid .control-field > .select-button { align-self: center; }
-.params-grid > button { height: var(--io-field); margin-block: var(--io-inset); }
+/* A group of buttons starts where the menus start (Refactor.80.3). 一組按鈕從選單開始的地方開始（R.80.3）。 */
+.params-grid .control-buttons { grid-column: 3 / -1; margin: 0; }
 .params-grid > .hint { padding-block: var(--io-inset); }
 .params-wired { height: var(--io-row); display: flex; align-items: center; gap: 8px; color: var(--text); }
 .params-wired > button { flex: none; height: var(--io-field); padding: 0 8px; }
@@ -876,6 +877,11 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .params-note > span { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 .params-note textarea { resize: vertical; min-height: 3em; font: inherit; color: inherit; background: var(--surface-field); border: 1px solid var(--border-control); border-radius: var(--radius-field); padding: 6px 8px; }
 .control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
+/* Buttons side by side are one group of equal widths (Controls in NodeCard.tsx, Refactor.80.3); on a card the group fills its line.
+   相鄰的按鈕是一組、等寬（NodeCard.tsx 的 Controls，R.80.3）；卡片上一組佔滿那一行。 */
+.control-buttons { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; align-items: center; min-height: var(--io-row); }
+.control-buttons > button { height: var(--io-field); min-width: 0; }
+.control-row > .control-buttons { flex: 1; }
 .control-row { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); } .control-row > .control-field { flex: 1; min-width: 0; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .grape-node .hint, .grape-node .ghost-note { contain: inline-size; }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
