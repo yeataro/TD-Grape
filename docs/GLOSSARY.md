@@ -56,7 +56,7 @@
 | 群組 | Group | **資料**：一群節點的成員名單＋名字＋顏色（一個節點最多屬一個群組；範圍限一個網路）。不影響產碼。新編輯器存檔欄位為 `ui.groups`；舊圖的 `ui.frames` 在新編輯器中直接忽略（新舊框架不共通，design-interview Q40）。程式類別用 `GraphGroup` 等名，避免與 React Flow 的 group（父子節點）混淆。 |
 | 群組外框 | Group box | **顯示**：畫在群組成員外的框，位置大小依成員算出、不儲存。不稱 frame。 |
 | Frame／Home | Frame（F）／Home（H） | **導覽指令**：把鏡頭對準選取／整張圖（同 TD，TD 沿用 Houdini 的 F／H）。2026-10-11 討論過改叫 Focus（非英語使用者覺得 Frame 不直覺），人類最後定**照 TD 慣例留 Frame**：使用者就是 TD 使用者；群組框已叫 Group，字母不撞；中文介面用中文（對準選取）。frame 另有時間軸格數的意思（TD 的 Frame、Abs Frame），和 TD 一樣兩義並存。 |
-| 專注編輯 | Focus graph／Canvas only（待定） | **畫面模式**：畫布填滿主體、版面裡的面板強制收起（面板的 C 狀態）。舊產品英文叫 Focus graph；導覽留 Frame 之後不再撞名，英文用哪個待人類選。 |
+| 專注編輯 | Focus graph | **畫面模式**：畫布填滿主體、版面裡的面板強制收起（面板的 C 狀態）；開著時按鈕寫還原版面（Restore layout）。照舊產品（人類 10-11：照原來的；比較過 Focus editor、Canvas only、Focus canvas）。快捷鍵 Ctrl＋Enter。 |
 
 ## 編輯器內部角色（2026-10-07 定名，尚未改名實作）
 
