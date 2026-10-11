@@ -462,11 +462,11 @@ export function backToA(layout: LayoutData, panel: string): LayoutData {
   if (!from || from === 'free') return layout;
   const { [panel]: _, ...floating } = layout.floating, next = copy({ ...layout, floating });
   if (from === 'closed') return { ...next, hidden: [...next.hidden.filter(id => id !== panel), panel] };
-  // Back as its pane's shown tab, the sides left as they are: it goes back to how things were, it does not open a side
-  // (Refactor.86: P sent it back and opened the right side, which closed the left). 回到它那一格、成為顯示中的分頁，兩側照舊：
-  // 是回到原本的樣子，不打開任何一側（R.86：按 P 送回去時打開了右側、左側因此收起）。
-  const placed = paneOf(next.root, panel);
-  if (placed) { placed.pane.active = panel; delete placed.pane.collapsed; }
+  // Back in its pane, which is left as it is: its shown tab and whether it is folded are not changed, and no side opens. Floating
+  // never changed the pane, so it is how it was, or as changed meanwhile (Refactor.86: P opened the right side; Refactor.93.1,
+  // human 2026-10-12: sending it back opened its pane, "that is what is wrong"). 回到它那一格，那一格照舊：顯示中的分頁、收不收合都不改，
+  // 也不打開任何一側。浮動時沒動過那一格，所以就是原本的樣子，或期間被改成的樣子（R.86：按 P 打開了右側；R.93.1，人類 10-12：送回去時那一格
+  // 彈開來「才是不對」）。
   return next;
 }
 /** Float or go back, for a panel with a home (P; human 2026-10-11). 有家的面板浮動或回去（P；人類 10-11）。 */

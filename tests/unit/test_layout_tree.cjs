@@ -192,9 +192,10 @@ test('a panel with a home floats in it, and goes back to its pane or to closed',
   assert.equal(layout.floats.appearance.corner, 'top-right', 'its home');
   assert.ok(tree.paneOf(layout.root, 'appearance'), 'still in the tree');
   assert.ok(tree.away(layout).includes('appearance'), 'the tree does not draw it');
+  const before = tree.paneOf(layout.root, 'appearance').pane.active;
   layout = tree.backToA(layout, 'appearance');
   assert.equal(layout.floating.appearance, undefined);
-  assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance', 'back as the shown tab');
+  assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, before, 'its pane is as it was');
   let closed = tree.popOut(tree.hidePanel(fresh(), 'appearance'), 'appearance', homes);
   assert.equal(closed.floating.appearance, 'closed');
   assert.ok(!closed.hidden.includes('appearance'), 'shown while it floats');
@@ -204,11 +205,19 @@ test('a panel with a home floats in it, and goes back to its pane or to closed',
   assert.equal(tree.popOut(base, 'glsl', homes), base, 'a panel without a home does not float this way');
 });
 
-test('going back from floating leaves the sides as they are (Refactor.86)', () => {
+test('going back from floating leaves the sides and its pane as they are (Refactor.86, 93.1)', () => {
   let layout = { ...fresh(), closed: { left: false, right: true } };
   layout = tree.backToA(tree.popOut(layout, 'appearance', homes), 'appearance');
   assert.deepEqual(layout.closed, { left: false, right: true }, 'the right side stays closed, as before it floated');
-  assert.equal(tree.paneOf(layout.root, 'appearance').pane.active, 'appearance');
+  // A folded pane showing another tab stays so (human 2026-10-12: its pane springing open is what is wrong).
+  // 收合著、顯示別的分頁的那一格維持原樣（人類：那一格彈開來才是不對）。
+  let shared = tree.movePanel(fresh(), 'glsl', { kind: 'tab', pane: where(fresh(), 'appearance'), index: 1 });
+  const pane = tree.paneOf(shared.root, 'appearance');
+  pane.pane.active = 'glsl'; pane.pane.collapsed = true;
+  shared = tree.backToA(tree.popOut(shared, 'appearance', homes), 'appearance');
+  const after = tree.paneOf(shared.root, 'appearance').pane;
+  assert.equal(after.active, 'glsl', 'the tab shown before is still shown');
+  assert.equal(after.collapsed, true, 'still folded');
 });
 
 test('a panel without a home floats free: out of the tree, docked again only by dragging (Refactor.88)', () => {
