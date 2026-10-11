@@ -15,7 +15,8 @@ import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
 import { Editor as EditorSession, type EditorState, type WireEnd, type WireFit } from './editor';
 import { resetToDefault } from './host_sync';
-import { RightDragSelect, pressKind } from './RightDragSelect';
+import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
+import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
 import { SelectionFrame } from './SelectionFrame';
 import { FloatingToolbar } from './FloatingToolbar';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
@@ -137,12 +138,20 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null;
-  onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
+  onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void; onMenu(open: MenuOpen): void;
 }) {
   const options = useOptions(), flow = useReactFlow();
+  // A right-click (or long press) on a port opens Create node for that port, there, instead of the menu (legacy graph_ui.js:2476);
+  // elsewhere the menu. 在接孔上按右鍵（或長按）：在那裡打開只列接得上的新增節點，不開選單（照舊產品）；其他地方開選單。
+  const menu = useCallback((open: MenuOpen) => {
+    if (!open.port) { onMenu(open); return; }
+    const { node, port, side } = open.port, data = flow.getNode(node)?.data as FlowNode['data'] | undefined;
+    const type = (side === 'output' ? data?.outputs : data?.inputs)?.find(item => item.key === port)?.type ?? '';
+    onCreate({ screen: { x: open.x, y: open.y }, wire: { end: { node, port, side } as WireEnd, type } });
+  }, [flow, onCreate, onMenu]);
   // Canvas damping takes the mouse's wheel and background drag over only while on (viewport.ts). 畫布阻尼只在開著時接管滑鼠。
   const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampCanvas> | null>(null);
   useEffect(() => {
@@ -195,7 +204,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
-    <RightDragSelect session={session} boxSelect={boxSelect}>
+    <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
     <ReactFlow<FlowNode, FlowEdge> ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
@@ -330,6 +339,11 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
+  // The right-click menu (Refactor.93): where it opened, and what was selected then. 右鍵選單（R.93）：在哪裡打開、當時選了什麼。
+  const [menuAt, setMenuAt] = useState<CanvasMenuRequest | null>(null);
+  const onMenu = useCallback((open: MenuOpen) => setMenuAt({ x: open.x, y: open.y, touch: open.touch, host: open.host, wire: open.wire,
+    selection: session ? selectionKey(session.snapshot()) : '' }), [session]);
+  const closeMenu = useCallback(() => setMenuAt(null), []);
   const choicesRef = useRef(choices); choicesRef.current = choices;
   const onDropChoice = useCallback((id: string, at: { x: number; y: number }) => {
     const choice = choicesRef.current.find(item => item.id === id);
@@ -389,6 +403,13 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
         && (element === document.body || element === document.documentElement || element.closest('.react-flow, .floating-area'))) {
         event.preventDefault(); layout.toggleFloat('params');
       }
+      // The menu key or Shift+F10 opens the right-click menu in the upper middle of the network, for the selection (legacy
+      // graph_ui.js:2559). 選單鍵或 Shift＋F10 在網路區中間偏上打開右鍵選單，對著選取（照舊產品）。
+      else if (!draft && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey))
+        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
+        const host = document.querySelector<HTMLElement>('.right-select-host');
+        if (host) { event.preventDefault(); onMenu({ ...middle(), touch: false, host }); }
+      }
       // F frames the selection (all when none), H frames all, on the network only (legacy graph_ui.js:2545, selection_ui.js:92).
       // F 對準選取（沒選就全部）、H 對準全部，只在網路區（同舊產品）。
       else if (!draft && ['f', 'h'].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
@@ -447,7 +468,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onDropChoice={onDropChoice} />
+            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
@@ -484,6 +505,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
+        {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} onClose={closeMenu}
+          onCreate={at => setCreating({ screen: at })} />}
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}
       </section>;

@@ -489,7 +489,7 @@ const recordWords = ({ kind, revision, from, link }: SyncRecord): Message => kin
   : tr('record.stopped', 'Stopped at revision {revision}', { revision });
 
 // The browser's own full screen (legacy foot bar, bottom-right). 瀏覽器自己的全螢幕（舊產品底列右下）。
-function useFullscreen() {
+export function useFullscreen() {
   return useSyncExternalStore(listener => { document.addEventListener('fullscreenchange', listener); return () => document.removeEventListener('fullscreenchange', listener); },
     () => !!document.fullscreenElement);
 }

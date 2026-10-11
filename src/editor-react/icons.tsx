@@ -24,6 +24,18 @@ const paths = {
   group: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /><rect x="7" y="12" width="4" height="4" /><rect x="13" y="12" width="4" height="4" /></>,
   subgraph: <path d="m3 3 6 6M9 4v5H4M21 3l-6 6M15 4v5h5M3 21l6-6M4 15h5v5M21 21l-6-6M20 15h-5v5" />,
   arrange: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
+  // The right-click menu's own (Refactor.93; legacy graph_ui.js:2923-2937). Home: the four corners with a small node (human
+  // 2026-10-11); Focus graph: arrows pushing out inside a frame (D, human 2026-10-11; drawn here first, settled in its own round).
+  // 右鍵選單自己的（R.93，取自舊產品）。Home：四角框加小節點（人類 10-11）；專注編輯：框裡箭頭往兩邊推（D，人類 10-11；先畫，在它那一輪定）。
+  plus: <path d="M12 4v16M4 12h16" />,
+  duplicate: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 14h6m-3-3v6" /></>,
+  convertWires: <path d="M3 6h14m-4-3 4 3-4 3M3 18h14m-4-3 4 3-4 3" />,
+  home: <><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" /><rect x="8.5" y="9.5" width="7" height="5" rx="1.2" /></>,
+  focus: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 12H6m2-2-2 2 2 2M14 12h4m-2-2 2 2-2 2" /></>,
+  floatingPanel: <path d="M4 3h16v18H4zM4 8h16M8 12h8M8 16h5" />,
+  arrowLeft: <path d="M20 12H4m6-6-6 6 6 6" />,
+  arrowRight: <path d="M4 12h16m-6-6 6 6-6 6" />,
+  check: <path d="m5 12 4 4L19 6" />,
   boxSelect: <rect x="4" y="4" width="16" height="16" rx="1" strokeDasharray="3 3" />,
   menu: <><circle cx="12" cy="5" r="1.6" className="icon-dot" /><circle cx="12" cy="12" r="1.6" className="icon-dot" /><circle cx="12" cy="19" r="1.6" className="icon-dot" /></>,
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,

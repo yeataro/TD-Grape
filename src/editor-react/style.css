@@ -1107,6 +1107,16 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .dropdown-menu button.danger { color: var(--status-error); }
 .dropdown-menu button.danger:hover, .dropdown-menu button.danger:focus-visible { background: color-mix(in srgb, var(--status-error) 14%, transparent); }
 .dropdown-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+/* Icons and shortcuts (Refactor.93, the right-click menu; legacy style.css:959-960, 541, 2081-2083): when any item has an icon, every
+   item keeps its column and a check sits there; shortcuts on the right, quieter; an on/off item with an icon shows on by the pressed
+   look. Opened by touch: taller rows, no shortcuts (legacy style.css:950-951). 圖示與快捷鍵（R.93 右鍵選單；照舊產品）：只要有一項有圖示，
+   每一項都留那一欄，勾勾也打在那裡；快捷鍵靠右、淡一點；有圖示的開關，開著用按下的樣子。觸控打開：列高一點、不顯示快捷鍵（照舊產品）。 */
+.dropdown-menu.with-icons button::before { display: none; } .dropdown-menu:focus { outline: none; }
+.dropdown-menu .menu-icon { flex: none; display: grid; place-items: center; width: 16px; height: 16px; }
+.dropdown-menu .menu-icon .icon-check { visibility: hidden; } .dropdown-menu button[aria-checked="true"] .icon-check { visibility: visible; }
+.dropdown-menu .menu-hint { margin-left: auto; padding-left: 20px; color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); white-space: nowrap; }
+.dropdown-menu button.pressable[aria-checked="true"] { color: var(--pressed); background: var(--surface-pressed); }
+.dropdown-menu.touch button { min-height: 44px; } .dropdown-menu.touch .menu-hint { display: none; }
 /* Message history, opening upward from the foot bar (Refactor.53). 訊息歷史，從底列往上開。 */
 /* Small panels called up from a button (controls.tsx Popover). 從按鈕叫出的小面板。 */
 .popover { position: fixed; z-index: 30; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-popup);

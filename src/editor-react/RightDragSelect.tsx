@@ -15,7 +15,13 @@ import type { FlowNode, FlowEdge } from './projection';
 // release (Refactor.50.1, human 2026-10-09: nodes no longer light up and go out mid-drag).
 // 規則對齊 TD：空白處右鍵拖或 Shift＋左鍵拖；碰到即算；按 Shift 保留原選取，否則取代（Ctrl 同無修飾鍵）。
 // 拖曳中只顯示預覽，放開才真的選取（R.50.1，人類：不再有拖曳途中亮了又熄的節點）。
-type Drag = { x: number; y: number; origin: { left: number; top: number }; previous: Set<string>; moved: boolean; right: boolean; touched: string[]; result: Set<string>; shown: boolean };
+// menu: the browser asked for its menu while the right button was still held (macOS opens it on press): the menu opens on release
+// if the press did not move. menu：右鍵還按著時瀏覽器就要開選單（macOS 在按下時開）：放開時沒移動才打開。
+type Drag = { x: number; y: number; origin: { left: number; top: number }; previous: Set<string>; moved: boolean; right: boolean; touched: string[]; result: Set<string>; shown: boolean;
+  target: Element; menu: boolean };
+/** What a right-click or a long press opened the menu on (Refactor.93): a wire, a port, or else the nodes. 右鍵或長按在什麼上面打開選單
+ * （R.93）：接線、接孔，或其他（節點）。 */
+export type MenuOpen = { x: number; y: number; touch: boolean; host: HTMLElement; wire?: string; port?: { node: string; port: string; side: 'input' | 'output' } };
 /** What the box would select if released now; null when no box is being dragged. 現在放開會選到哪些；沒在框選時為 null。 */
 export const BoxPreviewContext = createContext<ReadonlySet<string> | null>(null);
 /** Ctrl (or Cmd) toggles, Shift only adds, otherwise only this (TD as measured, Q39). */
@@ -29,13 +35,62 @@ function blockNextMenu() {
   window.addEventListener('contextmenu', block, true);
   setTimeout(() => window.removeEventListener('contextmenu', block, true), 400);
 }
+// After a long press, the release is not a tap (legacy graph_ui.js:2754): no click clears the selection or picks a wire.
+// 長按之後，放開不算點一下（照舊產品）：不會因此清掉選取或點到接線。
+function blockNextClick() {
+  const block = (event: Event) => { event.preventDefault(); event.stopPropagation(); window.removeEventListener('click', block, true); };
+  window.addEventListener('click', block, true);
+  setTimeout(() => window.removeEventListener('click', block, true), 400);
+}
+/** A touch held this long without moving this far opens the menu (legacy graph_ui.js:2619). 觸控按住這麼久、沒移動這麼遠，就打開選單（照舊產品）。 */
+const HOLD_MS = 550, HOLD_SLOP = 8;
+// Where a long press does not open the menu: what has its own press (fields, buttons, a value's ladder) and ports (a wire starts).
+// 長按不開選單的地方：有自己按住行為的（欄位、按鈕、數值梯尺）與接孔（開始拉線）。
+const ownPress = 'input, textarea, select, button, [contenteditable="true"], .nodrag, .react-flow__handle';
 
 // boxSelect: the toolbar's box-select switch, for touch and for people without modifier keys or a right button
 // (legacy graph_ui.js:2490, 2572): then a plain left (one-finger) drag on blank canvas selects instead of panning.
 // boxSelect：功能列的框選開關，給觸控、沒有修飾鍵或右鍵的人用（照舊產品）：開著時空白處一般左鍵（單指）拖曳＝框選、不平移。
-export function RightDragSelect({ session, boxSelect = false, children }: { session: EditorSession; boxSelect?: boolean; children: ReactNode }) {
+export function RightDragSelect({ session, boxSelect = false, onMenu, children }: { session: EditorSession; boxSelect?: boolean; onMenu?(open: MenuOpen): void; children: ReactNode }) {
   const flow = useReactFlow<FlowNode, FlowEdge>(), host = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
+  // The right-click menu (Refactor.93; human 2026-10-12): a right press released without moving, or a touch held still (legacy).
+  // A pressed node or wire not yet selected becomes the selection first; on blank canvas the selection stays (legacy graph_ui.js:2943).
+  // 右鍵選單（R.93；人類 10-12）：右鍵按下沒移動就放開，或觸控按住不動（照舊產品）。按到還沒選的節點或接線，先變成選取；空白處選取不變（照舊產品）。
+  const touches = useRef(new Set<number>()), touchUntil = useRef(0);
+  const hold = useRef<{ id: number; x: number; y: number; at: { x: number; y: number }; target: Element; timer: number; fired: boolean } | null>(null);
+  const open = (target: Element, x: number, y: number, touch: boolean) => {
+    const handle = target.closest<HTMLElement>('.react-flow__handle'), base = { x, y, touch, host: host.current! };
+    if (handle) {
+      const node = handle.dataset.nodeid, port = handle.dataset.handleid;
+      if (node && port) onMenu?.({ ...base, port: { node, port, side: handle.classList.contains('source') ? 'output' : 'input' } });
+      return;
+    }
+    const wire = target.closest('.react-flow__edge')?.getAttribute('data-id') ?? undefined, node = target.closest('.react-flow__node')?.getAttribute('data-id');
+    if (wire) session.clickEdge(wire, 'only'); else if (node) session.pressNode(node, 'only');
+    onMenu?.({ ...base, wire });
+  };
+  const stopHold = () => { if (hold.current) clearTimeout(hold.current.timer); hold.current = null; };
+  const startHold = (event: PointerEvent) => {
+    touches.current.add(event.pointerId); stopHold();
+    const target = event.target as Element;
+    if (touches.current.size !== 1 || !target.closest('.react-flow__pane') || target.closest(ownPress)) return;
+    const at = { x: event.clientX, y: event.clientY };
+    hold.current = { id: event.pointerId, x: at.x, y: at.y, at, target, fired: false, timer: window.setTimeout(() => {
+      const held = hold.current; if (!held) return;
+      held.fired = true; drag.current = null; setBox(null); setPreview(null);
+      open(held.target, held.at.x, held.at.y, true);
+    }, HOLD_MS) };
+  };
+  const moveHold = (event: PointerEvent) => {
+    const held = hold.current; if (!held || held.id !== event.pointerId || held.fired) return;
+    if (Math.hypot(event.clientX - held.x, event.clientY - held.y) >= HOLD_SLOP) stopHold(); else held.at = { x: event.clientX, y: event.clientY };
+  };
+  const endHold = (event: PointerEvent) => {
+    if (event.pointerType !== 'touch') return;
+    touches.current.delete(event.pointerId); touchUntil.current = performance.now() + 600;
+    if (hold.current?.id === event.pointerId) { if (hold.current.fired) blockNextClick(); stopHold(); }
+  };
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [preview, setPreview] = useState<ReadonlySet<string> | null>(null);
   // Only on blank canvas: wires and nodes sit inside the pane too, and a Shift press on a wire is a click
@@ -45,6 +100,7 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     && !(event.target as Element).closest('.react-flow__edge, .react-flow__node');
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
+    if (event.pointerType === 'touch') startHold(event);
     // A press on a node (not on a port: that starts a wire) selects it before any drag starts.
     // 按在節點上（不是接孔：那是開始拉線）就在拖曳開始前選取。
     const card = event.button === 0 && !target.closest('.react-flow__handle') ? target.closest('.react-flow__node') : null;
@@ -56,7 +112,8 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     // Where the canvas is, measured once: it does not move during a box drag (EDITOR_UI_RULES, continuous interactions;
     // Refactor.79.5). 畫布在哪，量一次：框選中它不會動（畫面規則「連續互動」；R.79.5）。
     const { left, top } = host.current!.getBoundingClientRect();
-    drag.current = { x: event.clientX, y: event.clientY, origin: { left, top }, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false };
+    drag.current = { x: event.clientX, y: event.clientY, origin: { left, top }, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false,
+      target, menu: false };
     host.current!.setPointerCapture(event.pointerId);
   };
   // The pane pans on mousedown (d3-zoom), so a Shift+left press must stop there too. 平移由 mousedown 觸發，一併攔下。
@@ -84,6 +141,7 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     setPreview(result);
   };
   const move = (event: PointerEvent) => {
+    moveHold(event);
     const start = drag.current; if (!start) return;
     // The button is no longer held but the release never arrived (it can be lost, e.g. outside an embedded
     // browser): end here, or the box would follow the pointer and cover every node.
@@ -98,7 +156,7 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
   };
   function end(event: PointerEvent) {
     const start = drag.current; drag.current = null; setBox(null);
-    if (!start?.moved) return;
+    if (!start?.moved) { if (start?.menu) open(start.target, start.x, start.y, false); return; }
     if (start.right) blockNextMenu(); // the release may land anywhere, e.g. over the toolbar
     select(start, event);
     setPreview(null);
@@ -106,12 +164,21 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
     // 放開時才真的改一次（接線清掉：節點與接線不混選）。
     session.boxSelect(start.result, start.touched);
   }
-  const cancel = () => { drag.current = null; setBox(null); setPreview(null); };
-  // Blank canvas never shows the browser menu (macOS opens it on press, not release).
-  // 畫布空白處不跳瀏覽器選單（macOS 在按下時就開）；舊產品此處是自己的選單。
-  const menu = (event: MouseEvent) => { if ((event.target as Element).closest('.react-flow__pane')) event.preventDefault(); };
+  const cancel = (event: PointerEvent) => { endHold(event); drag.current = null; setBox(null); setPreview(null); };
+  // The browser asks for its menu: on the network ours opens instead, unless what was pressed has its own (a value's presets: it
+  // has taken the event) or is text (the browser's, to copy and paste). After a right drag the release was a box select (blocked
+  // above); a touch has the long press instead. 瀏覽器要開它的選單：在網路區改開我們的，除非按到的東西有自己的（數值的常用值：它已經接手）
+  // 或是文字（用瀏覽器的，好複製貼上）。右鍵拖曳之後的放開是框選（上面已擋）；觸控改用長按。
+  const menu = (event: MouseEvent) => {
+    const target = event.target as Element;
+    if (event.defaultPrevented || !target.closest('.react-flow__pane') || target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    if (touches.current.size || performance.now() < touchUntil.current) return;
+    if (drag.current?.right) { drag.current.menu = true; return; }
+    open(target, event.clientX, event.clientY, false);
+  };
   return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
-    onPointerUp={end} onPointerCancel={cancel} onLostPointerCapture={event => { if (drag.current) end(event); }} onContextMenuCapture={menu}>
+    onPointerUp={event => { endHold(event); end(event); }} onPointerCancel={cancel} onLostPointerCapture={event => { if (drag.current) end(event); }} onContextMenu={menu}>
     <BoxPreviewContext.Provider value={preview}>{children}</BoxPreviewContext.Provider>
     {box && <div className="right-select-box" style={box} />}
   </div>;
