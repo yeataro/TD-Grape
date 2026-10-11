@@ -318,6 +318,22 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The network is drawn once into its own element, moved into the canvas's part (R.68.4); both just fill it.
    網路區畫進自己的元素、搬進畫布那一格（R.68.4）；兩層都只是填滿。 */
 .canvas-hole, .canvas-host { display: flex; flex: 1; min-width: 0; min-height: 0; }
+/* Floating panels (Refactor.84, human 2026-10-11): over the network, in its corners, below the notices on its top edge; rounded like
+   the toolbar; a title (triangle, name, menu) to drag, the content scrolling below it. The edges that size it sit half outside, so
+   the panel itself does not clip. 浮動面板（R.84，人類 10-11）：浮在網路區上、四個角，在上緣提示之下；圓角同功能列；標題（三角形、名字、
+   選單）用來拖，下面是可捲動的內容。調大小的邊一半在外面，所以面板本身不裁切。 */
+.canvas-host { position: relative; }
+.floating-area { position: absolute; z-index: 5; pointer-events: none; }
+.floating-panel { position: absolute; display: flex; flex-direction: column; min-width: 0; pointer-events: auto;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-zone); }
+:root[data-shadow-layers="on"] .floating-panel { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
+.floating-head { display: flex; align-items: center; gap: 2px; flex-shrink: 0; height: calc(var(--bar-height) - 2px); padding: 0 2px;
+  border-bottom: 1px solid var(--border); cursor: grab; touch-action: none; user-select: none; }
+.floating-panel.collapsed .floating-head { border-bottom: 0; }
+.floating-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px;
+  font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600; color: var(--text-strong); }
+.floating-head :is(.pane-collapse, .panel-menu) { position: static; height: calc(100% - 2px); }
+.floating-panel > .panel-content { border: 0; border-radius: 0 0 8px 8px; }
 /* Panes frame themselves (below), so two panes side by side share one line: the later one drops its left line (R.68.1's
    boundary, drawn by the frames since Refactor.80.1). 窗格自己畫框（下面），並排的兩格共用一條線：後一格不畫左線（R.68.1 的邊界，
    R.80.1 起由框畫）。 */

@@ -7,7 +7,7 @@ import { readPreference, writePreference } from './preferences';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon } from './icons';
 import * as tree from './layout_tree';
-import type { Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
+import type { Corner, Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
 
 // The editor's layout on screen (Refactor.53, 68; work/in-place-refactor-design/layout-tree.md): the tree of panes
 // (layout_tree.ts) drawn between the title bar and the foot bar, its handles, moving panels by their tabs, and the Layout
@@ -24,8 +24,9 @@ export type { Side } from './layout_tree';
 export type PanelView = { title: Message; content: ReactNode; menu?: () => readonly MenuItem[] };
 
 const defaults: tree.PanelDefaults = (Object.entries(PANELS) as [string, { side: Side; first?: true }][]).map(([id, row]) => [id, row.side, !!row.first]);
+const homes: tree.Homes = Object.fromEntries((Object.entries(PANELS) as [string, { corner?: Corner }][]).filter(([, row]) => row.corner).map(([id, row]) => [id, row.corner!]));
 function stored(): LayoutData {
-  try { return tree.readLayout(JSON.parse(readPreference('layout') ?? 'null'), defaults); }
+  try { return tree.keepHomes(tree.readLayout(JSON.parse(readPreference('layout') ?? 'null'), defaults), homes); }
   catch { return tree.defaultLayout(defaults); }
 }
 
@@ -38,7 +39,23 @@ export type Layout = LayoutData & {
   activate(path: Path, id: string): void; resize(path: Path, sizes: number[]): void; move(id: string, drop: Drop): void;
   /** Collapse a stacked tab pane to its tab bar, or open it (Refactor.80). 把疊著的分頁窗格收成分頁列，或打開（R.80）。 */
   collapse(path: Path, collapsed: boolean): void;
+  /** Floating panels (Refactor.84): float or go back (near where it sits), move to a corner, size or collapse, close.
+   * 浮動面板（R.84）：浮動或回去（在它所在處附近）、移到某一角、大小或收合、關閉。 */
+  toggleFloat(id: string): void; moveFloat(id: string, corner: Corner): void;
+  setFloat(id: string, patch: { width?: number; height?: number; collapsed?: boolean }): void; close(id: string): void;
+  /** Size a floating panel's height, pushing the one above or below (human 2026-10-11). 改浮動面板的高，推擠上下另一個（人類 10-11）。 */
+  pushFloat(id: string, axis: 'width' | 'height', size: number, room: number, gap: number, title: number): void;
+  /** Panels that float in one corner only (the panel table's `corner`). 只浮在某一角的面板（面板表的 corner）。 */
+  homes: tree.Homes;
 };
+/** The corners nearest where a panel sits now, nearest first (human 2026-10-11: it floats near where it was).
+ * 離面板現在所在處最近的幾個角，由近到遠（人類 10-11：在原本的位置附近浮動）。 */
+function cornersFor(id: string): Corner[] | undefined {
+  const area = document.querySelector('.floating-area')?.getBoundingClientRect();
+  const pane = document.querySelector(`.panel-tab[data-panel="${id}"]`)?.closest('.tab-pane')?.getBoundingClientRect();
+  if (!area || !pane) return undefined;
+  return tree.cornersNear({ x: pane.left - area.left, y: pane.top - area.top, width: pane.width, height: pane.height }, area.width, area.height);
+}
 export function useLayout(): Layout {
   const [data, setData] = useState(stored);
   // Written shortly after the last change, so dragging a handle does not write on every move.
@@ -59,6 +76,12 @@ export function useLayout(): Layout {
     resize: (path, sizes) => setData(old => tree.resize(old, path, sizes)),
     move: (id, drop) => setData(old => tree.movePanel(old, id, drop)),
     collapse: (path, collapsed) => setData(old => tree.setCollapsed(old, path, collapsed)),
+    toggleFloat: id => { const corners = cornersFor(id); setData(old => tree.toggleFloat(old, id, corners, homes)); },
+    moveFloat: (id, corner) => setData(old => tree.moveFloat(old, id, corner, homes)),
+    pushFloat: (id, axis, size, room, gap, title) => setData(old => tree.pushFloat(old, id, axis, size, room, gap, title)),
+    homes,
+    setFloat: (id, patch) => setData(old => tree.setFloat(old, id, patch)),
+    close: id => setData(old => tree.hidePanel(old, id)),
   }), [data]);
 }
 
@@ -95,7 +118,7 @@ export function LayoutView({ layout, panels, canvas }: { layout: Layout; panels:
   const host = useMemo(() => Object.assign(document.createElement('div'), { className: 'canvas-host' }), []);
   return <DragContext.Provider value={drag}>
     <PaneView pane={layout.root} path={[]} context={{ layout, panels, canvas: host }} />
-    {createPortal(canvas, host)}
+    {createPortal(<>{canvas}<FloatingPanels layout={layout} panels={panels} host={host} /></>, host)}
     <PanelDrag layout={layout} panels={panels} start={drag} />
   </DragContext.Provider>;
 }
@@ -121,7 +144,7 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   const { layout } = context, root = !path.length, element = useRef<HTMLDivElement>(null);
   const holdsCanvas = tree.hasCanvas(pane), centre = pane.children.findIndex(tree.hasCanvas), row = pane.direction === 'row';
   const closed = (index: number) => { const side = root ? tree.sideOf(layout.root, index) : null; return !!side && layout.closed[side]; };
-  const visible = pane.children.map((child, index) => ({ child, index })).filter(({ child, index }) => tree.shown(child, layout.hidden) && !closed(index));
+  const visible = pane.children.map((child, index) => ({ child, index })).filter(({ child, index }) => tree.shown(child, tree.away(layout)) && !closed(index));
   const begin = useRef({ sizes: [] as number[], limit: 0, total: 0, across: 1 });
   const length = () => (row ? element.current?.clientWidth : element.current?.clientHeight) || 1;
   // Next to the canvas, a part is pixels: it stays between its minimum and what leaves the canvas its own; elsewhere parts
@@ -193,7 +216,7 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
 
 function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { kind: 'tabs' }>; path: number[]; context: Context; stacked: boolean }) {
   const drag = useContext(DragContext), { layout, panels } = context;
-  const ids = pane.panels.filter(id => !layout.hidden.includes(id)), active = ids.includes(pane.active) ? pane.active : ids[0]!;
+  const away = tree.away(layout), ids = pane.panels.filter(id => !away.includes(id)), active = ids.includes(pane.active) ? pane.active : ids[0]!;
   const collapsed = !!pane.collapsed;
   return <section className={'tab-pane' + (collapsed ? ' collapsed' : '')} aria-label={say(panels[active]?.title ?? '')}>
     <div className="tab-head">
@@ -208,7 +231,8 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
           panel's. 疊在上下分割裡的窗格可以收成分頁列，分頁都還看得到；點分頁就再打開（R.80，人類）。三角形在顯示中分頁的左邊，和選單在
           右邊一樣，一般圖示按鈕寬（R.83.2，人類：好按、好看）；收起時留在原地用來打開。它屬於窗格，不屬於面板。 */}
       <div className="panel-tabs" role="tablist">{ids.map(id => {
-        const menu = id === active && !collapsed ? panels[id]?.menu : undefined;
+        // Every panel has a menu now (Pop out, Close panel; Refactor.84). 每個面板現在都有選單（Pop out、關閉面板；R.84）。
+        const menu = id === active && !collapsed ? panelMenu(layout, id, panels[id]) : undefined;
         const fold = id === active && stacked;
         return <div key={id} role="presentation" className={'tab-slot' + (id === active ? ' shown' : '') + (menu ? ' with-menu' : '') + (fold ? ' with-fold' : '')}>
           {fold && <button type="button" className="icon-button pane-collapse" aria-expanded={!collapsed}
@@ -269,8 +293,13 @@ type Mark = { kind: 'across' | 'along' | 'frame'; left: number; top: number; wid
    * so its words go inside. 放下會發生什麼，寫在提示旁（人類 10-10）；直線標明是哪一條邊，說明寫在內側。 */
   label?: Message; side?: Side;
   /** Joining as a tab: how many tabs the pane will have, and which one this is. 合併成分頁：會有幾個分頁、這是第幾個。 */
-  slots?: { count: number; at: number } };
-type Hint = { drop: Drop; mark: Mark; refused?: Message } | null;
+  slots?: { count: number; at: number };
+  /** The floating panel a corner drop swaps with (Refactor.84). 拖到某一角時要互換的浮動面板（R.84）。 */
+  swap?: string };
+/** Where a dragged panel goes: a place in the tree, or, for a floating panel, a corner (Refactor.84). 拖著的面板放到哪：版面樹裡某處，
+ * 或（浮動面板）某一角（R.84）。 */
+type Target = Drop | { kind: 'corner'; corner: Corner };
+type Hint = { drop: Target; mark: Mark; refused?: Message } | null;
 const across = (box: DOMRect, edge: 'top' | 'bottom'): Mark => ({ kind: 'across', left: box.left, top: edge === 'top' ? box.top : box.bottom, width: box.width });
 const along = (box: DOMRect, side: Side): Mark => ({ kind: 'along', left: side === 'left' ? box.left : box.right, top: box.top, height: box.height, side });
 const noRoom = tr('layout.noRoom', 'Not enough room here for another pane.');
@@ -291,7 +320,29 @@ function beside(layout: Layout, path: number[], edge: Edge, box: DOMRect): Hint 
   return { drop: { kind: 'beside', pane: path, edge }, mark: { ...mark, label: newPane }, refused: fits ? undefined : noRoom };
 }
 
+/** Why a corner is not free: it is another panel's home, or this panel floats only in its own. 為什麼這一角不能放：是別的面板的家，
+ * 或這個面板只浮在自己的家。 */
+function keptFor(panel: string, corner: Corner, homes: tree.Homes): Message {
+  const owner = Object.keys(homes).find(id => homes[id] === corner && id !== panel) ?? panel;
+  return tr('layout.cornerKept', 'This corner is kept for {panel}.', { panel: say(PANELS[owner as keyof typeof PANELS]?.title ?? owner) });
+}
+
 function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZone): Hint {
+  // A floating panel over the network goes to the nearest corner; one already there takes its corner (Refactor.84, human
+  // 2026-10-11: swap, shown while dragging). 浮動面板拖在網路區上：去最近的角；那一角已有面板就互換（R.84，人類 10-11：拖曳時預告）。
+  const area = layout.floating[panel] ? document.querySelector<HTMLElement>('.floating-area') : null, space = area?.getBoundingClientRect();
+  if (area && space && x >= space.left && x <= space.right && y >= space.top && y <= space.bottom) {
+    const corner = tree.cornerAt(x - space.left, y - space.top, space.width, space.height), other = tree.occupant(layout, corner);
+    // A panel with a home stays there (it may still be dragged into the layout); another's home is not free.
+    // 有家的面板留在家裡（仍可拖回版面）；別人的家不能進。
+    const kept = !tree.mayFloatIn(panel, corner, layout.homes);
+    const style = getComputedStyle(document.documentElement), gap = parseFloat(style.getPropertyValue('--float-gap')) || 8;
+    const rect = tree.floatRects(tree.moveFloat(layout, panel, corner), space.width, space.height, gap, parseFloat(style.getPropertyValue('--bar-height')) || 28)[panel]!;
+    return { drop: { kind: 'corner', corner }, mark: { kind: 'frame', left: space.left + rect.x, top: space.top + rect.y, width: rect.width, height: rect.height,
+      label: tr('layout.dropCorner', 'Float in this corner'),
+      swap: other && other !== panel && !kept ? other : undefined },
+      refused: kept ? keptFor(panel, corner, layout.homes) : undefined };
+  }
   const under = document.elementFromPoint(x, y) as HTMLElement | null, slot = under?.closest<HTMLElement>('[data-pane]');
   if (!under || !slot) return null;
   const path = slot.dataset.pane!.split('.').map(Number), pane = tree.at(layout.root, path), box = slot.getBoundingClientRect();
@@ -313,7 +364,7 @@ function hintAt(layout: Layout, panel: string, x: number, y: number, zone: EdgeZ
     if (distance < 1) return own && source!.pane.panels.length === 1 ? null : beside(layout, path, edge, box);
     // The tabs it will sit among (hidden ones keep their places but are not counted); the pointer's part of the width picks
     // the place. 會和哪些分頁並排（隱藏的保留位置、不算）；游標在寬度的哪一段決定位置。
-    const others = pane.panels.filter(id => id !== panel && !layout.hidden.includes(id));
+    const away = tree.away(layout), others = pane.panels.filter(id => id !== panel && !away.includes(id));
     if (!others.length) return null;
     const count = others.length + 1, at = Math.max(0, Math.min(count - 1, Math.floor((x - box.left) / box.width * count)));
     const index = at < others.length ? pane.panels.indexOf(others[at]!) : pane.panels.length;
@@ -365,7 +416,7 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
       // The click that ends a drag is not a tab click. 結束拖曳的那一下不算點分頁。
       const swallow = (click: Event) => { click.preventDefault(); click.stopImmediatePropagation(); };
       addEventListener('click', swallow, { capture: true, once: true }); setTimeout(() => removeEventListener('click', swallow, true), 0);
-      if (accept && hint && !hint.refused) now.current.move(panel, hint.drop);
+      if (accept && hint && !hint.refused) { const drop = hint.drop; if (drop.kind === 'corner') now.current.moveFloat(panel, drop.corner); else now.current.move(panel, drop); }
     };
     addEventListener('pointermove', move => {
       if (move.pointerId !== pointer) return;
@@ -390,9 +441,84 @@ function PanelDrag({ layout, panels, start }: { layout: Layout; panels: Record<s
       {mark.kind === 'frame' && ['tl', 'tr', 'bl', 'br'].map(corner => <span key={corner} className={'drop-corner ' + corner} />)}
       {mark.slots && <span className="drop-slots">{Array.from({ length: mark.slots.count }, (_, index) =>
         <span key={index} className={'drop-slot' + (index === mark.slots!.at ? ' at' : '')} />)}</span>}
-      {(drag.hint!.refused ?? mark.label) && <span ref={label} className="drop-label">{say(drag.hint!.refused ?? mark.label!)}</span>}</div>}
+      {(drag.hint!.refused ?? mark.label) && <span ref={label} className="drop-label">{mark.swap && !drag.hint!.refused
+        ? say(tr('layout.dropSwap', 'Swap with {panel}', { panel: say(panels[mark.swap]?.title ?? mark.swap) }))
+        : say(drag.hint!.refused ?? mark.label!)}</span>}</div>}
     <div className="drag-label" style={{ left: drag.x + 14, top: drag.y + 10 }}>{say(panels[drag.panel]?.title ?? drag.panel)}</div>
   </>, document.body);
+}
+
+
+/** The menu every panel has (human 2026-10-11): Pop out on top, the panel's own items in the middle, Close panel at the bottom,
+ * each part apart. Pop out is a tick: ticked while it floats; unticking sends it back (the A/B switch).
+ * 每個面板都有的選單（人類 10-11）：最上面 Pop out，中間是面板自己的項目，最下面關閉面板，各自一段。Pop out 是打勾項：浮動時勾著；
+ * 取消就回去（A／B 切換）。 */
+function panelMenu(layout: Layout, id: string, view: PanelView | undefined): () => readonly MenuItem[] {
+  return () => {
+    const own = view?.menu?.() ?? [];
+    return [{ key: 'popOut', label: say(tr('layout.popOut', 'Pop out')), checkbox: true, checked: !!layout.floating[id], select: () => layout.toggleFloat(id) },
+      ...own.map((item, index) => index ? item : { ...item, divider: true }),
+      { key: 'close', label: say(tr('layout.closePanel', 'Close panel')), divider: true, select: () => layout.close(id) }];
+  };
+}
+
+/** The floating panels (Refactor.84; work/refactor/floating-panels-scope-2026-10-11.md): over the network, in its four corners,
+ * between the toolbar and the canvas controls, the floating gap off every edge (legacy inspector.js:2139). Measured when the
+ * network, the toolbar or the canvas controls change size, not while anything moves. Below the notices on the network's top.
+ * 浮動面板（R.84）：浮在網路區上、四個角，介於功能列與畫布控制項之間，每條邊留浮動間隙（照舊產品）。網路區、功能列或畫布控制項
+ * 改變大小時才量，不是拖動時量。在網路區上緣的提示之下。 */
+export function FloatingPanels({ layout, panels, host }: { layout: Layout; panels: Record<string, PanelView>; host: HTMLElement }) {
+  const [area, setArea] = useState<{ left: number; top: number; width: number; height: number; gap: number; title: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const canvas = host.querySelector('.canvas'), bar = host.querySelector('.network-bar-slot'), controls = host.querySelector('.react-flow__controls');
+      if (!canvas) return;
+      const style = getComputedStyle(document.documentElement), gap = parseFloat(style.getPropertyValue('--float-gap')) || 8;
+      const title = parseFloat(style.getPropertyValue('--bar-height')) || 28, origin = host.getBoundingClientRect(), box = canvas.getBoundingClientRect();
+      const top = (bar ? bar.getBoundingClientRect().bottom : box.top) + gap, bottom = (controls ? controls.getBoundingClientRect().top : box.bottom) - gap;
+      setArea({ left: box.left - origin.left + gap, top: top - origin.top, width: Math.max(0, box.width - 2 * gap), height: Math.max(0, bottom - top), gap, title });
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(host);
+    for (const part of [host.querySelector('.network-bar-slot'), host.querySelector('.react-flow__controls')]) if (part) watch.observe(part);
+    return () => watch.disconnect();
+  }, [host, Object.keys(layout.floating).length > 0]);
+  if (!area) return null;
+  const rects = tree.floatRects(layout, area.width, area.height, area.gap, area.title);
+  return <div className="floating-area" style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
+    {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area} />)}
+  </div>;
+}
+
+/** One floating panel: its title (the triangle, the name, its menu; dragged to another corner or into the layout), its content,
+ * and the edges that face the network, to size it (legacy: the inner edges, inspector.js:2090). With a panel above or below on its
+ * side, the edge between them moves both (human 2026-10-11). 一個浮動面板：標題（三角形、名字、選單；拖到別的角或拖回版面）、內容，以及朝網路區的
+ * 邊，用來調大小（照舊產品：內側的邊）。同一邊上下都有面板時，兩者之間的邊一起動（人類 10-11）。 */
+function FloatingPanel({ id, layout, view, rect, area }: { id: string; layout: Layout; view: PanelView | undefined; rect: tree.FloatRect;
+  area: { width: number; height: number; gap: number; title: number } }) {
+  const drag = useContext(DragContext), place = layout.floats[id]!, top = place.corner.startsWith('top'), left = place.corner.endsWith('left');
+  const start = useRef({ width: 0, height: 0 });
+  // The panel above or below on the same side: the edge between them moves both. 同一邊上下的另一個面板：兩者之間的邊一起動。
+  const title = say(view?.title ?? id);
+  return <section className={'floating-panel' + (rect.collapsed ? ' collapsed' : '')} aria-label={title}
+    style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
+    <div className="floating-head" onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
+      <button type="button" className="icon-button pane-collapse" aria-expanded={!rect.collapsed}
+        aria-label={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+        title={say(rect.collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+        onClick={() => layout.setFloat(id, { collapsed: !place.collapsed })}><Icon name="chevronDown" /></button>
+      <span className="floating-title">{title}</span>
+      <PanelMenu title={view?.title ?? tr('layout.panel', 'Panel')} items={panelMenu(layout, id, view)} />
+    </div>
+    {!rect.collapsed && <div className="panel-content">{view?.content}</div>}
+    {!rect.collapsed && <ResizeHandle axis="x" edge={left ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
+      onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
+      onMove={delta => layout.pushFloat(id, 'width', start.current.width + (left ? delta : -delta), area.width, area.gap, area.title)} />}
+    {!rect.collapsed && <ResizeHandle axis="y" edge={top ? 'trail' : 'lead'} label={tr('layout.resizeFloat', 'Resize the panel')}
+      onStart={() => { start.current = { width: rect.width, height: rect.height }; }}
+      onMove={delta => layout.pushFloat(id, 'height', start.current.height + (top ? delta : -delta), area.height, area.gap, area.title)} />}
+  </section>;
 }
 
 /** The Layout menu (legacy inspector.js:2396; floating-panels.md 6): each panel shown or hidden, and the default layout.

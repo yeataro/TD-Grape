@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import type { AddChoice } from './add_entries';
-import type { Side } from './layout_tree';
+import type { Corner, Side } from './layout_tree';
 import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
 import { GlslPanel, glslMenu } from './GlslPanel';
@@ -20,7 +20,9 @@ import { tr, say, type Message } from './text';
 /** What a panel's content is made from: the graph being edited (Q47 4). 面板內容的來源：正在編輯的圖。 */
 export type PanelInput = { session: EditorSession | null; state: EditorState; choices: readonly AddChoice[]; add(choice: AddChoice): void };
 /** `menu`: the panel's own menu, on its tab's corner while shown (Refactor.83). menu：面板自己的選單，顯示時在分頁右上角（R.83）。 */
-export type PanelRow = { title: Message; side: Side; first?: true; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
+/** `corner`: it floats only in that corner, which no other panel may take (Refactor.84, human 2026-10-11: the Parameter panel
+ * keeps the top right). corner：只浮在那一角、別的面板不能用（R.84，人類 10-11：參數面板佔右上角）。 */
+export type PanelRow = { title: Message; side: Side; first?: true; corner?: Corner; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
 
 export const PANELS = {
   sources: { title: tr('sources.title', 'Shared Sources'), side: 'left', content: ({ session, state }) => session
@@ -35,7 +37,7 @@ export const PANELS = {
     ? <GlslPanel glsl={state.glsl} glslMap={state.glslMap} glslVariables={state.glslVariables} glslDeclarations={state.glslDeclarations} stuck={state.stuck} />
     : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p>, menu: glslMenu },
   // The Parameter panel (Refactor.76): the current node. 參數面板（R.76）：目前的節點。
-  params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, content: ({ session, state }) => session
+  params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, corner: 'top-right', content: ({ session, state }) => session
     ? <ParamsPanel state={state} />
     : <p className="hint">{say(tr('params.noGraph', 'Open a Grape OP to edit its nodes.'))}</p> },
   // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.
