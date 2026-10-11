@@ -319,10 +319,12 @@ function useCalm(state: EditorState | null): EditorState | null {
  * screen. The light opens the status (the state now, what to do when TD is away, the state's own record); the message opens
  * the message history (Refactor.70.1: two separate things). 底列：編輯器所有的提示（人類）。功能表、同步燈號、最新訊息、設定、
  * 全螢幕。燈號打開狀態（現在的狀態、TD 不在時怎麼辦、狀態自己的紀錄）；訊息打開訊息歷史（R.70.1：兩件不同的事）。 */
-export function FootBar({ session, waiting, onDownload, onReset, prefs, project, onAppearance }: {
+export function FootBar({ session, waiting, onDownload, onReset, prefs, project, onAppearance, apart, onApart }: {
   session: EditorSession | null; waiting: Message | string; onDownload(): void; onReset(): void; prefs: CanvasPrefs;
   /** The TD project's file name, as TD last said it (Refactor.75.2). TD 專案的檔名（TD 最後說的）。 */
   project?: string; onAppearance?(): void;
+  /** Floating panels forbidden to overlap (the layout's; Refactor.89.1). 浮動面板禁止重疊（版面的；R.89.1）。 */
+  apart: boolean; onApart(on: boolean): void;
 }) {
   // The light and the message show the calm state; the status panel, opened on purpose, the state as it is (R.73.2).
   // 燈號與訊息顯示平穩後的狀態；刻意打開的狀態面板顯示當下的狀態。
@@ -388,6 +390,9 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       {/* Trial (Refactor.63.6, human 2026-10-10): outline the nodes that wrote a line TD reported, as the legacy editor did; only
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
+      {/* Floating panels keep clear of each other; off, they may overlap and the one pressed comes to the front (Refactor.89.1, human
+          2026-10-12: off by default). 浮動面板彼此避開；關掉時可以重疊、按到的到最前面（R.89.1，人類 10-12：預設關）。 */}
+      <label className="check"><input type="checkbox" checked={apart} onChange={event => onApart(event.target.checked)} />{say(tr('foot.floatingApart', 'Forbid floating panels to overlap'))}</label>
       <ComponentTint />
       <WireGradient />
       <ComponentLetters />

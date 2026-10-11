@@ -45,12 +45,17 @@ export type Layout = LayoutData & {
   /** Floating (Refactor.84, 88): a panel with a home floats there or goes back (P); any other floats free where it is dropped, is
    * moved and sized there, and closes. 浮動（R.84、88）：有家的面板浮在家或回去（P）；其他的自由浮動在放下的地方，在那裡移動、調大小、關閉。 */
   toggleFloat(id: string): void; floatOut(id: string, place: tree.FloatPlace): void; placeFloats(places: Record<string, tree.FloatPlace>): void;
+  /** A floating panel clicked comes to the front (Refactor.89.1). 點到的浮動面板到最前面（R.89.1）。 */
+  raise(id: string): void;
+  /** Floating panels keep clear of each other ("forbid overlap" in the gear, off by default; Refactor.89.1, human 2026-10-12): a
+   * personal preference, kept in this browser. 浮動面板彼此避開（齒輪裡的「禁止重疊」，預設關；R.89.1，人類 10-12）：個人偏好，存在這個瀏覽器。 */
+  apart: boolean; setApart(on: boolean): void;
   setFloat(id: string, patch: { width?: number; height?: number; collapsed?: boolean }): void; close(id: string): void;
   /** Panels that float in one corner only (the panel table's `corner`). 只浮在某一角的面板（面板表的 corner）。 */
   homes: tree.Homes;
 };
 export function useLayout(): Layout {
-  const [data, setData] = useState(stored);
+  const [data, setData] = useState(stored), [apart, setApart] = useState(() => readPreference('floating.apart') === 'on');
   // Written shortly after the last change, so dragging a handle does not write on every move.
   // 停止變動後才寫入，拖把手時不會每一步都寫。
   useEffect(() => {
@@ -76,7 +81,9 @@ export function useLayout(): Layout {
     homes,
     setFloat: (id, patch) => setData(old => tree.setFloat(old, id, patch)),
     close: id => setData(old => tree.hidePanel(old, id)),
-  }), [data]);
+    raise: id => setData(old => tree.raise(old, id)),
+    apart, setApart: on => { setApart(on); writePreference('floating.apart', on ? 'on' : 'off'); },
+  }), [data, apart]);
 }
 
 /** A drag handle: drawn thin, grabbed by a wider area (human 2026-10-09). Reports the distance moved. `edge` puts it on the
@@ -416,8 +423,8 @@ function floatHint(layout: Layout, panel: string, x: number, y: number, geometry
   if (size.width < tree.FLOAT_MIN_WIDTH || size.height < tree.FLOAT_MIN_HEIGHT) return null;
   const others = Object.values(rects), clamp = (value: number, high: number) => Math.max(0, Math.min(high, value));
   const box = tree.snap({ x: clamp(x - area.left - size.width / 2, width - size.width), y: clamp(y - area.top - title / 2, height - size.height), ...size },
-    others, width, height, gap, SNAP);
-  if (!others.every(other => tree.clear(box, other, gap))) return null;
+    others, width, height, gap, SNAP, layout.apart);
+  if (layout.apart && !others.every(other => tree.clear(box, other, gap))) return null;
   return { drop: { kind: 'float', place: tree.placeAt(box, width, height), box }, mark: { kind: 'ghost', left: area.left + box.x, top: area.top + box.y, width: box.width, height: box.height } };
 }
 
@@ -481,7 +488,8 @@ function PanelDrag({ layout, panels, start, geometry }: { layout: Layout; panels
       if (!moving) { moving = true; document.documentElement.classList.add('moving-panel'); }
       if (own && shape && space && box && move.clientX >= space.left && move.clientX <= space.right && move.clientY >= space.top && move.clientY <= space.bottom) {
         const to = { x: own.x + move.clientX - x0, y: own.y + move.clientY - y0 };
-        box = tree.snap(tree.slide(box, to, others, shape.width, shape.height, shape.gap), others, shape.width, shape.height, shape.gap, SNAP);
+        const apart = now.current.apart;
+        box = tree.snap(tree.slide(box, to, apart ? others : [], shape.width, shape.height, shape.gap), others, shape.width, shape.height, shape.gap, SNAP, apart);
         hint = null; setDrag(null);
         now.current.placeFloats({ [panel]: tree.placeAt(box, shape.width, shape.height, was) });
         return;
@@ -561,7 +569,7 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
     if (!drawnNow) return;
     const free = Object.keys(layout.floating).filter(id => layout.floating[id] === 'free'), before = seen.current;
     seen.current = new Set(free);
-    if (!before) return;
+    if (!before || !layout.apart) return;
     const places = Object.fromEntries(free.filter(id => !before.has(id)).flatMap(id => {
       const others = Object.entries(drawnNow.rects).filter(([key]) => key !== id).map(([, rect]) => rect);
       const place = tree.callUp(layout.floats[id]!, others, drawnNow.width, drawnNow.height, drawnNow.gap, drawnNow.title);
@@ -579,8 +587,8 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
       const { collapsed: _, ...open } = layout.floats[id]!;
       return [id, { ...open, height: height(id) }];
     })) } });
-  const caps = tree.floatRects(sized(() => 1e6), area.width, area.height, area.gap, area.title);
-  const rects = tree.floatRects(sized(id => Math.min(measured[id] ?? caps[id]?.height ?? 0, caps[id]?.height ?? 0)), area.width, area.height, area.gap, area.title);
+  const caps = tree.floatRects(sized(() => 1e6), area.width, area.height, area.gap, area.title, layout.apart);
+  const rects = tree.floatRects(sized(id => Math.min(measured[id] ?? caps[id]?.height ?? 0, caps[id]?.height ?? 0)), area.width, area.height, area.gap, area.title, layout.apart);
   const measure = (id: string, height: number) => setMeasured(old => old[id] === height ? old : { ...old, [id]: height });
   drawn.current = { width: area.width, height: area.height, gap: area.gap, title: area.title, rects };
   // The seam's line, the whole length of the panels on it, from where they are now (it follows the drag). 縫的線，畫滿縫上所有面板的長度，
@@ -594,7 +602,8 @@ export function FloatingPanels({ layout, panels, host, geometry }: { layout: Lay
   })();
   // On a seam its line is the one mark: the edge's own line goes (human 2026-10-12). 縫上只留縫的線：邊自己的線不畫（人類 10-12）。
   return <div className={'floating-area' + (line ? ' on-seam' : '')} style={{ left: area.left, top: area.top, width: area.width, height: area.height }}>
-    {Object.keys(layout.floating).map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
+    {/* The first in line is drawn last, on top (Refactor.89.1). 排最前面的最後畫，在最上面（R.89.1）。 */}
+    {Object.keys(layout.floating).reverse().map(id => rects[id] && <FloatingPanel key={id} id={id} layout={layout} view={panels[id]} rect={rects[id]!} area={area}
       rects={rects} cap={caps[id]?.height} measure={height => measure(id, height)} sizing={!!seam?.ids.includes(id)} showSizing={setSeam} />)}
     {line && <div className={line.className} style={line.style} />}
   </div>;
@@ -629,7 +638,7 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
   const start = useRef<Record<string, tree.Box>>({});
   const fixed = () => Object.keys(rects).filter(key => key !== id && (layout.floating[key] !== 'free' || rects[key]!.collapsed));
   const size = (edge: tree.FloatEdge, dx: number, dy: number) => {
-    const sized = tree.sizeFloats(start.current, id, edge, dx, dy, area.width, area.height, area.gap, free ? fixed() : Object.keys(rects).filter(key => key !== id), SNAP_SIZE);
+    const sized = tree.sizeFloats(start.current, id, edge, dx, dy, area.width, area.height, area.gap, free ? fixed() : Object.keys(rects).filter(key => key !== id), SNAP_SIZE, layout.apart);
     if (!free) { layout.setFloat(id, { ...(edge.x ? { width: sized[id]!.width } : {}), ...(edge.y ? { height: sized[id]!.height } : {}) }); return; }
     // Only the panels that changed, so the others keep their turn when room runs short. 只寫變了的面板，其他的在空間不夠時保持原本的先後。
     const changed = (key: string) => (['x', 'y', 'width', 'height'] as const).some(side => sized[key]![side] !== start.current[key]![side]);
@@ -660,7 +669,9 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
     watch.observe(element);
     return () => watch.disconnect();
   }, [own]);
-  if (own) return <section ref={frame} className={'floating-panel own-frame' + (shut ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
+  // A press anywhere on it brings it to the front (Refactor.89.1, human 2026-10-12). 在它上面任何地方按下就到最前面（R.89.1，人類 10-12）。
+  const front = () => layout.raise(id);
+  if (own) return <section ref={frame} onPointerDownCapture={front} className={'floating-panel own-frame' + (shut ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: top ? rect.y : undefined, bottom: top ? undefined : 0, width: rect.width, maxHeight: cap }}>
     <FloatingContext.Provider value={{ collapsed: shut, fold, controls: unfloat, drag: event => drag.current(event, id), openMenu }}>
       {view?.content}</FloatingContext.Provider>
@@ -669,7 +680,7 @@ function FloatingPanel({ id, layout, view, rect, area, rects, cap, measure, sizi
   </section>;
   // Glass, as everything that floats (Refactor.89, human 2026-10-12: under the gear's glass setting). 玻璃，和所有浮著的一樣（R.89，人類 10-12：
   // 受齒輪的玻璃設定管）。
-  return <section className={'floating-panel glass' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
+  return <section onPointerDownCapture={front} className={'floating-panel glass' + (rect.collapsed ? ' collapsed' : '') + (sizing ? ' sizing' : '')} aria-label={title}
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     <div className="floating-head" onContextMenu={openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id); }}>
       {fold}

@@ -452,6 +452,13 @@ export function floatOut(layout: LayoutData, panel: string, place: FloatPlace): 
   const next = layout.floating[panel] === 'free' ? layout : remove(layout, panel);
   return { ...next, hidden: next.hidden.filter(id => id !== panel), floating: { ...next.floating, [panel]: 'free' }, floats: { ...next.floats, [panel]: place } };
 }
+/** A floating panel clicked: first in line, so it is drawn on top and wins when room runs short (Refactor.89.1, human 2026-10-12).
+ * 點到的浮動面板：排到最前面，畫在最上面、空間不夠時以它為準（R.89.1，人類 10-12）。 */
+export function raise(layout: LayoutData, panel: string): LayoutData {
+  if (!layout.floating[panel] || Object.keys(layout.floating)[0] === panel) return layout;
+  const { [panel]: own, ...rest } = layout.floating;
+  return { ...layout, floating: { [panel]: own!, ...rest } };
+}
 /** Keep where free panels now are (moved or sized together); the ones just placed go first, so where they were put wins when
  * room runs short (floatRects). 記下自由浮動面板現在的位置（一起移動或調大小）；剛放的排最前面，空間不夠時（floatRects）以它們放的
  * 位置為準。 */
@@ -472,10 +479,11 @@ export function setFloat(layout: LayoutData, panel: string, patch: { width?: num
   return { ...layout, floats: { ...layout.floats, [panel]: next } };
 }
 
-// Geometry of free panels, in the floating area (the network between its toolbar and canvas controls, gaps taken off). Panels
-// do not overlap (Refactor.88, human 2026-10-12: try it, drop it if it does not work): they keep `gap` apart; all of it is here,
-// so dropping the rule is one change. 自由浮動面板的幾何，在浮動範圍裡（網路區功能列到畫布控制項之間，已扣間隙）。面板不重疊（R.88，
-// 人類 10-12：先試，有問題再拿掉）：彼此至少隔 gap；全部集中在這裡，要拿掉只改一處。
+// Geometry of free panels, in the floating area (the network between its toolbar and canvas controls, gaps taken off). Whether
+// panels keep clear of each other is a switch, `apart` (Refactor.89.1, human 2026-10-12: "forbid overlap" in the gear, off by
+// default); snapping works either way (human: the shared handles are what snapping is for). 自由浮動面板的幾何，在浮動範圍裡
+// （網路區功能列到畫布控制項之間，已扣間隙）。面板要不要彼此避開是一個開關 apart（R.89.1，人類 10-12：齒輪裡的「禁止重疊」，預設關）；
+// 吸附兩種情況都照用（人類：有吸附共同把手才有用）。
 export type Box = { x: number; y: number; width: number; height: number };
 export type FloatRect = Box & { collapsed: boolean };
 const near = 0.5;
@@ -603,7 +611,7 @@ export function freeSpot(box: Box, others: readonly Box[], width: number, height
  * 每個浮動面板畫在 width x height 範圍的哪裡。有家的：在它的角、自己的大小、不超過範圍。自由浮動的，最近放的先：在記的位置、超出範圍的切掉；
  * 被先畫的擠到就讓開，最小到最小值，再不行暫時重疊（R.88.5，人類 10-12：視窗的規則，不跳位）。記的值不改，所以有空間時會回來（第 13 題）。
  * 範圍太矮：只有標題。 */
-export function floatRects(layout: LayoutData, width: number, height: number, gap: number, title: number): Record<string, FloatRect> {
+export function floatRects(layout: LayoutData, width: number, height: number, gap: number, title: number, apart = true): Record<string, FloatRect> {
   const rects: Record<string, FloatRect> = {}, ids = Object.keys(layout.floating).filter(id => layout.floats[id]);
   for (const id of ids.filter(each => layout.floating[each] !== 'free')) {
     const place = layout.floats[id]!, collapsed = !!place.collapsed || height < FLOAT_MIN_HEIGHT;
@@ -613,7 +621,8 @@ export function floatRects(layout: LayoutData, width: number, height: number, ga
   const placed: Box[] = Object.values(rects);
   for (const id of ids.filter(each => layout.floating[each] === 'free')) {
     const want = boxOf(layout.floats[id]!, width, height, title);
-    const box = giveWay(want, placed, gap, { width: Math.min(FLOAT_MIN_WIDTH, width), height: want.collapsed ? want.height : Math.min(FLOAT_MIN_HEIGHT, height) });
+    // Overlapping allowed: where it is kept. 可以重疊：就在記的位置。
+    const box = !apart ? want : giveWay(want, placed, gap, { width: Math.min(FLOAT_MIN_WIDTH, width), height: want.collapsed ? want.height : Math.min(FLOAT_MIN_HEIGHT, height) });
     rects[id] = { x: box.x, y: box.y, width: box.width, height: box.height, collapsed: want.collapsed }; placed.push(box);
   }
   return rects;
@@ -639,13 +648,13 @@ export function slide(from: Box, to: { x: number; y: number }, others: readonly 
 /** Snapping (Q47 5: near an edge it snaps, leaving the gap): within `reach` of the area's edge, or of a panel beside it, it lines up
  * there, `gap` apart, if that is clear. 吸附（Q47 第 5 點：靠近邊緣就吸過去、留間隙）：離範圍的邊、或旁邊的面板 reach 以內時對齊過去、
  * 隔 gap，前提是那裡沒有別的面板。 */
-export function snap(box: Box, others: readonly Box[], width: number, height: number, gap: number, reach: number): Box {
+export function snap(box: Box, others: readonly Box[], width: number, height: number, gap: number, reach: number, apart = true): Box {
   let snapped = box;
   for (const axis of ['x', 'y'] as const) {
     const [start, size] = along(snapped, axis), room = axis === 'x' ? width : height;
     const lines = [0, room - size, ...others.filter(o => facing(snapped, o, axis, reach)).flatMap(o => { const [s, l] = along(o, axis); return [s + l + gap, s - gap - size]; })];
     const best = lines.filter(at => Math.abs(at - start) <= reach && at >= -near && at <= room - size + near)
-      .sort((a, b) => Math.abs(a - start) - Math.abs(b - start)).find(at => others.every(o => clear(put(snapped, axis, at), o, gap)));
+      .sort((a, b) => Math.abs(a - start) - Math.abs(b - start)).find(at => !apart || others.every(o => clear(put(snapped, axis, at), o, gap)));
     if (best !== undefined) snapped = put(snapped, axis, best);
   }
   return snapped;
@@ -683,7 +692,7 @@ export function seamOf(rects: Readonly<Record<string, Box>>, id: string, edge: F
  * 或離別的面板 gap 為止；不推。那條邊是縫時（對面隔 gap 有面板、彼此有重疊）就是分隔線：縫上的面板一起動，一邊變大一邊變小，各自到最小值，
  * 直到有面板被拖開。從開始拖的那一刻的位置算（人類：只在那時算，平常不耗成本）。fixed：只是擋路的面板（參數面板、收起的）。 */
 export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edge: FloatEdge, dx: number, dy: number, width: number, height: number,
-  gap: number, fixed: readonly string[] = [], reach = 0): Record<string, Box> {
+  gap: number, fixed: readonly string[] = [], reach = 0, apart = true): Record<string, Box> {
   let boxes: Record<string, Box> = { ...rects };
   for (const axis of ['x', 'y'] as const) {
     const side = edge[axis];
@@ -698,11 +707,13 @@ export function sizeFloats(rects: Readonly<Record<string, Box>>, id: string, edg
     const near_ = new Set(seam.near), far = new Set(seam.far);
     const group = new Set([...near_, ...far]), others = Object.keys(mirrored).filter(key => !group.has(key));
     const length = (key: string) => along(mirrored[key]!, axis)[1];
+    // Overlapping allowed: other panels are not in the way. 可以重疊：別的面板不擋路。
+    const blocking = apart ? others : [];
     // How far the line may go: each side down to its least; the near side not past the area or another panel, the far side not
     // into another panel behind it. 線能走多遠：兩邊各自到最小值；近的一邊不超出範圍或碰到別的面板，遠的一邊不往後碰到別的面板。
-    let high = Math.min(...[...near_].map(n => Math.min(room, ...others.filter(o => facing(mirrored[n]!, mirrored[o]!, axis, gap) && start(o) + near >= end(n) + gap)
+    let high = Math.min(...[...near_].map(n => Math.min(room, ...blocking.filter(o => facing(mirrored[n]!, mirrored[o]!, axis, gap) && start(o) + near >= end(n) + gap)
       .map(o => start(o) - gap)) - end(n)), ...[...far].map(f => length(f) - least));
-    let low = Math.max(...[...near_].map(n => least - length(n)), ...[...far].map(f => Math.max(0, ...others.filter(o => facing(mirrored[f]!, mirrored[o]!, axis, gap) && end(o) <= start(f) - gap + near)
+    let low = Math.max(...[...near_].map(n => least - length(n)), ...[...far].map(f => Math.max(0, ...blocking.filter(o => facing(mirrored[f]!, mirrored[o]!, axis, gap) && end(o) <= start(f) - gap + near)
       .map(o => end(o) + gap)) - start(f)));
     if (high < low) { high = 0; low = 0; }
     let move = clamp(d * (side === 'end' ? 1 : -1), low, high);

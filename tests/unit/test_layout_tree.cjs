@@ -367,3 +367,17 @@ test('the GLSL button: in view it does what the triangle does there; otherwise i
   assert.equal(layout.floats.glsl.collapsed, true);
   assert.ok(!tree.showOrFold(layout, 'glsl').floats.glsl.collapsed);
 });
+
+test('overlapping allowed (the default, R.89.1): nothing keeps clear, snapping still works; a press brings a panel to the front', () => {
+  const other = { x: 400, y: 0, width: 200, height: 300 }, from = { x: 0, y: 0, width: 200, height: 200 };
+  assert.deepEqual(tree.slide(from, { x: 500, y: 50 }, [], 1000, 600, 8), { x: 500, y: 50, width: 200, height: 200 }, 'moving with nobody in the way (the drag passes no one)');
+  assert.deepEqual(tree.snap({ x: 185, y: 5, width: 200, height: 200 }, [other], 1000, 600, 8, 12, false), { x: 192, y: 0, width: 200, height: 200 }, 'snapping still lines up');
+  const rects = { a: { x: 0, y: 0, width: 300, height: 300 }, b: { x: 400, y: 0, width: 300, height: 300 } };
+  assert.equal(tree.sizeFloats(rects, 'a', { x: 'end' }, 200, 0, 1000, 600, 8, [], 0, false).a.width, 500, 'sizing goes over another');
+  assert.equal(tree.sizeFloats(rects, 'a', { x: 'end' }, 200, 0, 1000, 600, 8, [], 0, true).a.width, 392, 'forbidden: it stops');
+  let layout = tree.floatOut(tree.floatOut(fresh(), 'sources', at(0, 0)), 'glsl', at(100, 100));
+  assert.deepEqual(plain(tree.floatRects(layout, 1000, 600, 8, 28, false).glsl), { x: 100, y: 100, width: 320, height: 360, collapsed: false }, 'drawn where kept, overlapping');
+  assert.notEqual(tree.floatRects(layout, 1000, 600, 8, 28, true).glsl.x, 100, 'forbidden: it gives way');
+  assert.deepEqual(Object.keys(tree.raise(layout, 'glsl').floating), ['glsl', 'sources'], 'pressed: first in line (drawn on top)');
+  assert.equal(tree.raise(layout, 'sources'), layout, 'already first: nothing changes');
+});

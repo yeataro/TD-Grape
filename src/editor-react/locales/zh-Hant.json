@@ -128,6 +128,7 @@
   "edit.wireMoved": "接線已搬過去",
   "edit.wireRefused": "無法接線：型別或圖結構不相容",
   "editor.tagline": "TouchDesigner 視覺化著色器編輯器",
+  "foot.floatingApart": "禁止浮動面板重疊",
   "foot.fullscreen": "全螢幕",
   "foot.history": "訊息歷史",
   "foot.historyEmpty": "還沒有訊息。",

@@ -128,6 +128,7 @@
   "edit.wireMoved": "Wire moved",
   "edit.wireRefused": "Cannot connect: the types or the graph structure do not fit.",
   "editor.tagline": "A Shader Editor for TouchDesigner",
+  "foot.floatingApart": "Forbid floating panels to overlap",
   "foot.fullscreen": "Full screen",
   "foot.history": "Message history",
   "foot.historyEmpty": "No messages yet.",
