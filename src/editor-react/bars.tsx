@@ -542,15 +542,6 @@ function ComponentTint() {
 function WireGradient() {
   useSyncExternalStore(appearanceSubscribe, appearance);
   return <>
-    {/* Trial (Refactor.78): solid over a port it can connect to, as the legacy editor. 試驗（R.78）：接得上時變實線，照舊產品。 */}
-    <label className="check"><input type="checkbox" checked={shadowOn('wireReadySolid')} onChange={event => setShadow('wireReadySolid', event.target.checked)} />
-      {say(tr('appearance.wireReadySolid', 'Dragged wire turns solid over a port it can connect to'))}</label>
-    {/* Trial (Refactor.78.2): the drag preview can be switched off, to compare the repaint. 試驗（R.78.2）：拖線預告可關，比對重畫。 */}
-    <label className="check"><input type="checkbox" checked={shadowOn('wirePreview')} onChange={event => setShadow('wirePreview', event.target.checked)} />
-      {say(tr('appearance.wirePreview', 'While dragging a wire, preview the wires it replaces or pulls and the rows it merges'))}</label>
-    {/* Trial (Refactor.78.1): and goes under the nodes. 試驗（R.78.1）：並放到節點下面。 */}
-    <label className="check"><input type="checkbox" checked={shadowOn('wireReadyUnder')} onChange={event => setShadow('wireReadyUnder', event.target.checked)} />
-      {say(tr('appearance.wireReadyUnder', 'Dragged wire goes under the nodes over a port it can connect to'))}</label>
     <label className="check"><input type="checkbox" checked={shadowOn('wireGradient')} onChange={event => setShadow('wireGradient', event.target.checked)} />
       {say(tr('appearance.wireGradient', 'Type conversion wires: gradient between the two type colours'))}</label>
     {/* How it blends (Refactor.77.4); the choices are named as the human named them. 怎麼混色（R.77.4）；選項照人類給的名字。 */}

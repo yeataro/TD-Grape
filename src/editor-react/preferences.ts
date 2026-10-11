@@ -22,7 +22,9 @@ const isFormer = (key: string) => Object.values(formerNames).includes(key) || ke
 // was tuned to (Refactor.78).
 // 已經沒有程式在讀的名字，刪一次，免得被誤當成還有作用的設定（人類：交給助手）。前者被明暗取代、次者被版面取代；
 // 兩個 tune.* 被單一選取綠與節點外框線取代；tune.--wire-ghost 被 --wire-off 取代，預設已是當時調的灰（R.78）。
-const retired = ['grape-react-theme', 'sgrapeSourcesPanel', 'grape.tune.--palette-select-yellow', 'grape.tune.--tint-node-divider', 'grape.tune.--wire-ghost'];
+const retired = ['grape-react-theme', 'sgrapeSourcesPanel', 'grape.tune.--palette-select-yellow', 'grape.tune.--tint-node-divider', 'grape.tune.--wire-ghost',
+  // Trial switches settled as always on (Refactor.78.3). 定案為一律開的試驗開關（R.78.3）。
+  'grape.appearance.shadow.wireReadySolid', 'grape.appearance.shadow.wireReadyUnder', 'grape.appearance.shadow.wirePreview'];
 if (typeof window !== 'undefined') try { retired.forEach(name => localStorage.removeItem(name)); } catch { /* storage may be blocked */ }
 
 /** A preference as stored, or null when there is none (or storage is blocked). 存著的偏好；沒有（或被擋）就是 null。 */
