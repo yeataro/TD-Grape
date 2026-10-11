@@ -195,7 +195,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect}>
-    <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+    <ReactFlow<FlowNode, FlowEdge> ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}

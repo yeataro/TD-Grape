@@ -286,11 +286,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
 .canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); pointer-events: none; }
 .canvas-caption strong { letter-spacing: .12em; text-transform: uppercase; font-size: var(--font-xs); line-height: var(--line-xs); }
-/* React Flow's zoom controls: separate rounded buttons with the shared gap, lifted clear of React Flow's credit line.
-   React Flow 的縮放控制：分開的圓角按鈕、共用間距，抬高避開它的署名。 */
-.react-flow__controls.horizontal { display: flex; gap: 4px; box-shadow: none; margin: var(--float-gap); margin-bottom: calc(var(--float-gap) + 14px); }
+/* React Flow's view controls: separate rounded buttons, the shared gap off the canvas edges. Its credit line is kept (we use it
+   unpaid) but sits on the lower left, where the caption was (Refactor.83.5, human 2026-10-11), so the controls sit as low as the
+   toolbar sits high, and the credit lines up with them. React Flow 的視角控制：分開的圓角按鈕、離畫布邊緣共用間距。署名保留（沒有付費
+   方案），但移到左下角原本說明的位置（R.83.5，人類），控制就能和功能列一樣貼邊，署名也和它們齊平。 */
+.react-flow__controls.horizontal { display: flex; gap: 4px; box-shadow: none; margin: var(--float-gap); }
 .react-flow__controls .react-flow__controls-button { width: var(--icon-button); height: var(--icon-button); border: 1px solid var(--border); border-radius: var(--radius-control); }
-.react-flow__attribution { color: var(--text-faint); }
+.react-flow__attribution { color: var(--text-faint); margin: var(--float-gap); }
 .zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border: 0; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); font-variant-numeric: tabular-nums; }
 .zoom-readout:hover, .zoom-readout[aria-expanded="true"] { color: var(--text); background: var(--surface-control-hover); }
 
