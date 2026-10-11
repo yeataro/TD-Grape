@@ -88,7 +88,7 @@
   --tint-layer-glow: 2%;    /* the light seeping in from a layer's edges (trial; human 2026-10-09: 2%) 內發光的濃度（試驗；人類：2%） */
   --tint-name-field: 5%;
   --tint-merge-band: 30%;
-  --wire-convert-paper: var(--palette-lift); /* the hand under a conversion wire icon's coloured lines, white (R.77.10) 轉型線手勢圖示的底，白色 */   /* the band over rows a dragged wire would merge (R.76.16, 76.17) 拖線會合併的那幾列的色帶 */
+  --wire-convert-paper: var(--palette-node); /* the hand under a conversion wire icon's coloured lines: dark grey, the node card's (R.77.11, human 2026-10-11: try dark grey or black; white in R.77.10) 轉型線手勢圖示的底：深灰，同節點卡片（R.77.11，人類：試深灰或黑；R.77.10 是白） */   /* the band over rows a dragged wire would merge (R.76.16, 76.17) 拖線會合併的那幾列的色帶 */
   --merge-band-blend: plus-lighter; /* added to what is below: a light on the rows (R.76.17, human: ADD) 加在底下的東西上：照在那幾列的光（人類：ADD） */
   --tint-wire-ghost: 80%;   /* a ghost on a wire, body and outline as one (human 2026-10-11: more see-through than on a node; tried on the slider, set at 80%) 線上的幽靈，身體連描邊一起（人類：比節點上的透明） */    /* a name box on a title bar (human 2026-10-11: about 5% white, not a black box) 標題列上的名稱框（人類：約 5% 的白，不要黑框） */
   --tint-wire-ready: 30%;   /* the glow round a port a dragged wire will land on (legacy --wire-ready-glow #aa84d64d) 拖線要接上的接孔外圍光暈 */   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
