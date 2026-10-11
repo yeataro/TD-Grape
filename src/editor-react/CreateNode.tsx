@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { searchChoices, sourceLabel, wireOrder, type AddChoice } from './add_entries';
 import type { Editor as EditorSession, WireEnd, WireFit } from './editor';
 import { Icon } from './icons';
-import { say, tr } from './text';
+import { language, languageSubscribe, say, tr } from './text';
 
 // The floating Create node (Refactor.54; floating-panels.md 23, legacy graph_ui.js:2285–2350): search, the list,
 // a description column (a placeholder for now). Opened where it is called up; from a dropped wire it lists only
@@ -37,27 +37,29 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     return found.sort((a, b) => rank(a) - rank(b));
   }, [fitting, query, wire]);
   const active = matches[Math.min(index, matches.length - 1)];
-  // Kept inside the window, 8px from its edges. 留在視窗裡、離邊 8px。
-  const inside = (left: number, top: number) => {
-    const width = box.current?.offsetWidth ?? 0, height = box.current?.offsetHeight ?? 0;
-    return { left: Math.max(8, Math.min(left, innerWidth - width - 8)), top: Math.max(8, Math.min(top, innerHeight - height - 8)) };
-  };
-  useLayoutEffect(() => { setPlace(inside(request.screen.x, request.screen.y)); }, [request]);
+  // Kept inside the window, 8px from its edges, for a panel of this size. 這個大小的面板留在視窗裡、離邊 8px。
+  const inside = (left: number, top: number, width: number, height: number) =>
+    ({ left: Math.max(8, Math.min(left, innerWidth - width - 8)), top: Math.max(8, Math.min(top, innerHeight - height - 8)) });
+  useLayoutEffect(() => { setPlace(inside(request.screen.x, request.screen.y, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0)); }, [request]);
   // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it, so a click does not
   // nudge it; each opening starts where it was called up. Escape closes the panel as always (Refactor.79.1: legacy cancelled the
   // move instead; one meaning per key); only an interruption the person did not choose (a cancel, a lost pointer) puts it back.
   // 抓標題列移動，照舊產品：移動 3px 以上才開始，點一下不會讓它抖；每次打開都從叫出的位置開始。Esc 照常關閉面板（R.79.1：
   // 舊產品是取消移動；一個鍵一個意思）；只有不是人選的中斷（取消、指標遺失）才放回原位。
+  // Only the place changes while moving: the size is measured once, and the list (below) is not rebuilt (Refactor.79.2, human
+  // 2026-10-11: it trailed the mouse). 移動時只改位置：大小量一次，清單（下面）不重建（R.79.2，人類：有跟隨感）。
   const moveBy = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.button !== 0 || (event.target as Element).closest('button')) return;
-    const head: HTMLElement = event.currentTarget, id = event.pointerId, from = { x: event.clientX, y: event.clientY }, start = place;
+    if (event.button !== 0 || (event.target as Element).closest('button') || !box.current) return;
+    const head: HTMLElement = event.currentTarget, id = event.pointerId, from = { x: event.clientX, y: event.clientY };
+    const rect = box.current.getBoundingClientRect(), start = { left: rect.left, top: rect.top };
+    const inBox = (left: number, top: number) => inside(left, top, rect.width, rect.height);
     let moved = false;
     const stop = new AbortController(), options = { signal: stop.signal };
     const end = (keep: boolean) => { stop.abort(); if (!keep) setPlace(start); if (head.hasPointerCapture(id)) head.releasePointerCapture(id); };
     head.addEventListener('pointermove', move => {
       if (move.pointerId !== id) return;
       if (!moved && Math.hypot(move.clientX - from.x, move.clientY - from.y) < 3) return;
-      moved = true; setPlace(inside(start.left + move.clientX - from.x, start.top + move.clientY - from.y));
+      moved = true; setPlace(inBox(start.left + move.clientX - from.x, start.top + move.clientY - from.y));
     }, options);
     head.addEventListener('pointerup', up => { if (up.pointerId === id) end(true); }, options);
     head.addEventListener('pointercancel', () => end(false), options);
@@ -83,11 +85,9 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   // list; a tap on the box brings it (Refactor.75.10, human 2026-10-11). With a mouse it is focused as before.
   // 觸控螢幕上不馬上聚焦搜尋框：鍵盤會蓋掉半個畫面，而且多半是從清單挑；點一下搜尋框才出現（R.75.10，人類）。滑鼠照舊聚焦。
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  return <div ref={box} className="create-node" role="dialog" aria-label={say(tr('create.title', 'Create node'))} style={place} onKeyDown={keys}>
-    <header className="create-head" onPointerDown={moveBy}><strong>{title}</strong>
-      <button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))} onClick={onClose}><Icon name="close" /></button></header>
-    <input className="create-search" autoFocus={!touch} value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
-      onChange={event => { setQuery(event.target.value); setIndex(0); }} />
+  const shownIn = useSyncExternalStore(languageSubscribe, language); // the texts below follow the language 下面的文字跟著語言
+  // The list and details, rebuilt only when what they show changes, not when the panel moves. 清單與說明，內容變了才重建，移動面板時不重建。
+  const columns = useMemo(() =>
     <div className="create-columns">
       <div className="create-list" role="listbox" aria-label={say(tr('create.results', 'Nodes'))}>
         {matches.length ? matches.map((match, i) => <button key={match.choice.id} type="button" role="option" aria-selected={i === index}
@@ -102,6 +102,12 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
       <aside className="create-details">{active && <><strong>{active.choice.label}</strong>
         <small>{say(sourceLabel[active.choice.source])}</small>
         <p className="hint">{say(tr('create.noDescription', 'Descriptions are not available yet.'))}</p></>}</aside>
-    </div>
+    </div>, [matches, index, active, onPick, shownIn]);
+  return <div ref={box} className="create-node" role="dialog" aria-label={say(tr('create.title', 'Create node'))} style={place} onKeyDown={keys}>
+    <header className="create-head" onPointerDown={moveBy}><strong>{title}</strong>
+      <button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))} onClick={onClose}><Icon name="close" /></button></header>
+    <input className="create-search" autoFocus={!touch} value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
+      onChange={event => { setQuery(event.target.value); setIndex(0); }} />
+    {columns}
   </div>;
 }
