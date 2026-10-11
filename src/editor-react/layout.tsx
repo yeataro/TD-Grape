@@ -5,6 +5,7 @@ import { say, tr, type Message } from './text';
 import { PANELS } from './panels';
 import { readPreference, writePreference } from './preferences';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
+import { Icon } from './icons';
 import * as tree from './layout_tree';
 import type { Drop, Edge, LayoutData, Pane, Path, Side } from './layout_tree';
 
@@ -33,6 +34,8 @@ export type Layout = LayoutData & {
   /** Bring a panel forward: shown, its tab chosen, its side opened. 把面板叫到前面：顯示、選中、打開所在那一側。 */
   show(id: string): void; togglePanel(id: string): void; reset(): void;
   activate(path: Path, id: string): void; resize(path: Path, sizes: number[]): void; move(id: string, drop: Drop): void;
+  /** Collapse a stacked tab pane to its tab bar, or open it (Refactor.80). 把疊著的分頁窗格收成分頁列，或打開（R.80）。 */
+  collapse(path: Path, collapsed: boolean): void;
 };
 export function useLayout(): Layout {
   const [data, setData] = useState(stored);
@@ -53,6 +56,7 @@ export function useLayout(): Layout {
     activate: (path, id) => setData(old => tree.activate(old, path, id)),
     resize: (path, sizes) => setData(old => tree.resize(old, path, sizes)),
     move: (id, drop) => setData(old => tree.movePanel(old, id, drop)),
+    collapse: (path, collapsed) => setData(old => tree.setCollapsed(old, path, collapsed)),
   }), [data]);
 }
 
@@ -96,7 +100,7 @@ export function LayoutView({ layout, panels, canvas }: { layout: Layout; panels:
 
 function PaneView({ pane, path, context }: { pane: Pane; path: number[]; context: Context }): ReactNode {
   if (pane.kind === 'canvas') return <CanvasHole host={context.canvas} />;
-  if (pane.kind === 'tabs') return <TabPaneView pane={pane} path={path} context={context} />;
+  if (pane.kind === 'tabs') return <TabPaneView pane={pane} path={path} context={context} stacked={tree.stacked(context.layout.root, path)} />;
   return <SplitPaneView pane={pane} path={path} context={context} />;
 }
 /** Where the network's element is put. 放網路區元素的地方。 */
@@ -165,16 +169,18 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   return <div ref={element} className={'split split-' + pane.direction + (root ? ' workspace' : '')}>
     {visible.map(({ child, index }, n) => {
       const before = visible[n - 1], after = visible[n + 1];
+      // A collapsed part has no height to drag, so no handle touches it (Refactor.80). 收起的一格沒有高度可拖，旁邊不放把手（R.80）。
+      const folded = (part?: { child: Pane }) => part?.child.kind === 'tabs' && !!part.child.collapsed;
       // In a split with the canvas, a handle belongs to the pixel part, on its edge towards the canvas; elsewhere it sits
       // between two parts on the later one's leading edge (R.53). 含畫布時，把手屬於像素那一格、在朝畫布的邊上；其他在兩格之間、後一格的前緣。
-      const lead = before && (holdsCanvas ? index > centre && <ResizeHandle axis={axis} label={label}
+      const lead = before && !folded({ child }) && !(holdsCanvas ? false : folded(before)) && (holdsCanvas ? index > centre && <ResizeHandle axis={axis} label={label}
           onStart={() => startPixels(index)} onMove={delta => movePixels(index, -delta)} />
         : <ResizeHandle axis={axis} label={label} onStart={startShare} onMove={delta => moveShare(before.index, index, delta)} />);
-      const trail = after && holdsCanvas && index < centre && <ResizeHandle axis={axis} edge="trail" label={label}
+      const trail = after && holdsCanvas && index < centre && !folded({ child }) && <ResizeHandle axis={axis} edge="trail" label={label}
         onStart={() => startPixels(index)} onMove={delta => movePixels(index, delta)} />;
       // Next to the canvas, parts give way before the canvas goes below its minimum (one side on a narrow screen).
       // 畫布旁的格子先讓，畫布不會小於最小值（窄畫面上只開一側時）。
-      const flex: CSSProperties = !holdsCanvas ? { flex: `${pane.sizes[index] ?? 1} 1 0` } : index !== centre ? { flex: `0 1 ${pane.sizes[index]}px` }
+      const flex: CSSProperties = folded({ child }) ? { flex: '0 0 auto' } : !holdsCanvas ? { flex: `${pane.sizes[index] ?? 1} 1 0` } : index !== centre ? { flex: `0 1 ${pane.sizes[index]}px` }
         : { flex: '1 0 0', [row ? 'minWidth' : 'minHeight']: row ? tree.CANVAS_MIN_WIDTH : tree.CANVAS_MIN_HEIGHT };
       return <div key={keyOf(child)} className={zone(index)} style={flex} data-pane={[...path, index].join('.')} data-kind={child.kind}>
         {lead}<PaneView pane={child} path={[...path, index]} context={context} />{trail}
@@ -183,14 +189,23 @@ function SplitPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 's
   </div>;
 }
 
-function TabPaneView({ pane, path, context }: { pane: Extract<Pane, { kind: 'tabs' }>; path: number[]; context: Context }) {
+function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { kind: 'tabs' }>; path: number[]; context: Context; stacked: boolean }) {
   const drag = useContext(DragContext), { layout, panels } = context;
   const ids = pane.panels.filter(id => !layout.hidden.includes(id)), active = ids.includes(pane.active) ? pane.active : ids[0]!;
-  return <section className="tab-pane" aria-label={say(panels[active]?.title ?? '')}>
-    {/* A tab is also the handle that moves its panel (legacy: drag the panel title). 分頁也是搬面板的把手（舊產品：拖面板標題）。 */}
-    <div className="panel-tabs" role="tablist">{ids.map(id => <button key={id} role="tab" aria-selected={id === active} data-panel={id}
-      className="panel-tab" onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>)}</div>
-    <div className="panel-content" role="tabpanel">{panels[active]?.content}</div>
+  const collapsed = !!pane.collapsed;
+  return <section className={'tab-pane' + (collapsed ? ' collapsed' : '')} aria-label={say(panels[active]?.title ?? '')}>
+    <div className="tab-head">
+      {/* Stacked in a column split, a pane collapses to its tab bar, every tab still in view; a tab opens it again (Refactor.80,
+          human 2026-10-11). 疊在上下分割裡的窗格可以收成分頁列，分頁都還看得到；點分頁就再打開（R.80，人類）。 */}
+      {stacked && <button type="button" className="expand-toggle pane-collapse" aria-expanded={!collapsed}
+        aria-label={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+        title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
+        onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
+      {/* A tab is also the handle that moves its panel (legacy: drag the panel title). 分頁也是搬面板的把手（舊產品：拖面板標題）。 */}
+      <div className="panel-tabs" role="tablist">{ids.map(id => <button key={id} role="tab" aria-selected={id === active} data-panel={id}
+        className="panel-tab" onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>)}</div>
+    </div>
+    {!collapsed && <div className="panel-content" role="tabpanel">{panels[active]?.content}</div>}
   </section>;
 }
 

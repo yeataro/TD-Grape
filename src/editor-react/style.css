@@ -313,6 +313,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .split-row > .pane-slot + .pane-slot { border-left: 1px solid var(--border); }
 /* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
 .panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); background: var(--surface-canvas); }
+/* The tab bar's row: the collapse triangle (stacked panes, Refactor.80) then the tabs. 分頁列那一排：收合三角形（疊著的窗格，R.80），再來是分頁。 */
+.tab-head { display: flex; flex-shrink: 0; background: var(--surface-canvas); }
+.tab-head > .panel-tabs { flex: 1; min-width: 0; }
+.pane-collapse { height: var(--bar-height); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+/* Collapsed: only the bar; no tab is open below. 收起：只剩分頁列，沒有分頁往下開口。 */
+.tab-pane.collapsed .panel-tab[aria-selected="true"] { border-bottom-color: var(--border); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
    分頁標題照舊產品：小字、一般粗細，顯示中的才加粗。 */
 .panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left;

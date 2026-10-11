@@ -137,3 +137,26 @@ test('the canvas keeps its minimum: with both sides open and too little room, th
   const beside = tree.movePanel(both, 'glsl', { kind: 'beside', pane: canvasPath(both.root), edge: 'right' });
   assert.equal(tree.canvasWidth(beside, 1400), 1400 - 3 * tree.SIDE_WIDTH, 'a pane beside the canvas takes its pixels too');
 });
+
+// Refactor.80 (human 2026-10-11): a pane stacked in a column split collapses to its tab bar; a tab, a move or show opens it;
+// out of a column split it cannot stay collapsed; a stored layout keeps it. R.80（人類）：疊在上下分割裡的窗格收成分頁列；
+// 點分頁、搬進來或叫出來就打開；離開上下分割不能維持收起；存起來的版面保留它。
+test('a stacked pane collapses to its tab bar and opens again', () => {
+  let layout = tree.movePanel(fresh(), 'glsl', { kind: 'beside', pane: where(fresh(), 'sources'), edge: 'bottom' });
+  const glsl = () => tree.paneOf(layout.root, 'glsl'), sources = () => tree.paneOf(layout.root, 'sources');
+  assert.ok(tree.stacked(layout.root, glsl().path) && tree.stacked(layout.root, sources().path));
+  assert.ok(!tree.stacked(layout.root, where(layout, 'appearance')), 'alone on its side: nothing to give its height to');
+  assert.equal(tree.setCollapsed(layout, where(layout, 'appearance'), true), layout, 'a pane not stacked does not collapse');
+  layout = tree.setCollapsed(layout, glsl().path, true);
+  assert.equal(glsl().pane.collapsed, true);
+  assert.equal(plain(tree.readLayout(plain(layout), panels)).root.children[0].children[1].collapsed, true, 'kept when stored');
+  assert.equal(tree.activate(layout, glsl().path, 'glsl').root.children[0].children[1].collapsed, undefined, 'its tab opens it');
+  assert.equal(tree.setCollapsed(layout, glsl().path, false).root.children[0].children[1].collapsed, undefined);
+  const added = tree.movePanel(layout, 'sources', { kind: 'tab', pane: glsl().path, index: 1 });
+  assert.equal(tree.paneOf(added.root, 'sources').pane.collapsed, undefined, 'a panel moved in is seen: the pane opens');
+  // Its neighbour leaves: the column is gone, so the pane opens. 鄰居搬走：上下分割不在了，窗格打開。
+  const alone = tree.movePanel(layout, 'addNode', { kind: 'tab', pane: where(layout, 'appearance'), index: 1 });
+  const moved = tree.movePanel(alone, 'sources', { kind: 'tab', pane: where(alone, 'appearance'), index: 1 });
+  assert.equal(shape(moved.root), 'row(glsl, canvas, appearance|sources|addNode)');
+  assert.equal(tree.paneOf(moved.root, 'glsl').pane.collapsed, undefined, 'no longer stacked: open');
+});

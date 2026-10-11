@@ -19,7 +19,9 @@ export type Direction = 'row' | 'column';
 export type Side = 'left' | 'right';
 export type Pane =
   | { kind: 'split'; direction: Direction; children: Pane[]; sizes: number[] }
-  | { kind: 'tabs'; panels: string[]; active: string }
+  /** collapsed: only its tab bar shows (Refactor.80); only in a column split, where the others take the height.
+   * collapsed：只剩分頁列（R.80）；只在上下分割裡，高度給其他格。 */
+  | { kind: 'tabs'; panels: string[]; active: string; collapsed?: true }
   | { kind: 'canvas' };
 export type LayoutData = {
   version: 2; titleBar: boolean; root: Pane;
@@ -90,18 +92,37 @@ export function sideToClose(layout: LayoutData, width: number, opened: Side | nu
 }
 
 /** Drop empty tab panes and empty splits, and put a split of one part in that part's place; the outermost row stays (the
- * sides are read from it). 拿掉空的窗格與分割，只剩一格的分割換成那一格；最外層保留（左右側從它算）。 */
-export function tidy(pane: Pane, outermost = true): Pane | null {
+ * sides are read from it). A tab pane is collapsed only while it is stacked in a column split (`stacked`); moved out of one,
+ * it opens. 拿掉空的窗格與分割，只剩一格的分割換成那一格；最外層保留（左右側從它算）。分頁窗格只有疊在上下分割裡才能收起
+ * （stacked）；離開上下分割就打開。 */
+export function tidy(pane: Pane, outermost = true, stacked = false): Pane | null {
   if (pane.kind === 'canvas') return pane;
   if (pane.kind === 'tabs') {
     if (!pane.panels.length) return null;
-    return pane.panels.includes(pane.active) ? pane : { ...pane, active: pane.panels[0]! };
+    const active = pane.panels.includes(pane.active) ? pane.active : pane.panels[0]!;
+    if (pane.collapsed && !stacked) { const { collapsed: _, ...open } = pane; return { ...open, active }; }
+    return active === pane.active ? pane : { ...pane, active };
   }
   const children: Pane[] = [], sizes: number[] = [];
-  pane.children.forEach((child, index) => { const kept = tidy(child, false); if (kept) { children.push(kept); sizes.push(pane.sizes[index] ?? 1); } });
+  pane.children.forEach((child, index) => { const kept = tidy(child, false, pane.direction === 'column'); if (kept) { children.push(kept); sizes.push(pane.sizes[index] ?? 1); } });
   if (!children.length) return null;
-  if (children.length === 1 && !outermost) return children[0]!;
+  // A split of one part gives way to that part, which now sits where the split sat. 只剩一格的分割讓給那一格，它坐到分割的位置。
+  if (children.length === 1 && !outermost) return tidy(children[0]!, false, stacked);
   return { ...pane, children, sizes };
+}
+/** Whether the pane at `path` is stacked in a column split, so it can collapse to its tab bar (Refactor.80).
+ * 這一格是否疊在上下分割裡，可以收成分頁列（R.80）。 */
+export const stacked = (root: Pane, path: Path) => {
+  const parent = path.length ? at(root, path.slice(0, -1)) : undefined;
+  return parent?.kind === 'split' && parent.direction === 'column';
+};
+/** Collapse a stacked tab pane to its tab bar, or open it (Refactor.80). 把疊著的分頁窗格收成分頁列，或打開（R.80）。 */
+export function setCollapsed(layout: LayoutData, path: Path, collapsed: boolean): LayoutData {
+  const pane = at(layout.root, path);
+  if (pane?.kind !== 'tabs' || !!pane.collapsed === collapsed || (collapsed && !stacked(layout.root, path))) return layout;
+  const next = copy(layout), target = at(next.root, path) as Extract<Pane, { kind: 'tabs' }>;
+  if (collapsed) target.collapsed = true; else delete target.collapsed;
+  return next;
 }
 
 export function defaultLayout(panels: PanelDefaults): LayoutData {
@@ -132,7 +153,8 @@ export function readLayout(stored: unknown, panels: PanelDefaults): LayoutData {
         const node = raw as Record<string, unknown>;
         if (node?.kind === 'canvas') return { kind: 'canvas' };
         if (node?.kind === 'tabs' && Array.isArray(node.panels))
-          return { kind: 'tabs', panels: node.panels.filter((id): id is string => typeof id === 'string'), active: String(node.active) };
+          return { kind: 'tabs', panels: node.panels.filter((id): id is string => typeof id === 'string'), active: String(node.active),
+            ...(node.collapsed === true ? { collapsed: true as const } : {}) };
         if (node?.kind === 'split' && (node.direction === 'row' || node.direction === 'column') && Array.isArray(node.children)) {
           const sizes = Array.isArray(node.sizes) ? node.sizes : [];
           return { kind: 'split', direction: node.direction, children: node.children.map(pane).filter((p): p is Pane => !!p),
@@ -259,7 +281,8 @@ function replace(layout: LayoutData, path: Path, pane: Pane) {
 /** A moved panel is shown, its tab chosen, and its side opened. 搬過的面板：顯示、選中、打開所在的那一側。 */
 function finish(layout: LayoutData, panel: string, side: Side | null): LayoutData {
   const placed = paneOf(layout.root, panel);
-  if (placed) placed.pane.active = panel;
+  // Moved, shown or added: it is seen, so its pane opens (Refactor.80). 搬過、顯示或加入的面板要看得到，所在的窗格打開（R.80）。
+  if (placed) { placed.pane.active = panel; delete placed.pane.collapsed; }
   const opened = side ?? (placed && layout.root.kind === 'split' ? sideOf(layout.root, placed.path[0]!) : null);
   return { ...layout, hidden: layout.hidden.filter(id => id !== panel), closed: opened ? { ...layout.closed, [opened]: false } : layout.closed };
 }
@@ -268,9 +291,10 @@ function finish(layout: LayoutData, panel: string, side: Side | null): LayoutDat
 export const showPanel = (layout: LayoutData, panel: string) => finish(copy(layout), panel, null);
 export const hidePanel = (layout: LayoutData, panel: string): LayoutData =>
   layout.hidden.includes(panel) ? layout : { ...layout, hidden: [...layout.hidden, panel] };
+/** Show a tab; a collapsed pane opens (its tab clicked, Refactor.80). 顯示某個分頁；收起的窗格打開（點它的分頁，R.80）。 */
 export function activate(layout: LayoutData, path: Path, panel: string): LayoutData {
   const next = copy(layout), pane = at(next.root, path);
-  if (pane?.kind === 'tabs' && pane.panels.includes(panel)) pane.active = panel;
+  if (pane?.kind === 'tabs' && pane.panels.includes(panel)) { pane.active = panel; delete pane.collapsed; }
   return next;
 }
 export function resize(layout: LayoutData, path: Path, sizes: readonly number[]): LayoutData {
