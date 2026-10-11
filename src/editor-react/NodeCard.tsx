@@ -22,27 +22,27 @@ export const listed = (values: readonly string[]) => values.map(value => ({ valu
 // `bare`: a control at the head of the body (what the node points to, e.g. its declaration) shows only its choice, as the
 // legacy editor (human 2026-10-09: the label wasted space and lined up with nothing). The name stays for assistive tech.
 // bare：本體開頭的控制項（節點指向什麼，例如宣告）只顯示選到的值，照舊產品（人類：標籤浪費空間、也對不齊）。名稱仍給輔助工具。
-/** The node's type menu (its selector, or its types when there are several), or null when the type is not chosen here.
- * Shared by the card and the Parameter panel (Refactor.81.1). 節點的型別選單（它的 selector，或有好幾種型別時的型別），型別不在
- * 這裡選時是 null。卡片與參數面板共用（R.81.1）。 */
-export function TypeChoice({ id, data }: { id: string; data: FlowNode['data'] }) {
-  const session = useSession(), { view, authored } = data;
-  if (view.typeLocked) return null;
-  if (view.selector) return <Select className="nodrag" label={`${id} type`} value={view.selector.value}
-    onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} />;
-  return data.types.length > 1 ? <Select className="nodrag" label={`${id} type`} value={String(authored.params.type)}
-    onChange={value => session.configure(id, value)} options={listed(data.types)} /> : null;
-}
-/** Which end a node's type menu chooses (design-interview Q73 rule two): the title always shows the output; a node whose menu
- * chooses its input shows it as a row named "Input type" on the card and in the Parameter panel (Refactor.81.1).
- * 節點的型別選單選哪一端（Q73 規則二）：標題列永遠顯示輸出；選輸入的節點，選單是卡片與參數面板裡名為「輸入型別」的一列（R.81.1）。 */
+/** A node's type menus (design-interview Q73 rule two; Refactor.81.1, 81.3). The output menu sits in the title: the module's own
+ * selector, or its types when they choose the output. The input menu is a row named "Input type" on the card and in the
+ * Parameter panel, when its types choose the input (typeOf 'input'; logic nodes, Swizzle, Split…). A node may have both
+ * (Swizzle: how many components out, and what comes in). 節點的型別選單（Q73 規則二；R.81.1、81.3）。輸出選單在標題列：模組自己的
+ * selector，或型別選的是輸出時的型別。輸入選單是卡片與參數面板裡名為「輸入型別」的一列，型別選的是輸入時（typeOf 'input'：邏輯類、
+ * Swizzle、Split…）。可以兩個都有（Swizzle：輸出幾個分量、輸入接什麼）。 */
 export const picksInput = (data: FlowNode['data']) => data.view.typeOf === 'input';
-export const hasTypeChoice = (data: FlowNode['data']) => !data.view.typeLocked && (!!data.view.selector || data.types.length > 1);
-export const typeRowName = (data: FlowNode['data']) => picksInput(data) ? tr('params.inputType', 'Input type') : tr('params.outputType', 'Output type');
-
-/** The type menu as a row with its name (card and Parameter panel). 型別選單作為一列、有名稱（卡片與參數面板）。 */
-export function TypeRow({ id, data }: { id: string; data: FlowNode['data'] }) {
-  return hasTypeChoice(data) ? <label className="control-field nodrag"><span>{say(typeRowName(data))}</span><TypeChoice id={id} data={data} /></label> : null;
+export const hasOutputChoice = (data: FlowNode['data']) => !data.view.typeLocked && (!!data.view.selector || (!picksInput(data) && data.types.length > 1));
+export const hasInputChoice = (data: FlowNode['data']) => !data.view.typeLocked && picksInput(data) && data.types.length > 1;
+export function TypeChoice({ id, data, end }: { id: string; data: FlowNode['data']; end: 'input' | 'output' }) {
+  const session = useSession(), { view, authored } = data;
+  if (end === 'output' && view.selector) return <Select className="nodrag" label={`${id} output type`} value={view.selector.value}
+    onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} />;
+  return <Select className="nodrag" label={`${id} ${end} type`} value={String(authored.params.type)}
+    onChange={value => session.configure(id, value)} options={listed(data.types)} />;
+}
+/** A type menu as a row with its name. 型別選單作為一列、有名稱。 */
+export function TypeRow({ id, data, end }: { id: string; data: FlowNode['data']; end: 'input' | 'output' }) {
+  const shown = end === 'output' ? hasOutputChoice(data) : hasInputChoice(data);
+  return shown ? <label className="control-field nodrag"><span>{say(end === 'input' ? tr('params.inputType', 'Input type') : tr('params.outputType', 'Output type'))}</span>
+    <TypeChoice id={id} data={data} end={end} /></label> : null;
 }
 
 /** A list of a node's controls. Buttons next to each other are one group of equal widths, wherever a module puts them (Refactor.80.3,
@@ -219,11 +219,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
       aria-label={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}><Icon name="errorBadge" /></span>}
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
-      {!picksInput(data) && hasTypeChoice(data) ? <TypeChoice id={id} data={data} /> : <small>{sourceTag}{outputs[0]?.type}</small>}
+      {hasOutputChoice(data) ? <TypeChoice id={id} data={data} end="output" /> : <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {start && outputRows}
-      {picksInput(data) && <TypeRow id={id} data={data} />}
+      <TypeRow id={id} data={data} end="input" />
       {view.inlineControls && <Controls id={id} controls={view.inlineControls} bare />}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}

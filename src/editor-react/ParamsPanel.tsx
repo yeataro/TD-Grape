@@ -78,8 +78,9 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
         every row lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：展開｜名稱靠右｜型別｜欄位；
         每一列都和其他列對齊。 */}
     {!data.ghost && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
-      {/* Named by the end it chooses (Q73 rule two): input or output type. 照它選的那一端命名（Q73 規則二）：輸入或輸出型別。 */}
-      <TypeRow id={id} data={data} />
+      {/* The output menu, then the input menu, each named (Q73 rule two). 輸出選單、再來輸入選單，各有名稱（Q73 規則二）。 */}
+      <TypeRow id={id} data={data} end="output" />
+      <TypeRow id={id} data={data} end="input" />
       {view.inlineControls && <Controls id={id} controls={view.inlineControls} />}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}

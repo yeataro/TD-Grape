@@ -78,26 +78,27 @@ test('component names: defaults, stored names, labels and components per port',(
  assert.deepEqual(view('rgba').components.outputs,{r:[0],g:[1],b:[2],a:[3]});
  assert.deepEqual([view('mask').portLabels.outputs.out,view('mask').components.outputs.out],['QS',[3,0]]);
 });
-// Refactor.80.3, 81 (human 2026-10-11): Swizzle's menus are named by the output component they fill, in the node's letters and
-// that component's colour; one more empty menu adds a component, "—" takes one out, the last cannot go; no plus or minus.
-// R.80.3、81（人類）：Swizzle 的選單以它填的輸出分量命名、用節點的字母與分量色；多一格空選單用來加、「—」拿掉，最後一個不能拿掉；沒有加減。
-test('Swizzle chooses its components in menus: an empty one adds, "—" takes one out',()=>{
+// Refactor.80.3, 81.3 (human 2026-10-11): Swizzle's menus are named by the output component they fill, in the node's letters and
+// that component's colour; the title's output menu says how many (more are filled in turn, fewer drop from the end); no "—", no
+// empty menu, no plus or minus. R.80.3、81.3（人類）：Swizzle 的選單以它填的輸出分量命名、用節點的字母與分量色；標題列的輸出選單決定
+// 幾個（變多依序補、變少從後面拿掉）；沒有「—」、沒有空選單、沒有加減。
+test('Swizzle: the output menu says how many components, each menu picks one',()=>{
  const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[
   node('plain','swizzle',{type:'vec4',mask:'wzx'}),{...node('colour','swizzle',{type:'vec4',mask:'xy'}),ui:{componentNames:'rgba'}},
-  node('one','swizzle',{type:'vec2',mask:'y'}),node('full','swizzle',{type:'vec2',mask:'xyxy'})],edges:[]}}};
+  node('small','swizzle',{type:'vec2',mask:'y'})],edges:[]}}};
  const doc=new GraphDocument(graph,registry),net=()=>doc.networks.get('pixel');
  const view=id=>net().node(id).definition.presentation(net().node(id).data,net().context);
  const menus=id=>view(id).controls[0].children;
- assert.equal(view('plain').controls.length,1,'no row of buttons');
- assert.deepEqual(menus('plain').map(c=>[c.label,c.component,c.value]),[['X',0,'w'],['Y',1,'z'],['Z',2,'x'],['W',3,'']]);
- assert.deepEqual(menus('plain')[0].options.map(o=>o.label),['—','X','Y','Z','W']);
- assert.deepEqual(menus('colour').map(c=>c.label),['R','G','B']);
- assert.ok(!menus('one')[0].options.some(o=>o.value===''),'the last component has no "—"');
- assert.equal(menus('full').length,4,'four chosen: no empty menu');
- const masked=(id,data)=>doc.change(d=>d.networks.get('pixel').node(id).edit('mask',data)).after.stages.pixel.nodes.find(n=>n.id===id).params.mask;
- assert.equal(masked('plain',{index:3,value:'y'}),'wzxy','the empty menu adds');
- assert.equal(masked('plain',{index:1,value:''}),'wx','"—" takes it out, the rest move up');
- assert.throws(()=>masked('one',{index:0,value:''}),/at least one/);
+ assert.deepEqual(view('plain').selector,{value:'vec3',command:'output',label:'vector.outputType',options:['float','vec2','vec3','vec4']});
+ assert.equal(view('plain').typeOf,'input','the input is its own row');
+ assert.deepEqual(menus('plain').map(c=>[c.label,c.component,c.value]),[['X',0,'w'],['Y',1,'z'],['Z',2,'x']]);
+ assert.deepEqual(menus('plain')[0].options.map(o=>o.label),['X','Y','Z','W'],'no "—"');
+ assert.deepEqual(menus('colour').map(c=>c.label),['R','G']);
+ const after=(id,command,data)=>doc.change(d=>d.networks.get('pixel').node(id).edit(command,data)).after.stages.pixel.nodes.find(n=>n.id===id).params.mask;
+ assert.equal(after('plain','output',{value:'vec2'}),'wz','fewer: from the end');
+ assert.equal(after('small','output',{value:'vec4'}),'yyyy','more on a vec2: the next components in turn, here the last one it has');
+ assert.equal(after('colour','output',{value:'vec4'}),'xyzw');
+ assert.equal(after('plain','mask',{index:1,value:'y'}),'wyx');
 });
 // Refactor.81.2 (design-interview Q73): wired, Swizzle's input takes the wire's size; its components and output stay; a component
 // the new size lacks refuses the wire; int and float stay (the wire converts). R.81.2（Q73）：接上線時 Swizzle 的輸入改成線的大小；
