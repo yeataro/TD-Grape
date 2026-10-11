@@ -138,7 +138,8 @@ function ZoomReadout() {
       aria-label={say(tr('canvas.zoom', 'Zoom'))} title={say(tr('canvas.zoom', 'Zoom'))}
       onClick={event => setAnchor(anchor ? null : event.currentTarget)}>{zoom}%</button>
     {anchor && <DropdownMenu anchor={anchor} label={say(tr('canvas.zoom', 'Zoom'))} fit onClose={() => setAnchor(null)}
-      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
+      // No check on the current one (human 2026-10-12: no check here at all). 目前的那一個不打勾（人類 10-12：這裡根本不要勾勾）。
+      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus, clip }: {
@@ -275,13 +276,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           minus (Refactor.83.3, human 2026-10-11: crowded, and not needed to edit; legacy had none, index.html:57): wheel, trackpad
           and pinch still zoom, and the number's menu sets it. React Flow 自己的視角控制，加上目前縮放百分比（人類 10-09：用預設即可），
           拿掉加減號（R.83.3，人類 10-11：太擠、編輯用不到；舊產品沒有）：滾輪、觸控板、雙指照樣縮放，縮放數字的選單也能設。 */}
-      {/* Home is ours, not React Flow's fit view (Refactor.94, human 2026-10-12: it looked the same as full screen): the four corners
+      {/* The order is legacy's: zoom, Home, Focus graph (index.html:57; Refactor.96.1, human 2026-10-12: the zoom held between two
+          buttons looked odd). 順序照舊產品：縮放、置中、專注編輯（R.96.1，人類：縮放夾在兩個按鈕中間很奇怪）。
+          Home is ours, not React Flow's fit view (Refactor.94, human 2026-10-12: it looked the same as full screen): the four corners
           with a small node (human 2026-10-11), the same framing as H, with our words. Home 用我們的、不用 React Flow 的看見全部（R.94，
           人類：和全螢幕長得一模一樣）：四角框加小節點（人類 10-11），和 H 同一個對準，說明用我們的字。 */}
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false} showFitView={false}>
+        <ZoomReadout />
         <ControlButton className="home" onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
           title={withShortcut(say(tr('canvas.homeHint', 'Home: show the whole network')), 'home')}><Icon name="home" /></ControlButton>
-        <ZoomReadout />
         {/* Focus graph, after the zoom as legacy (index.html:57; human 2026-10-11: icon D, Ctrl+Enter, Esc leaves); while on, full screen
             comes here too, the foot bar being away (legacy app.js:1482). 專注編輯，照舊產品放在縮放後面（人類 10-11：圖示 D、Ctrl＋Enter、
             Esc 離開）；開著時全螢幕也搬到這裡，因為底列不在（照舊產品）。 */}

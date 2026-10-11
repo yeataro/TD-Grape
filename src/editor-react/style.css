@@ -322,7 +322,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    toolbar sits high, and the credit lines up with them. React Flow 的視角控制：分開的圓角按鈕、離畫布邊緣共用間距。署名保留（沒有付費
    方案），但移到左下角原本說明的位置（R.83.5，人類），控制就能和功能列一樣貼邊，署名也和它們齊平。 */
 .react-flow__controls.horizontal { display: flex; gap: 4px; box-shadow: none; margin: var(--float-gap); }
-.react-flow__controls .react-flow__controls-button { width: var(--icon-button); height: var(--icon-button); border: 1px solid var(--border); border-radius: var(--radius-control); }
+/* `.horizontal` too: React Flow's own rule for a horizontal row takes the bottom border away (Refactor.96.1, human 2026-10-12: the
+   pressed Focus graph frame was broken on a phone). 加上 .horizontal：React Flow 對橫排的規則會拿掉下框（R.96.1，人類：手機上按下的專注
+   編輯外框缺一邊）。 */
+.react-flow__controls.horizontal .react-flow__controls-button { width: var(--icon-button); height: var(--icon-button); border: 1px solid var(--border); border-radius: var(--radius-control); }
 .react-flow__attribution { color: var(--text-faint); margin: var(--float-gap); }
 .zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border: 0; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); font-variant-numeric: tabular-nums; }
 .zoom-readout:hover, .zoom-readout[aria-expanded="true"] { color: var(--text); background: var(--surface-control-hover); }
@@ -1053,7 +1056,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    12px; pressed as our tool buttons. React Flow 控制按鈕裡用我們的圖示（Home、專注編輯、全螢幕；R.94）：我們的線條與大小，不用它的填色
    12px；按下時同我們的工具按鈕。 */
 .react-flow__controls-button svg.icon { width: var(--icon-size); height: var(--icon-size); max-width: none; max-height: none; fill: none; }
-.react-flow__controls button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
+.react-flow__controls.horizontal button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
 .startup-error { margin: auto; max-width: 620px; padding: 35px; }
 
 .value-ladder { position: fixed; z-index: 100; border: 1px solid var(--border-hover); border-radius: 6px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); pointer-events: none; user-select: none; font-size: var(--font-base); line-height: var(--line-base); font-variant-numeric: tabular-nums; }
@@ -1101,7 +1104,10 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 /* Dropdown menu widget and the shell's Grape OP menu (Refactor.51). As wide as its content (Refactor.87.1, human 2026-10-12: every
    new menu came out too wide, from a 260px least set for the Grape OP menu in R.51). 下拉選單元件與外殼的 Grape OP 選單。照內容寬
    （R.87.1，人類 10-12：每個新選單都太寬，來自 R.51 為 Grape OP 選單設的最小 260px）。 */
-.dropdown-menu { position: fixed; z-index: 30; max-width: min(600px, calc(100vw - 16px)); max-height: 60vh; overflow: auto;
+/* Its width is its content's wherever it is put (Refactor.96.1, human 2026-10-12: the zoom list was too narrow on a phone): a fixed box
+   placed near the right edge would otherwise be measured narrower the next time, as only the room left of the edge counts.
+   寬度一律照內容，不管放在哪裡（R.96.1，人類：手機上縮放清單太窄）：否則放在靠右的固定位置時，下一次量就只算到右邊還剩的空間、變窄。 */
+.dropdown-menu { position: fixed; z-index: 30; width: max-content; max-width: min(600px, calc(100vw - 16px)); max-height: 60vh; overflow: auto;
   display: flex; flex-direction: column; gap: 2px; padding: 6px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); }
 .dropdown-menu button { display: flex; gap: 8px; align-items: center; text-align: left; background: none; border: 0; padding: 6px 8px; border-radius: 5px; color: inherit; }
 .dropdown-menu button:hover, .dropdown-menu button:focus-visible { background: var(--surface-control-hover); }
