@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { searchChoices, sourceLabel, wireOrder, type AddChoice } from './add_entries';
 import type { Editor as EditorSession, WireEnd, WireFit } from './editor';
 import { Icon } from './icons';
@@ -37,10 +37,33 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
     return found.sort((a, b) => rank(a) - rank(b));
   }, [fitting, query, wire]);
   const active = matches[Math.min(index, matches.length - 1)];
-  useLayoutEffect(() => {
+  // Kept inside the window, 8px from its edges. 留在視窗裡、離邊 8px。
+  const inside = (left: number, top: number) => {
     const width = box.current?.offsetWidth ?? 0, height = box.current?.offsetHeight ?? 0;
-    setPlace({ left: Math.max(8, Math.min(request.screen.x, innerWidth - width - 8)), top: Math.max(8, Math.min(request.screen.y, innerHeight - height - 8)) });
-  }, [request]);
+    return { left: Math.max(8, Math.min(left, innerWidth - width - 8)), top: Math.max(8, Math.min(top, innerHeight - height - 8)) };
+  };
+  useLayoutEffect(() => { setPlace(inside(request.screen.x, request.screen.y)); }, [request]);
+  // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it; Escape, a lost
+  // pointer or a cancel puts it back; each opening starts where it was called up.
+  // 抓標題列移動，照舊產品：移動 3px 以上才開始；Esc、指標遺失或取消就放回原位；每次打開都從叫出的位置開始。
+  const moveBy = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0 || (event.target as Element).closest('button')) return;
+    const head: HTMLElement = event.currentTarget, id = event.pointerId, from = { x: event.clientX, y: event.clientY }, start = place;
+    let moved = false;
+    const stop = new AbortController(), options = { signal: stop.signal };
+    const end = (keep: boolean) => { stop.abort(); if (!keep) setPlace(start); if (head.hasPointerCapture(id)) head.releasePointerCapture(id); };
+    head.addEventListener('pointermove', move => {
+      if (move.pointerId !== id) return;
+      if (!moved && Math.hypot(move.clientX - from.x, move.clientY - from.y) < 3) return;
+      moved = true; setPlace(inside(start.left + move.clientX - from.x, start.top + move.clientY - from.y));
+    }, options);
+    head.addEventListener('pointerup', up => { if (up.pointerId === id) end(true); }, options);
+    head.addEventListener('pointercancel', () => end(false), options);
+    head.addEventListener('lostpointercapture', () => end(false), options);
+    addEventListener('keydown', key => { if (key.key === 'Escape') { key.stopPropagation(); end(false); } }, { ...options, capture: true });
+    event.preventDefault();
+    try { head.setPointerCapture(id); } catch { end(false); } // a pointer already gone 指標已經不在
+  };
   useEffect(() => {
     const away = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node)) onClose(); };
     addEventListener('pointerdown', away, true);
@@ -60,7 +83,7 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   // 觸控螢幕上不馬上聚焦搜尋框：鍵盤會蓋掉半個畫面，而且多半是從清單挑；點一下搜尋框才出現（R.75.10，人類）。滑鼠照舊聚焦。
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   return <div ref={box} className="create-node" role="dialog" aria-label={say(tr('create.title', 'Create node'))} style={place} onKeyDown={keys}>
-    <header className="create-head"><strong>{title}</strong>
+    <header className="create-head" onPointerDown={moveBy}><strong>{title}</strong>
       <button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))} onClick={onClose}><Icon name="close" /></button></header>
     <input className="create-search" autoFocus={!touch} value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
       onChange={event => { setQuery(event.target.value); setIndex(0); }} />
