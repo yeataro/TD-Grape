@@ -470,6 +470,16 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* On a ghost wire: a ghost at the middle, as big as the node's (R.75.27; R.75.28, human 2026-10-11: 24px was too small), not
    in the way of the wire. Ghost 線中點的幽靈，和節點上的一樣大（R.75.28，人類：24px 太小），不擋線。 */
 .wire-ghost-mark { position: absolute; width: 38px; height: 38px; pointer-events: none; }
+/* A conversion wire's label (Refactor.77.6, trials in the gear): the two type names in the two ends' colours, or the hand
+   with crossed fingers filled with them. Never in the pointer's way. 轉型線的標籤（R.77.6，齒輪裡的試驗）：兩個型別名稱用兩端顏色，或填著
+   兩端顏色的交叉手指。不擋滑鼠。 */
+.wire-convert { position: absolute; pointer-events: none; display: inline-flex; align-items: center; }
+.wire-convert.text { gap: 3px; padding: 1px 5px; border-radius: 4px; background: var(--surface-raised); font-size: var(--font-xs); line-height: var(--line-xs); }
+.wire-convert .from { color: var(--convert-from); } .wire-convert .to { color: var(--convert-to); } .wire-convert .arrow { color: var(--text-muted); }
+.wire-convert.icon { width: 26px; height: 26px; } .wire-convert.icon svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* An input showing the conversion, as the legacy port caption: the incoming type in its colour, an arrow, the port's type.
+   輸入接孔寫出轉換，同舊產品：接進來的型別用它的顏色、箭頭、接孔自己的型別。 */
+.port-conversion { display: inline-flex; gap: 2px; } .port-conversion .conversion-arrow { color: var(--text-muted); }
 /* More see-through on a wire (Refactor.76.14, human 2026-10-11): the body, hem and outline fade as one layer, so where they
    overlap shows no seam; the eyes stay solid. 線上的更透明（R.76.14，人類）：身體、裙擺、描邊合成一層一起淡，重疊處不會有接縫；眼睛維持實心。 */
 .ghost-figure.wire .ghost-shape { opacity: var(--tint-wire-ghost); }

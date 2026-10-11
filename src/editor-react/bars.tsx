@@ -6,7 +6,7 @@ import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
 import type { Link } from './host_sync';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, componentLettersOn, setComponentLetters, shadowOn, setShadow, currentGradientBlend, gradientBlends, setGradientBlend, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, componentLettersOn, setComponentLetters, shadowOn, setShadow, currentGradientBlend, gradientBlends, setGradientBlend, currentConvertLabel, convertLabels, setConvertLabel, currentConvertPorts, convertPortChoices, setConvertPorts, effectOf, follows, setEffect, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import { LayoutMenu, type Layout } from './layout';
 import type { Report } from './reports';
 import { clockOf, clockTime, language, setLanguage, say, tr, type Message } from './text';
@@ -548,8 +548,19 @@ function WireGradient() {
     <SettingsRow label={tr('appearance.wireGradientBlend', 'Gradient blend')}>
       <Select label={tr('appearance.wireGradientBlend', 'Gradient blend')} value={currentGradientBlend()} onChange={setGradientBlend}
         options={gradientBlends.map(value => ({ value, label: value }))} /></SettingsRow>
+    {/* What a conversion wire shows, and whether an input shows the conversion (Refactor.77.6, trials). 轉型線標籤、接孔顯示（R.77.6，試驗）。 */}
+    <SettingsRow label={tr('appearance.convertLabel', 'Conversion wire label')}>
+      <Select label={tr('appearance.convertLabel', 'Conversion wire label')} value={currentConvertLabel()} onChange={setConvertLabel}
+        options={convertLabels.map(value => ({ value, label: say(convertLabelNames[value]) }))} /></SettingsRow>
+    <SettingsRow label={tr('appearance.convertPorts', 'Conversion on input ports')}>
+      <Select label={tr('appearance.convertPorts', 'Conversion on input ports')} value={currentConvertPorts()} onChange={setConvertPorts}
+        options={convertPortChoices.map(value => ({ value, label: say(convertPortNames[value]) }))} /></SettingsRow>
   </>;
 }
+const convertLabelNames: Record<string, Message> = { none: tr('appearance.convertLabelNone', 'None'),
+  text: tr('appearance.convertLabelText', 'Text'), icon: tr('appearance.convertLabelIcon', 'Icon') };
+const convertPortNames: Record<string, Message> = { plain: tr('appearance.convertPortsPlain', 'Unchanged'),
+  conversion: tr('appearance.convertPortsShown', 'Show the conversion') };
 
 function ComponentLetters() {
   useSyncExternalStore(appearanceSubscribe, appearance);

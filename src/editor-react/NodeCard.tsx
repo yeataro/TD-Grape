@@ -9,6 +9,7 @@ import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { Icon } from './icons';
 import { GhostMark } from './GhostMark';
+import { appearanceSubscribe, currentConvertPorts } from './appearance';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { modesOf } from './declaration_modes';
@@ -71,6 +72,18 @@ export const single = (components?: readonly number[]) => components?.length ===
 /** A port's label; when its letters are its components, each letter carries its own (e.g. "RG"); a one-component port
  * carries it whole (e.g. "alpha"). The colours are the theme's, under the component-tint switch (style.css).
  * 接孔標籤；字母就是分量時每個字母各帶自己的分量（例如「RG」），單一分量的接孔整個帶（例如「alpha」）。顏色由主題與分量染色開關決定。 */
+/** An input's type; under "show the conversion" a wire bringing another type reads "float → vec4", each type in its own colour
+ * (Refactor.77.6, as the legacy port caption, graph_ui.js:1213); the explanation is in the title, as legacy's. 輸入的型別；
+ * 「顯示轉換型別」時，接進另一種型別寫成「float → vec4」，各用自己的型別色（R.77.6，同舊產品接孔）；說明放在滑鼠提示，同舊產品。 */
+function InputType({ type, from }: { type: string; from?: string }) {
+  const ports = useSyncExternalStore(appearanceSubscribe, currentConvertPorts);
+  if (!from || ports !== 'conversion') return <small>{type}</small>;
+  const splat = core.values.types.includes(from) && core.values.count(from) === 1 && core.values.count(type) > 1;
+  const title = say(splat ? tr('type.splat', 'The source {source} value is repeated in every component of {target}. The node keeps its selected operation type.', { source: from, target: type })
+    : tr('type.cast', 'Convert {source} to {target}; integer conversion truncates fractional parts.', { source: from, target: type }));
+  return <small className="port-conversion" title={title}><span style={{ color: typeColor(from) }}>{from}</span><span className="conversion-arrow" aria-hidden="true">→</span><span>{type}</span></small>;
+}
+
 export function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
   // Every letter that names one component takes the letter slot, so X…W and XY / ZW line up down a column (Refactor.76.8,
   // 76.12); the letters of a name stay one piece, so a row's gap falls only before its type.
@@ -187,12 +200,12 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         {/* An input with a value: its name and type lead the value widget (middle button there changes the whole value).
             有值的輸入：名字與型別是數值 widget 的開頭文字（在上面按中鍵整組調值）。 */}
         {port.fallback === undefined && core.values.types.includes(port.type) ? null
-          : <span>{label} <small>{port.type}</small></span>}
+          : <span>{label} <InputType type={port.type} from={data.conversions?.[port.key]} /></span>}
         {/* A fixed expression (e.g. vUV.st) is shown, not edited; a texture has no value. A wire hides the value but keeps
             its place (wiring never changes the height, EDITOR_UI_RULES.md 六). 固定式子只顯示不編輯；貼圖沒有值。接線只藏起值、位置留著。 */}
         {port.fallback !== undefined ? <code className={'port-fallback' + (wired ? ' wired' : '')}>{port.fallback}</code>
           : core.values.types.includes(port.type) && <ValueFields label={`${id} ${port.key}`} type={port.type} wired={wired} defaults={port.default}
-          caption={<>{label} <small>{port.type}</small></>}
+          caption={<>{label} <InputType type={port.type} from={data.conversions?.[port.key]} /></>}
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>; })}
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}

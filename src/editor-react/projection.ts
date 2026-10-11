@@ -8,6 +8,10 @@ export type FlowNode = RFNode<{
   inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; wired: string[]; ghost?: GhostKind;
   /** The declaration a reference node points to (its value is shown on the card, Refactor.55.2). 引用宣告節點指向的宣告。 */
   declaration?: Declaration;
+  /** Inputs whose wire brings another type, with that type (Refactor.77.6: shown on the port, as the legacy editor did).
+   * Taken from the wires every time, so a node follows when the node upstream changes type. 接進另一種型別的輸入與那個型別
+   * （R.77.6：寫在接孔上，同舊產品）。每次都從線算，上游換型別時跟著變。 */
+  conversions?: Record<string, string>;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
 export type Projection = { nodes: FlowNode[]; edges: FlowEdge[] };
@@ -48,6 +52,12 @@ export function project(document: GraphDocument, previous: Projection, contract:
   // Ghosts are judged by the core (ghosts.ts); a ghost's ports are the ones its stored wires use.
   // Ghost 由核心判斷；Ghost 節點的接孔就是它存著的線用到的那些。
   const ghosts = core.ghostsOf(network, core.values.policy);
+  const conversions = new Map<string, Record<string, string>>();
+  for (const edge of network.edges) {
+    const from = edge.from?.type, to = edge.to?.type;
+    if (!from || !to || from === to || ghosts.edges.has(edge.id)) continue;
+    conversions.set(edge.data!.to[0], { ...conversions.get(edge.data!.to[0]), [edge.data!.to[1]]: from });
+  }
   const ghostPorts = (keys: string[] | undefined, direction: 'input' | 'output'): PortSpec[] =>
     [...new Set(keys ?? [])].map(key => ({ key, direction, type: '' }));
   const priorNodes = new Map(previous.nodes.map(node => [node.id, node]));
@@ -75,6 +85,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
         declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined };
       data = data && same(data, next) ? data : next;
     }
+    const converted = conversions.get(node.id);
+    if (data && !same(data.conversions, converted)) data = { ...data, conversions: converted };
     if (old && old.data === data && same(old.position, position)) return old;
     return { ...old, id: node.id, type: 'grape' as const, position, data: data!,
       dragHandle: '.node-drag-surface' };
@@ -100,7 +112,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // too, carrying the target's type colour (Refactor.77.1, the gradient trial). Ghost 線用自己的類型畫，中點一隻幽靈；
     // 轉型的線也用自己的類型，帶著下游的型別色（R.77.1，漸層試驗）。
     return { ...old, id: edge.id, type: ghost ? 'ghost' : label ? 'convert' : undefined, source: saved.from[0], sourceHandle: saved.from[1], className,
-      target: saved.to[0], targetHandle: saved.to[1], style, label, data: label ? { to: typeColor(targetType) } : undefined,
+      target: saved.to[0], targetHandle: saved.to[1], style, label,
+      data: label ? { to: typeColor(targetType), fromType: sourceType, toType: targetType, component: components?.length === 1 ? components[0] : undefined } : undefined,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
   const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges) };

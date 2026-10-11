@@ -46,6 +46,16 @@ let componentLetters = browser ? readChoice('appearance.componentLetters', ['on'
 export type GradientBlend = 'linear' | 'smoothstep' | 'oklab' | 'oklch' | 'step';
 export const gradientBlends: readonly GradientBlend[] = ['linear', 'smoothstep', 'oklab', 'oklch', 'step'];
 let gradientBlend: GradientBlend = browser ? readChoice<GradientBlend>('appearance.wireGradientBlend', gradientBlends, 'linear') : 'linear';
+// What a type conversion wire shows at its middle, and whether an input shows the conversion (Refactor.77.6, human 2026-10-11,
+// trials): no label, the two type names in the wire's colours, or the hand icon; an input's type as is, or "float → vec4"
+// as the legacy editor wrote it on the port (legacy graph_ui.js:1213). 轉型線中間顯示什麼、輸入接孔要不要寫出轉換（R.77.6，人類，試驗）：
+// 不顯示、兩個型別名稱用線兩端的顏色、或手勢圖示；接孔照原樣，或像舊產品寫成「float → vec4」。
+export type ConvertLabel = 'none' | 'text' | 'icon';
+export const convertLabels: readonly ConvertLabel[] = ['none', 'text', 'icon'];
+let convertLabel: ConvertLabel = browser ? readChoice<ConvertLabel>('appearance.convertLabel', convertLabels, 'text') : 'text';
+export type ConvertPorts = 'plain' | 'conversion';
+export const convertPortChoices: readonly ConvertPorts[] = ['plain', 'conversion'];
+let convertPorts: ConvertPorts = browser ? readChoice<ConvertPorts>('appearance.convertPorts', convertPortChoices, 'plain') : 'plain';
 // Effects that follow a system setting unless told otherwise (Refactor.75.21, 75.22; design-interview Q70; human 2026-10-11:
 // follow the system, always on or always off): fades follow "reduce motion", the glass "reduce transparency".
 // 跟隨系統設定、也可以指定的效果（R.75.21、75.22；Q70；人類：跟隨系統、一律開、一律關）：淡入跟「減少動態效果」，玻璃跟「減少透明度」。
@@ -83,13 +93,21 @@ function apply() {
 apply();
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}${Number(componentLetters)}${gradientBlend}/${effects.motion}/${effects.glass}/${Object.values(shadows).map(Number).join('')}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}${Number(componentLetters)}${gradientBlend}${convertLabel}${convertPorts}/${effects.motion}/${effects.glass}/${Object.values(shadows).map(Number).join('')}`;
 export const componentTintOn = () => componentTint;
 export function setComponentTint(on: boolean) {
   if (on !== componentTint) { componentTint = on; writePreference('appearance.componentTint', on ? 'on' : 'off'); changed(); }
 }
 export const componentLettersOn = () => componentLetters;
 export const currentGradientBlend = () => gradientBlend;
+export const currentConvertLabel = () => convertLabel;
+export function setConvertLabel(next: ConvertLabel) {
+  if (next !== convertLabel) { convertLabel = next; writePreference('appearance.convertLabel', next); changed(); }
+}
+export const currentConvertPorts = () => convertPorts;
+export function setConvertPorts(next: ConvertPorts) {
+  if (next !== convertPorts) { convertPorts = next; writePreference('appearance.convertPorts', next); changed(); }
+}
 export function setGradientBlend(next: GradientBlend) {
   if (next !== gradientBlend) { gradientBlend = next; writePreference('appearance.wireGradientBlend', next); changed(); }
 }
