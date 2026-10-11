@@ -66,6 +66,11 @@ function wire(net: Network, c: Connection | FlowEdge) {
   }
   net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
 }
+// The wires of `before` that `after` no longer has (a rehearsal's answer). before 有、after 沒有的線（預演的答案）。
+function gone(before: Network, after: Network): string[] {
+  const still = new Set(after.data.edges.map(edge => edge.id));
+  return before.data.edges.map(edge => edge.id).filter(id => !still.has(id));
+}
 // Pull an input's wire; the release and its preview share it (Refactor.78.1). 拔掉一個輸入的線；放開與預告共用（R.78.1）。
 function unwire(net: Network, node: string, port: string) {
   const edges = net.node(node).port('input', port).edges;
@@ -476,23 +481,26 @@ export class Editor {
    * same rules as the real edit (Refactor.54; no separate core question). A port of exactly the wire's type comes
    * first. null: it does not fit. 新節點的哪個接孔能接這條線：在丟棄的候選文件上預演，答案與真正的修改同一套規則；
    * 型別完全相同的優先。null＝接不上。 */
-  portFor = (spec: NewNode, end: WireEnd): { port: string; type: string } | null => {
-    let found: { port: string; type: string } | null = null;
-    try {
-      this.document.change(document => {
-        const id = insertNew(document, spec, { x: 0, y: 0 }), net = document.networks.get('pixel')!;
-        const there = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
-        const ports = Object.entries(net.node(id).interface[end.side === 'output' ? 'inputs' : 'outputs']);
-        const fits = ports.filter(([key]) => net.plan(core.values.policy, { kind: 'wire',
-          ...(end.side === 'output' ? { from: { node: end.node, port: end.port }, to: { node: id, port: key } }
-            : { from: { node: id, port: key }, to: { node: end.node, port: end.port } }) }).ok);
-        const best = fits.find(([, port]) => port.type === there) ?? fits[0];
-        if (best) found = { port: best[0], type: best[1].type };
-        throw new Rehearsed();
-      });
-    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
-    return found;
-  };
+  portFor = (spec: NewNode, end: WireEnd): { port: string; type: string } | null => this.rehearse(document => {
+    const id = insertNew(document, spec, { x: 0, y: 0 }), net = document.networks.get('pixel')!;
+    const there = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
+    const ports = Object.entries(net.node(id).interface[end.side === 'output' ? 'inputs' : 'outputs']);
+    const fits = ports.filter(([key]) => net.plan(core.values.policy, { kind: 'wire',
+      ...(end.side === 'output' ? { from: { node: end.node, port: end.port }, to: { node: id, port: key } }
+        : { from: { node: id, port: key }, to: { node: end.node, port: end.port } }) }).ok);
+    const best = fits.find(([, port]) => port.type === there) ?? fits[0];
+    return best ? { port: best[0], type: best[1].type } : null;
+  });
+  /** Run an edit on a discarded candidate and return what it reports; nothing is kept, nothing is published. The one way
+   * this session asks "what would happen" (Create node's ports, the drag preview). null: the edit failed.
+   * 在丟棄的候選上跑一次修改、回傳它報告的結果；什麼都不留、不發布。這個 session 問「會發生什麼」只走這一條（新增節點的接孔、
+   * 拖線預告）。null＝修改失敗。 */
+  private rehearse<T>(edit: (candidate: GraphDocument) => T): T | null {
+    const out: { value?: T } = {};
+    try { this.document.change(candidate => { out.value = edit(candidate); throw new Rehearsed(); }); }
+    catch (error) { if (!(error instanceof Rehearsed)) return null; }
+    return out.value ?? null;
+  }
   // Shared sources (Refactor.40; Q41, Q45): global constants for now. 共用來源：本輪只有全域常數。
   addConstant = () => {
     const name = core.freeLegacyName(this.document.document, 'cValue'); // legacy default name 舊產品的預設名
@@ -553,32 +561,23 @@ export class Editor {
     } catch { return false; }
   };
   connect = (c: Connection) => this.transact(tr('edit.wired', 'Wire updated'), net => wire(net, c));
-  /** What a wire would change if dropped here (Refactor.57; CURRENT 2026-10-07, human: only nodes whose wiring changes
-   * their ports pay for it): the target's inputs it would merge away (a component group) and the wires it would
-   * replace. Rehearsed with the real edit on a discarded candidate, so the preview is what happens. null: no change
-   * to show, or it does not fit. 線放在這裡會改變什麼：目標節點會被併掉的輸入、會被換掉的線。用真正的修改在丟棄的候選上
-   * 預演，預告就是實際結果；null＝沒有要預告的或接不上。
-   * Every node is rehearsed, so a wire about to be replaced shows on any input (Refactor.78, human 2026-10-11: treat them
-   * alike; legacy and R.57 did Combine and Replace only). 每個節點都預演，任何輸入上即將被換掉的線都會預告（R.78，人類：
-   * 一視同仁；舊產品和 R.57 只做 Combine、Replace）。
-   * Also the input it lands on and the wire's type, so the rows that merge can be shown as one band in the wire's colour
-   * (Refactor.76.16). 也帶上落在哪個輸入與線的型別，會合併的列才能畫成線色的一整條（R.76.16）。 */
+  /** What a wire would change if dropped on this input (Refactor.57, 78; design-interview Q72): the target's inputs it would
+   * merge away (a component group) and the wires it would replace, on any node. Rehearsed with the release's own edit, so
+   * the preview is what happens. Also the input and the wire's type, so the merging rows can be one band in the wire's colour
+   * (Refactor.76.16). null: nothing to show, or it does not fit.
+   * 線放在這個輸入上會改變什麼（R.57、78；Q72）：目標節點會被併掉的輸入、會被換掉的線，任何節點都一樣。用放開時同一個修改預演，
+   * 預告就是實際結果。也帶上輸入與線的型別，會合併的列才能畫成線色的一整條（R.76.16）。null＝沒有要預告的或接不上。 */
   wirePreview = (c: Connection): WirePreview | null => {
     if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle) return null;
-    const net = this.document.networks.get('pixel')!;
-    const inputs = Object.keys(net.node(c.target).interface.inputs), edges = net.data.edges.map(edge => edge.id);
+    const net = this.document.networks.get('pixel')!, inputs = Object.keys(net.node(c.target).interface.inputs);
     const type = net.node(c.source).interface.outputs[c.sourceHandle]?.type ?? '';
-    let found: WirePreview | null = null;
-    try {
-      this.document.change(candidate => {
-        const after = candidate.networks.get('pixel')!;
-        wire(after, c);
-        const kept = new Set(Object.keys(after.node(c.target).interface.inputs)), still = new Set(after.data.edges.map(edge => edge.id));
-        found = { node: c.target, port: c.targetHandle!, type, merged: inputs.filter(key => !kept.has(key)), replaced: edges.filter(id => !still.has(id)) };
-        throw new Rehearsed();
-      });
-    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
-    return found && ((found as { merged: string[] }).merged.length || (found as { replaced: string[] }).replaced.length) ? found : null;
+    const found = this.rehearse(candidate => {
+      const after = candidate.networks.get('pixel')!;
+      wire(after, c);
+      const kept = after.node(c.target).interface.inputs;
+      return { merged: inputs.filter(key => !(key in kept)), replaced: gone(net, after) };
+    });
+    return found && (found.merged.length || found.replaced.length) ? { node: c.target, port: c.targetHandle, type, ...found } : null;
   };
   /** What releasing a wire dragged from this input onto empty canvas would change: the input's wire is pulled (Q33), so that
    * wire shows as about to go (Refactor.78.1, human 2026-10-11: treat it as a wire about to be replaced; new, the legacy editor
@@ -586,18 +585,13 @@ export class Editor {
    * 從這個輸入拉到空白處放開會改變什麼：拔掉它的線（Q33），那條線預告為即將不見（R.78.1，人類：和即將被換掉的線一樣；
    * 新的，舊產品只寫提示）。用放開時同一個修改預演；null＝這個輸入沒有線。 */
   pullPreview = (node: string, port: string): WirePreview | null => {
-    const edges = this.document.networks.get('pixel')!.data.edges.map(edge => edge.id);
-    let replaced: string[] = [];
-    try {
-      this.document.change(candidate => {
-        const after = candidate.networks.get('pixel')!;
-        unwire(after, node, port);
-        const still = new Set(after.data.edges.map(edge => edge.id));
-        replaced = edges.filter(id => !still.has(id));
-        throw new Rehearsed();
-      });
-    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
-    return replaced.length ? { node, port, type: '', merged: [], replaced } : null;
+    const net = this.document.networks.get('pixel')!;
+    const replaced = this.rehearse(candidate => {
+      const after = candidate.networks.get('pixel')!;
+      unwire(after, node, port);
+      return gone(net, after);
+    });
+    return replaced?.length ? { node, port, type: '', merged: [], replaced } : null;
   };
   /** A wire picked up from an input and dropped on another input moves there (Refactor.54; human 2026-10-09:
    * yes, move it, as Blender). One step, one Undo. 從輸入拿起的線放到另一個輸入：搬過去（人類：要，像 Blender）。 */
