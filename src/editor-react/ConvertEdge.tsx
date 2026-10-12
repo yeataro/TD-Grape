@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { WireHalo } from './wire_edge';
 import { crossedFingersOutline, crossedFingersPath, crossedFingersViewBox } from './crossed_fingers';
 import { appearanceSubscribe, componentTintOn, currentConvertLabel, currentGradientBlend, shadowOn, type GradientBlend } from './appearance';
 
@@ -58,6 +59,7 @@ export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosi
     {on && <defs><linearGradient id={key} gradientUnits="userSpaceOnUse" x1={sourceX} y1={sourceY} x2={targetX} y2={targetY}>
       {stops(`var(--wire-start, ${from})`, to!, blend).map(stop =>
         <stop key={stop.offset + stop.color} offset={stop.offset} style={{ stopColor: stop.color }} />)}</linearGradient></defs>}
+    <WireHalo path={path} />
     <BaseEdge id={id} path={path} style={on ? { ...style, stroke: `url(#${key})`, '--wire-paint': `url(#${key})` } as CSSProperties : style}
       markerEnd={markerEnd} interactionWidth={interactionWidth} />
     {/* The label (Refactor.77.6, a trial in the gear): none, the two type names in the two ends' colours, or the hand.

@@ -93,6 +93,7 @@
 | 內建功能 | 怎麼處理 | 理由 | 出處 |
 | --- | --- | --- | --- |
 | 選取（`elementsSelectable`、`multiSelectionKeyCode`） | 關掉，選取由編輯協調者決定 | 對齊 TD 的選取規則（Ctrl 切換、Shift 加選、節點與線不混選） | Refactor.49 |
+| 預設的線（`default` 貝茲線） | 一般線改用自己的 `WireEdge`（`wire_edge.tsx`），畫法和預設線相同（`getBezierPath`＋`BaseEdge`），只多一條畫布色底線 | 人類 10-13：線邊加畫布色的框，交疊時比較清楚；底線要和線在同一組、畫在線之前，預設線放不進去；顯示上和預設線沒有差別（人類 10-13：既然沒有本質差異，就用我們自己的線） | Refactor.105.18 |
 | 框選（`selectionKeyCode`） | 關掉，用自己的 RightDragSelect | 人類：內建框選「看著煩」；碰到就算、Shift 加選 | Q33、Q39 |
 | 雙擊縮放（`zoomOnDoubleClick`） | 關掉 | 雙擊空白＝新增節點、雙擊節點＝對準 | Refactor.54、58.2 |
 | 滾輪縮放（`zoomOnScroll`）、觸控板雙指縮放（帶 Ctrl 的滾輪）、滑鼠拖背景平移 | **只在「畫布阻尼」開著時**由 `viewport.ts` 接管：`zoomOnScroll` 關掉；觸控板雙指縮放與左／中鍵拖背景在捕獲階段接走，React Flow 不會收到；動畫仍用 React Flow 的 `setViewport` 過渡。觸控（單指平移、雙指縮放）照樣由 React Flow 處理。阻尼關掉就全部還給原生 | 原生沒有阻尼；受控視角會讓 React Flow 內部位置與滑動中的畫面互相拉扯（`syncViewport`），快速連滾會被吃掉縮放量。一種操作只由一方處理就不會撞（人類 10-09） | Refactor.58.2 |

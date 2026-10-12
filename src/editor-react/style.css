@@ -834,6 +834,12 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .grape-node.box-in { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: var(--wire-width-hover) !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: var(--wire-width-selected) !important; }
+/* A wire's halo (wire_edge.tsx; Refactor.105.18, human 2026-10-13: 1.5px a side to start): the canvas's colour, as wide as the wire plus
+   a halo on each side, wider with it under the pointer or selected; solid under a dashed wire too. 線的底線：畫布色，線寬加兩側各一份
+   底線寬，滑過或選中時跟著變寬；虛線下面也是實心。 */
+.wire-halo { fill: none; stroke: var(--surface-canvas); stroke-width: calc(var(--wire-width) + 2 * var(--wire-halo)); pointer-events: none; }
+.react-flow__edge:hover .wire-halo { stroke-width: calc(var(--wire-width-hover) + 2 * var(--wire-halo)); }
+.react-flow__edge.selected .wire-halo { stroke-width: calc(var(--wire-width-selected) + 2 * var(--wire-halo)); }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
 .fold-section { margin-bottom: 8px; }

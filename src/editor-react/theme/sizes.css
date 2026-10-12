@@ -46,6 +46,7 @@
   --port-ready-ring: 3px;  /* the ring round where a dragged wire will land (legacy .wire-target) 拖線要接上的接孔外框 */
   --port-ready-glow: 7px;  /* and its glow beyond that ring 外框再往外的光暈 */    /* the handle element: a point at the port's centre, where wires end 接孔元素：圓心的一點，線的端點 */
   --wire-width: 3.5px;  /* a wire 接線粗細 */
+  --wire-halo: 1.5px;   /* the canvas-coloured edge on each side of a wire, cutting the wires under it (R.105.18, human: 1.5 to start) 線兩側的畫布色邊，切開下面的線（R.105.18，人類：先 1.5） */
   --wire-width-hover: 5px;    /* under the pointer 滑過時 */
   --wire-width-selected: 5px; /* selected 選中時 */
   --wire-width-drag: 2px;     /* the wire being dragged: still thinner than a wire, not lost to anti-aliasing zoomed out (R.78.1, human 2026-10-11; was 1.3px) 拖曳中的線：仍比接好的細，拉遠時不被反鋸齒吃掉（R.78.1，人類；原 1.3px） */

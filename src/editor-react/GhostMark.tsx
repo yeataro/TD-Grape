@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
+import { WireHalo } from './wire_edge';
 import { ghostPhase, roundedHem } from './ghost_motion';
 
 // The Ghost mark, alive (Refactor.75.27, human 2026-10-11): on a node the hem flows and the eyes blink; on a wire it also
@@ -41,6 +42,7 @@ export function GhostMark({ id, on }: { id: string; on: 'node' | 'wire' }) {
 export function GhostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth }: EdgeProps) {
   const [path, x, y] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   return <>
+    <WireHalo path={path} />
     <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} interactionWidth={interactionWidth} />
     <EdgeLabelRenderer>
       <span className="wire-ghost-mark" style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}><GhostMark id={id} on="wire" /></span>

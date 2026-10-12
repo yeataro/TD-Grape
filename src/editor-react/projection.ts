@@ -133,7 +133,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // A ghost wire is drawn by its own type, a ghost at its middle (Refactor.75.27); a wire that converts types by its own
     // too, carrying the target's type colour (Refactor.77.1, the gradient trial). Ghost 線用自己的類型畫，中點一隻幽靈；
     // 轉型的線也用自己的類型，帶著下游的型別色（R.77.1，漸層試驗）。
-    return { ...old, id: edge.id, type: ghost ? 'ghost' : label ? 'convert' : undefined, source: saved.from[0], sourceHandle: saved.from[1], className,
+    return { ...old, id: edge.id, type: ghost ? 'ghost' : label ? 'convert' : 'wire', source: saved.from[0], sourceHandle: saved.from[1], className,
       target: saved.to[0], targetHandle: saved.to[1], style, label,
       data: label ? { to: typeColor(targetType), fromType: sourceType, toType: targetType, component: components?.length === 1 ? components[0] : undefined } : undefined,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
