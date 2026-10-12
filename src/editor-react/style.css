@@ -679,7 +679,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .markdown :is(ul, ol) { padding-left: 1.5em; }
 .markdown code { padding: 0 3px; border-radius: 3px; background: var(--surface-node-field); }
 .markdown a { color: var(--code-link); }
-.markdown .md-code { padding: 4px 6px; border-radius: var(--radius-field); background: var(--surface-node-field); overflow: hidden; }
+/* A code block on the panel's own colour, as the GLSL panel (Refactor.100.2, human 2026-10-12: the field colour was too bright; the
+   rounding is good). 程式碼框用面板的底色，同 GLSL 面板（R.100.2，人類：欄位色太亮；圓角很好）。 */
+.markdown .md-code { padding: 4px 6px; border-radius: var(--radius-field); background: var(--surface-canvas); overflow: hidden; }
 .markdown .md-code code, .md-code .md-code-line { background: none; padding: 0; }
 .md-code .md-code-line { display: flex; }
 .group-text textarea { display: block; width: 100%; box-sizing: border-box; min-height: var(--line-md); padding: 0; border: 0; border-radius: 0; resize: none; overflow: hidden;
