@@ -108,7 +108,7 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
         <p className="hint">{say(tr('create.noDescription', 'Descriptions are not available yet.'))}</p></>}</aside>
     </div>, [matches, index, active, onPick, shownIn]);
   return <div ref={box} className="create-node" role="dialog" aria-label={say(tr('create.title', 'Create node'))} style={place} onKeyDown={keys}>
-    <header className="create-head" onPointerDown={moveBy}><strong>{title}</strong>
+    <header className="create-head" data-movable="" onPointerDown={moveBy}><strong>{title}</strong>
       <button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))} onClick={onClose}><Icon name="close" /></button></header>
     <input className="create-search" autoFocus={!touch} value={query} placeholder={say(tr('create.search', 'Search nodes…'))}
       onChange={event => { setQuery(event.target.value); setIndex(0); }} />

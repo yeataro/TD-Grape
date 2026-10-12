@@ -40,6 +40,8 @@ function blockNextClick() {
  * 捲動；'none'：只有滑鼠或筆。 */
 export function dragToAdd(choice: string, options: { touch?: 'handle' | 'none' } = {}) {
   return {
+    // It can be picked up and moved: the open hand (style.css, the cursor rules). 可以拿起來移動：手形（style.css 游標規則）。
+    'data-movable': '',
     onPointerDown(event: PointerEvent) {
       const element = event.target as Element;
       // A tile still shrinking or fading from the last drag does not hold the next one. 上一次還在縮小或淡出的圖塊不擋下一次。

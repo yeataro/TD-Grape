@@ -104,7 +104,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
     {/* Floating, the node card is the panel (Refactor.85, human 2026-10-11: no frame, no panel title): its head holds the triangle,
         and the menu and close on the right, and moves it. 浮動時節點卡就是面板（R.85，人類：沒有外框、沒有面板標題列）：頭上放三角形、
         右邊放選單與關閉，抓頭搬它。 */}
-    <div className="node-title params-title" onContextMenu={floating?.openMenu} onPointerDown={floating ? event => {
+    <div className="node-title params-title" data-movable={floating ? '' : undefined} onContextMenu={floating?.openMenu} onPointerDown={floating ? event => {
       if (!(event.target as HTMLElement).closest('button, input, select, textarea')) floating.drag(event); } : undefined}>
       {floating?.fold}
       <strong>{kind ? say(kind) : text(data.label)}</strong>
@@ -162,7 +162,7 @@ export function ParamsPanel({ state }: { state: EditorState }) {
   // Nothing selected: one line (legacy inspector.js:1592); floating, under a plain head so it can still be moved and closed.
   // 沒選：一行提示（照舊產品）；浮動時放在一個素的頭下面，仍能搬、能關。
   if (!node) return floating ? <article className="grape-node params-card floating params-empty">
-    <div className="node-title params-title" onContextMenu={floating.openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) floating.drag(event); }}>
+    <div className="node-title params-title" data-movable="" onContextMenu={floating.openMenu} onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) floating.drag(event); }}>
       {floating.fold}<strong>{say(tr('params.title', 'Parameters'))}</strong><span className="spacer" />{floating.controls}</div>
     {!floating.collapsed && <p className="hint params-pad">{say(tr('params.empty', 'Select a node to edit its parameters.'))}</p>}
   </article> : <p className="hint">{say(tr('params.empty', 'Select a node to edit its parameters.'))}</p>;

@@ -275,7 +275,7 @@ function TabPaneView({ pane, path, context, stacked }: { pane: Extract<Pane, { k
             aria-label={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
             title={say(collapsed ? tr('layout.expandPane', 'Expand') : tr('layout.collapsePane', 'Collapse'))}
             onClick={() => layout.collapse(path, !collapsed)}><Icon name="chevronDown" /></button>}
-          <button role="tab" aria-selected={id === active} data-panel={id} className="panel-tab" onContextMenu={openMenu}
+          <button role="tab" aria-selected={id === active} data-panel={id} data-movable="" className="panel-tab" onContextMenu={openMenu}
             onPointerDown={event => drag.current(event, id)} onClick={() => layout.activate(path, id)}>{say(panels[id]?.title ?? id)}</button>
           {menu && <PanelMenu title={panels[id]!.title} items={menu} />}
         </div>;
@@ -732,7 +732,7 @@ function FloatingPanel({ id, layout, view, panels, rect, area, rects, cap, measu
     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}>
     {/* Its title bar moves the whole frame (anywhere but a tab or a button); a free frame takes panels dropped on it as tabs
         (Refactor.90). 標題列搬整個框（分頁與按鈕以外的地方）；自由浮動的框接受放上來的面板成為分頁（R.90）。 */}
-    <div className="floating-head" data-frame={free ? id : undefined} onContextMenu={openMenu}
+    <div className="floating-head" data-frame={free ? id : undefined} data-movable="" onContextMenu={openMenu}
       onPointerDown={event => { if (!(event.target as HTMLElement).closest('button')) drag.current(event, id, 'frame'); }}>
       {fold}
       {tabs.length > 1 ? <div className="floating-tabs" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" data-tab={tab}

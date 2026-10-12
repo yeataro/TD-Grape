@@ -178,6 +178,22 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
     const taken = damper.current = dampCanvas(flow, surface.current);
     return () => { taken.detach(); damper.current = null; };
   }, [damping, flow]);
+  // Zooming shows the up-down arrow (Refactor.104.7, human 2026-10-12): the wheel (a trackpad pinch too) over the canvas zooms it,
+  // damped or not, and has no held state, so the canvas is marked while it turns and a moment after. The zoom buttons and framing
+  // do not count (human). 縮放時是上下箭頭（R.104.7，人類 10-12）：在畫布上滾滾輪（觸控板雙指也是）就是縮放，有沒有阻尼都一樣；
+  // 滾輪沒有「按住」的狀態，所以滾動時與停下後一下子標記畫布。縮放按鈕與對準不算（人類）。
+  useEffect(() => {
+    const element = surface.current;
+    if (!element) return;
+    let timer = 0;
+    const wheel = (event: WheelEvent) => {
+      if ((event.target as Element).closest('.nowheel')) return;
+      element.classList.add('zooming'); clearTimeout(timer);
+      timer = window.setTimeout(() => element.classList.remove('zooming'), 200);
+    };
+    element.addEventListener('wheel', wheel, { capture: true, passive: true });
+    return () => { element.removeEventListener('wheel', wheel, { capture: true }); clearTimeout(timer); element.classList.remove('zooming'); };
+  }, []);
   // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
   const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human

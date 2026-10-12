@@ -51,6 +51,11 @@ export function useValueLadder(options: {
     const controller = new AbortController();
     const options = { capture: true, signal: controller.signal };
     const anchor = latest.current.anchor.current;
+    // Dragged with a held button, the whole page shows the two-way arrow, as legacy's body.scrubbing-value (Refactor.104.7, human
+    // 2026-10-12: the text cursor over the value ladder was wrong). 按住拖著調時，整頁都是左右箭頭，同舊產品（R.104.7，人類 10-12：
+    // 數值階梯上出現文字游標不對）。
+    const scrubbing = (on: boolean) => { if (state.pointer) document.documentElement.classList.toggle('scrubbing-value', on); };
+    scrubbing(true);
     let shown = state.value;
     const paint = () => {
       latest.current.show(state.value);
@@ -60,7 +65,7 @@ export function useValueLadder(options: {
     const finish = (accept: boolean) => {
       if (gesture.current !== state) return;
       gesture.current = null;
-      controller.abort();
+      controller.abort(); scrubbing(false);
       setLadder(null);
       suppressContext.current = performance.now() + 400;
       if (state.pointer && anchor?.hasPointerCapture(state.pointer.id)) anchor.releasePointerCapture(state.pointer.id);
@@ -105,7 +110,7 @@ export function useValueLadder(options: {
     anchor?.addEventListener('blur', () => finish(false), options);
     anchor?.addEventListener('lostpointercapture', () => finish(false), options);
     document.addEventListener('visibilitychange', () => { if (document.hidden) finish(false); }, options);
-    return () => { controller.abort(); gesture.current = null; };
+    return () => { controller.abort(); scrubbing(false); gesture.current = null; };
   }, [active]);
 
   const view = ladder && createPortal(<div id={id} role="tooltip" aria-label="Value Ladder" className="value-ladder"

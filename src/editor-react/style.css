@@ -389,7 +389,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .params-card.floating { box-shadow: 0 8px 24px var(--shadow); }
 :root[data-shadow-layers="on"] .floating-panel { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
 .floating-head { display: flex; align-items: center; gap: 2px; flex-shrink: 0; height: calc(var(--bar-height) - 2px); padding: 0 2px;
-  border-bottom: 1px solid var(--border); cursor: grab; touch-action: none; user-select: none; }
+  border-bottom: 1px solid var(--border); touch-action: none; user-select: none; }
 .floating-panel.collapsed .floating-head { border-bottom: 0; }
 .floating-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px;
   font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600; color: var(--text-strong); }
@@ -1172,7 +1172,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 /* Rows keep their height and start at the top however tall the panel is (human 2026-10-11: sizing on resize was awful).
    列維持自己的高度、從上往下排，面板多高都一樣（人類 10-11：調大小時排版很可怕）。 */
 .params-card.floating > :is(.node-body, .params-settings) { align-content: start; }
-.params-card.floating .params-title { gap: 4px; padding-left: 4px; padding-right: 4px; cursor: grab; touch-action: none; }
+.params-card.floating .params-title { gap: 4px; padding-left: 4px; padding-right: 4px; touch-action: none; }
 .params-card.floating .params-title :is(.pane-collapse, .floating-close) { position: static; flex: none; height: var(--io-field); color: inherit; }
 .params-card.floating .params-title .pane-collapse .icon { width: 12px; height: 12px; }
 /* Floating, each input's port, a wire can be dropped on (Refactor.85; legacy style.css:905–910): the row's type colour, filled while
@@ -1366,11 +1366,34 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 /* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
 .wire-plus { fill: var(--text-strong); font-size: var(--font-lg); line-height: var(--line-lg); font-weight: 700; pointer-events: none; }
 
-/* The R.54.2 cursor table (the arrow everywhere, as TouchDesigner) is gone (Refactor.104.6, human 2026-10-12: overturned whole — panning
-   the canvas did not show its cross; the cursors are looked at one by one, work/refactor/cursor-review-2026-10-12.md). Until then the
-   browser's and React Flow's own cursors show. R.54.2 的游標表（滑過都是箭頭，照 TD）已拿掉（R.104.6，人類 10-12：整個推翻——拖畫布時
-   沒有十字；游標一個一個看）。在那之前顯示瀏覽器與 React Flow 自己的游標。 */
-/* A value box shows the arrow until it is typed in; while dragging its value, the two-way arrow.
-   數值框在打字前是箭頭；拖曳改值時是左右箭頭。 */
-input.number:not(:focus) { cursor: default; } input.number.scrubbing { cursor: ew-resize; }
+/* The cursor rules (Refactor.104.7, human 2026-10-12, replacing R.54.2's "the arrow everywhere"; exceptions later):
+   - what can be picked up and moved — marked data-movable by its component, or a React Flow node — shows the open hand, held the
+     closed hand; never the canvas;
+   - whatever else can be clicked (buttons, summaries, menus' items, wires) shows the pointing finger;
+   - text fields the text cursor; a value box, a slider to drag, the two-way arrow (dragging it too);
+   - everything else the arrow.
+   While a gesture is on, its cursor holds over whatever is under the pointer: panning the four-way arrow, zooming (the wheel; not the
+   zoom buttons or framing) the up-down arrow, drawing a wire the finger. Ports keep React Flow's crosshair; resize handles their
+   two-way arrows (where they are drawn). The clickable rule is :where-weak, so a movable button (a panel tab) is the hand.
+   游標規則（R.104.7，人類 10-12，取代 R.54.2「滑過都是箭頭」；例外之後再補）：
+   - 可以拿起來移動的（元件標 data-movable，或 React Flow 的節點）是手形，按住是抓握；畫布不算；
+   - 其他可以點的（按鈕、摘要、選單項目、線）是手指；
+   - 文字框是文字游標；數值框是可以拖的滑桿，左右箭頭（拖曳中也是）；
+   - 其他是箭頭。
+   手勢進行中，指標下不論是什麼都用手勢的游標：拖畫布十字方向箭頭、縮放（滾輪；不含縮放按鈕與對準）上下箭頭、拉線手指。接孔保留
+   React Flow 的十字準星；調大小的把手保留雙向箭頭（寫在各自那裡）。「可以點」那條用 :where 降到最弱，可移動的按鈕（面板分頁）就是手形。 */
+:where(button, summary, select, a[href], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"],
+  input:is([type="checkbox"], [type="radio"], [type="color"])) { cursor: pointer; }
+:where(button:is(:disabled, [aria-disabled="true"])) { cursor: default; }
+:where(input:not([type="checkbox"], [type="radio"], [type="color"], [type="range"]), textarea, [contenteditable="true"]) { cursor: text; }
+[data-movable] { cursor: grab; } [data-movable]:active { cursor: grabbing; }
+.react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__nodesselection-rect { cursor: default; }
+.react-flow__edge { cursor: pointer; }
+.react-flow__pane.dragging, .react-flow__pane.dragging * { cursor: move !important; }
+.react-flow.zooming, .react-flow.zooming * { cursor: ns-resize !important; }
+.react-flow:has(.react-flow__connectionline), .react-flow:has(.react-flow__connectionline) * { cursor: pointer !important; }
+:root.scrubbing-value, :root.scrubbing-value * { cursor: ew-resize !important; user-select: none; } /* the value ladder, held 按住拖的數值階梯 */
+/* A value box is a slider to drag: the two-way arrow until it is typed in, and while dragging its value (human 2026-10-12).
+   數值框是可以拖的滑桿：打字前與拖曳改值時都是左右箭頭（人類 10-12）。 */
+input.number:not(:focus), input.number.scrubbing { cursor: ew-resize; }
 

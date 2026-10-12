@@ -219,7 +219,7 @@ const GroupBox = memo(function GroupBox({ group, session, actions, snap, grid, c
         }} />
         : <Markdown text={group.text ?? ''} />}
     </div>}
-    <div className="group-title nopan nodrag" role="group" tabIndex={0} aria-label={group.name} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: GROUP_TITLE }}
+    <div className="group-title nopan nodrag" data-movable="" role="group" tabIndex={0} aria-label={group.name} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: GROUP_TITLE }}
       onPointerDown={down} onPointerMove={drag} onPointerUp={up} onPointerCancel={back} onLostPointerCapture={() => { if (move.current) back(); }}
       onDoubleClick={event => { if (!(event.target as Element).closest('button')) actions.setRenaming(group.id); }}
       onKeyDown={event => { if (matches('renameGroup', event) && !renaming) { event.preventDefault(); actions.setRenaming(group.id); } }}
