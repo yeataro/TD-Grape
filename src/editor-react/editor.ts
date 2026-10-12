@@ -29,6 +29,9 @@ export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
 /** Where a dropped wire goes on a new node, and the configuration to create it in (Refactor.77; core wire_drop.ts).
  * 線接到新節點的哪裡、用什麼設定建立（R.77）。 */
 export type WireFit = Bootstrap['typeContract']['wireDrop'][string]['output'][string];
+/** The wire a new node is made on: the end it starts from, the new node's port, and the configuration it is made in (Refactor.54, 77).
+ * 新節點接上的線：從哪一端來、接到新節點哪個接孔、用什麼設定建立（R.54、77）。 */
+export type NewWire = { end: WireEnd; port: string; configure?: WireFit['configure'] };
 /** Random hex digits from the browser's secure random source. Not `crypto.randomUUID`: that one exists only on a secure page (https or
  * localhost), and the editor is also opened over plain http from another device (Refactor.103.4, human 2026-10-12: pasting on a phone
  * failed with "crypto.randomUUID is not a function"). 瀏覽器安全亂數產生的十六進位字。不用 crypto.randomUUID：它只在安全的頁面（https 或
@@ -502,42 +505,42 @@ export class Editor {
   add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
-  addNode = (spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
+  addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) =>
     this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => { this.insertWired(document, spec, position, wire); });
   /** What adding this node (wired when given) would draw, rehearsed on a discarded candidate with the same edit as addNode
    * (Refactor.105: place a node): the new node and the wires touching it, as the canvas draws them. null: adding it fails.
    * 新增這個節點（有給線就接上）會畫出什麼，用和 addNode 同一個修改在丟棄的候選上預演（R.105：放置節點）：新節點與碰到它的線，
    * 照畫布畫的樣子。null＝新增會失敗。 */
-  placementPreview = (spec: NewNode, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) => this.rehearse(document => {
+  placementPreview = (spec: NewNode, wire?: NewWire) => this.rehearse(document => {
     const id = this.insertWired(document, spec, { x: 0, y: 0 }, wire), drawn = project(document, this.state.projection, this.bootstrap.typeContract);
     const node = drawn.nodes.find(item => item.id === id);
     return node ? { node, edges: drawn.edges.filter(edge => edge.source === id || edge.target === id) } : null;
   });
-  private insertWired(document: GraphDocument, spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) {
-      const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
-      if (!wire) return id;
-      const { end, port, configure } = wire;
-      // Made in the configuration the wire-drop table chose (e.g. Add as vec4), in the same step (Refactor.77).
-      // 用拉線新增表選的設定建立（例如 Add 建成 vec4），同一步完成（R.77）。
-      if (configure) net.node(id).configure(configure);
-      if (end.side === 'output') net.connect(net.node(end.node).port('output', end.port), net.node(id).port('input', port), core.values.policy);
-      else {
-        // An input takes one wire: the new one replaces whatever was there. 輸入只接一條：新線取代原本的。
-        const old = net.node(end.node).port('input', end.port).edges;
-        if (old.length) net.disconnectAll(old);
-        net.connect(net.node(id).port('output', port), net.node(end.node).port('input', end.port), core.values.policy);
-      }
-      // A node made from a wire takes the component names of the node at the other end, in the same step (Refactor.59; legacy
-      // graph_ui.js:2346 did it for vector nodes). Trial (Refactor.85.2, human 2026-10-11: try it): every node that has names to
-      // choose, by the same rule as the Settings tab, not only vector nodes; the default is not stored.
-      // 由拉線新增的節點沿用另一端節點的分量名稱，同一步完成（R.59；舊產品只給向量節點）。試驗（R.85.2，人類：試試看）：凡是有分量名稱可選的節點
-      // 都沿用，規則和設定分頁同一條，不只向量節點；預設不記。
-      const made = net.node(id), peer = net.node(end.node);
-      if (made.data && peer.data && namesOf(net, id, this.document.document.declarations)) {
-        const style = core.componentStyle(peer.definition, peer.data, net.context), { componentNames: _, ...ui } = made.data.ui ?? {};
-        made.update({ ui: style === core.componentStyle(made.definition, { ...made.data, ui }, net.context) ? ui : { ...ui, componentNames: style } });
-      }
-      return id;
+  private insertWired(document: GraphDocument, spec: NewNode, position: XYPosition, wire?: NewWire) {
+    const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
+    if (!wire) return id;
+    const { end, port, configure } = wire;
+    // Made in the configuration the wire-drop table chose (e.g. Add as vec4), in the same step (Refactor.77).
+    // 用拉線新增表選的設定建立（例如 Add 建成 vec4），同一步完成（R.77）。
+    if (configure) net.node(id).configure(configure);
+    if (end.side === 'output') net.connect(net.node(end.node).port('output', end.port), net.node(id).port('input', port), core.values.policy);
+    else {
+      // An input takes one wire: the new one replaces whatever was there. 輸入只接一條：新線取代原本的。
+      const old = net.node(end.node).port('input', end.port).edges;
+      if (old.length) net.disconnectAll(old);
+      net.connect(net.node(id).port('output', port), net.node(end.node).port('input', end.port), core.values.policy);
+    }
+    // A node made from a wire takes the component names of the node at the other end, in the same step (Refactor.59; legacy
+    // graph_ui.js:2346 did it for vector nodes). Trial (Refactor.85.2, human 2026-10-11: try it): every node that has names to
+    // choose, by the same rule as the Settings tab, not only vector nodes; the default is not stored.
+    // 由拉線新增的節點沿用另一端節點的分量名稱，同一步完成（R.59；舊產品只給向量節點）。試驗（R.85.2，人類：試試看）：凡是有分量名稱可選的節點
+    // 都沿用，規則和設定分頁同一條，不只向量節點；預設不記。
+    const made = net.node(id), peer = net.node(end.node);
+    if (made.data && peer.data && namesOf(net, id, this.document.document.declarations)) {
+      const style = core.componentStyle(peer.definition, peer.data, net.context), { componentNames: _, ...ui } = made.data.ui ?? {};
+      made.update({ ui: style === core.componentStyle(made.definition, { ...made.data, ui }, net.context) ? ui : { ...ui, componentNames: style } });
+    }
+    return id;
   }
   /** Where a dropped wire would go on a new node made from this choice (Refactor.77, design-interview Q37 1-5 supplement):
    * looked up in the table the build wrote with the real rules; choices only the document knows (declared sources,

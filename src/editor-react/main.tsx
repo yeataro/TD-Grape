@@ -13,7 +13,7 @@ import { appearanceSubscribe, currentTheme } from './appearance';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
-import { Editor as EditorSession, type EditorState, type WireEnd, type WireFit } from './editor';
+import { Editor as EditorSession, type EditorState, type WireEnd, type NewWire } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
 import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
@@ -400,7 +400,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const choices = useMemo(() => addChoices(state.declarations ?? [], text), [state.declarations, text]);
   const [creating, setCreating] = useState<CreateRequest | null>(null);
   const middle = () => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width / 2, y: box.y + box.height / 3 }; };
-  const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
+  const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: NewWire) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
   // Place a node (Refactor.105): after a port's right-click the picked node follows the pointer until a press adds it. 放置節點（R.105）。
