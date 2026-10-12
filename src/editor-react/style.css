@@ -848,6 +848,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .sources { --io-row: 28px; --io-field: 22px; --io-field-min: 36px; --field-pad: 4px 8px; --button-pad: 3px 8px;
   --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 10px; --line-md: 14px; --font-base: 11px; --line-base: 15px;
   font-size: var(--font-sm); line-height: var(--line-sm); }
+/* Its section titles keep the Add Node panel's heading size, outside that smaller set: --row-font is worked out at :root (Refactor.105.10,
+   human 2026-10-13: the titles were too small — 10px, the smaller set reaching them). 分組標題用新增節點面板分類標題的字級，不在那組縮小字級裡：
+   --row-font 在 :root 就算好了（R.105.10，人類 10-13：標題太小——10px，是那組縮小字級套到了它們）。 */
+.sources .fold-toggle { font-size: var(--row-font); }
 
 /* A source card (SourceCard.tsx; human 2026-10-09, after the legacy card). 來源卡片（參考舊產品）。
    - A strip at its left in its kind's colour (a node title turned on its side, at the title's strength).
