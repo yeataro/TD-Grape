@@ -466,6 +466,13 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .graph-json .graph-json-line { display: flex; }
 .graph-json .graph-json-indent { flex: none; }
 .graph-json .graph-json-text { flex: 1; min-width: 0; padding-left: 2ch; text-indent: -2ch; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Live trace (Refactor.102.1): the selected node's lines lit as the GLSL panel's traced lines; a changed line flashes from the brightest
+   text colour back to its own (a filter: rule 六 animates no colour). Not under the gear's animation setting: the panel's own switch turns it off (human 2026-10-12).
+   即時追蹤（R.102.1）：選到的節點那幾行像 GLSL 被追蹤的行一樣亮；改到的行從最亮的字色退回原本的顏色（用 filter：規則六不動畫顏色）。不歸齒輪的動畫設定管：面板自己
+   的開關關掉它（人類 10-12）。 */
+.graph-json .graph-json-line.traced { background: var(--code-line-hover); }
+.graph-json .graph-json-line.changed .graph-json-text { animation: graph-json-flash 1.2s ease-out; }
+@keyframes graph-json-flash { from { filter: saturate(0) brightness(var(--code-flash-brightness)); } }
 .glsl-failure { padding: 8px 10px; border-radius: var(--radius-field); border: 1px solid var(--status-error); font-size: var(--font-sm); line-height: var(--line-sm); }
 .glsl-failure p { margin: 0 0 4px; }
 .glsl-failure ul { margin: 0; padding-left: 1.2em; }

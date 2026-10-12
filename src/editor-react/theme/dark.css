@@ -60,6 +60,9 @@
 
   /* ── strengths: the steps of the ladder, shared by every purpose ── */
   --title-alpha: 80%;
+  /* A changed code line flashes from its text grey and this bright: white here, black in the light theme (0; Refactor.102.1). 改到的程式碼行
+     從灰階、這個亮度亮起：這裡是白，淺色主題是黑（0；R.102.1）。 */
+  --code-flash-brightness: 3;
   --lift-canvas: 1%;    /* the network: just above the app background */
   --lift-bar: 3%;       /* title bar, foot bar */
   --lift-zone: 4%;      /* panel zones, the location bar */

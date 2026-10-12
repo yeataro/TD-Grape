@@ -51,6 +51,7 @@
   --palette-glsl-builtin: #5364ac;
 
   --title-alpha: 80%;
+  --code-flash-brightness: 0;
   --lift-canvas: 0%;
   --lift-bar: 30%;
   --lift-zone: 45%;
