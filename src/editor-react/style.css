@@ -1366,15 +1366,10 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 /* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
 .wire-plus { fill: var(--text-strong); font-size: var(--font-lg); line-height: var(--line-lg); font-weight: 700; pointer-events: none; }
 
-/* The cursor table (Refactor.54.2; human 2026-10-09: as TouchDesigner): the arrow everywhere, whatever is under the
-   pointer; it changes only while a button is held — holding on the canvas pans with the four-way arrow. Resize handles
-   keep their two-way arrows. One table, overriding React Flow's own hands and pointers; components write no cursor.
-   游標對照表（照 TouchDesigner）：滑過什麼都是箭頭；只有按住時才變——在畫布上按住平移是十字方向箭頭。調大小的把手保留雙向箭頭。
-   只有這一張表，蓋過 React Flow 自己的手形與指標；元件不寫游標。 */
-button, summary, .choice-row, .node-drag-surface, .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__edge.selectable,
-.react-flow__node.selectable, .react-flow__node.draggable, .react-flow__node.draggable.dragging, .react-flow__nodesselection-rect,
-.react-flow__handle.connectionindicator, .react-flow__edgeupdater, .react-flow__controls-button { cursor: default; }
-.react-flow__pane.dragging { cursor: move; }
+/* The R.54.2 cursor table (the arrow everywhere, as TouchDesigner) is gone (Refactor.104.6, human 2026-10-12: overturned whole — panning
+   the canvas did not show its cross; the cursors are looked at one by one, work/refactor/cursor-review-2026-10-12.md). Until then the
+   browser's and React Flow's own cursors show. R.54.2 的游標表（滑過都是箭頭，照 TD）已拿掉（R.104.6，人類 10-12：整個推翻——拖畫布時
+   沒有十字；游標一個一個看）。在那之前顯示瀏覽器與 React Flow 自己的游標。 */
 /* A value box shows the arrow until it is typed in; while dragging its value, the two-way arrow.
    數值框在打字前是箭頭；拖曳改值時是左右箭頭。 */
 input.number:not(:focus) { cursor: default; } input.number.scrubbing { cursor: ew-resize; }
