@@ -317,13 +317,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    human 2026-10-12: the hover background should be brighter; legacy's was #393741). 底色用滑過的表面，從工具列上跳出來；--surface-control
    和工具列本身的底差不多（R.104.5，人類 10-12：滑過的底色要再亮一點；舊產品是 #393741）。 */
 @media (hover: hover) { :where(.network-bar-group) .icon-button:not([aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"]):hover { background: var(--surface-control-hover); } }
-/* It rises in when it appears or its buttons change: a short fade with a slight growth (Refactor.104.2, human 2026-10-12: short,
-   "floating up"); none with animation effects off. 出現或按鈕改變時浮現：很短的淡入加些微放大（R.104.2，人類 10-12：要短、浮現的感覺）；
-   動畫效果關掉時沒有。 */
-.floating-toolbar-face { animation: floating-toolbar-rise 120ms ease-out; }
-@keyframes floating-toolbar-rise { from { opacity: 0; transform: scale(.95); } }
-:root[data-motion="off"] .floating-toolbar-face { animation: none; }
-@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .floating-toolbar-face { animation: none; } }
+/* Floating things rise in when they appear: a short fade with a slight growth (Refactor.104.2, human 2026-10-12: short, "floating up";
+   shared since R.105.9, the operation hint being its second user); none with animation effects off. The floating toolbar also rises
+   when its buttons change. 浮動的東西出現時浮現：很短的淡入加些微放大（R.104.2，人類 10-12：要短、浮現的感覺；R.105.9 起共用，操作提示是
+   第二個使用者）；動畫效果關掉時沒有。浮動工具列換按鈕時也浮現。 */
+.floating-toolbar-face, .operation-hint { animation: float-rise 120ms ease-out; }
+@keyframes float-rise { from { opacity: 0; transform: scale(.95); } }
+:root[data-motion="off"] :is(.floating-toolbar-face, .operation-hint) { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] :is(.floating-toolbar-face, .operation-hint) { animation: none; } }
 /* One height for the whole toolbar (Refactor.83.6, human 2026-10-11: too tall, and the stage switch should line up with it; legacy
    gave its stage and tool buttons one height, 32px standard / 38px comfortable, style.css:961, 1524): a word button is as tall as
    an icon button, and the stage switch is as tall as the tool group (a transparent line stands in for the group's border).
@@ -516,9 +517,12 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* The operation hint (operation_hint.tsx; Refactor.105.7): a small pill in the canvas's bottom row, placed and sized by its component,
    its text cut with an ellipsis when narrowed; never under the pointer. 操作提示：畫布下方那一排的小膠囊，位置與大小由元件算，變窄時文字用「…」；
    不擋指標。 */
-.operation-hint { position: absolute; z-index: 5; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px;
-  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--text);
-  font-size: var(--font-sm); line-height: var(--line-sm); white-space: nowrap; pointer-events: none; }
+/* Made to stand out (R.105.9, human 2026-10-13: not prominent enough; our purple, a shadow, rising in, taller and wider): the primary
+   buttons' purple and its text colour, no new colour (legacy's #443653 is not in our palette). 要醒目（R.105.9，人類 10-13：不夠醒目；用我們的
+   紫色、陰影、浮現、更高更寬）：主要按鈕的紫色與它的文字色，不新增顏色（舊產品的 #443653 不在我們的調色盤）。 */
+.operation-hint { position: absolute; z-index: 5; box-sizing: border-box; display: flex; align-items: center; padding: 0 20px;
+  border: 1px solid var(--accent-fill); border-radius: 8px; background: var(--accent-fill); color: var(--text-on-accent); box-shadow: 0 5px 16px var(--shadow);
+  font-size: var(--font-base); line-height: var(--line-base); font-weight: 650; white-space: nowrap; pointer-events: none; }
 .operation-hint > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .react-flow__node.placing { pointer-events: none; }
 .react-flow__node.placing.measuring { opacity: 0; } /* opacity: React Flow writes visibility itself 用透明度：可見度 React Flow 自己會寫 */

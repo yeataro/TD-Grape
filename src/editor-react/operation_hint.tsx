@@ -3,12 +3,13 @@ import { say, useLanguage, type Message } from './text';
 
 // The operation hint (GLOSSARY; Refactor.105.7, human 2026-10-13: shared now, and it must not take others' places): while something
 // is going on, one short line saying how to finish it — placing a node first; wire hints later (legacy #connection, style.css:88, used
-// it for wires, quick links and placing). One at a time, the latest. It sits in the canvas's bottom row, as tall as the controls there:
-// centred, moved left when the controls at the right crowd it (over React Flow's credit if need be), narrowed with an ellipsis, and
-// hidden when too little room is left. Never under the pointer.
+// it for wires, quick links and placing). One at a time, the latest. It sits in the canvas's bottom row — 8px from the bottom, its top
+// 8px above the controls' (R.105.9, human: taller, to the band's limit): centred, moved left when the controls at the right crowd it
+// (over React Flow's credit if need be), narrowed with an ellipsis, and hidden when too little room is left. Never under the pointer.
 // 操作提示（用語表；R.105.7，人類 10-13：確定會共用，而且不能佔到其他位置）：有事正在進行時，一行短句說怎麼完成——先給放置節點；之後
-// 拉線的提示（舊產品 #connection 用在拉線、快速連線、放置）。一次一則，最新的。放在畫布下方那一排，和那裡的按鈕同高：置中，被右邊按鈕
-// 擠到就往左讓（必要時蓋過 React Flow 的致謝），變窄時文字用「…」，空間太小就不顯示。不擋指標。
+// 拉線的提示（舊產品 #connection 用在拉線、快速連線、放置）。一次一則，最新的。放在畫布下方那一排——離底 8px，上緣在按鈕上緣再往上 8px
+// （R.105.9，人類：更高，頂到那一排的上限）：置中，被右邊按鈕擠到就往左讓（必要時蓋過 React Flow 的致謝），變窄時文字用「…」，
+// 空間太小就不顯示。不擋指標。
 
 let shown: Message | null = null;
 const listeners = new Set<() => void>();
@@ -48,7 +49,7 @@ export function OperationHint() {
       // 寬度最多是它有的空間；在畫布置中，按鈕擋到時往左讓。
       element.style.maxWidth = Math.min(WIDEST, room) + 'px';
       const width = element.offsetWidth, left = Math.max(GAP, Math.min(box.width / 2 - width / 2, right - width));
-      const height = controls?.height ?? 26, bottom = controls ? box.bottom - controls.bottom : GAP;
+      const bottom = GAP, height = controls ? box.bottom - GAP - (controls.top - GAP) : 34;
       setPlace(old => old && old.left === left && old.bottom === bottom && old.height === height && old.width === width ? old : { left, bottom, height, width });
     };
     fit();
