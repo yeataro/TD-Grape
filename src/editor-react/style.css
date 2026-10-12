@@ -661,9 +661,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
   color: var(--text-strong); font-size: var(--font-md); line-height: var(--line-md); pointer-events: auto; touch-action: none; }
 .group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The body text (Refactor.99): under the title, the box's width less its padding; lines break as written and wrap; it does not take the
-   pointer (pressing it is pressing the box) except while being written. 內文（R.99）：在標題下、寬度是外框扣掉兩側空間；照寫下的換行、也會自動
-   換行；不接滑鼠（按它等於按框身），寫的時候才接。 */
-.group-text { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; padding-top: 8px; color: var(--text-strong);
+   pointer (pressing it is pressing the box) except while being written. 12px under the title (Refactor.99.1, human 2026-10-12: try 12, then
+   discuss; 8 was a pick of no source). 內文（R.99）：在標題下、寬度是外框扣掉兩側空間；照寫下的換行、也會自動換行；不接滑鼠（按它等於按框身），
+   寫的時候才接。離標題 12px（R.99.1，人類：先改 12 再討論；原本的 8 沒有依據）。 */
+.group-text { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; padding-top: 12px; color: var(--text-strong);
   font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; overflow-wrap: anywhere; pointer-events: none; }
 .group-text.writing { pointer-events: auto; }
 .group-text textarea { display: block; width: 100%; box-sizing: border-box; min-height: var(--line-md); padding: 0; border: 0; border-radius: 0; resize: none; overflow: hidden;

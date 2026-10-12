@@ -29,8 +29,15 @@ export const GROUP_PAD = 24, GROUP_TITLE = 28;
 /** A group's box from its members' bounds and the height of its body text, which sits between the title and the members, so the box
  * grows upwards and the members stay (Refactor.99, human 2026-10-12). 依成員範圍與內文高度算出的群組外框；內文在標題與成員之間，所以外框
  * 往上長、成員不動（R.99，人類 10-12）。 */
-export const groupBox = (members: Rect, text = 0): Rect =>
-  ({ x: members.x - GROUP_PAD, y: members.y - GROUP_PAD - text - GROUP_TITLE, width: members.width + 2 * GROUP_PAD, height: members.height + 2 * GROUP_PAD + text + GROUP_TITLE });
+export const groupBox = (members: Rect, text = 0): Rect => {
+  // With text, 12 between it and the members as above it (Refactor.99.1, human 2026-10-12); without, legacy's 24 above the members.
+  // 有內文時，內文和成員之間 12，同內文上方（R.99.1，人類）；沒有內文時，成員上方照舊產品 24。
+  const above = text ? TEXT_GAP + text : GROUP_PAD;
+  return { x: members.x - GROUP_PAD, y: members.y - above - GROUP_TITLE, width: members.width + 2 * GROUP_PAD, height: members.height + GROUP_PAD + above + GROUP_TITLE };
+};
+/** Between the body text and the members (its gap to the title is the text block's own, style.css). 內文和成員之間（和標題之間的空隙是
+ * 內文區塊自己的，style.css）。 */
+const TEXT_GAP = 12;
 /** Each group's measured body text height, by group ID (flow units; none = no text). 每個群組量到的內文高度（畫布單位；沒有＝沒有內文）。 */
 export type TextHeights = Readonly<Record<string, number>>;
 /** The selection's bounds in flow units: its nodes, and the box of every group whose members are all selected, so the
