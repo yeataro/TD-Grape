@@ -5,7 +5,7 @@ import { say, tr, type Message } from './text';
 import type { IconName } from './icons';
 import type { Layout } from './layout';
 import { frameNodes } from './viewport';
-import { useFullscreen } from './bars';
+import { useFullscreen, toggleFullscreen } from './bars';
 import { shortcutText, type Shortcut } from './shortcuts';
 import type { CopyPaste } from './copy_paste';
 import type { GroupActions } from './Groups';
@@ -74,13 +74,13 @@ export function CanvasMenu({ request, session, state, layout, clip, grouping, on
     { key: 'home', group: 5, icon: 'home', label: tr('canvasMenu.home', 'Home'), keys: 'home', run: () => frameNodes(flow) },
     ...count ? [{ key: 'frame', group: 5, icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), keys: 'frame', run: () => frameNodes(flow, ids) }] as Row[] : [],
     // Its name says what choosing it does (legacy view.restoreLayout). 名字說選了會怎樣（照舊產品）。
-    { key: 'focus', group: 5, icon: layout.focused ? 'unfocus' : 'focus', label: layout.focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvasMenu.focus', 'Focus graph'),
-      toggle: true, checked: layout.focused, run: () => layout.setFocused(on => !on) },
+    { key: 'focus', group: 5, icon: layout.focused ? 'unfocus' : 'focus', label: layout.focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvas.focus', 'Focus graph'),
+      keys: 'focusGraph', toggle: true, checked: layout.focused, run: () => layout.setFocused(on => !on) },
     // The browser's own full screen, as the foot bar's; not offered where the browser has none (an iPhone). 瀏覽器自己的全螢幕，同底列；
     // 瀏覽器沒有時（iPhone）不能按。
     { key: 'fullscreen', group: 5, icon: 'fullscreen', label: fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'),
       toggle: true, checked: fullscreen, disabled: !document.fullscreenEnabled,
-      run: () => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen()) },
+      run: () => toggleFullscreen(fullscreen) },
     { key: 'delete', group: 6, icon: 'delete', label: edges.length ? tr('canvasMenu.disconnect', 'Disconnect wire') : tr('canvasMenu.deleteNode', 'Delete node'),
       keys: 'delete', disabled: !count && !edges.length, run: remove },
     params,

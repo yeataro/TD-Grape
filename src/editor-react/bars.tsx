@@ -399,7 +399,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
     </PopoverButton></span>
     <AppearancePanels onPanel={onAppearance} fold={fold} />
     <span {...fold(5)}><IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
-      onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} /></span>
+      onClick={() => toggleFullscreen(fullscreen)} /></span>
     {status && <StatusPanel anchor={status} state={live} project={project} line={line} tone={tone} onRetry={() => void session?.check()} onClose={() => setStatus(null)} />}
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
   </footer>;
@@ -496,6 +496,9 @@ const recordWords = ({ kind, revision, from, link }: SyncRecord): Message => kin
   : tr('record.stopped', 'Stopped at revision {revision}', { revision });
 
 // The browser's own full screen (legacy foot bar, bottom-right). 瀏覽器自己的全螢幕（舊產品底列右下）。
+/** Into or out of the browser's full screen; a refusal (no gesture, not allowed) changes nothing. The foot bar, the canvas menu and the
+ * Focus graph controls share it. 進入或離開瀏覽器的全螢幕；被拒絕（沒有手勢、不允許）就什麼都不變。底列、畫布選單、專注編輯的控制共用。 */
+export const toggleFullscreen = (on: boolean) => { void (on ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => undefined); };
 export function useFullscreen() {
   return useSyncExternalStore(listener => { document.addEventListener('fullscreenchange', listener); return () => document.removeEventListener('fullscreenchange', listener); },
     () => !!document.fullscreenElement);

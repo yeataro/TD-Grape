@@ -24,7 +24,7 @@ import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
 import { LayoutView, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput, type PanelRow } from './panels';
-import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, useFullscreen, type CanvasPrefs } from './bars';
+import { TitleBar, LocationBar, NetworkBar, FootBar, SPARE, useFullscreen, type CanvasPrefs, toggleFullscreen } from './bars';
 import { Icon } from './icons';
 import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
@@ -297,12 +297,12 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           人類：和全螢幕長得一模一樣）：四角框加小節點（人類 10-11），和 H 同一個對準，說明用我們的字。 */}
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false} showFitView={false}>
         <ZoomReadout />
-        <ControlButton className="home" onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
+        <ControlButton onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
           title={withShortcut(say(tr('canvas.homeHint', 'Home: show the whole network')), 'home')}><Icon name="home" /></ControlButton>
         {/* Focus graph, after the zoom as legacy (index.html:57; human 2026-10-11: icon D, Ctrl+Enter, Esc leaves); while on, full screen
             comes here too, the foot bar being away (legacy app.js:1482). 專注編輯，照舊產品放在縮放後面（人類 10-11：圖示 D、Ctrl＋Enter、
             Esc 離開）；開著時全螢幕也搬到這裡，因為底列不在（照舊產品）。 */}
-        <ControlButton className="focus-graph" aria-pressed={focused} onClick={() => onFocus(on => !on)}
+        <ControlButton aria-pressed={focused} onClick={() => onFocus(on => !on)}
           aria-label={say(focused ? tr('canvas.restoreLayout', 'Restore layout') : tr('canvas.focus', 'Focus graph'))}
           title={focused ? withShortcut(say(tr('canvas.restoreLayout', 'Restore layout')), 'focusGraph', 'leaveFocus')
             : withShortcut(say(tr('canvas.focusHint', 'Focus graph: only the network and its toolbar')), 'focusGraph')}>
@@ -310,7 +310,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         {focused && <ControlButton aria-pressed={fullscreen} disabled={!document.fullscreenEnabled}
           aria-label={say(fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'))}
           title={say(fullscreen ? tr('canvasMenu.exitFullscreen', 'Exit fullscreen') : tr('canvasMenu.fullscreen', 'Fullscreen'))}
-          onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())}><Icon name="fullscreen" /></ControlButton>}
+          onClick={() => toggleFullscreen(fullscreen)}><Icon name="fullscreen" /></ControlButton>}
       </Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       {/* Groups behind and between (Groups.tsx), then the selection's frame and toolbar. 群組在後面與中間，然後是選取的框與工具列。 */}
@@ -434,8 +434,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     if (!session) return;
     const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty && !resetting.current) { event.preventDefault(); event.returnValue = ''; } };
     // The editor's commands, their keys from the one table (shortcuts.ts, Refactor.95); where each applies is decided here. Copy and
-    // paste come as the browser's own events (copy_paste.ts). 編輯器的指令（複製、貼上走瀏覽器自己的事件，copy_paste.ts）。
-    // 編輯器的指令，鍵都從那一張表來（shortcuts.ts，R.95）；在哪裡生效在這裡決定。
+    // paste come as the browser's own events (copy_paste.ts). 編輯器的指令，鍵都從那一張表來（shortcuts.ts，R.95）；在哪裡生效在這裡
+    // 決定。複製、貼上走瀏覽器自己的事件（copy_paste.ts）。
     const keys = (event: KeyboardEvent) => {
       const element = event.target as HTMLElement;
       if (element.closest('input,select,textarea,[contenteditable="true"]')) return;

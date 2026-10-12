@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { FlowNode, FlowEdge } from './projection';
 import { say, tr, type Message } from './text';
 import { IconButton } from './controls';
 import type { IconName } from './icons';
 import { frameNodes } from './viewport';
+import { appearance, appearanceSubscribe } from './appearance';
 import type { CopyPaste } from './copy_paste';
 import { selectionBounds, type GroupActions, type TextHeights } from './Groups';
 import type { GraphGroup } from './core';
@@ -36,6 +37,9 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
   nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions; texts: TextHeights;
 }) {
   const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
+  // Read again only when the look changes (density), not on every drag or pan frame (deep clean 2026-10-12). 只在外觀（密度）改變時
+  // 重讀，不是拖曳或平移的每一格（10-12 深度清潔）。
+  const look = useSyncExternalStore(appearanceSubscribe, appearance), gap = useMemo(() => frameOffset(), [look]);
   const selected = nodes.filter(node => node.selected), ids = selected.map(node => node.id);
   // The selection's bounds on screen: worked out from React Flow's measured nodes and its view, as a key so the bar draws again only
   // when they change. 選取在螢幕上的範圍：從 React Flow 量到的節點與視角算出，做成字串，變了才重畫。
@@ -90,7 +94,7 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
   // Out of view: hidden; else above the selection, or below when there is no room, kept inside. 看不到就藏；否則在上方，放不下在下方，夾在範圍裡。
   const shown = room && right > 0 && left < room.width && bottom > room.top && top < room.bottom;
   const x = room ? Math.max(OFF_SIDE, Math.min(room.width - OFF_SIDE - size.width, (left + right) / 2 - size.width / 2)) : 0;
-  const off = OFF_SELECTION + (many ? frameOffset() : 0);
+  const off = OFF_SELECTION + (many ? gap : 0);
   const above = top - off - size.height, y = room ? Math.max(room.top, Math.min(room.bottom - size.height, above >= room.top ? above : bottom + off)) : 0;
   // Not there yet: greyed, its name saying so. 還沒有的：灰的，名字後面說尚未提供。
   const tool = (item: Tool) => <IconButton key={item.key} icon={item.icon} label={item.label} danger={item.danger} disabled={!item.run || item.disabled}

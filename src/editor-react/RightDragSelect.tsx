@@ -98,9 +98,14 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
   const starts = (event: { button: number; shiftKey: boolean; target: EventTarget }) =>
     (event.button === 2 || (event.button === 0 && (event.shiftKey || boxSelect))) && !!(event.target as Element).closest('.react-flow__pane')
     && !(event.target as Element).closest('.react-flow__edge, .react-flow__node, .group-title, .group-text.writing');
+  // A right press that starts no box (on a node or a wire): where it was, so a release after moving does not open the menu (deep clean
+  // 2026-10-12: it opened wherever the pointer ended). 不開始框選的右鍵按下（在節點或接線上）：記下位置，移動後放開就不開選單（10-12
+  // 深度清潔：原本不管游標停在哪都會開）。
+  const rightPress = useRef<{ x: number; y: number } | null>(null);
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
     if (event.pointerType === 'touch') startHold(event);
+    rightPress.current = event.button === 2 && !starts(event) ? { x: event.clientX, y: event.clientY } : null;
     // A press on a node (not on a port: that starts a wire) selects it before any drag starts.
     // 按在節點上（不是接孔：那是開始拉線）就在拖曳開始前選取。
     const card = event.button === 0 && !target.closest('.react-flow__handle') ? target.closest('.react-flow__node') : null;
@@ -175,6 +180,8 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     event.preventDefault();
     if (touches.current.size || performance.now() < touchUntil.current) return;
     if (drag.current?.right) { drag.current.menu = true; return; }
+    const pressed = rightPress.current; rightPress.current = null;
+    if (pressed && Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > threshold) return;
     open(target, event.clientX, event.clientY, false);
   };
   return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
