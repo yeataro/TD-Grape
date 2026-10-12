@@ -1,14 +1,12 @@
-import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { memo, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { highlightJson } from './code_highlight';
 import { changedLines, layJson, type JsonLine } from './json_format';
 import { tr, say, useLanguage } from './text';
 import { frameNodes } from './viewport';
 import { ScrollFade } from './controls';
-import { scrollToMiddle } from './scroll_glide';
 import type { Editor as EditorSession } from './editor';
-import type { MenuItem } from './DropdownMenu';
-import { readPreference, writePreference } from './preferences';
+import { traceSwitch, useFollowTrace } from './live_trace';
 
 // Live trace (Refactor.102.1, human 2026-10-12; new): the primary node's lines are lit as the GLSL panel's traced lines, and the lines
 // an edit changed flash from the brightest text colour back to their own. One switch for both, this panel's own (not the GLSL
@@ -16,16 +14,10 @@ import { readPreference, writePreference } from './preferences';
 // default, a personal preference. 即時追蹤（R.102.1，人類 10-12；新行為）：主要選取節點的那幾行像 GLSL 面板被追蹤的行一樣亮起，修改改到
 // 的行從最亮的字色退回原本的顏色。兩件事一個開關，是這個面板自己的（不是 GLSL 面板的）；亮一下只跟這個開關，不跟齒輪的動畫設定
 // （人類：不想要的人關掉追蹤）。預設開；個人偏好。
-const TRACE = 'graphJson.liveTrace';
-let tracing = readPreference(TRACE) !== 'off';
-const traceListeners = new Set<() => void>();
-const traceSubscribe = (listener: () => void) => { traceListeners.add(listener); return () => { traceListeners.delete(listener); }; };
-const traceSnapshot = () => tracing;
+const trace = traceSwitch('graphJson.liveTrace', tr('graphJson.liveTrace', 'Live trace'),
+  tr('graphJson.liveTraceHint', "Light the selected node's lines, and the lines an edit changes"));
 /** The Graph JSON View's menu (Refactor.102.1). Graph JSON View 的選單（R.102.1）。 */
-export const graphJsonMenu = (): readonly MenuItem[] => [{ key: 'liveTrace', checkbox: true, checked: tracing,
-  label: say(tr('graphJson.liveTrace', 'Live trace')),
-  title: say(tr('graphJson.liveTraceHint', "Light the selected node's lines, and the lines an edit changes")),
-  select: () => { tracing = !tracing; writePreference(TRACE, tracing ? 'on' : 'off'); traceListeners.forEach(listener => listener()); } }];
+export const graphJsonMenu = trace.menu;
 
 /** The graph document as JSON, read only (Refactor.102, human 2026-10-12; new, legacy only exported it): laid out for reading,
  * coloured as the GLSL panel, no line numbers (the saved document is one line, so they would point at nothing). Worked out again
@@ -41,23 +33,24 @@ export const GraphJsonView = memo(function GraphJsonView({ session, version }: {
   // What changed since the lines shown before; nothing on the first showing (opening the panel is not an edit). Kept by the lines
   // it was worked out for, so working it out twice (React's strict mode) gives the same answer.
   // 和上次顯示的行比，改了哪些；第一次顯示什麼都不算（打開面板不是修改）。照算出它的那份行保存，算兩次（React 嚴格模式）答案一樣。
-  const shown = useRef<{ lines: readonly JsonLine[]; before: readonly JsonLine[] | null; changed: Set<number> } | null>(null);
+  const shown = useRef<{ lines: readonly JsonLine[]; changed: Set<number>; version: number } | null>(null);
   if (shown.current?.lines !== lines) {
     const before = shown.current?.lines ?? null;
-    shown.current = { lines, before, changed: before ? changedLines(before, lines) : new Set() };
+    shown.current = { lines, changed: before ? changedLines(before, lines) : new Set(), version };
   }
   const changed = shown.current.changed;
   // Re-drawn only when the primary node changes, as the GLSL panel. 只在主要選取換人時重畫，同 GLSL 面板。
   const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
-  const on = useSyncExternalStore(traceSubscribe, traceSnapshot), traced = on ? primary : null;
+  const on = useSyncExternalStore(trace.subscribe, trace.snapshot), traced = on ? primary : null;
+  // The version tracing came on at: what changed before it is not flashed again when it is turned back on (deep clean 2026-10-12).
+  // 追蹤打開時的版本：打開之前的修改，重新打開時不再亮一次（10-12 深度清潔）。
+  const onAt = useRef<number | null>(null);
+  if (!on) onAt.current = null; else if (onAt.current === null) onAt.current = version;
+  const flashing = on && shown.current.version > onAt.current!;
   const box = useRef<HTMLPreElement>(null);
-  // The traced node's lines come into view when it is chosen, unless they already are; gliding by the gear's animation effects
-  // (Refactor.102.2). 選到的節點那幾行捲進畫面，已經看得到就不動；照齒輪的動畫效果滑過去（R.102.2）。
-  useEffect(() => {
-    const first = traced && box.current?.querySelector<HTMLElement>('.graph-json-line.traced');
-    if (first) scrollToMiddle(first, true);
-  }, [traced]);
-  const goToNode = (id: string) => { session.selectNode(id); frameNodes(flow, [id]); };
+  // The traced node's lines come into view when it is chosen (Refactor.102.2). 選到的節點那幾行捲進畫面（R.102.2）。
+  const chooseHere = useFollowTrace(box, '.graph-json-line.traced', traced);
+  const goToNode = (id: string) => { chooseHere(id); session.selectNode(id); frameNodes(flow, [id]); };
   // Each line: its indent, then its text; a long line wraps under its own start, a little further in. A line that changed is keyed
   // anew, so its flash starts again at every edit. 每一行：縮排，再來是內容；長的一行換行時，接在自己開頭的下面、再往內一點。改到的
   // 行換一個 key，每次修改都重新亮一次。
@@ -66,7 +59,7 @@ export const GraphJsonView = memo(function GraphJsonView({ session, version }: {
       const row = pieces[index] ?? [];
       const lead = row[0] && !row[0].kind ? /^ */.exec(row[0].text)![0] : '';
       const rest = lead ? [{ ...row[0]!, text: row[0]!.text.slice(lead.length) }, ...row.slice(1)] : row;
-      const flash = on && changed.has(index);
+      const flash = flashing && changed.has(index);
       return <div key={flash ? index + ':' + version : index}
         className={'graph-json-line' + (line.node !== undefined && line.node === traced ? ' traced' : '') + (flash ? ' changed' : '')}>
         {lead && <span className="graph-json-indent">{lead}</span>}

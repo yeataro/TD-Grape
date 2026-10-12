@@ -32,10 +32,14 @@ export function scrollToMiddle(element: HTMLElement, unlessSeen = false) {
   cancelAnimationFrame(gliding.get(box) ?? 0);
   if (!motionOn()) { box.scrollTop = target; return; }
   const from = box.scrollTop, start = performance.now();
+  // A wheel or a press on the box stops the glide: the person scrolling takes over (deep clean 2026-10-12). 在框上滾滾輪或按下就停：
+  // 人自己捲的優先（10-12 深度清潔）。
+  const stop = () => { cancelAnimationFrame(gliding.get(box) ?? 0); gliding.delete(box); box.removeEventListener('wheel', stop); box.removeEventListener('pointerdown', stop); };
+  box.addEventListener('wheel', stop, { passive: true }); box.addEventListener('pointerdown', stop);
   const step = (now: number) => {
     const t = Math.min(1, (now - start) / SCROLL_MS);
     box.scrollTop = from + (target - from) * glide.ease(t);
-    if (t < 1) gliding.set(box, requestAnimationFrame(step)); else gliding.delete(box);
+    if (t < 1) gliding.set(box, requestAnimationFrame(step)); else stop();
   };
   gliding.set(box, requestAnimationFrame(step));
 }

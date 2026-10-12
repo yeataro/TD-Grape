@@ -33,7 +33,9 @@ function oneLine(value: Json): string {
 /** `path`: the keys down to here; a canvas node is an item of `stages.<stage>.nodes`. path：走到這裡的鍵；畫布上的節點是
  * stages.<stage>.nodes 的項目。 */
 function lay(value: Json, indent: string, key: string | null, comma: string, path: readonly string[], node: string | undefined, lines: JsonLine[]) {
-  const place = path.join('\u0000');
+  // The path written as JSON, so no key can run into another; an opening and a closing line get their own last step.
+  // 路徑寫成 JSON，任何鍵都不會撞在一起；開頭與結尾的行各自多一步。
+  const place = JSON.stringify(path), edge = (mark: string) => JSON.stringify([...path, mark]);
   const flat = indent + keyOf(key) + oneLine(value) + comma;
   if (!isOpenable(value) || flat.length <= WIDTH || !entriesOf(value).length) {
     const link = node !== undefined && path.length === 5 && (key === 'id' || key === 'name') && typeof value === 'string' ? node : undefined;
@@ -42,13 +44,15 @@ function lay(value: Json, indent: string, key: string | null, comma: string, pat
   }
   const items = entriesOf(value), [open, close] = Array.isArray(value) ? ['[', ']'] : ['{', '}'];
   const at = (line: Omit<JsonLine, 'node'>) => lines.push(node !== undefined ? { ...line, node } : line);
-  at({ text: indent + keyOf(key) + open, place: place + '\u0000{' });
+  at({ text: indent + keyOf(key) + open, place: edge('\u0001{') });
   const canvas = path.length === 3 && path[0] === 'stages' && path[2] === 'nodes';
   items.forEach(([childKey, item], index) => {
-    const step = childKey ?? '#' + (idOf(item) ?? index);
+    // An item with an id is placed by it (@), others by their index (#): an id "3" is not the fourth item. 有 id 的項目用 id（@）、其他用
+    // 索引（#）：id 是「3」不等於第四項。
+    const step = childKey ?? (idOf(item) !== null ? '@' + idOf(item) : '#' + index);
     lay(item, indent + INDENT, childKey, index < items.length - 1 ? ',' : '', [...path, step], canvas ? idOf(item) ?? undefined : node, lines);
   });
-  at({ text: indent + close + comma, place: place + '\u0000}' });
+  at({ text: indent + close + comma, place: edge('\u0001}') });
 }
 
 /** The value laid out for reading, line by line. 排成好讀的樣子，一行一行。 */

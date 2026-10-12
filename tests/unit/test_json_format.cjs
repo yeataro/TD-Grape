@@ -58,3 +58,12 @@ test('changed lines: a moved node lights its own place; removing or adding one d
   const lit = [...changedLines(before, added)];
   assert.ok(lit.length > 0 && lit.every(index => added[index].node === 'd'));
 });
+
+// Deep clean (2026-10-12): every line has its own place — an id "3" is not the fourth item, and no key runs into another.
+// 深度清潔（10-12）：每一行有自己的位置——id「3」不是第四項，任何鍵都不會撞在一起。
+test('places never repeat', () => {
+  const lines = layJson({ list: [{ id: '3', value: 'a long enough text to open this object' }, 'y', { w: 'another long text to open it too' },
+    { value: 'x and enough words to open this one as well' }], 'a\u0000b': { '{': 1, c: 'more than sixty characters in all, so that it opens' } });
+  const places = lines.map(line => line.place);
+  assert.equal(new Set(places).size, places.length);
+});
