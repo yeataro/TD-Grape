@@ -16,7 +16,9 @@ export type Block =
   | { kind: 'list'; ordered: boolean; start: number; items: Inline[][] }
   | { kind: 'code'; language: string; source: string };
 
-const INLINE = /`([^`\n]+)`|\[([^\]\n]+)\]\(([^\s)]+)\)|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g;
+// Emphasis needs a letter, not a space, right inside its marks, so 2 * 3 * 4 stays as written (deep clean 2026-10-12). 強調的記號內側
+// 要緊貼文字、不能是空白，2 * 3 * 4 才會照原文（10-12 深度清潔）。
+const INLINE = /`([^`\n]+)`|\[([^\]\n]+)\]\(([^\s)]+)\)|\*\*([^*\s](?:[^*\n]*[^*\s])?)\*\*|\*([^*\s](?:[^*\n]*[^*\s])?)\*/g;
 /** A link only to the web or mail; anything else stays as written. 只連到網頁或郵件；其他照原文。 */
 function safeLink(href: string): string | null {
   if (!/^(?:https?:\/\/|mailto:)/i.test(href)) return null;

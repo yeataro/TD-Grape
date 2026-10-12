@@ -31,14 +31,17 @@ export function SelectionFrame({ nodes, session, groups, texts }: { nodes: reado
   });
   const move = (positions: Map<string, { x: number; y: number }>, dragging: boolean) =>
     session.nodeChanges([...positions].map(([id, position]): NodePositionChange => ({ type: 'position', id, position, dragging })));
-  const back = () => { const start = spread.current; spread.current = null; if (start?.moved) move(new Map(start.boxes.map(box => [box.id, { x: box.x, y: box.y }])), true); };
+  // Put back and let go there: no Undo step, no node left marked as dragged (as a group's title drag). 放回並在那裡放開：不多一步復原，
+  // 節點不會留著拖曳中的標記（同群組標題的拖曳）。
+  const back = () => { const start = spread.current; spread.current = null; if (start?.moved) move(new Map(start.boxes.map(box => [box.id, { x: box.x, y: box.y }])), false); };
+  const backNow = useRef(back); backNow.current = back;
   // Esc puts the selection back; a wheel (the view moving) does too (legacy selection_ui.js:254-259). Esc 還原；滾輪（畫面在動）也還原（照舊產品）。
   useEffect(() => {
-    const key = (event: KeyboardEvent) => { if (spread.current && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); back(); } };
-    const wheel = () => { if (spread.current) back(); };
+    const key = (event: KeyboardEvent) => { if (spread.current && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); backNow.current(); } };
+    const wheel = () => { if (spread.current) backNow.current(); };
     addEventListener('keydown', key, true); addEventListener('wheel', wheel, { capture: true, passive: true });
     return () => { removeEventListener('keydown', key, true); removeEventListener('wheel', wheel, true); };
-  });
+  }, []);
   if (!key) return null;
   const [left, top, right, bottom, width, height] = key.split(',').map(Number) as [number, number, number, number, number, number];
   if (right < 0 || left > width || bottom < 0 || top > height) return null;

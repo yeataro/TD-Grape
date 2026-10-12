@@ -49,7 +49,7 @@ test('only shortcuts.ts knows the commands\' keys', () => {
   const textual = /['"`](?:Ctrl|Cmd|Shift|Alt)[+＋]/;
   // Tab and Esc are also widgets' own keys (a menu, the value ladder), so only the commands' letters and keys are looked for.
   // Tab、Esc 也是元件自己的鍵（選單、數值梯尺），所以只找指令的字母與鍵。
-  const commandKeys = /deleteKeyCode=\{\[|event\.key(?:\.toLowerCase\(\))? === '(?:z|p|f|h|d|c|v|g|x|f10|contextmenu)'/i;
+  const commandKeys = /deleteKeyCode=\{\[|event\.key(?:\.toLowerCase\(\))? === '(?:z|p|f|h|d|c|v|g|x|f\d{1,2}|contextmenu)'/i;
   const found = code.filter(file => {
     const source = strip(fs.readFileSync(path.join(web, file), 'utf8'))
       .replace(/tr\('status\.recoveryDeleted'[^)]*\)/, ''); // TD's own Ctrl+Z, not ours 那是 TD 的 Ctrl＋Z
@@ -61,6 +61,6 @@ test('only shortcuts.ts knows the commands\' keys', () => {
   const allowed = new Set(['number.help', 'status.recoveryDeleted']); // a field's gestures; TD's key 欄位的手勢；TD 的鍵
   for (const language of ['en', 'zh-Hant']) {
     const texts = JSON.parse(fs.readFileSync(path.join(web, `locales/${language}.json`), 'utf8'));
-    assert.deepEqual(Object.entries(texts).filter(([key, text]) => !allowed.has(key) && /\b(?:Ctrl|Cmd)[+＋]|[(（](?:[A-Z]|Tab)[)）]/.test(text)).map(([key]) => key), [], language);
+    assert.deepEqual(Object.entries(texts).filter(([key, text]) => !allowed.has(key) && /\b(?:Ctrl|Cmd)[+＋]|[(（](?:[A-Z]|Tab)[)）]|\bF\d{1,2}\b/.test(text)).map(([key]) => key), [], language);
   }
 });

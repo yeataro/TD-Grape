@@ -211,7 +211,7 @@
   "group.invalidName": "Use 1–80 characters without control characters.",
   "group.name": "Group name",
   "group.remove": "Remove group (keep nodes)",
-  "group.renameHint": "Double-click or F2 to rename",
+  "group.renameHint": "Double-click to rename",
   "group.text": "Group text",
   "group.textStyle": "Text appearance",
   "groups.openFixed": "Some groups held entries that could not be kept as they were (nodes not in the graph, a node listed twice, or invalid values); they were tidied.",

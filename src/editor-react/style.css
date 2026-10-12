@@ -674,17 +674,13 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
   background: color-mix(in srgb, color-mix(in srgb, var(--group-color) 22%, var(--surface-node)) 80%, transparent) padding-box;
   color: var(--text-strong); font-size: var(--font-md); line-height: var(--line-md); pointer-events: auto; touch-action: none; }
 .group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The body text (Refactor.99): under the title, the box's width less its padding; lines break as written and wrap; it does not take the
-   pointer (pressing it is pressing the box) except while being written. 12px under the title (Refactor.99.1, human 2026-10-12: try 12, then
-   discuss; 8 was a pick of no source). 內文（R.99）：在標題下、寬度是外框扣掉兩側空間；照寫下的換行、也會自動換行；不接滑鼠（按它等於按框身），
-   寫的時候才接。離標題 12px（R.99.1，人類：先改 12 再討論；原本的 8 沒有依據）。 */
+/* The body text (Refactor.99): under the title, the box's width less its padding; lines break as written and wrap. 12px above and below
+   (Refactor.99.1, human 2026-10-12). It takes the pointer (Refactor.101: a double-click edits it, its links can be clicked); presses and
+   drags on it still reach the canvas. 內文（R.99）：在標題下、寬度是外框扣掉兩側空間；照寫下的換行、也會自動換行。上下各 12px（R.99.1，
+   人類 10-12）。接滑鼠（R.101：雙擊編輯、連結可以點）；在上面按下與拖曳照樣到畫布。 */
 .group-text { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; padding: 12px 0; color: var(--text-strong);
   font-size: calc(var(--font-md) * var(--text-scale, 1)); line-height: calc(var(--line-md) * var(--text-scale, 1)); white-space: pre-wrap; overflow-wrap: anywhere;
   pointer-events: auto; }
-/* The text takes a double-click (Refactor.101); presses and drags still reach the canvas around it. 內文接收雙擊（R.101）；按下與拖曳照樣到畫布。 */
-/* Group text drawn as Markdown (Refactor.100): its links can be clicked, the rest passes to the box. 群組內文以 Markdown 畫出（R.100）：
-   連結可以點，其他照樣交給框身。 */
-.group-text a { pointer-events: auto; }
 /* Markdown (Refactor.100, Markdown.tsx): compact, in the surrounding size; headings a step or two up; code blocks as the GLSL panel,
    with its gutter and colours. Markdown（R.100）：緊湊、用外面的字級；標題大一兩級；程式碼塊同 GLSL 面板的行號欄與顏色。 */
 .markdown { white-space: normal; }
@@ -697,7 +693,7 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* A code block on the panel's own colour, as the GLSL panel (Refactor.100.2, human 2026-10-12: the field colour was too bright; the
    rounding is good). 程式碼框用面板的底色，同 GLSL 面板（R.100.2，人類：欄位色太亮；圓角很好）。 */
 .markdown .md-code { padding: 4px 6px; border-radius: var(--radius-field); background: var(--surface-canvas); overflow: hidden; }
-.markdown .md-code code, .md-code .md-code-line { background: none; padding: 0; }
+.md-code .md-code-line { background: none; padding: 0; }
 .md-code .md-code-line { display: flex; }
 /* Inside Markdown a code block takes the text's size (Refactor.101: the text appearance scales it all). Markdown 裡的程式碼塊跟著文字大小
    （R.101：文字外觀整段一起縮放）。 */

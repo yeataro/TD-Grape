@@ -9,10 +9,12 @@ const { parseMarkdown, parseInline } = loaded.exports;
 const plain = value => JSON.parse(JSON.stringify(value));
 
 test('inline: code, bold, italic and links, only to the web or mail', () => {
-  assert.deepEqual(plain(parseInline('a `x` **b** *c* [d](https://e.com) [f](javascript:alert(1))')), [
+  // The first nine pieces; the script link after them is checked below. 前九段；後面的腳本連結在下面檢查。
+  assert.deepEqual(plain(parseInline('a `x` **b** *c* [d](https://e.com) [f](javascript:alert(1))')).slice(0, 9), [
     { kind: 'text', text: 'a ' }, { kind: 'code', text: 'x' }, { kind: 'text', text: ' ' }, { kind: 'strong', text: 'b' }, { kind: 'text', text: ' ' },
-    { kind: 'em', text: 'c' }, { kind: 'text', text: ' ' }, { kind: 'link', text: 'd', href: 'https://e.com/' }, { kind: 'text', text: ' ' }].concat(
-    plain(parseInline('a `x` **b** *c* [d](https://e.com) [f](javascript:alert(1))')).slice(9)));
+    { kind: 'em', text: 'c' }, { kind: 'text', text: ' ' }, { kind: 'link', text: 'd', href: 'https://e.com/' }, { kind: 'text', text: ' ' }]);
+  // Spaced stars are not emphasis (deep clean 2026-10-12). 前後有空白的星號不是強調（10-12 深度清潔）。
+  assert.deepEqual(plain(parseInline('2 * 3 * 4')), [{ kind: 'text', text: '2 * 3 * 4' }]);
   // The script link is not a link: its text stays as written. 腳本連結不是連結：文字照原文。
   const tail = plain(parseInline('[f](javascript:alert(1))'));
   assert.ok(tail.every(piece => piece.kind === 'text'));

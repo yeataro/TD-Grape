@@ -28,7 +28,7 @@ function CodeBlock({ language, source }: { language: string; source: string }) {
 
 const block = (item: Block, key: number): ReactNode => {
   switch (item.kind) {
-    case 'heading': { const Tag = `h${Math.min(6, item.level)}` as 'h1'; return <Tag key={key}>{inline(item.content)}</Tag>; }
+    case 'heading': { const Tag = `h${item.level}` as 'h1'; return <Tag key={key}>{inline(item.content)}</Tag>; }
     case 'list': return item.ordered
       ? <ol key={key} start={item.start}>{item.items.map((content, i) => <li key={i}>{inline(content)}</li>)}</ol>
       : <ul key={key}>{item.items.map((content, i) => <li key={i}>{inline(content)}</li>)}</ul>;
@@ -38,7 +38,7 @@ const block = (item: Block, key: number): ReactNode => {
 };
 
 /** Text written in basic Markdown, drawn. 用基本 Markdown 寫的文字，畫出來。 */
-export const Markdown = memo(function Markdown({ text, className }: { text: string; className?: string }) {
+export const Markdown = memo(function Markdown({ text }: { text: string }) {
   const blocks = useMemo(() => parseMarkdown(text), [text]);
-  return <div className={'markdown' + (className ? ' ' + className : '')}>{blocks.map(block)}</div>;
+  return <div className="markdown">{blocks.map(block)}</div>;
 });

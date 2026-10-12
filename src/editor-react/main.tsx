@@ -153,7 +153,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   textGrows: boolean;
 }) {
   const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
-  const selectedIds = useMemo(() => new Set(projection.nodes.filter(node => node.selected).map(node => node.id)), [projection.nodes]);
+  // A new set only when the selection changes, not on every drag frame (deep clean 2026-10-12: the groups re-rendered each frame).
+  // 選取變了才換一個新的集合，不是拖曳的每一格（10-12 深度清潔：群組每一格都重繪）。
+  const selectedKey = projection.nodes.filter(node => node.selected).map(node => node.id).join('\u0000');
+  const selectedIds = useMemo(() => new Set(selectedKey ? selectedKey.split('\u0000') : []), [selectedKey]);
   // Groups' body text heights, reported by each group when its text or width changes (Refactor.99): the selection's frame and toolbar
   // go around the grown box. 群組內文的高度，由各群組在內文或寬度改變時回報（R.99）：選取的框與工具列包住長高的外框。
   // Only with "group text makes the box taller" on (the gear; human 2026-10-12: the text and its height apart, so the height can be

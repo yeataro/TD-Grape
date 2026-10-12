@@ -211,7 +211,7 @@
   "group.invalidName": "名稱需為 1–80 字，且不可包含控制字元。",
   "group.name": "群組名稱",
   "group.remove": "拿掉群組（保留節點）",
-  "group.renameHint": "雙擊或按 F2 改名",
+  "group.renameHint": "雙擊改名",
   "group.text": "群組內文",
   "group.textStyle": "文字外觀",
   "groups.openFixed": "有群組的內容無法照原樣保留（列了圖裡沒有的節點、同一個節點列了兩次，或數值不對）；已整理好。",

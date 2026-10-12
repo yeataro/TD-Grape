@@ -28,6 +28,8 @@ export const SHORTCUTS = {
   group: { section: 'edit', keys: ['Mod+G'] },
   joinGroup: { section: 'edit', keys: ['Alt+Shift+G'] },
   leaveGroup: { section: 'edit', keys: ['Alt+G'] },
+  /** Rename the focused group (legacy has none; Refactor.98). 改名焦點所在的群組（舊產品沒有；R.98）。 */
+  renameGroup: { section: 'edit', keys: ['F2'] },
   subgraph: { section: 'core', keys: ['Mod+Shift+G'] },
   home: { section: 'ui', keys: ['H'] },
   frame: { section: 'ui', keys: ['F'] },
@@ -42,12 +44,14 @@ export type Shortcut = keyof typeof SHORTCUTS;
 
 const mac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-/** Whether a key press is this command: exactly its modifiers (Mod is Ctrl or Cmd, not both), letters in either case.
- * 這次按鍵是不是這個指令：修飾鍵完全相同（Mod 是 Ctrl 或 Cmd、不能兩個都按），字母不分大小寫。 */
-export function matches(id: Shortcut, event: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean }): boolean {
+/** Whether a key press is this command: exactly its modifiers (Mod is Ctrl or Cmd, not both), letters in either case. A letter is
+ * also known by where its key is (`code`): Option+G on a Mac types "©", and other keyboard layouts type other letters (deep clean
+ * 2026-10-12). 這次按鍵是不是這個指令：修飾鍵完全相同（Mod 是 Ctrl 或 Cmd、不能兩個都按），字母不分大小寫。字母也看按鍵的位置（code）：
+ * Mac 的 Option＋G 打出「©」，其他鍵盤配置打出別的字（10-12 深度清潔）。 */
+export function matches(id: Shortcut, event: { key: string; code?: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean }): boolean {
   return SHORTCUTS[id].keys.some(combo => {
     const parts = combo.split('+'), key = parts.pop()!, mod = parts.includes('Mod');
-    return event.key.toLowerCase() === key.toLowerCase()
+    return (event.key.toLowerCase() === key.toLowerCase() || (/^[A-Z]$/i.test(key) && event.code === 'Key' + key.toUpperCase()))
       && (mod ? event.ctrlKey !== event.metaKey : !event.ctrlKey && !event.metaKey)
       && event.altKey === parts.includes('Alt') && event.shiftKey === parts.includes('Shift');
   });
