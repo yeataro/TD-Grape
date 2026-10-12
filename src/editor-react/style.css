@@ -303,6 +303,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The floating toolbar (Refactor.92): the toolbar's box, placed by its transform over the canvas, under the floating panels.
    浮動工具列（R.92）：和工具列一樣的框，用 transform 放在畫布上，在浮動面板下面。 */
 .floating-toolbar { position: absolute; left: 0; top: 0; z-index: 5; }
+/* Its icons are bright from the start; a hover only adds the background, as legacy (style.css:1007-1008; human 2026-10-12: dimmed they
+   look listless and are harder to tell apart). 圖示一開始就是亮的，滑過只加底色，照舊產品（人類 10-12：暗的看起來沒精神、辨識度差）。 */
+.floating-toolbar .icon-button { color: var(--text); }
 /* One height for the whole toolbar (Refactor.83.6, human 2026-10-11: too tall, and the stage switch should line up with it; legacy
    gave its stage and tool buttons one height, 32px standard / 38px comfortable, style.css:961, 1524): a word button is as tall as
    an icon button, and the stage switch is as tall as the tool group (a transparent line stands in for the group's border).

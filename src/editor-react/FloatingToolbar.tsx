@@ -65,10 +65,19 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
     for (const part of [element, canvas, host?.querySelector('.network-bar-slot'), canvas.querySelector('.react-flow__controls')]) if (part) watch.observe(part);
     return () => watch.disconnect();
   }, [ids.length > 0]);
+  // Which buttons it has: when that changes (one node to several, a group to join), its size is read before the screen is drawn, so it
+  // is never shown one frame at the old width's place (Refactor.104.1, human 2026-10-12: it changed after it appeared; the resize
+  // observer reports a frame late). 有哪些按鈕：改變時（一個變多個、有群組可加入）在畫面畫出來之前就量大小，不會用舊寬度的位置出現一格
+  // （R.104.1，人類 10-12：出現之後才改內容；ResizeObserver 晚一格才回報）。
+  const many = ids.length > 1, target = ids.length ? grouping.joinTarget(ids) : null, inGroup = ids.length > 0 && grouping.inGroup(ids);
+  useLayoutEffect(() => {
+    const element = bar.current;
+    if (element) setSize(old => old.width === element.offsetWidth && old.height === element.offsetHeight ? old : { width: element.offsetWidth, height: element.offsetHeight });
+  }, [many, target?.id, inGroup]);
 
   if (!ids.length) return null;
   const [left, top, right, bottom] = key.split(',').map(Number) as [number, number, number, number];
-  const many = ids.length > 1, wires = edges.filter(edge => edge.selected), target = grouping.joinTarget(ids);
+  const wires = edges.filter(edge => edge.selected);
   // Legacy's order and groups (selection_ui.js:433-439): what edits the selection, then what arranges it. 舊產品的順序與分組。
   const edit: Tool[] = [
     // Paste from here lands a third into the canvas (legacy graph_ui.js:2811). 從這裡貼上，貼在畫布三分之一處（照舊產品）。
@@ -84,7 +93,7 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
     // some are in one (Refactor.98). 群組照舊產品：兩個以上可建立；有群組可加入時加入；有在群組裡的可移出（R.98）。
     ...(many ? [{ key: 'group', icon: 'group', label: tr('selection.group', 'Create group'), run: grouping.create, disabled: !grouping.canCreate(ids) }] as Tool[] : []),
     ...(target ? [{ key: 'joinGroup', icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), run: grouping.join }] as Tool[] : []),
-    ...(grouping.inGroup(ids) ? [{ key: 'leaveGroup', icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), run: grouping.leave }] as Tool[] : []),
+    ...(inGroup ? [{ key: 'leaveGroup', icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), run: grouping.leave }] as Tool[] : []),
     ...(many ? [
       { key: 'subgraph', icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph') },
       { key: 'arrange', icon: 'arrange', label: tr('selection.arrange', 'Arrange nodes') },
