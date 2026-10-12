@@ -52,3 +52,11 @@ test('the page before loading shows the same mark as BrandMark', () => {
   assert.deepEqual(circles(page), circles(mark));
   assert.match(page, /class="brand-mark loading loading-wave" viewBox="0 0 64 64"/, 'the chosen waiting animation');
 });
+
+// IDs come from crypto.getRandomValues: crypto.randomUUID exists only on secure pages, and the editor is also opened over plain http from
+// another device (Refactor.103.4: pasting on a phone failed). ID 用 crypto.getRandomValues：randomUUID 只在安全頁面存在，編輯器也會從別的裝置
+// 用一般 http 打開（R.103.4：手機上貼上失敗）。
+test('no crypto.randomUUID in the editor', () => {
+  const files = fs.readdirSync(web).filter(file => /\.tsx?$/.test(file));
+  assert.deepEqual(files.filter(file => /randomUUID/.test(fs.readFileSync(path.join(web, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''))), []);
+});

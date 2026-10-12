@@ -29,9 +29,16 @@ export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
 /** Where a dropped wire goes on a new node, and the configuration to create it in (Refactor.77; core wire_drop.ts).
  * 線接到新節點的哪裡、用什麼設定建立（R.77）。 */
 export type WireFit = Bootstrap['typeContract']['wireDrop'][string]['output'][string];
-const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
+/** Random hex digits from the browser's secure random source. Not `crypto.randomUUID`: that one exists only on a secure page (https or
+ * localhost), and the editor is also opened over plain http from another device (Refactor.103.4, human 2026-10-12: pasting on a phone
+ * failed with "crypto.randomUUID is not a function"). 瀏覽器安全亂數產生的十六進位字。不用 crypto.randomUUID：它只在安全的頁面（https 或
+ * localhost）存在，而編輯器也會從別的裝置用一般 http 打開（R.103.4，人類：手機上貼上失敗）。 */
+const randomHex = (digits: number) => Array.from(crypto.getRandomValues(new Uint8Array(Math.ceil(digits / 2))), byte => byte.toString(16).padStart(2, '0')).join('').slice(0, digits);
+const newId = () => 'n' + randomHex(32);
 /** A new group's ID, for a new group and a pasted one alike. 新群組的 ID，新建與貼上都用。 */
-const newGroupId = () => 'g' + crypto.randomUUID().replaceAll('-', '').slice(0, 16);
+const newGroupId = () => 'g' + randomHex(16);
+/** A new declaration's ID. 新宣告的 ID。 */
+const newDeclarationId = () => 'd' + randomHex(16);
 /** A stored graph read for editing, the one way every graph comes in (Refactor.65, 98): its nodes in their current forms, checked that
  * it can be opened, then its groups tidied (1-2) — checked first, so a graph in another format is refused with its own message
  * instead of failing while being tidied. Nothing changed gives the same object back, so a caller can tell (useRemote).
@@ -55,7 +62,7 @@ const DUPLICATE_OFFSET = 48;
 function presetDeclaration(document: GraphDocument, entry: string) {
   const preset = core.uniformPresets.find(item => item.entry === entry)!;
   return document.document.declarations.find(d => d.kind === 'uniform' && d.entry === entry)
-    ?? document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
+    ?? document.addDeclaration({ id: newDeclarationId(),
       kind: 'uniform', name: preset.name, type: preset.type, entry });
 }
 function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition) {
@@ -561,7 +568,7 @@ export class Editor {
   addConstant = () => {
     const name = core.freeLegacyName(this.document.document, 'cValue'); // legacy default name 舊產品的預設名
     this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
-      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
+      document.addDeclaration({ id: newDeclarationId(), kind: 'constant', name, type: 'float' }));
   };
   // Uniforms (Refactor.44, D1): a colour or not is chosen when it is added and never switched (Q59: the
   // Colors and Vectors pages differ, switching would drop what drives it in TD). A colour starts white.
@@ -569,7 +576,7 @@ export class Editor {
   addUniform = (color = false) => {
     const name = core.freeLegacyName(this.document.document, color ? 'uColor' : 'uValue'); // legacy default names 舊產品的預設名
     this.transactGraph(tr('sources.uniformAdded', 'Uniform {name} added', { name }), document =>
-      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'uniform', name,
+      document.addDeclaration({ id: newDeclarationId(), kind: 'uniform', name,
         ...(color ? { type: 'vec4', color: true, value: [1, 1, 1, 1] } : { type: 'float' }) }));
   };
   // Preset Uniforms (time, Q61): placing one creates its Uniform the first time and reuses it after; one
@@ -586,7 +593,7 @@ export class Editor {
     const name = core.freeDeclarationName(this.document.document, 'input');
     const shown = 'sTD2DInputs[' + this.document.document.declarations.filter(d => d.kind === 'topInput').length + ']';
     this.transactGraph(tr('sources.inputAdded', 'Texture input {name} added', { name: shown }), document =>
-      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'topInput', name, type: 'sampler2D' }));
+      document.addDeclaration({ id: newDeclarationId(), kind: 'topInput', name, type: 'sampler2D' }));
   };
   setDefaultTexture = (id: string, defaultTexture: string) =>
     this.transactGraph(tr('sources.defaultTextureChanged', 'Default image updated; waiting to apply'), document => { document.changeDeclaration(id, { defaultTexture }); });
