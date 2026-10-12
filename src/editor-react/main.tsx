@@ -563,7 +563,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           <div className="network-overlay">
           <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.showOrFold('glsl')} /></div>
           {/* While a node is placed, how to finish (legacy create.place). 放置節點時，怎麼完成（照舊產品）。 */}
-          {placing && <div className="floating-notice" role="status">{say(tr('create.place', 'Click to place the node · Esc to cancel'))}</div>}
+          {placing && !placing.leaving && <div className="floating-notice" role="status">{say(tr('create.place', 'Click to place the node · Esc to cancel'))}</div>}
           {session && draft && <div className="floating-notice warning" role="group" aria-label={say(tr('draft.label', 'Earlier draft'))}>
             <span>{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}</span>
             {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}

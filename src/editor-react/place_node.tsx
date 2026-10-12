@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactFlowInstance } from '@xyflow/react';
 import type { Editor as EditorSession, NewNode, WireEnd, WireFit } from './editor';
 import type { FlowNode, FlowEdge } from './projection';
+import { motionOn } from './appearance';
 
 // Place a node (GLOSSARY; Refactor.105, human 2026-10-12: "the node you add can still be given its place first, then really added
 // or taken back"). As legacy's node placement (graph_ui.js:2360), only after a right-click on a port: the chosen node is not in the
@@ -13,11 +14,11 @@ import type { FlowNode, FlowEdge } from './projection';
 // 其他按鍵、在畫布外按下、離開視窗、圖被改了，都是反悔，什麼都不留。按下之前圖、TD、上一步、Graph JSON View 都不知道它。
 
 type Wire = { end: WireEnd; port: string; configure?: WireFit['configure'] };
-/** What the canvas draws while a node is placed. 放置中畫布要畫的。 */
-export type Placing = { node: FlowNode; edges: FlowEdge[] };
+/** What the canvas draws while a node is placed; leaving: placed, fading out. 放置中畫布要畫的；leaving：已放下、淡出中。 */
+export type Placing = { node: FlowNode; edges: FlowEdge[]; leaving?: boolean };
 type Gesture = { spec: NewNode; wire?: Wire; shown: Placing; client: { x: number; y: number }; version: number };
 
-export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlowInstance, 'screenToFlowPosition' | 'getInternalNode'>, grid: number | null) {
+export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlowInstance, 'screenToFlowPosition' | 'getInternalNode' | 'getViewport'>, grid: number | null) {
   const [placing, setPlacing] = useState<Placing | null>(null);
   const gesture = useRef<Gesture | null>(null);
   // Where the pointer last was, so placing starts at the pointer, not where the popup opened — a pick by Enter too (Refactor.105.2,
@@ -45,7 +46,9 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
     setPlacing(shown);
     return true;
   }, [session, flow]);
-  const active = placing !== null;
+  // Each placing its own run (keyed by its node's id), so one that starts while the last fades out gets its listeners.
+  // 每次放置各自一輪（用它節點的 id），上一個還在淡出時開始的新放置也有自己的監聽。
+  const active = placing && !placing.leaving ? placing.node.id : null;
   useEffect(() => {
     const g = gesture.current;
     if (!active || !g || !session) return;
@@ -56,13 +59,38 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
     const where = () => {
       const size = flow.getInternalNode(id)?.measured;
       const title = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"] .node-title`);
-      if (!size?.width || !title) return null;
-      const point = flow.screenToFlowPosition(g.client);
+      if (!size?.width || !size.height || !title) return null;
+      // With the pointer off the canvas (the popup can float over a panel), it waits at the canvas's edge nearest the pointer, whole,
+      // and follows again once the pointer comes in (Refactor.105.5, human 2026-10-12: the first way). 指標在畫布外時（浮動視窗可以
+      // 在面板上），它整個停在畫布靠近指標的那一邊，指標進來後再跟上（R.105.5，人類 10-12：第一種）。
+      const canvas = title.closest('.react-flow')?.getBoundingClientRect(), zoom = flow.getViewport().zoom;
+      let client = g.client;
+      if (canvas && (client.x < canvas.left || client.x > canvas.right || client.y < canvas.top || client.y > canvas.bottom)) {
+        const half = size.width * zoom / 2, top = title.offsetHeight * zoom / 2, below = size.height * zoom - top;
+        const within = (value: number, low: number, high: number) => low > high ? (low + high) / 2 : Math.min(high, Math.max(low, value));
+        client = { x: within(client.x, canvas.left + half, canvas.right - half), y: within(client.y, canvas.top + top, canvas.bottom - below) };
+      }
+      const point = flow.screenToFlowPosition(client);
       let x = point.x - size.width / 2, y = point.y - title.offsetHeight / 2;
       if (grid) { x = Math.round(x / grid) * grid; y = Math.round(y / grid) * grid; }
       return { x, y };
     };
-    const end = () => { if (gesture.current !== g) return; gesture.current = null; stop.abort(); cancelAnimationFrame(frame); setPlacing(null); };
+    // Placed, it fades out over the node just added (Refactor.105.5, human 2026-10-12: 0.1 s; animation effects off: gone at once); taken
+    // back, it goes at once. 放下時在剛新增的節點上淡出（R.105.5，人類 10-12：0.1 秒；動畫效果關掉時直接拿掉）；反悔時直接拿掉。
+    const end = (placed = false) => {
+      if (gesture.current !== g) return;
+      gesture.current = null; stop.abort(); cancelAnimationFrame(frame);
+      if (!placed || !motionOn() || g.shown.node.className !== 'placing') { setPlacing(null); return; }
+      const leaving: Placing = { leaving: true, node: { ...g.shown.node, className: 'placing leaving' },
+        edges: g.shown.edges.map(edge => ({ ...edge, className: edge.className + ' leaving' })) };
+      setPlacing(leaving);
+      // Gone when its fade-out has played (the time stays in the CSS; the build rewrites 100ms as .1s), or after a second at most.
+      // 淡出播完就拿掉（時間只寫在 CSS；打包會把 100ms 改寫成 .1s），最多一秒。
+      const gone = () => { removeEventListener('animationend', played); clearTimeout(late); setPlacing(now => now === leaving ? null : now); };
+      const played = (event: AnimationEvent) => { if (event.animationName === 'placing-out') gone(); };
+      const late = setTimeout(gone, 1000);
+      addEventListener('animationend', played);
+    };
     // The graph unchanged since it began (version counts graph edits, not selection). 開始以來圖沒變（version 數的是圖的修改，不是選取）。
     const valid = () => session.snapshot().version === g.version;
     // Once a frame: follow the pointer (and the view, when it pans or zooms under it). 每格一次：跟著指標（畫面平移縮放時也跟）。
@@ -105,15 +133,15 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
       // A finger has no hover: where it touches is where it goes. 手指沒有滑過：碰到哪裡就放哪裡。
       g.client = { x: event.clientX, y: event.clientY };
       const at = where();
-      end();
+      end(!!at);
       if (at) session.addNode(g.spec, at, g.wire);
     }, options);
     addEventListener('keydown', event => {
       event.preventDefault(); event.stopImmediatePropagation();
       if (event.key === 'Escape' || event.key === 'Tab') end();
     }, options);
-    addEventListener('blur', end, { signal: stop.signal });
-    addEventListener('resize', end, { signal: stop.signal });
+    addEventListener('blur', () => end(), { signal: stop.signal });
+    addEventListener('resize', () => end(), { signal: stop.signal });
     document.addEventListener('visibilitychange', () => { if (document.hidden) end(); }, { signal: stop.signal });
     return () => { stop.abort(); cancelAnimationFrame(frame); };
   }, [active, session, flow, grid]);
