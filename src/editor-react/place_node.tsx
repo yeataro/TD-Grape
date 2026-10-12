@@ -20,9 +20,19 @@ type Gesture = { spec: NewNode; wire?: Wire; shown: Placing; client: { x: number
 export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlowInstance, 'screenToFlowPosition' | 'getInternalNode'>, grid: number | null) {
   const [placing, setPlacing] = useState<Placing | null>(null);
   const gesture = useRef<Gesture | null>(null);
-  /** Begin placing; false when adding it would fail (the caller adds it as before). 開始放置；新增會失敗時回 false。 */
-  const start = useCallback((spec: NewNode, wire: Wire | undefined, at: { x: number; y: number }) => {
-    const preview = session?.placementPreview(spec, wire);
+  // Where the pointer last was, so placing starts at the pointer, not where the popup opened — a pick by Enter too (Refactor.105.2,
+  // human 2026-10-12: start right where the pointer is). 指標最後在哪裡，讓放置從指標開始、不從視窗打開的地方——用 Enter 選也是
+  // （R.105.2，人類 10-12：直接從滑鼠現在的位置開始）。
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const seen = (event: PointerEvent) => { pointer.current = { x: event.clientX, y: event.clientY }; };
+    addEventListener('pointermove', seen, { capture: true, passive: true }); addEventListener('pointerdown', seen, { capture: true, passive: true });
+    return () => { removeEventListener('pointermove', seen, { capture: true }); removeEventListener('pointerdown', seen, { capture: true }); };
+  }, []);
+  /** Begin placing at the pointer (where the popup opened, before the pointer has been seen); false when adding it would fail
+   * (the caller adds it as before). 從指標開始放置（還沒看過指標時從視窗打開的地方）；新增會失敗時回 false。 */
+  const start = useCallback((spec: NewNode, wire: Wire | undefined, opened: { x: number; y: number }) => {
+    const at = pointer.current ?? opened, preview = session?.placementPreview(spec, wire);
     if (!session || !preview) return false;
     // Drawn hidden until React Flow has measured it, so it never shows at a guessed place. 量到大小之前先藏著，不在猜的位置出現。
     const shown: Placing = {
