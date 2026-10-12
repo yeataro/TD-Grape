@@ -19,8 +19,14 @@ import type { CopyPaste } from './copy_paste';
 // （人類：先把東西畫上去）。位置照舊產品：選取上方 12px、置中、在畫布裡離左右 8px；上方放不下就放下方；不蓋到工具列那一排與畫布控制項那一排；
 // 選取看不到時隱藏。平移、縮放、拖曳時跟著走，讀 React Flow 自己的狀態。
 
-/** How far the bar keeps from the selection, and from the canvas's sides (legacy selection_ui.js:160, 166). 離選取多遠、離畫布邊多遠。 */
+/** How far the bar keeps from what it belongs to, and from the canvas's sides (legacy selection_ui.js:160, 166). With the
+ * multi-selection frame (two or more nodes) it keeps that far from the frame, without it from the node (Refactor.97.1, human
+ * 2026-10-12: having the frame or not is what decides). 離它所屬的東西多遠、離畫布邊多遠（照舊產品）。有多選框（兩個以上節點）時離框這麼遠，
+ * 沒有時離節點這麼遠（R.97.1，人類：有沒有多選框才是判斷條件）。 */
 const OFF_SELECTION = 12, OFF_SIDE = 8;
+/** How far the multi-selection frame's line sits outside the nodes: the theme's gap and the line itself (SelectionFrame.tsx).
+ * 多選框的線在節點外多遠：主題的間距加上線本身（SelectionFrame.tsx）。 */
+const frameOffset = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--selection-gap')) || 0) + 1;
 
 type Tool = { key: string; icon: IconName; label: Message; run?: () => void; disabled?: boolean; danger?: boolean };
 
@@ -75,7 +81,8 @@ export function FloatingToolbar({ nodes, edges, clip }: { nodes: readonly FlowNo
   // Out of view: hidden; else above the selection, or below when there is no room, kept inside. 看不到就藏；否則在上方，放不下在下方，夾在範圍裡。
   const shown = room && right > 0 && left < room.width && bottom > room.top && top < room.bottom;
   const x = room ? Math.max(OFF_SIDE, Math.min(room.width - OFF_SIDE - size.width, (left + right) / 2 - size.width / 2)) : 0;
-  const above = top - OFF_SELECTION - size.height, y = room ? Math.max(room.top, Math.min(room.bottom - size.height, above >= room.top ? above : bottom + OFF_SELECTION)) : 0;
+  const off = OFF_SELECTION + (many ? frameOffset() : 0);
+  const above = top - off - size.height, y = room ? Math.max(room.top, Math.min(room.bottom - size.height, above >= room.top ? above : bottom + off)) : 0;
   // Not there yet: greyed, its name saying so. 還沒有的：灰的，名字後面說尚未提供。
   const tool = (item: Tool) => <IconButton key={item.key} icon={item.icon} label={item.label} danger={item.danger} disabled={!item.run || item.disabled}
     title={item.run ? undefined : tr('selection.notYet', '{action} (not available yet)', { action: say(item.label) })} onClick={item.run} />;
