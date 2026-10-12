@@ -36,12 +36,15 @@ export function spreadPositions(boxes: readonly Box[], handle: Handle, dx: numbe
       const centres = boxes.map(box => centre(box, axis)), spread = Math.max(...centres) - Math.min(...centres);
       return spread > 0 ? Math.max(0, 1 + axis.direction * axis.delta / spread) : 1;
     }
-    const target = span(axis, 1) + axis.direction * axis.delta;
-    if (target <= span(axis, 0)) return 0;
+    // Drawn together, the span stops at the longest node (legacy selection_ui.js:186): the largest factor that gives the span, so a
+    // smaller node stops against the longer one's edge rather than going on to its centre (Refactor.100.1, human 2026-10-12: two
+    // nodes ended centred). 收攏時外框停在最長的那個節點（照舊產品）：取得到這個外框的最大倍數，所以小的停在長的那一邊的邊上，不會一路縮到
+    // 中心（R.100.1，人類：兩個節點最後置中了）。
+    const target = Math.max(span(axis, 0), span(axis, 1) + axis.direction * axis.delta);
     let low = 0, high = 1;
-    while (span(axis, high) < target) high *= 2;
-    for (let i = 0; i < 50; i++) { const mid = (low + high) / 2; if (span(axis, mid) < target) low = mid; else high = mid; }
-    return high;
+    while (span(axis, high) <= target) high *= 2;
+    for (let i = 0; i < 50; i++) { const mid = (low + high) / 2; if (span(axis, mid) <= target) low = mid; else high = mid; }
+    return low;
   });
   // How far along the way (0 to 1) the move may go before two nodes newly overlap; a gap of up to KEEP_GAP is kept.
   // 往目標走多遠（0 到 1）之前兩個節點會新重疊；保留最多 KEEP_GAP 的間隙。

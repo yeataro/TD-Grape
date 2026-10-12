@@ -33,6 +33,16 @@ test('drawing together stops at a new overlap, keeping up to 8px of the gap', ()
   assert.deepEqual(at(spreadPositions(close, 'e', -50, 0), 'b'), [104, 0], 'a 4px gap is kept as it is');
 });
 
+test('drawn together all the way, a smaller node stops against the longer one\'s edge, not its centre (Refactor.100.1)', () => {
+  // Different rows, so they never overlap; heights 60 and 200, drawn together from the bottom. 不同排、不會重疊；高 60 與 200，從下面收攏。
+  const nodes = [box('tall', 0, 0, 100, 200), box('short', 300, 400, 100, 60)];
+  const result = spreadPositions(nodes, 's', 0, -2000);
+  assert.deepEqual(at(result, 'tall'), [0, 0], 'the top edge stays');
+  assert.equal(at(result, 'short')[1] + 60, 200, 'the short one ends flush with the tall one\'s bottom, as it was below');
+  const same = spreadPositions([box('a', 0, 0), box('b', 300, 400)], 's', 0, -2000);
+  assert.equal(at(same, 'b')[1], at(same, 'a')[1], 'two of one size end centred, as legacy');
+});
+
 test('an overlap already there does not lock the selection', () => {
   const stacked = [box('a', 0, 0), box('b', 50, 20)];
   assert.ok(at(spreadPositions(stacked, 'e', 100, 0), 'b')[0] > 50, 'spreads apart');
