@@ -283,7 +283,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         setTimeout(() => { reconnecting.current = false; });
         if (!state.toHandle && edge.targetHandle) session.disconnectInput(edge.target, edge.targetHandle);
       }}
-      onDoubleClick={event => { if ((event.target as Element).classList.contains('react-flow__pane')) onCreate({ screen: { x: event.clientX, y: event.clientY } }); }}
+      onDoubleClick={event => { if ((event.target as Element).classList.contains('react-flow__pane')) onCreate({ screen: { x: event.clientX, y: event.clientY }, place: true }); }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
       // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
       // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
@@ -481,7 +481,9 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       if (!draft && matches('undo', event)) run(() => session.history(false));
       else if (!draft && matches('redo', event)) run(() => session.history(true));
       // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560). Tab 在網路區中間偏上打開新增節點（照舊產品）。
-      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle() }));
+      // Tab, a double-click and the menu's Nodes place what is picked (Refactor.105.1, human 2026-10-12); a wire dropped on the canvas adds
+      // it where it was dropped, as legacy. Tab、雙擊與選單的節點：選好的先放置（R.105.1，人類 10-12）；拉線放到畫布照舊產品，在放開處新增。
+      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle(), place: true }));
       // P floats the Parameter panel, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network, in a floating
       // panel or with nothing focused. P 讓參數面板浮出來，或送回去（照舊產品；人類 10-11）：在網路區、浮動面板裡或沒有焦點時。
       else if ((network || element.closest('.floating-area')) && matches('floatingParameter', event)) run(() => { if (!event.repeat) layout.toggleFloat('params'); });
@@ -588,7 +590,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
         {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} clip={clip} grouping={grouping} onClose={closeMenu}
-          onCreate={at => setCreating({ screen: at })} />}
+          onCreate={at => setCreating({ screen: at, place: true })} />}
         <DragToAddLayer />
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => {

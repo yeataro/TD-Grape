@@ -521,6 +521,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .react-flow__node.placing .node-title > :not(strong) { visibility: hidden; }
 .react-flow__node.placing .node-title strong { color: var(--accent); }
 .react-flow__edge.placing .react-flow__edge-path { stroke-dasharray: 6 5; }
+/* The port its wire reaches is drawn, solid, at its real size, in the frame's purple (Refactor.105.1, human 2026-10-12; legacy drew that
+   one port too). 線接到的那個接孔畫出來，實心、真實大小，用外框的紫色（R.105.1，人類 10-12；舊產品也畫那一個）。 */
+.react-flow__node.placing .react-flow__handle[data-connected="true"] { visibility: visible; --port-color: var(--accent); }
+.react-flow__node.placing .react-flow__handle[data-connected="true"]::after { background: var(--port-color); box-shadow: none; }
 .graph-json-scroll { height: 100%; }
 .graph-json-scroll .scroll-fade-content { width: auto; }
 .graph-json .graph-json-line { display: flex; }
@@ -1400,6 +1404,10 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 :where(button:is(:disabled, [aria-disabled="true"])) { cursor: default; }
 :where(input:not([type="checkbox"], [type="radio"], [type="color"], [type="range"]), textarea, [contenteditable="true"]) { cursor: text; }
 [data-movable] { cursor: grab; } [data-movable]:active { cursor: grabbing; }
+/* Exception (Refactor.105.1, human 2026-10-12): the rows of the Create node popup opened by Tab, a double-click or the menu do two things —
+   a click places, a drag adds — so they keep the plain arrow. 例外（R.105.1，人類 10-12）：Tab、雙擊、選單打開的浮動新增視窗，項目有兩種能力
+   （點一下放置、拖曳新增），所以就用普通箭頭。 */
+.create-entry[data-movable], .create-entry[data-movable]:active { cursor: default; }
 .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__nodesselection-rect { cursor: default; }
 .react-flow__edge { cursor: pointer; }
 :root.panning-canvas, :root.panning-canvas * { cursor: move !important; } /* whole page: see panningCursor (viewport.ts) 整頁，見 panningCursor */
