@@ -54,11 +54,12 @@ export function useGroupActions(session: EditorSession | null): GroupActions {
     return {
       canCreate: ids => core.groups.canGroup(groups(), ids), joinTarget: ids => core.groups.joinTarget(groups(), ids),
       inGroup: ids => core.groups.inAnyGroup(groups(), ids),
-      // Named "Group N" in the interface's language, the first free N (legacy, which wrote it in English). 名字是介面語言的「群組 N」，
-      // 取第一個沒人用的 N（舊產品寫死英文）。
+      // Named "Group N", the first free N, in every language (legacy frames_ui.js:58; Refactor.98.1, human 2026-10-12: a name is data in
+      // the graph, so the interface language must not change it, as node names). 名字是「Group N」、取第一個沒人用的 N，每種語言都一樣
+      // （照舊產品；R.98.1，人類：名字是圖裡的資料，不該因為介面語言而變，同節點名稱）。
       create: () => {
         if (!session) return;
-        const names = new Set(groups().map(group => group.name)), base = say(tr('group.defaultName', 'Group'));
+        const names = new Set(groups().map(group => group.name)), base = 'Group';
         let n = 1; while (names.has(base + ' ' + n)) n++;
         const id = session.createGroup(selected(), base + ' ' + n);
         if (id) setRenaming(id);

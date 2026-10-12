@@ -200,7 +200,6 @@
   "group.colorTeal": "青綠",
   "group.colorTerracotta": "陶橙",
   "group.colorWarmGray": "暖灰",
-  "group.defaultName": "群組",
   "group.editText": "編輯內文",
   "group.invalidName": "名稱需為 1–80 字，且不可包含控制字元。",
   "group.name": "群組名稱",
