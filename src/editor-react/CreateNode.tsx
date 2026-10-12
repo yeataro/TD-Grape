@@ -13,7 +13,8 @@ import { language, languageSubscribe, say, tr } from './text';
 // 常用的排前面。分類欄等人類想好（選項多會擠）。
 /** place: what is picked is placed, not added at once (a right-click on a port, Refactor.105; Tab, a double-click, the menu, R.105.1).
  * place：選好的先放置，不馬上新增（接孔右鍵，R.105；Tab、雙擊、選單，R.105.1）。 */
-export type CreateRequest = { screen: { x: number; y: number }; wire?: { end: WireEnd; type: string }; place?: boolean };
+/** whole: the whole panel is centred on the point, not its search box (Tab, R.105.12). whole：整個視窗置中在那一點，不是搜尋框（Tab，R.105.12）。 */
+export type CreateRequest = { screen: { x: number; y: number }; wire?: { end: WireEnd; type: string }; place?: boolean; whole?: boolean };
 type Match = { choice: AddChoice; port?: WireFit };
 
 export function CreateNode({ request, choices, session, onPick, onClose }: {
@@ -46,9 +47,11 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   // Its search box is centred on the point it was called up at (Refactor.105.11, human 2026-10-13: try the text box's middle on the
   // pointer; legacy centred the panel across it with its title bar's middle on it; ours had its top left there). 搜尋框的中心對準叫出的
   // 那一點（R.105.11，人類 10-13：試試看文字輸入框的中間對齊滑鼠；舊產品是整個面板水平置中、標題列中間對著它；我們原本是左上角）。
+  // Tab centres the whole panel instead (R.105.12, human 2026-10-13). Tab 改成整個視窗置中（R.105.12，人類 10-13）。
   useLayoutEffect(() => {
-    const panel = box.current, search = panel?.querySelector<HTMLElement>('.create-search');
-    const x = search ? search.offsetLeft + search.offsetWidth / 2 : 0, y = search ? search.offsetTop + search.offsetHeight / 2 : 0;
+    // What is centred on the point, and where it sits in the panel. 置中在那一點的是什麼，它在視窗裡的哪裡。
+    const panel = box.current, aim = request.whole ? panel : panel?.querySelector<HTMLElement>('.create-search');
+    const x = aim ? (request.whole ? 0 : aim.offsetLeft) + aim.offsetWidth / 2 : 0, y = aim ? (request.whole ? 0 : aim.offsetTop) + aim.offsetHeight / 2 : 0;
     setPlace(inside(request.screen.x - x, request.screen.y - y, panel?.offsetWidth ?? 0, panel?.offsetHeight ?? 0));
   }, [request]);
   // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it, so a click does not
