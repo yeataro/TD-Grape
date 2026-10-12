@@ -1532,7 +1532,8 @@ function tidy(network) {
         groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
             ...(typeof group.text === 'string' && group.text && group.text.length <= exports.GROUP_TEXT_LIMIT ? { text: group.text } : {}),
             ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
-            ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
+            ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}),
+            ...(group.textPlace === 'bottom' ? { textPlace: group.textPlace } : {}) });
     }
     // Compared as JSON values, whatever order the fields were written in. 照 JSON 的值比，不管欄位寫的順序。
     return { groups, fixed: !(0, changes_1.equal)(groups, raw) };
@@ -1640,10 +1641,12 @@ function changeGroup(network, id, patch) {
             throw Error('Invalid text scale');
         if (patch.textAlign !== undefined && !['left', 'center', 'right'].includes(patch.textAlign))
             throw Error('Invalid text alignment');
-        // The defaults are not stored: no text, size 1, left. 預設值不存：沒有內文、倍率 1、靠左。
-        const { text, textScale, textAlign, ...rest } = { ...group, ...patch };
+        if (patch.textPlace !== undefined && !['top', 'bottom'].includes(patch.textPlace))
+            throw Error('Invalid text place');
+        // The defaults are not stored: no text, size 1, left, top. 預設值不存：沒有內文、倍率 1、靠左、靠上。
+        const { text, textScale, textAlign, textPlace, ...rest } = { ...group, ...patch };
         return { ...rest, ...(text ? { text } : {}), ...(textScale !== undefined && textScale !== 1 ? { textScale } : {}),
-            ...(textAlign && textAlign !== 'left' ? { textAlign } : {}) };
+            ...(textAlign && textAlign !== 'left' ? { textAlign } : {}), ...(textPlace === 'bottom' ? { textPlace } : {}) };
     }));
 }
 /** The groups that come along when these nodes are copied: only those whose members are all among them (G-2). 複製這些節點時帶著的群組：
