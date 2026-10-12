@@ -386,7 +386,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // What can be added, shared by the Add Node panel and Create node (Refactor.54). 可新增的東西，兩個入口共用。
   const choices = useMemo(() => addChoices(state.declarations ?? [], text), [state.declarations, text]);
   const [creating, setCreating] = useState<CreateRequest | null>(null);
-  const middle = () => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width / 2, y: box.y + box.height / 3 }; };
+  const middle = (down = 1 / 3) => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width / 2, y: box.y + box.height * down }; };
   const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: NewWire) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
@@ -469,10 +469,11 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       const run = (action: () => void) => { event.preventDefault(); action(); };
       if (!draft && matches('undo', event)) run(() => session.history(false));
       else if (!draft && matches('redo', event)) run(() => session.history(true));
-      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560). Tab 在網路區中間偏上打開新增節點（照舊產品）。
+      // Tab opens Create node with its search box at the network's centre (Refactor.105.11, human 2026-10-13: centre-centre; legacy
+      // graph_ui.js:2560 used a third of the height). Tab 打開新增節點，搜尋框在網路區正中（R.105.11，人類 10-13：正中；舊產品是高度三分之一）。
       // Tab, a double-click and the menu's Nodes place what is picked (Refactor.105.1, human 2026-10-12); a wire dropped on the canvas adds
       // it where it was dropped, as legacy. Tab、雙擊與選單的節點：選好的先放置（R.105.1，人類 10-12）；拉線放到畫布照舊產品，在放開處新增。
-      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle(), place: true }));
+      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle(1 / 2), place: true }));
       // P floats the Parameter panel, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network, in a floating
       // panel or with nothing focused. P 讓參數面板浮出來，或送回去（照舊產品；人類 10-11）：在網路區、浮動面板裡或沒有焦點時。
       else if ((network || element.closest('.floating-area')) && matches('floatingParameter', event)) run(() => { if (!event.repeat) layout.toggleFloat('params'); });

@@ -43,7 +43,14 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   // Kept inside the window, 8px from its edges, for a panel of this size. 這個大小的面板留在視窗裡、離邊 8px。
   const inside = (left: number, top: number, width: number, height: number) =>
     ({ left: Math.max(8, Math.min(left, innerWidth - width - 8)), top: Math.max(8, Math.min(top, innerHeight - height - 8)) });
-  useLayoutEffect(() => { setPlace(inside(request.screen.x, request.screen.y, box.current?.offsetWidth ?? 0, box.current?.offsetHeight ?? 0)); }, [request]);
+  // Its search box is centred on the point it was called up at (Refactor.105.11, human 2026-10-13: try the text box's middle on the
+  // pointer; legacy centred the panel across it with its title bar's middle on it; ours had its top left there). 搜尋框的中心對準叫出的
+  // 那一點（R.105.11，人類 10-13：試試看文字輸入框的中間對齊滑鼠；舊產品是整個面板水平置中、標題列中間對著它；我們原本是左上角）。
+  useLayoutEffect(() => {
+    const panel = box.current, search = panel?.querySelector<HTMLElement>('.create-search');
+    const x = search ? search.offsetLeft + search.offsetWidth / 2 : 0, y = search ? search.offsetTop + search.offsetHeight / 2 : 0;
+    setPlace(inside(request.screen.x - x, request.screen.y - y, panel?.offsetWidth ?? 0, panel?.offsetHeight ?? 0));
+  }, [request]);
   // Moved by its title bar, as the legacy editor (graph_ui.js:2255–2282): a move of 3px or more starts it, so a click does not
   // nudge it; each opening starts where it was called up. Escape closes the panel as always (Refactor.79.1: legacy cancelled the
   // move instead; one meaning per key); only an interruption the person did not choose (a cancel, a lost pointer) puts it back.
