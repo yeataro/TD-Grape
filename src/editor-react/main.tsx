@@ -31,6 +31,7 @@ import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNode
 import { addChoices, type AddChoice } from './add_entries';
 import { DragToAddLayer, useDropToAdd } from './drag_to_add';
 import { usePlaceNode, type Placing } from './place_node';
+import { OperationHint, useOperationHint } from './operation_hint';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, LoadingCanvas, useShell, type Shell } from './shell';
@@ -315,6 +316,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
           Home is ours, not React Flow's fit view (Refactor.94, human 2026-10-12: it looked the same as full screen): the four corners
           with a small node (human 2026-10-11), the same framing as H, with our words. Home 用我們的、不用 React Flow 的看見全部（R.94，
           人類：和全螢幕長得一模一樣）：四角框加小節點（人類 10-11），和 H 同一個對準，說明用我們的字。 */}
+      {/* How to finish what is going on, in the bottom row beside the controls (operation_hint.tsx). 正在進行的事怎麼完成，在下方那一排。 */}
+      <OperationHint />
       <Controls position="bottom-right" orientation="horizontal" showInteractive={false} showZoom={false} showFitView={false}>
         <ZoomReadout />
         <ControlButton onClick={() => frameNodes(flow)} aria-label={say(tr('canvasMenu.home', 'Home'))}
@@ -405,6 +408,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
   // Place a node (Refactor.105): after a port's right-click the picked node follows the pointer until a press adds it. 放置節點（R.105）。
   const place = usePlaceNode(session, flow, prefs.snap ? GRID : null), placing = place.placing;
+  // While placing, how to finish it (legacy create.place), as an operation hint. 放置時，怎麼完成（照舊產品），用操作提示。
+  useOperationHint(placing && !placing.leaving ? tr('create.place', 'Click to place the node · Esc to cancel') : null);
   // The right-click menu (Refactor.93): where it opened, and what was selected then. 右鍵選單（R.93）：在哪裡打開、當時選了什麼。
   const [menuAt, setMenuAt] = useState<CanvasMenuRequest | null>(null);
   const onMenu = useCallback((open: MenuOpen) => setMenuAt({ x: open.x, y: open.y, touch: open.touch, host: open.host, wire: open.wire,
@@ -562,8 +567,6 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               （人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
           <div className="network-overlay">
           <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.showOrFold('glsl')} /></div>
-          {/* While a node is placed, how to finish (legacy create.place). 放置節點時，怎麼完成（照舊產品）。 */}
-          {placing && !placing.leaving && <div className="floating-notice" role="status">{say(tr('create.place', 'Click to place the node · Esc to cancel'))}</div>}
           {session && draft && <div className="floating-notice warning" role="group" aria-label={say(tr('draft.label', 'Earlier draft'))}>
             <span>{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}</span>
             {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
