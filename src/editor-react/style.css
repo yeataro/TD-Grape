@@ -694,11 +694,15 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* The text appearance panel (Refactor.101, TextStyle.tsx). 文字外觀面板（R.101）。 */
 .text-style { display: flex; flex-direction: column; gap: 8px; }
 .text-style-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.text-style-field { display: flex; align-items: center; gap: 4px; width: 96px; }
-.text-style-field > :first-child { flex: 1; min-width: 0; }
-.text-style-unit { color: var(--text-muted); }
+.text-style-field { width: 80px; }
+/* A unit inside a value field, on the right, as a component letter on the left (Refactor.101.2). 數值欄位裡的單位，放在右邊，同左邊的分量字母
+   （R.101.2）。 */
+.value-field > .field-unit { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none; color: var(--text-muted); }
+.value-field.with-unit input { padding-right: 18px; }
+/* While writing, the field takes the text's size and alignment, as it will show (Refactor.101.2, human 2026-10-12: the alignment did not
+   follow). 寫的時候輸入框跟著文字的大小與對齊（R.101.2，人類：對齊沒跟著很奇怪）。 */
 .group-text textarea { display: block; width: 100%; box-sizing: border-box; min-height: var(--line-md); padding: 0; border: 0; border-radius: 0; resize: none; overflow: hidden;
-  background: none; color: inherit; font: inherit; line-height: inherit; outline: 1px dashed color-mix(in srgb, var(--group-color) 55%, transparent); outline-offset: 2px; }
+  background: none; color: inherit; font: inherit; line-height: inherit; text-align: inherit; outline: 1px dashed color-mix(in srgb, var(--group-color) 55%, transparent); outline-offset: 2px; }
 .group-name-input { flex: 1; min-width: 0; height: 22px; font-size: var(--font-md); }
 .group-button { display: grid; place-items: center; flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; opacity: .65; }
 .group-button:not([aria-disabled="true"]):hover { opacity: 1; background: var(--surface-control-hover); }

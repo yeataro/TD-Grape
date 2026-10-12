@@ -23,10 +23,12 @@ export function TextStyle({ scale, align, onScale, onAlign, onPreview }: {
   return <div className="text-style">
     <label className="text-style-row">
       <span>{say(tr('textStyle.size', 'Text size'))}</span>
-      <span className="text-style-field">
+      {/* The % inside the box, as a value field's component letter (Refactor.101.2, human 2026-10-12). % 放在框裡，同數值欄位的分量字母
+          （R.101.2，人類）。 */}
+      <span className="value-field with-unit text-style-field">
         <NumberField label={say(tr('textStyle.size', 'Text size'))} value={Math.round(scale * 100)} integer unsigned
           preview={value => onPreview?.(percent(value) / 100)} commit={value => { onPreview?.(null); onScale(percent(value) / 100); }} />
-        <span className="text-style-unit">%</span>
+        <span className="field-unit">%</span>
       </span>
     </label>
     <Segmented label={tr('textStyle.align', 'Alignment')} value={align} onChange={onAlign} options={[
