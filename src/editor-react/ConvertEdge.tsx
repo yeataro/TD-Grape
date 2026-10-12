@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useSyncExternalStore, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
 import { WireHalo } from './wire_edge';
 import { crossedFingersOutline, crossedFingersPath, crossedFingersViewBox } from './crossed_fingers';
@@ -41,7 +41,9 @@ function CrossedFingers({ id }: { id: string }) {
   </svg>;
 }
 
-export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth, data }: EdgeProps) {
+// Memoised like React Flow's own wires (R.105.20, measured: without it all five conversion wires re-ran on every selection and node move,
+// with no change to the page). 和 React Flow 自己的線一樣包 memo（R.105.20，量過：沒包時每次選取或移動節點，五條轉換線都白跑一次，頁面沒變）。
+export const ConvertEdge = memo(function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth, data }: EdgeProps) {
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   const gradient = useSyncExternalStore(appearanceSubscribe, () => shadowOn('wireGradient'));
   const blend = useSyncExternalStore(appearanceSubscribe, currentGradientBlend);
@@ -71,4 +73,4 @@ export function ConvertEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosi
       </span>
     </EdgeLabelRenderer>}
   </>;
-}
+});

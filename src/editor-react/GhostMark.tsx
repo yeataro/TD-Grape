@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from 'react';
+import { memo, useId, type CSSProperties } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
 import { WireHalo } from './wire_edge';
 import { ghostPhase, roundedHem } from './ghost_motion';
@@ -38,8 +38,9 @@ export function GhostMark({ id, on }: { id: string; on: 'node' | 'wire' }) {
 }
 
 /** A ghost wire (Q37 1-3) drawn as React Flow's own wire, with a small ghost at its middle (Refactor.75.27, human 2026-10-11).
- * Ghost 線：照 React Flow 原本的線畫，中點多一隻小幽靈（R.75.27，人類）。 */
-export function GhostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth }: EdgeProps) {
+ * Memoised like React Flow's own wires (R.105.20). Ghost 線：照 React Flow 原本的線畫，中點多一隻小幽靈（R.75.27，人類）。和 React Flow
+ * 自己的線一樣包 memo（R.105.20）。 */
+export const GhostEdge = memo(function GhostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth }: EdgeProps) {
   const [path, x, y] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   return <>
     <WireHalo path={path} />
@@ -48,4 +49,4 @@ export function GhostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
       <span className="wire-ghost-mark" style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}><GhostMark id={id} on="wire" /></span>
     </EdgeLabelRenderer>
   </>;
-}
+});
