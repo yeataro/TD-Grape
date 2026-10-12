@@ -103,7 +103,7 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
   // or the view pans (human 2026-10-12). 內文（R.99）：按鉛筆編輯；只在內文或外框寬度改變時量，其他節點移動、平移都不量（人類 10-12）。
   const [writing, setWriting] = useState(false), block = useRef<HTMLDivElement>(null), area = useRef<HTMLTextAreaElement | null>(null);
   // The text appearance panel, from the T that takes the pencil's place while writing (Refactor.101). 文字外觀面板，從寫的時候取代鉛筆的 T 打開（R.101）。
-  const [styling, setStyling] = useState<HTMLElement | null>(null);
+  const [styling, setStyling] = useState<HTMLElement | null>(null), [previewScale, setPreviewScale] = useState<number | null>(null);
   const shown = writing || !!group.text;
   // Measured only while the text makes the box taller (the gear); otherwise it sits in the room under the title. 只在內文撐高外框時
   // （齒輪）量；否則放在標題下原本的空間。
@@ -181,7 +181,8 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
   // click outside does. 移到 T 或它的面板不算離開內文（R.101）；在內文以外的地方關掉面板就結束編輯，同點外面。
   const inStyle = (element: EventTarget | null) => !!(element as Element | null)?.closest?.('.text-style, .group-text-style');
   const closeStyle = () => { setStyling(null); setTimeout(() => { if (area.current && document.activeElement !== area.current) write(area.current.value); }); };
-  const look = { '--text-scale': group.textScale ?? 1, textAlign: group.textAlign ?? 'left' } as CSSProperties;
+  // While the size is dragged it shows at once, stored only when let go (Refactor.101.1). 拖曳大小時立刻顯示，放開才存（R.101.1）。
+  const look = { '--text-scale': previewScale ?? group.textScale ?? 1, textAlign: group.textAlign ?? 'left' } as CSSProperties;
   return <>
     <div className={'group-body' + (complete ? ' selected' : '')} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: box.height }} />
     {/* Under the title, above the members; one line at once when the pencil is pressed, a line more for every line break (human
@@ -238,7 +239,8 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
     </Popover>, document.body)}
     {styling && createPortal(<Popover anchor={styling} label={tr('group.textStyle', 'Text appearance')} className="group-text-style-panel" onClose={closeStyle}>
       <TextStyle scale={group.textScale ?? 1} align={group.textAlign ?? 'left'}
-        onScale={textScale => session.changeGroup(group.id, { textScale })} onAlign={textAlign => session.changeGroup(group.id, { textAlign })} />
+        onScale={textScale => session.changeGroup(group.id, { textScale })} onAlign={textAlign => session.changeGroup(group.id, { textAlign })}
+        onPreview={setPreviewScale} />
     </Popover>, document.body)}
   </>;
 }
