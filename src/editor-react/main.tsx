@@ -469,12 +469,12 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       const run = (action: () => void) => { event.preventDefault(); action(); };
       if (!draft && matches('undo', event)) run(() => session.history(false));
       else if (!draft && matches('redo', event)) run(() => session.history(true));
-      // Tab opens Create node centred on the network (Refactor.105.11–105.12, human 2026-10-13: centre-centre, the whole panel; legacy
-      // graph_ui.js:2560 used a third of the height). Tab 打開新增節點，整個視窗在網路區正中（R.105.11–105.12，人類 10-13：正中、整個視窗；
-      // 舊產品是高度三分之一）。
+      // Tab opens Create node with its search box at the network's centre (Refactor.105.11, 105.13, human 2026-10-13: centre-centre, the
+      // search box, pushed in when there is no room; legacy graph_ui.js:2560 used a third of the height). Tab 打開新增節點，搜尋框在網路區
+      // 正中（R.105.11、105.13，人類 10-13：正中、對齊搜尋框，空間不夠就推擠；舊產品是高度三分之一）。
       // Tab, a double-click and the menu's Nodes place what is picked (Refactor.105.1, human 2026-10-12); a wire dropped on the canvas adds
       // it where it was dropped, as legacy. Tab、雙擊與選單的節點：選好的先放置（R.105.1，人類 10-12）；拉線放到畫布照舊產品，在放開處新增。
-      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle(1 / 2), place: true, whole: true }));
+      else if (!draft && network && matches('add', event)) run(() => setCreating({ screen: middle(1 / 2), place: true }));
       // P floats the Parameter panel, or sends it back (legacy graph_ui.js:2534; human 2026-10-11): on the network, in a floating
       // panel or with nothing focused. P 讓參數面板浮出來，或送回去（照舊產品；人類 10-11）：在網路區、浮動面板裡或沒有焦點時。
       else if ((network || element.closest('.floating-area')) && matches('floatingParameter', event)) run(() => { if (!event.repeat) layout.toggleFloat('params'); });
