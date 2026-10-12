@@ -7,6 +7,7 @@ import type { MenuOpen } from './RightDragSelect';
 import { pressKind } from './RightDragSelect';
 import { Popover } from './controls';
 import { Icon } from './icons';
+import { Markdown } from './Markdown';
 import { say, tr, type Message } from './text';
 import { GROUP_COLORS, DEFAULT_GROUP_COLOR as DEFAULT_COLOR } from './group_colors';
 
@@ -190,7 +191,7 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
           if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.blur(); }
           else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); write(null); }
         }} />
-        : group.text}
+        : <Markdown text={group.text ?? ''} />}
     </div>}
     <div className="group-title nopan nodrag" role="group" tabIndex={0} aria-label={group.name} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: GROUP_TITLE }}
       onPointerDown={down} onPointerMove={drag} onPointerUp={up} onPointerCancel={back} onLostPointerCapture={() => { if (move.current) back(); }}

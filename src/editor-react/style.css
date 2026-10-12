@@ -667,6 +667,21 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .group-text { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; padding-top: 12px; color: var(--text-strong);
   font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; overflow-wrap: anywhere; pointer-events: none; }
 .group-text.writing { pointer-events: auto; }
+/* Group text drawn as Markdown (Refactor.100): its links can be clicked, the rest passes to the box. 群組內文以 Markdown 畫出（R.100）：
+   連結可以點，其他照樣交給框身。 */
+.group-text a { pointer-events: auto; }
+/* Markdown (Refactor.100, Markdown.tsx): compact, in the surrounding size; headings a step or two up; code blocks as the GLSL panel,
+   with its gutter and colours. Markdown（R.100）：緊湊、用外面的字級；標題大一兩級；程式碼塊同 GLSL 面板的行號欄與顏色。 */
+.markdown { white-space: normal; }
+.markdown > * { margin: 0 0 6px; } .markdown > :last-child { margin-bottom: 0; }
+.markdown :is(h1, h2, h3, h4, h5, h6) { font-weight: 600; line-height: var(--line-base); }
+.markdown h1 { font-size: var(--font-lg); line-height: var(--line-lg); } .markdown h2 { font-size: var(--font-base); } .markdown :is(h3, h4, h5, h6) { font-size: inherit; }
+.markdown :is(ul, ol) { padding-left: 1.5em; }
+.markdown code { padding: 0 3px; border-radius: 3px; background: var(--surface-node-field); }
+.markdown a { color: var(--code-link); }
+.markdown .md-code { padding: 4px 6px; border-radius: var(--radius-field); background: var(--surface-node-field); overflow: hidden; }
+.markdown .md-code code, .md-code .md-code-line { background: none; padding: 0; }
+.md-code .md-code-line { display: flex; }
 .group-text textarea { display: block; width: 100%; box-sizing: border-box; min-height: var(--line-md); padding: 0; border: 0; border-radius: 0; resize: none; overflow: hidden;
   background: none; color: inherit; font: inherit; line-height: inherit; outline: 1px dashed color-mix(in srgb, var(--group-color) 55%, transparent); outline-offset: 2px; }
 .group-name-input { flex: 1; min-width: 0; height: 22px; font-size: var(--font-md); }
