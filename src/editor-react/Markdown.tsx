@@ -1,9 +1,9 @@
 import { memo, useMemo, type ReactNode } from 'react';
 import { parseMarkdown, type Block, type Inline } from './markdown_parse';
-import { highlightGlsl, type Piece } from './glsl_highlight';
+import { highlightGlsl, type Piece } from './code_highlight';
 
 // The Markdown engine's drawing half (Refactor.100): draws what markdown_parse.ts read, only as text elements — never HTML. A code block
-// has line numbers; a glsl one is coloured as the GLSL panel (glsl_highlight.ts, the same colours and gutter). Read again only when
+// has line numbers; a glsl one is coloured as the GLSL panel (code_highlight.ts, the same colours and gutter). Read again only when
 // the text changes. Used by group text; Notes later. Markdown 引擎的「畫」那一半（R.100）：把 markdown_parse.ts 讀出的結構畫成文字元素，
 // 永遠不是 HTML。程式碼塊有行號；glsl 的照 GLSL 面板上色（同一份上色、同樣的行號欄）。只在文字改變時重讀。群組內文在用；之後的 Note 也用。
 

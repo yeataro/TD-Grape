@@ -20,7 +20,7 @@ body { margin: 0; }
    按或拖不會在上面塗出選取；要讀、要複製的（GLSL、紀錄與狀態、提示的內容、節點的說明）與所有輸入框可以。一條規則加一張清單：
    新的零件不用記得說就不能選。 */
 body { -webkit-user-select: none; user-select: none; }
-:is(input, textarea, [contenteditable="true"], .glsl-code, .glsl-failure, .glsl-log, .log-list, .status-now, .floating-notice,
+:is(input, textarea, [contenteditable="true"], .glsl-code, .graph-json, .glsl-failure, .glsl-log, .log-list, .status-now, .floating-notice,
   .create-details, .add-node-details, .tuning-changed) { -webkit-user-select: text; user-select: text; }
 :is(.status-now, .floating-notice, .add-node-details) button { -webkit-user-select: none; user-select: none; }
 /* The page before the editor's code has loaded (index.html): the waiting mark in the middle. 程式載入前的頁面：中央的等待標誌。 */
@@ -459,6 +459,13 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .glsl-number { color: var(--glsl-number); }
 .glsl-function { color: var(--glsl-function); } .glsl-directive { color: var(--glsl-directive); }
 .glsl-string { color: var(--glsl-string); } .glsl-builtin { color: var(--glsl-builtin); }
+/* The Graph JSON View (Refactor.102): no line numbers; long lines wrap under their own start, 2 characters further in.
+   Graph JSON View（R.102）：沒有行號；長的一行換行時接在自己開頭的下面、再往內 2 個字。 */
+.graph-json-scroll { height: 100%; }
+.graph-json-scroll .scroll-fade-content { width: auto; }
+.graph-json .graph-json-line { display: flex; }
+.graph-json .graph-json-indent { flex: none; }
+.graph-json .graph-json-text { flex: 1; min-width: 0; padding-left: 2ch; text-indent: -2ch; white-space: pre-wrap; overflow-wrap: anywhere; }
 .glsl-failure { padding: 8px 10px; border-radius: var(--radius-field); border: 1px solid var(--status-error); font-size: var(--font-sm); line-height: var(--line-sm); }
 .glsl-failure p { margin: 0 0 4px; }
 .glsl-failure ul { margin: 0; padding-left: 1.2em; }

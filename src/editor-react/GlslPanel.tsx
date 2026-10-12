@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { highlightGlsl } from './glsl_highlight';
+import { highlightGlsl } from './code_highlight';
 import { tr, say, useLanguage } from './text';
 import { useSession } from './contexts';
 import { frameNodes } from './viewport';

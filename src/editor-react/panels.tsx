@@ -5,6 +5,7 @@ import type { Corner, Side } from './layout_tree';
 import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
 import { GlslPanel, glslMenu } from './GlslPanel';
+import { GraphJsonView } from './GraphJsonView';
 import type { MenuItem } from './DropdownMenu';
 import { AppearancePanel } from './AppearancePanel';
 import { ParamsPanel } from './ParamsPanel';
@@ -38,6 +39,10 @@ export const PANELS = {
   glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ session, state }) => session
     ? <GlslPanel glsl={state.glsl} glslMap={state.glslMap} glslVariables={state.glslVariables} glslDeclarations={state.glslDeclarations} stuck={state.stuck} />
     : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p>, menu: glslMenu },
+  // The graph document as JSON, read only (Refactor.102). 圖文件的 JSON，唯讀（R.102）。
+  graphJsonView: { title: tr('graphJson.title', 'Graph JSON'), side: 'right', content: ({ session, state }) => session
+    ? <GraphJsonView session={session} version={state.version} />
+    : <p className="hint">{say(tr('graphJson.noGraph', 'Open a Grape OP to see its graph as JSON.'))}</p> },
   // The Parameter panel (Refactor.76): the current node. 參數面板（R.76）：目前的節點。
   params: { title: tr('params.title', 'Parameters'), side: 'right', first: true, corner: 'top-right', frame: 'own', content: ({ session, state }) => session
     ? <ParamsPanel state={state} />
