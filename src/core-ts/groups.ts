@@ -16,8 +16,12 @@ export interface GraphGroup { id: string; name: string; nodes: string[]; color?:
   /** How the whole body text is shown, not part of the Markdown (Refactor.101; legacy Note noteFontScale, noteTextAlign,
    * graph_ui.js:1688-1689): its size as a factor (1 is not stored) and its alignment (left is not stored). 整段內文怎麼顯示，不屬於
    * Markdown（R.101；照舊產品 Note 的 noteFontScale、noteTextAlign）：字體倍率（1 不存）與對齊（靠左不存）。 */
-  textScale?: number; textAlign?: TextAlign }
+  textScale?: number; textAlign?: TextAlign;
+  /** Where the body text sits: above the members, or below them (Refactor.105.16, human 2026-10-13: top and bottom; top is not
+   * stored). 內文放在哪裡：成員上方，或成員下方（R.105.16，人類 10-13：靠上與置底；靠上不存）。 */
+  textPlace?: TextPlace }
 export type TextAlign = 'left' | 'center' | 'right';
+export type TextPlace = 'top' | 'bottom';
 /** The body text's size factor, as legacy (graph_ui.js:1688: up to 10). 內文字體倍率範圍（照舊產品：最大 10）。 */
 export const TEXT_SCALE_MIN = 0.5, TEXT_SCALE_MAX = 10;
 const validScale = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= TEXT_SCALE_MIN && value <= TEXT_SCALE_MAX;
@@ -50,7 +54,8 @@ export function tidy(network: NetworkData): { groups: GraphGroup[]; fixed: boole
     groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
       ...(typeof group.text === 'string' && group.text && group.text.length <= GROUP_TEXT_LIMIT ? { text: group.text } : {}),
       ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
-      ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
+      ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}),
+      ...(group.textPlace === 'bottom' ? { textPlace: group.textPlace } : {}) });
   }
   // Compared as JSON values, whatever order the fields were written in. 照 JSON 的值比，不管欄位寫的順序。
   return { groups, fixed: !equal(groups, raw) };
@@ -124,7 +129,7 @@ export function removeGroup(network: Network, id: string): void {
   edit(network, groups => groups.filter(group => group.id !== id));
 }
 /** Rename, recolour or rewrite a group; an empty text takes the text away. 群組改名、改色或改內文；空的內文＝拿掉內文。 */
-export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string; text?: string; textScale?: number; textAlign?: TextAlign }): void {
+export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string; text?: string; textScale?: number; textAlign?: TextAlign; textPlace?: TextPlace }): void {
   edit(network, groups => groups.map(group => {
     if (group.id !== id) return group;
     if (patch.name !== undefined && !validGroupName(patch.name)) throw Error('Invalid group name');
@@ -132,10 +137,11 @@ export function changeGroup(network: Network, id: string, patch: { name?: string
     if (patch.text !== undefined && patch.text.length > GROUP_TEXT_LIMIT) throw Error('Group text too long');
     if (patch.textScale !== undefined && !validScale(patch.textScale)) throw Error('Invalid text scale');
     if (patch.textAlign !== undefined && !['left', 'center', 'right'].includes(patch.textAlign)) throw Error('Invalid text alignment');
-    // The defaults are not stored: no text, size 1, left. 預設值不存：沒有內文、倍率 1、靠左。
-    const { text, textScale, textAlign, ...rest } = { ...group, ...patch };
+    if (patch.textPlace !== undefined && !['top', 'bottom'].includes(patch.textPlace)) throw Error('Invalid text place');
+    // The defaults are not stored: no text, size 1, left, top. 預設值不存：沒有內文、倍率 1、靠左、靠上。
+    const { text, textScale, textAlign, textPlace, ...rest } = { ...group, ...patch };
     return { ...rest, ...(text ? { text } : {}), ...(textScale !== undefined && textScale !== 1 ? { textScale } : {}),
-      ...(textAlign && textAlign !== 'left' ? { textAlign } : {}) };
+      ...(textAlign && textAlign !== 'left' ? { textAlign } : {}), ...(textPlace === 'bottom' ? { textPlace } : {}) };
   }));
 }
 

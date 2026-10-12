@@ -70,6 +70,17 @@ test('the body text\'s size and alignment are kept apart from the text; defaults
   assert.equal(G.groups.tidyGroups(raw),1,'bad values are tidied away');
 });
 
+test('the body text sits above the members or below them; top is not stored (Refactor.105.16)',()=>{
+  let doc=step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'}));
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{text:'Hi',textPlace:'bottom'}));
+  assert.equal(of(doc)[0].textPlace,'bottom');
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{textPlace:'top'}));
+  assert.ok(!('textPlace' in doc.document.stages.pixel.ui.groups[0]),'top is not stored');
+  assert.throws(()=>step(doc,net=>groups.changeGroup(net,'g1',{textPlace:'middle'})),/text place/);
+  const raw=plain(doc.document);raw.stages.pixel.ui.groups[0].textPlace='middle';
+  assert.equal(G.groups.tidyGroups(raw),1,'a bad place is tidied away');
+});
+
 test('a ghost node is still a member',()=>{
   const raw=plain(step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'})).document);
   raw.stages.pixel.nodes.find(n=>n.id==='a').nodeType='sgrape.builtin.not_a_node';

@@ -743,7 +743,7 @@ export class Editor {
   joinGroup = (ids: readonly string[]) => this.transact(tr('edit.joinedGroup', 'Moved into the group'), net => core.groups.joinGroup(net, ids));
   leaveGroups = (ids: readonly string[]) => this.transact(tr('edit.leftGroup', 'Removed from the group'), net => core.groups.leaveGroups(net, ids));
   removeGroup = (id: string) => this.transact(tr('edit.ungrouped', 'Group removed (its nodes stay)'), net => core.groups.removeGroup(net, id));
-  changeGroup = (id: string, patch: { name?: string; color?: string; text?: string; textScale?: number; textAlign?: 'left' | 'center' | 'right' }) =>
+  changeGroup = (id: string, patch: { name?: string; color?: string; text?: string; textScale?: number; textAlign?: 'left' | 'center' | 'right'; textPlace?: 'top' | 'bottom' }) =>
     this.transact(tr('edit.groupChanged', 'Group updated'), net => core.groups.changeGroup(net, id, patch));
   /** Select a group's members (legacy frames_ui.js:182-189): plain = only them; Ctrl toggles them as one (all selected: off);
    * Shift adds. 選取群組的成員（照舊產品）：一般＝只選它們；Ctrl 整組切換（全選著就取消）；Shift 加選。 */

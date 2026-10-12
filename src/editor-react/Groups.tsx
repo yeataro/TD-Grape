@@ -8,7 +8,7 @@ import { pressKind } from './RightDragSelect';
 import { Popover } from './controls';
 import { Icon } from './icons';
 import { Markdown } from './Markdown';
-import { TextStyle } from './TextStyle';
+import { TextStyle, type TextPlace } from './TextStyle';
 import { say, tr, type Message } from './text';
 import { matches, withShortcut } from './shortcuts';
 import { GROUP_COLORS, DEFAULT_GROUP_COLOR as DEFAULT_COLOR } from './group_colors';
@@ -29,15 +29,16 @@ import { GROUP_COLORS, DEFAULT_GROUP_COLOR as DEFAULT_COLOR } from './group_colo
 const GROUP_PAD = 24, GROUP_TITLE = 28;
 
 
-/** A group's box from its members' bounds and the height of its body text, which sits between the title and the members, so the box
- * grows upwards and the members stay (Refactor.99, human 2026-10-12). 依成員範圍與內文高度算出的群組外框；內文在標題與成員之間，所以外框
- * 往上長、成員不動（R.99，人類 10-12）。 */
-const groupBox = (members: Rect, text = 0): Rect => {
-  // The text block holds its own 12 above and below (Refactor.99.1, 101), so the whole band between the title and the members is the
-  // text's (a double-click there edits it); without text, legacy's 24 above the members. 內文區塊自己帶著上下各 12（R.99.1、101），標題與
-  // 成員之間整條都屬於內文（在那裡雙擊就編輯）；沒有內文時，成員上方照舊產品 24。
-  const above = text || GROUP_PAD;
-  return { x: members.x - GROUP_PAD, y: members.y - above - GROUP_TITLE, width: members.width + 2 * GROUP_PAD, height: members.height + GROUP_PAD + above + GROUP_TITLE };
+/** A group's box from its members' bounds and the height of its body text. The text sits between the title and the members, so the box
+ * grows upwards (Refactor.99, human 2026-10-12), or below the members, so it grows downwards (R.105.16, human 2026-10-13); the members
+ * stay. 依成員範圍與內文高度算出的群組外框。內文在標題與成員之間，外框往上長（R.99，人類 10-12），或在成員下方，外框往下長（R.105.16，
+ * 人類 10-13）；成員不動。 */
+const groupBox = (members: Rect, text = 0, place: TextPlace = 'top'): Rect => {
+  // The text block holds its own 12 above and below (Refactor.99.1, 101), so the whole band it sits in is the text's (a double-click
+  // there edits it); without text, legacy's 24 on each side of the members. 內文區塊自己帶著上下各 12（R.99.1、101），它所在的那一整條
+  // 都屬於內文（在那裡雙擊就編輯）；沒有內文時，成員兩側照舊產品各 24。
+  const above = place === 'top' ? text || GROUP_PAD : GROUP_PAD, below = place === 'bottom' ? text || GROUP_PAD : GROUP_PAD;
+  return { x: members.x - GROUP_PAD, y: members.y - above - GROUP_TITLE, width: members.width + 2 * GROUP_PAD, height: members.height + below + above + GROUP_TITLE };
 };
 /** Each group's measured body text height, by group ID (flow units; none = no text). 每個群組量到的內文高度（畫布單位；沒有＝沒有內文）。 */
 export type TextHeights = Readonly<Record<string, number>>;
@@ -47,7 +48,7 @@ export type TextHeights = Readonly<Record<string, number>>;
 type Lookup = NonNullable<Parameters<typeof getNodesBounds>[1]>;
 export function selectionBounds(lookup: Lookup, ids: readonly string[], groups: readonly GraphGroup[], texts: TextHeights = {}): Rect {
   const chosen = new Set(ids), boxes = [getNodesBounds([...ids], lookup),
-    ...groups.filter(group => group.nodes.every(id => chosen.has(id))).map(group => groupBox(getNodesBounds(group.nodes, lookup), texts[group.id]))];
+    ...groups.filter(group => group.nodes.every(id => chosen.has(id))).map(group => groupBox(getNodesBounds(group.nodes, lookup), texts[group.id], group.textPlace))];
   const left = Math.min(...boxes.map(box => box.x)), top = Math.min(...boxes.map(box => box.y));
   return { x: left, y: top, width: Math.max(...boxes.map(box => box.x + box.width)) - left, height: Math.max(...boxes.map(box => box.y + box.height)) - top };
 }
@@ -137,7 +138,7 @@ const GroupBox = memo(function GroupBox({ group, session, actions, snap, grid, c
     return () => removeEventListener('keydown', key, true);
   }, []);
   const [x, y, width, height] = key.split(',').map(Number) as [number, number, number, number];
-  const box = groupBox({ x, y, width, height }, text), style = { '--group-color': group.color ?? DEFAULT_COLOR } as CSSProperties;
+  const textPlace = group.textPlace ?? 'top', box = groupBox({ x, y, width, height }, text, textPlace), style = { '--group-color': group.color ?? DEFAULT_COLOR } as CSSProperties;
   // Pressing the title selects the members (legacy frames_ui.js:203); a modifier only toggles them, without a drag (graph_ui.js:1433).
   // 按下標題選取成員（照舊產品）；按著修飾鍵只切換、不拖（照舊產品）。
   const down = (event: PointerEvent<HTMLDivElement>) => {
@@ -202,12 +203,12 @@ const GroupBox = memo(function GroupBox({ group, session, actions, snap, grid, c
   useLayoutEffect(() => { if (area.current) fit(area.current); }, [writing, previewScale, group.textScale, group.textAlign, box.width]);
   return <>
     <div className={'group-body' + (complete ? ' selected' : '')} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: box.height }} />
-    {/* Under the title, above the members; it takes room at once when the pencil is pressed and grows with what is written (human
-        2026-10-12). 在標題下、成員上；按鉛筆立刻有空間，隨寫的內容長高（人類 10-12）。 */}
+    {/* Under the title, above the members — or right below the members (R.105.16); it takes room at once when the pencil is pressed and
+        grows with what is written (human 2026-10-12). 在標題下、成員上——或緊接在成員下面（R.105.16）；按鉛筆立刻有空間，隨寫的內容長高（人類 10-12）。 */}
     {/* A double-click on the text edits it (Refactor.101, human 2026-10-12: the band of the text, so the rest of the box stays canvas).
         雙擊內文就編輯（R.101，人類：內文那一條，框裡其他地方仍是畫布）。 */}
     {shown && <div ref={block} className={'group-text' + (writing ? ' writing' : '')} data-align={group.textAlign ?? 'left'}
-      style={{ ...look, transform: `translate(${box.x + GROUP_PAD}px, ${box.y + GROUP_TITLE}px)`, width: box.width - 2 * GROUP_PAD }}
+      style={{ ...look, transform: `translate(${box.x + GROUP_PAD}px, ${textPlace === 'top' ? box.y + GROUP_TITLE : y + height}px)`, width: box.width - 2 * GROUP_PAD }}
       onDoubleClick={event => { if (writing || (event.target as Element).closest('a')) return; event.stopPropagation(); setWriting(true); }}>
       {writing ? <textarea className="nodrag nopan" defaultValue={group.text ?? ''} autoFocus rows={1} maxLength={core.groups.GROUP_TEXT_LIMIT}
         aria-label={say(tr('group.text', 'Group text'))}
@@ -254,8 +255,9 @@ const GroupBox = memo(function GroupBox({ group, session, actions, snap, grid, c
         onClick={() => { setPalette(null); session.changeGroup(group.id, { color: color.value }); }} />)}
     </Popover>, document.body)}
     {styling && createPortal(<Popover anchor={styling} label={tr('group.textStyle', 'Text appearance')} className="group-text-style-panel" onClose={closeStyle}>
-      <TextStyle scale={group.textScale ?? 1} align={group.textAlign ?? 'left'}
+      <TextStyle scale={group.textScale ?? 1} align={group.textAlign ?? 'left'} place={textPlace}
         onScale={textScale => session.changeGroup(group.id, { textScale })} onAlign={textAlign => session.changeGroup(group.id, { textAlign })}
+        onPlace={next => session.changeGroup(group.id, { textPlace: next })}
         onPreview={setPreviewScale} />
     </Popover>, document.body)}
   </>;
