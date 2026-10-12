@@ -809,6 +809,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .text-style { display: flex; flex-direction: column; gap: 8px; }
 .text-style-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .text-style-field { width: 80px; }
+/* Its switches share the row equally, two halves or three thirds (Refactor.105.17, human 2026-10-13: why not halves? the buttons were as
+   wide as their words). 它的切換平分整列，兩格各半、三格各三分之一（R.105.17，人類 10-13：為什麼不切兩半？原本每格只有字那麼寬）。 */
+.text-style .segmented button { flex: 1; }
 /* A unit inside a value field, on the right, as a component letter on the left (Refactor.101.2). 數值欄位裡的單位，放在右邊，同左邊的分量字母
    （R.101.2）。 */
 .value-field > .field-unit { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none; color: var(--text-muted); }
