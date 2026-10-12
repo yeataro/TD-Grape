@@ -1389,7 +1389,7 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 [data-movable] { cursor: grab; } [data-movable]:active { cursor: grabbing; }
 .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__nodesselection-rect { cursor: default; }
 .react-flow__edge { cursor: pointer; }
-.react-flow__pane.dragging, .react-flow__pane.dragging * { cursor: move !important; }
+:root.panning-canvas, :root.panning-canvas * { cursor: move !important; } /* whole page: see panningCursor (viewport.ts) 整頁，見 panningCursor */
 .react-flow.zooming, .react-flow.zooming * { cursor: ns-resize !important; }
 .react-flow:has(.react-flow__connectionline), .react-flow:has(.react-flow__connectionline) * { cursor: pointer !important; }
 :root.scrubbing-value, :root.scrubbing-value * { cursor: ew-resize !important; user-select: none; } /* the value ladder, held 按住拖的數值階梯 */

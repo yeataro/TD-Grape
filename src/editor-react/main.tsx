@@ -39,7 +39,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
-import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
+import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide, panningCursor } from './viewport';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
 import { useCopyPaste, type CopyPaste } from './copy_paste';
 import { GroupLayer, useGroupActions, type GroupActions, type TextHeights } from './Groups';
@@ -241,7 +241,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
     <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
+      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); if (event?.type === 'mousedown') panningCursor(true); }}
+      // Only a gesture's end: the damped pan moves the view by code, and each such move ends with no event. 只在手勢結束時：阻尼的平移
+      // 用程式移動畫面，每次這樣的移動結束時都沒有事件。
+      onMoveEnd={event => { if (event) panningCursor(false); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
       onConnectEnd={(event, state) => {

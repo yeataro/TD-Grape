@@ -40,6 +40,11 @@ export const frameNodes = (flow: Pick<ReactFlowInstance, 'fitView'>, ids?: reado
 // 觸控仍由 React Flow 處理（單指平移、雙指縮放；人類用 iPad）。每一下滾輪、每一步拖曳都移動我們記的目標，快速連滾的縮放量和沒有阻尼時一樣。
 // 關掉時這裡完全不執行。
 export const DAMPING_MS = 150;
+/** While the canvas is dragged to pan, the whole page shows the four-way arrow (Refactor.104.8, human 2026-10-12: it did not hold).
+ * Page-wide, not on the canvas: a damped pan holds the pointer on the canvas's outer element, and an undamped one lets it pass
+ * over panels. Both pans call this. 拖畫布平移時整頁都是十字方向箭頭（R.104.8，人類 10-12：沒有保持住）。放在整頁、不放在畫布上：
+ * 阻尼的平移把指標鎖在畫布最外層，沒有阻尼時指標會經過面板。兩種平移都呼叫這個。 */
+export const panningCursor = (on: boolean) => document.documentElement.classList.toggle('panning-canvas', on);
 // One tick's zoom, as React Flow's own (@xyflow/system wheelDelta). 一下滾輪的縮放量，同 React Flow 原生。
 const wheelStep = (event: WheelEvent) => -event.deltaY * (event.deltaMode === 1 ? .05 : event.deltaMode ? 1 : .002)
   * (event.ctrlKey && /Mac/i.test(navigator.platform) ? 10 : 1);
@@ -92,7 +97,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     if (event.pointerType !== 'mouse' || event.button > 1 || !on.closest('.react-flow__pane') || on.closest('.nopan')) return;
     event.stopPropagation();
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: base(), moved: false };
-    element.querySelector('.react-flow__pane')?.classList.add('dragging');
+    element.querySelector('.react-flow__pane')?.classList.add('dragging'); panningCursor(true);
   };
   // React Flow's pan listens to mousedown: it never starts while ours does. React Flow 的平移聽 mousedown：我們接手時它不會開始。
   const press = (event: MouseEvent) => { if (drag) event.stopPropagation(); };
@@ -110,7 +115,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
   const up = (event: PointerEvent) => {
     if (!drag || event.pointerId !== drag.id) return;
     const moved = drag.moved; drag = null;
-    element.querySelector('.react-flow__pane')?.classList.remove('dragging');
+    element.querySelector('.react-flow__pane')?.classList.remove('dragging'); panningCursor(false);
     // A drag is not a click on the background (that would clear the selection), as React Flow's own pan.
     // 拖過就不算點背景（否則會清掉選取），同 React Flow 原生平移。
     if (moved) element.addEventListener('click', event => event.stopPropagation(), { capture: true, once: true });
