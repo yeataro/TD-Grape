@@ -516,15 +516,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .react-flow__node.placing { pointer-events: none; }
 .react-flow__node.placing.measuring { opacity: 0; } /* opacity: React Flow writes visibility itself 用透明度：可見度 React Flow 自己會寫 */
 .react-flow:has(.react-flow__node.placing.measuring) .react-flow__edge.placing { opacity: 0; } /* its wire shows with it 線跟它一起出現 */
-/* It fades in when shown, its wire with it, and out when placed (Refactor.105.4–105.5, human 2026-10-12: a little fade-in, 1/3 s tried
-   first, then 0.1 s each way; animation effects off: none). The fade-in starts when its rule starts to apply, the moment it is shown.
-   顯示時淡入、放下時淡出，線也一起（R.105.4–105.5，人類 10-12：加一點淡入，先試 1/3 秒，再試進出各 0.1 秒；動畫效果關掉時沒有）。
-   淡入在規則開始套用的那一刻，也就是顯示的那一刻開始。 */
-/* The fade-in leaves the fading-out one alone: the build merges this list into :is(), which takes its strongest part's weight. 淡入不管淡出中的：
-   打包時這串會合併成 :is()，權重取最強的那個。 */
-.react-flow__node.placing:not(.measuring, .leaving), .react-flow:not(:has(.react-flow__node.placing.measuring)) .react-flow__edge.placing:not(.leaving) { animation: placing-in var(--placing-in-time) ease-out; }
-@keyframes placing-in { from { opacity: 0; } }
-.react-flow__node.placing.leaving, .react-flow:not(:has(.react-flow__node.placing.measuring)) .react-flow__edge.placing.leaving { animation: placing-out var(--placing-out-time) ease-in forwards; }
+/* Placed, it fades out over the node just added, its wire with it (Refactor.105.5, human 2026-10-12: 0.1 s; R.105.6, decided: no
+   fade-in, the fade-out stays); animation effects off: gone at once. 放下時在剛新增的節點上淡出，線也一起（R.105.5，人類 10-12：0.1 秒；
+   R.105.6 決定：不要淡入，淡出保留）；動畫效果關掉時直接拿掉。 */
+.react-flow__node.placing.leaving, .react-flow__edge.placing.leaving { animation: placing-out var(--placing-out-time) ease-in forwards; }
 @keyframes placing-out { to { opacity: 0; } }
 :root[data-motion="off"] :is(.react-flow__node.placing, .react-flow__edge.placing) { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { :root[data-motion="system"] :is(.react-flow__node.placing, .react-flow__edge.placing) { animation: none !important; } }
