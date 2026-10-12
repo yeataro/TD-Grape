@@ -472,6 +472,12 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    的開關關掉它（人類 10-12）。 */
 .graph-json .graph-json-line.traced { background: var(--code-line-hover); }
 .graph-json .graph-json-line.changed .graph-json-text { animation: graph-json-flash var(--code-flash-time) ease-out; }
+/* Its background lights too and fades (Refactor.103, human 2026-10-12: the background, not only the text): a layer behind the line
+   whose opacity goes, as rule 六 allows. 底色也亮起再退（R.103，人類：要底色，不只文字）：行後面一層，動畫只改透明度（規則六）。 */
+.graph-json .graph-json-line { position: relative; z-index: 0; }
+.graph-json .graph-json-line.changed::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--code-line-flash);
+  opacity: 0; animation: graph-json-flash-back var(--code-flash-time) ease-out; pointer-events: none; }
+@keyframes graph-json-flash-back { from { opacity: 1; } }
 @keyframes graph-json-flash { from { filter: saturate(0) brightness(var(--code-flash-brightness)); } }
 .glsl-failure { padding: 8px 10px; border-radius: var(--radius-field); border: 1px solid var(--status-error); font-size: var(--font-sm); line-height: var(--line-sm); }
 .glsl-failure p { margin: 0 0 4px; }
@@ -769,6 +775,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .source-card { position: relative; overflow: hidden; margin-bottom: 8px; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
   padding: calc(var(--source-fade) - var(--io-inset)) var(--source-fade) calc(var(--source-fade) - var(--io-inset)) calc(8px + var(--source-strip));
   display: grid; grid-template-columns: var(--expand-width) minmax(0, 1fr); column-gap: 6px; row-gap: 0; align-items: start; }
+/* A selected source card (Refactor.103, human 2026-10-12: not the bright green of the canvas, the purple frame): the accent line on its
+   border, as a chosen row. 選到的來源卡片（R.103，人類：不要畫布那種亮綠色，用紫色框）：強調色的線畫在邊框上，同選中的一列。 */
+.source-card.selected { outline: 1px solid var(--accent); outline-offset: -1px; }
 .source-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
   background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 .source-card::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;

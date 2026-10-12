@@ -354,7 +354,7 @@ export class Editor {
   /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
    * 這張圖有的 Stage，照編輯器顯示的順序（只列圖裡有的）。 */
   stageNames = () => ['vertex', 'pixel'].filter(name => name in this.document.document.stages);
-  private publish() { this.keepPrimary(); if (!this.disposed) this.listeners.forEach(listener => listener()); }
+  private publish() { this.keepPrimary(); this.keepWireKey(); if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>, source = 'editor') {
     if (patch.message) this.log.add(patch.level ?? 'info', patch.message, source);
     this.state = { ...this.state, ...patch }; this.publish();
@@ -743,6 +743,29 @@ export class Editor {
   private selectionListeners = new Set<() => void>();
   selectionSubscribe = (listener: () => void) => { this.selectionListeners.add(listener); return () => { this.selectionListeners.delete(listener); }; };
   primarySnapshot = () => this.primary;
+  // The selected shared source (Refactor.103; legacy selectInputSource, inspector.js:2534): one at a time, never with nodes or wires
+  // (legacy); for now it only locates its declaration (human 2026-10-12: what else it does, later; no batch selection yet). Not
+  // stored, not undone. 選到的共用來源（R.103；照舊產品）：一次一個，不和節點、接線同時選（照舊產品）；目前只用來定位它的宣告（人類 10-12：
+  // 還能做什麼之後再說；先不批次選取）。不存圖、不進 Undo。
+  private source: string | null = null;
+  sourceSnapshot = () => this.source;
+  private setSource(id: string | null) {
+    if (this.source === id) return;
+    this.source = id;
+    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
+  }
+  /** Select a shared source: the canvas selection goes. 選取一個共用來源：畫布上的選取清掉。 */
+  selectSource = (id: string) => { this.reselect(new Set(), new Set()); this.setPrimary(null); this.setSource(id); };
+  // The selected wires as one key, so a panel follows them without redrawing on every move (Refactor.103). 選到的接線做成一個字串，
+  // 面板跟著它、不會每一下都重畫（R.103）。
+  private wireKey = '';
+  selectedWiresSnapshot = () => this.wireKey;
+  private keepWireKey() {
+    const key = this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id).join('\u0000');
+    if (key === this.wireKey) return;
+    this.wireKey = key;
+    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
+  }
   private setPrimary(id: string | null) {
     if (this.primary === id) return;
     this.primary = id;
@@ -754,6 +777,8 @@ export class Editor {
     if (this.primary !== null && !this.state.projection.nodes.some(node => node.id === this.primary && node.selected)) this.setPrimary(null);
   }
   private reselect(nodes: ReadonlySet<string>, edges: ReadonlySet<string>) {
+    // Any canvas selection, or clearing it, lets go of a selected source (legacy). 畫布上的選取（或清掉選取）放開選到的來源（照舊產品）。
+    this.setSource(null);
     const { projection } = this.state;
     const nodeChanges = projection.nodes.flatMap(node => nodes.has(node.id) === !!node.selected ? []
       : [{ type: 'select' as const, id: node.id, selected: nodes.has(node.id) }]);
@@ -820,6 +845,7 @@ export class Editor {
   edgeChanges = (changes: EdgeChange<FlowEdge>[]) => {
     const runtime = changes.filter(change => change.type === 'select');
     if (!runtime.length) return;
+    if (runtime.some(change => change.type === 'select' && change.selected)) this.setSource(null); // a wire chosen 選了接線
     this.state = { ...this.state, projection: { ...this.state.projection,
       edges: applyEdgeChanges(runtime, this.state.projection.edges) } }; this.publish();
   };
@@ -862,6 +888,8 @@ export class Editor {
   focusGlslLine = (line: number) => { this.glslFocus = { line, n: this.glslFocus.n + 1 }; this.glslListeners.forEach(listener => listener()); };
   /** Select one node, as clicking it would (a GLSL line leads to its node, Refactor.63). 選取一個節點（GLSL 的行找回它的節點）。 */
   selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
+  /** Select one wire, as a click on it (Refactor.103: from the Graph JSON View). 選取一條接線，同點它（R.103：從 Graph JSON View）。 */
+  selectWire = (id: string) => { this.reselect(new Set(), new Set([id])); this.setPrimary(null); };
   /** Back to the graph of the program TD still runs (Last Known Good, design-interview Q38 2-5; Refactor.63): loaded the
    * way TD's version is when a conflict is resolved, as one Undo step, then delivered as any edit; Uniforms take no part
    * of their own (human 2026-10-10). 回到 TD 仍在跑的那一版的圖：照衝突時採用 TD 版本的方式載入、一步 Undo，再照一般編輯送出；

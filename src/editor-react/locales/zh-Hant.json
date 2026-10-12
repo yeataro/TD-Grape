@@ -188,6 +188,7 @@
   "glsl.selectReferences": "選取所有使用 {name} 的節點",
   "glsl.title": "GLSL",
   "graphJson.goToNode": "選取節點 {node}",
+  "graphJson.goToWire": "選取這條線",
   "graphJson.label": "圖文件的 JSON",
   "graphJson.liveTrace": "即時追蹤",
   "graphJson.liveTraceHint": "亮起選取節點的那幾行，以及修改改到的行",

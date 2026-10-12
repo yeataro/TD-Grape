@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { core, type Declaration } from './core';
 import { tr, say } from './text';
 import { useSession } from './contexts';
@@ -49,7 +49,14 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
   group: string; refKey: string; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove?(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className="source-card" style={groupColor(group)} {...drag}>
+  // Pressing the card itself (not a field, a button or its menu) selects it, as legacy (inspector.js:2534); a TD value has no
+  // declaration and is not selected (Refactor.103). 按卡片本身（不是欄位、按鈕或選單）就選取它，照舊產品；TD 內建值沒有宣告，不選取（R.103）。
+  const declared = !refKey.startsWith('tdValue:');
+  const selected = useSyncExternalStore(session.selectionSubscribe, session.sourceSnapshot) === refKey && declared;
+  const choose = (event: MouseEvent) => {
+    if (declared && !(event.target as Element).closest('input, textarea, select, button, .value-row')) session.selectSource(refKey);
+  };
+  return <div className={'source-card' + (selected ? ' selected' : '')} style={groupColor(group)} {...drag} onClick={choose}>
     {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
       : <span className="expand-toggle" aria-hidden="true" />}

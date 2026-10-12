@@ -6,6 +6,7 @@ const loaded = { exports: {} };
 new Function('module', 'exports', ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../../src/editor-react/json_format.ts'), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(loaded, loaded.exports);
 const { formatJson, layJson, changedLines } = loaded.exports;
+const plain = value => JSON.parse(JSON.stringify(value));
 
 test('short objects and arrays stay on one line', () => {
   assert.equal(formatJson({ x: 1, y: [1, 2], z: {}, w: [] }), '{ "x": 1, "y": [1, 2], "z": {}, "w": [] }');
@@ -41,10 +42,13 @@ test('a canvas node owns its lines, and only its id and name lead to it', () => 
   const own = lines.filter(line => line.node === 'a').map(line => line.text.trim());
   assert.equal(own[0], '{'); assert.equal(own.at(-1), '},');
   assert.ok(own.includes('"nodeType": "sgrape.builtin.color",'));
-  assert.deepEqual(lines.filter(line => line.link).map(line => [line.link, line.text.trim()]),
-    [['a', '"id": "a",'], ['a', '"name": "a_1"'], ['b', '"id": "b",'], ['b', '"name": "b_1"']]);
-  // The edge names nodes too, but it is not a node's own line. 線也寫了節點，但不是節點自己的行。
-  assert.ok(lines.filter(line => line.text.includes('"from"')).every(line => line.node === undefined && line.link === undefined));
+  assert.deepEqual(lines.filter(line => line.node && line.links).map(line => [line.links, line.text.trim()]),
+    [[[{ node: 'a' }], '"id": "a",'], [[{ node: 'a' }], '"name": "a_1"'], [[{ node: 'b' }], '"id": "b",'], [[{ node: 'b' }], '"name": "b_1"']]);
+  // A wire's line is its own, not a node's; its id leads to the wire, its from and to to their nodes, the ports to nothing
+  // (Refactor.103). 接線那一行屬於接線、不屬於節點；id 帶到接線，from、to 帶到兩端的節點，接孔名不帶（R.103）。
+  const wire = lines.filter(line => line.edge === 'e1');
+  assert.ok(wire.length && wire.every(line => line.node === undefined));
+  assert.deepEqual(plain(wire.flatMap(line => line.links ?? [])), [{ edge: 'e1' }, { node: 'a' }, null, { node: 'b' }, null]);
 });
 
 test('changed lines: a moved node lights its own place; removing or adding one does not light the rest', () => {

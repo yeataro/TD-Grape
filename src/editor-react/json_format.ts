@@ -11,17 +11,38 @@ const WIDTH = 60;
 const INDENT = '  ';
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+/** What a value on a line leads to: a node, or a wire (Refactor.103). 一行裡的某個值帶到哪裡：一個節點，或一條接線（R.103）。 */
+export type JsonTarget = { node: string } | { edge: string };
 /** A laid-out line. `place`: where it is in the graph, the same for the same thing after an edit (an item with an id is placed by its
- * id, not its index, so removing one does not move the rest); `node`: the node whose object holds it; `link`: the node its value
- * names, on a node's own id or name line. 排好的一行。place：在圖裡的位置，改過之後同一個東西還是同一個位置（有 id 的項目用 id 不用
- * 索引，刪掉一個不會讓後面的換位置）；node：包住它的節點物件；link：節點自己的 id 或名字那一行，值指向的節點。 */
-export type JsonLine = { text: string; place: string; node?: string; link?: string };
+ * id, not its index, so removing one does not move the rest); `node`: the node whose object holds it; `links`: for each text value on
+ * the line, in order, what it leads to (a node's id and name lead to the node; a wire's id to the wire, its `from` and `to` to their
+ * nodes), or null. 排好的一行。place：在圖裡的位置，改過之後同一個東西還是同一個位置（有 id 的項目用 id 不用索引，刪掉一個不會讓後面的
+ * 換位置）；node：包住它的節點物件；links：這一行每個文字值依序帶到哪裡（節點的 id 與名字帶到節點；接線的 id 帶到接線，from、to 帶到
+ * 兩端的節點），或 null。 */
+export type JsonLine = { text: string; place: string; node?: string; links?: (JsonTarget | null)[];
+  /** The wire or declaration whose object holds it (Refactor.103). 包住它的接線或宣告物件（R.103）。 */
+  edge?: string; declaration?: string };
+type Owner = { node?: string; edge?: string; declaration?: string };
 
 const isOpenable = (value: Json): value is Json[] | { [key: string]: Json } => typeof value === 'object' && value !== null;
 const entriesOf = (value: Json[] | { [key: string]: Json }): [string | null, Json][] =>
   Array.isArray(value) ? value.map(item => [null, item]) : Object.entries(value);
 const keyOf = (key: string | null) => key === null ? '' : JSON.stringify(key) + ': ';
 const idOf = (value: Json) => isOpenable(value) && !Array.isArray(value) && typeof value.id === 'string' ? value.id : null;
+
+/** The targets of the text values inside a value, in the order they are written. 一個值裡面的文字值，依寫出的順序各自帶到哪裡。 */
+function targets(value: Json, path: readonly string[], out: (JsonTarget | null)[] = []): (JsonTarget | null)[] {
+  if (typeof value === 'string') {
+    const [stages, , list, item, key, end] = path, own = item?.startsWith('@') ? item.slice(1) : undefined;
+    const target: JsonTarget | null = stages !== 'stages' || own === undefined ? null
+      : list === 'nodes' && path.length === 5 && (key === 'id' || key === 'name') ? { node: own }
+      : list === 'edges' && path.length === 5 && key === 'id' ? { edge: own }
+      : list === 'edges' && path.length === 6 && (key === 'from' || key === 'to') && end === '#0' ? { node: value }
+      : null;
+    out.push(target);
+  } else if (isOpenable(value)) entriesOf(value).forEach(([key, item], index) => targets(item, [...path, key ?? (idOf(item) !== null ? '@' + idOf(item) : '#' + index)], out));
+  return out;
+}
 
 function oneLine(value: Json): string {
   if (!isOpenable(value)) return JSON.stringify(value);
@@ -30,27 +51,31 @@ function oneLine(value: Json): string {
   return items.length ? '{ ' + items.join(', ') + ' }' : '{}';
 }
 
-/** `path`: the keys down to here; a canvas node is an item of `stages.<stage>.nodes`. path：走到這裡的鍵；畫布上的節點是
- * stages.<stage>.nodes 的項目。 */
-function lay(value: Json, indent: string, key: string | null, comma: string, path: readonly string[], node: string | undefined, lines: JsonLine[]) {
+/** `path`: the keys down to here; a canvas node is an item of `stages.<stage>.nodes`, a wire of `stages.<stage>.edges`, a declaration
+ * of `declarations`. path：走到這裡的鍵；畫布上的節點是 stages.<stage>.nodes 的項目，接線是 stages.<stage>.edges 的，宣告是 declarations 的。 */
+function lay(value: Json, indent: string, key: string | null, comma: string, path: readonly string[], owner: Owner, lines: JsonLine[]) {
   // The path written as JSON, so no key can run into another; an opening and a closing line get their own last step.
   // 路徑寫成 JSON，任何鍵都不會撞在一起；開頭與結尾的行各自多一步。
   const place = JSON.stringify(path), edge = (mark: string) => JSON.stringify([...path, mark]);
   const flat = indent + keyOf(key) + oneLine(value) + comma;
   if (!isOpenable(value) || flat.length <= WIDTH || !entriesOf(value).length) {
-    const link = node !== undefined && path.length === 5 && (key === 'id' || key === 'name') && typeof value === 'string' ? node : undefined;
-    lines.push({ text: flat, place, ...(node !== undefined ? { node } : {}), ...(link !== undefined ? { link } : {}) });
+    const links = targets(value, path);
+    lines.push({ text: flat, place, ...owner, ...(links.some(Boolean) ? { links } : {}) });
     return;
   }
   const items = entriesOf(value), [open, close] = Array.isArray(value) ? ['[', ']'] : ['{', '}'];
-  const at = (line: Omit<JsonLine, 'node'>) => lines.push(node !== undefined ? { ...line, node } : line);
+  const at = (line: { text: string; place: string }) => lines.push({ ...line, ...owner });
   at({ text: indent + keyOf(key) + open, place: edge('\u0001{') });
-  const canvas = path.length === 3 && path[0] === 'stages' && path[2] === 'nodes';
+  const stageList = path.length === 3 && path[0] === 'stages' ? path[2] : path.length === 1 && path[0] === 'declarations' ? 'declarations' : null;
+  const ownerOf = (item: Json): Owner => {
+    const id = idOf(item) ?? undefined;
+    return stageList === 'nodes' ? { node: id } : stageList === 'edges' ? { edge: id } : stageList === 'declarations' ? { declaration: id } : owner;
+  };
   items.forEach(([childKey, item], index) => {
     // An item with an id is placed by it (@), others by their index (#): an id "3" is not the fourth item. 有 id 的項目用 id（@）、其他用
     // 索引（#）：id 是「3」不等於第四項。
     const step = childKey ?? (idOf(item) !== null ? '@' + idOf(item) : '#' + index);
-    lay(item, indent + INDENT, childKey, index < items.length - 1 ? ',' : '', [...path, step], canvas ? idOf(item) ?? undefined : node, lines);
+    lay(item, indent + INDENT, childKey, index < items.length - 1 ? ',' : '', [...path, step], ownerOf(item), lines);
   });
   at({ text: indent + close + comma, place: edge('\u0001}') });
 }
@@ -62,7 +87,7 @@ export function layJson(value: unknown): JsonLine[] {
   const text = JSON.stringify(value);
   if (text === undefined) return [];
   const lines: JsonLine[] = [];
-  lay(JSON.parse(text) as Json, '', null, '', [], undefined, lines);
+  lay(JSON.parse(text) as Json, '', null, '', [], {}, lines);
   return lines;
 }
 /** The same as text; read as JSON it is the same value. 同上的文字；當 JSON 讀回來是同一個值。 */
