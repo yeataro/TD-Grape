@@ -508,6 +508,19 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 :root.dragging-to-add, :root.dragging-to-add * { cursor: copy !important; }
 /* A finger starts the drag on these, so they do not scroll the list (drag_to_add.tsx). 手指在這些地方開始拖曳，不捲動清單。 */
 [data-drag-handle] { touch-action: none; }
+/* A node being placed (Refactor.105, first look to adjust; human 2026-10-12: only the frame, the title, the line between title and
+   body, and the name, as legacy's placement outline — purple, not its green; a glow later, with the appearance presets). The card
+   keeps its real size, its insides hidden; its wire is dashed. Hidden until React Flow has measured it. Never under the pointer.
+   放置中的節點（R.105，第一版樣式，之後再調；人類 10-12：只有框、標題、標題與內容之間的線、名稱，同舊產品的放置框——紫色，不用它的綠色；
+   光暈之後隨外觀預設）。卡片維持真正的大小、裡面藏起來；它的線是虛線。量到大小之前藏著。不擋指標。 */
+.react-flow__node.placing { pointer-events: none; }
+.react-flow__node.placing.measuring { visibility: hidden; }
+.react-flow__node.placing .grape-node { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--surface-node) 40%, transparent); box-shadow: none; }
+.react-flow__node.placing .grape-node > :not(.node-title) { visibility: hidden; }
+.react-flow__node.placing .node-title { background: none; border-bottom: 1.5px solid var(--accent); }
+.react-flow__node.placing .node-title > :not(strong) { visibility: hidden; }
+.react-flow__node.placing .node-title strong { color: var(--accent); }
+.react-flow__edge.placing .react-flow__edge-path { stroke-dasharray: 6 5; }
 .graph-json-scroll { height: 100%; }
 .graph-json-scroll .scroll-fade-content { width: auto; }
 .graph-json .graph-json-line { display: flex; }

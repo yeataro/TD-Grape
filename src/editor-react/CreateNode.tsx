@@ -11,7 +11,8 @@ import { language, languageSubscribe, say, tr } from './text';
 // the human (still thinking how to keep it from crowding).
 // 浮動的新增節點：搜尋、清單、說明欄（先佔位）。在叫出的位置打開；從放開的線叫出時只列接得上的、標出接哪個接孔、
 // 常用的排前面。分類欄等人類想好（選項多會擠）。
-export type CreateRequest = { screen: { x: number; y: number }; wire?: { end: WireEnd; type: string } };
+/** place: what is picked is placed, not added at once (a right-click on a port; Refactor.105). place：選好的先放置，不馬上新增（接孔右鍵；R.105）。 */
+export type CreateRequest = { screen: { x: number; y: number }; wire?: { end: WireEnd; type: string }; place?: boolean };
 type Match = { choice: AddChoice; port?: WireFit };
 
 export function CreateNode({ request, choices, session, onPick, onClose }: {

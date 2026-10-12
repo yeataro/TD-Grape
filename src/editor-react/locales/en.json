@@ -117,6 +117,7 @@
   "create.close": "Close",
   "create.empty": "Nothing matches.",
   "create.noDescription": "Descriptions are not available yet.",
+  "create.place": "Click to place the node · Esc to cancel",
   "create.results": "Nodes",
   "create.search": "Search nodes…",
   "create.title": "Create node",

@@ -30,6 +30,7 @@ import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
 import { DragToAddLayer, useDropToAdd } from './drag_to_add';
+import { usePlaceNode, type Placing } from './place_node';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, LoadingCanvas, useShell, type Shell } from './shell';
@@ -145,9 +146,9 @@ function ZoomReadout() {
   </>;
 }
 const NO_TEXT: TextHeights = {};
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, placing, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
-  errorNodes: ReadonlySet<string> | null;
+  errorNodes: ReadonlySet<string> | null; placing: Placing | null;
   onCreate(request: CreateRequest): void; onMenu(open: MenuOpen): void;
   focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
   textGrows: boolean;
@@ -169,7 +170,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
     if (!open.port) { onMenu(open); return; }
     const { node, port, side } = open.port, data = flow.getNode(node)?.data as FlowNode['data'] | undefined;
     const type = (side === 'output' ? data?.outputs : data?.inputs)?.find(item => item.key === port)?.type ?? '';
-    onCreate({ screen: { x: open.x, y: open.y }, wire: { end: { node, port, side } as WireEnd, type } });
+    onCreate({ screen: { x: open.x, y: open.y }, wire: { end: { node, port, side } as WireEnd, type }, place: true });
   }, [flow, onCreate, onMenu]);
   // Canvas damping takes the mouse's wheel and background drag over only while on (viewport.ts). 畫布阻尼只在開著時接管滑鼠。
   const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampCanvas> | null>(null);
@@ -240,7 +241,9 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
-    <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+    <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left"
+      // A node being placed is drawn with the graph's, but is not in it (place_node.tsx). 放置中的節點和圖的一起畫，但不在圖裡。
+      nodes={placing ? [...projection.nodes, placing.node] : projection.nodes} edges={placing ? [...edges, ...placing.edges] : edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); if (event?.type === 'mousedown') panningCursor(true); }}
       // Only a gesture's end: the damped pan moves the view by code, and each such move ends with no event. 只在手勢結束時：阻尼的平移
       // 用程式移動畫面，每次這樣的移動結束時都沒有事件。
@@ -400,6 +403,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
+  // Place a node (Refactor.105): after a port's right-click the picked node follows the pointer until a press adds it. 放置節點（R.105）。
+  const place = usePlaceNode(session, flow, prefs.snap ? GRID : null), placing = place.placing;
   // The right-click menu (Refactor.93): where it opened, and what was selected then. 右鍵選單（R.93）：在哪裡打開、當時選了什麼。
   const [menuAt, setMenuAt] = useState<CanvasMenuRequest | null>(null);
   const onMenu = useCallback((open: MenuOpen) => setMenuAt({ x: open.x, y: open.y, touch: open.touch, host: open.host, wire: open.wire,
@@ -543,7 +548,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
+            placing={placing} onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
@@ -555,6 +560,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               （人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
           <div className="network-overlay">
           <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.showOrFold('glsl')} /></div>
+          {/* While a node is placed, how to finish (legacy create.place). 放置節點時，怎麼完成（照舊產品）。 */}
+          {placing && <div className="floating-notice" role="status">{say(tr('create.place', 'Click to place the node · Esc to cancel'))}</div>}
           {session && draft && <div className="floating-notice warning" role="group" aria-label={say(tr('draft.label', 'Earlier draft'))}>
             <span>{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}</span>
             {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
@@ -584,7 +591,11 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           onCreate={at => setCreating({ screen: at })} />}
         <DragToAddLayer />
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
-          onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}
+          onPick={(choice, port) => {
+            setCreating(null);
+            const wire = creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined;
+            if (!(creating.place && place.start(choice.spec, wire, creating.screen))) addAt(choice, creating.screen, wire);
+          }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     {above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}

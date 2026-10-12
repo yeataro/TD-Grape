@@ -117,6 +117,7 @@
   "create.close": "關閉",
   "create.empty": "沒有符合的項目。",
   "create.noDescription": "節點說明尚未提供。",
+  "create.place": "點擊放置節點 · Esc 取消",
   "create.results": "節點",
   "create.search": "搜尋節點…",
   "create.title": "新增節點",

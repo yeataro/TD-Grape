@@ -503,9 +503,19 @@ export class Editor {
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
   addNode = (spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) =>
-    this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
+    this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => { this.insertWired(document, spec, position, wire); });
+  /** What adding this node (wired when given) would draw, rehearsed on a discarded candidate with the same edit as addNode
+   * (Refactor.105: place a node): the new node and the wires touching it, as the canvas draws them. null: adding it fails.
+   * 新增這個節點（有給線就接上）會畫出什麼，用和 addNode 同一個修改在丟棄的候選上預演（R.105：放置節點）：新節點與碰到它的線，
+   * 照畫布畫的樣子。null＝新增會失敗。 */
+  placementPreview = (spec: NewNode, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) => this.rehearse(document => {
+    const id = this.insertWired(document, spec, { x: 0, y: 0 }, wire), drawn = project(document, this.state.projection, this.bootstrap.typeContract);
+    const node = drawn.nodes.find(item => item.id === id);
+    return node ? { node, edges: drawn.edges.filter(edge => edge.source === id || edge.target === id) } : null;
+  });
+  private insertWired(document: GraphDocument, spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string; configure?: WireFit['configure'] }) {
       const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
-      if (!wire) return;
+      if (!wire) return id;
       const { end, port, configure } = wire;
       // Made in the configuration the wire-drop table chose (e.g. Add as vec4), in the same step (Refactor.77).
       // 用拉線新增表選的設定建立（例如 Add 建成 vec4），同一步完成（R.77）。
@@ -527,7 +537,8 @@ export class Editor {
         const style = core.componentStyle(peer.definition, peer.data, net.context), { componentNames: _, ...ui } = made.data.ui ?? {};
         made.update({ ui: style === core.componentStyle(made.definition, { ...made.data, ui }, net.context) ? ui : { ...ui, componentNames: style } });
       }
-    });
+      return id;
+  }
   /** Where a dropped wire would go on a new node made from this choice (Refactor.77, design-interview Q37 1-5 supplement):
    * looked up in the table the build wrote with the real rules; choices only the document knows (declared sources,
    * preset Uniforms, TD values) are still rehearsed below until the same table is made for a document. null: it does not fit.
