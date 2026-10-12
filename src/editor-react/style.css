@@ -478,6 +478,12 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .graph-json .graph-json-line.changed::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--code-line-flash);
   opacity: 0; animation: graph-json-flash-back var(--code-flash-time) ease-out; pointer-events: none; }
 @keyframes graph-json-flash-back { from { opacity: 1; } }
+/* A gone line (Refactor.103.2, a trial; human 2026-10-12: "turn red, then vanish"): red where it stood, fading out, then taken away; not
+   selectable, so a copy never takes what is no longer there. 不見的行（R.103.2，試做；人類：「變紅後消失」）：在原位紅色淡出，再拿掉；
+   不能選取，複製時不會拿到已經不在的東西。 */
+.graph-json .graph-json-line.removed { color: var(--status-error); background: var(--code-line-removed); user-select: none; -webkit-user-select: none;
+  opacity: 0; animation: graph-json-gone var(--code-flash-time) ease-in; }
+@keyframes graph-json-gone { from { opacity: 1; } }
 @keyframes graph-json-flash { from { filter: saturate(0) brightness(var(--code-flash-brightness)); } }
 .glsl-failure { padding: 8px 10px; border-radius: var(--radius-field); border: 1px solid var(--status-error); font-size: var(--font-sm); line-height: var(--line-sm); }
 .glsl-failure p { margin: 0 0 4px; }

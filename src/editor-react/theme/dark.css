@@ -170,6 +170,8 @@
   --code-line-hover: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
   /* A changed code line's background as it lights (Refactor.103). 改到的程式碼行亮起時的底色（R.103）。 */
   --code-line-flash: color-mix(in srgb, var(--palette-contrast) 22%, transparent);
+  /* A gone code line's background as it fades (Refactor.103.2). 不見的程式碼行淡出時的底色（R.103.2）。 */
+  --code-line-removed: color-mix(in srgb, var(--status-error) 18%, transparent);
   --code-line-error: color-mix(in srgb, var(--palette-error) 32%, transparent);
   /* TD's error mark on a node that wrote a line TD reported (trial, Refactor.63.6.1): the error colour with a dark cross.
      TD 回報的錯誤行由它寫的節點掛的 TD 錯誤標記（試驗）：錯誤色底、深色叉。 */

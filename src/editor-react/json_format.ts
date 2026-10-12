@@ -103,3 +103,17 @@ export function changedLines(before: readonly JsonLine[], after: readonly JsonLi
   after.forEach((line, index) => { if (was.get(line.place) !== bare(line.text)) changed.add(index); });
   return changed;
 }
+
+/** The lines that are gone, each with where it stood: before the line now at `at` (or at the end). Shown red for a moment and then
+ * taken away (Refactor.103.2, human 2026-10-12: "turn red, then vanish" — a trial, to be taken back if it is not worth it).
+ * 不見了的行，各自原本在哪：現在第 at 行之前（或最後）。先畫成紅色一下再拿掉（R.103.2，人類：「變紅後消失」——試做，不值得就退回）。 */
+export function removedLines(before: readonly JsonLine[], after: readonly JsonLine[]): { at: number; line: JsonLine }[] {
+  const now = new Map(after.map((line, index) => [line.place, index]));
+  const gone: { at: number; line: JsonLine }[] = [];
+  let at = 0;
+  for (const line of before) {
+    const index = now.get(line.place);
+    if (index !== undefined) at = index + 1; else gone.push({ at, line });
+  }
+  return gone;
+}

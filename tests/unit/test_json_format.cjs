@@ -5,7 +5,7 @@ const fs = require('node:fs'), path = require('node:path'), ts = require('typesc
 const loaded = { exports: {} };
 new Function('module', 'exports', ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../../src/editor-react/json_format.ts'), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(loaded, loaded.exports);
-const { formatJson, layJson, changedLines } = loaded.exports;
+const { formatJson, layJson, changedLines, removedLines } = loaded.exports;
 const plain = value => JSON.parse(JSON.stringify(value));
 
 test('short objects and arrays stay on one line', () => {
@@ -70,4 +70,14 @@ test('places never repeat', () => {
     { value: 'x and enough words to open this one as well' }], 'a\u0000b': { '{': 1, c: 'more than sixty characters in all, so that it opens' } });
   const places = lines.map(line => line.place);
   assert.equal(new Set(places).size, places.length);
+});
+
+// Gone lines stand where they were (Refactor.103.2). 不見的行放回原本的位置（R.103.2）。
+test('removed lines: each with where it stood', () => {
+  const before = layJson(graph(node('a', 1), node('b', 2), node('c', 3))), after = layJson(graph(node('a', 1), node('c', 3)));
+  const gone = removedLines(before, after);
+  assert.ok(gone.length > 0 && gone.every(item => item.line.node === 'b'));
+  const firstC = after.findIndex(line => line.node === 'c');
+  assert.ok(gone.every(item => item.at === firstC), 'all of b goes back right before c');
+  assert.deepEqual(removedLines(after, after), []);
 });
