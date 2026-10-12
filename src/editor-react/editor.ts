@@ -30,6 +30,22 @@ export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
  * 線接到新節點的哪裡、用什麼設定建立（R.77）。 */
 export type WireFit = Bootstrap['typeContract']['wireDrop'][string]['output'][string];
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
+/** A new group's ID, for a new group and a pasted one alike. 新群組的 ID，新建與貼上都用。 */
+const newGroupId = () => 'g' + crypto.randomUUID().replaceAll('-', '').slice(0, 16);
+/** A stored graph read for editing, the one way every graph comes in (Refactor.65, 98): its nodes in their current forms, checked that
+ * it can be opened, then its groups tidied (1-2) — checked first, so a graph in another format is refused with its own message
+ * instead of failing while being tidied. Nothing changed gives the same object back, so a caller can tell (useRemote).
+ * 讀進來編輯的圖，每一條讀圖的路都走這裡（R.65、98）：節點換成目前的寫法、檢查能不能打開、再整理群組（1-2）——先檢查，別種格式的圖
+ * 會照它自己的訊息被拒絕，而不是整理時壞掉。什麼都沒改就回傳同一個物件，呼叫的人分得出來（useRemote）。 */
+function readStored(stored: Graph) {
+  const { graph: read, changes } = core.upgradeGraph(stored, core.nodeUpgrades, core.registry);
+  requireSupported(read);
+  const tidied = structuredClone(read), groupsFixed = core.groups.tidyGroups(tidied) > 0;
+  return { graph: groupsFixed ? tidied : read, changes, groupsFixed };
+}
+/** Said when groups were tidied on opening; it covers every kind of fix (members, repeats, values). 開圖時整理過群組要說的話；
+ * 涵蓋各種修正（成員、重複、數值）。 */
+const groupsFixedText = () => tr('groups.openFixed', 'Some groups held entries that could not be kept as they were (nodes not in the graph, a node listed twice, or invalid values); they were tidied.');
 /** How far Duplicate puts the copy, right and down (legacy graph_ui.js:2429). 複製副本放多遠，往右下（照舊產品）。 */
 const DUPLICATE_OFFSET = 48;
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
@@ -183,11 +199,9 @@ export class Editor {
     private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler, editorVersion = 'unknown',
     readonly log = new ReportLog()) {
     checkLoaded(host, bootstrap, loaded);
-    const { graph: read, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document), core.nodeUpgrades, core.registry);
-    // Groups that list nodes not there, or a node twice, are tidied on opening, said, and sent like an upgrade (design-interview
-    // 1-2). 群組名單有不存在的節點、或一個節點被認領兩次：開圖時整理、說出來，像升級一樣送出（1-2）。
-    const graph = structuredClone(read), groupsFixed = core.groups.tidyGroups(graph) > 0;
-    requireSupported(graph);
+    // Groups that need tidying are tidied on opening, said, and sent like an upgrade (design-interview 1-2).
+    // 需要整理的群組在開圖時整理、說出來，像升級一樣送出（1-2）。
+    const { graph, changes: upgrades, groupsFixed } = readStored(parseDocument(loaded.state.document));
     this.document = new core.GraphDocument(graph, core.registry);
     this.td = loaded.uniforms ?? {};
     // The live connection also tells, before anything is sent, that TD is gone or not answering (Refactor.71).
@@ -215,7 +229,7 @@ export class Editor {
     // Upgraded as it was read: reported, then sent like any edit so TD stores the current form (human 2026-10-10).
     // 讀圖時升級過：報告，再照一般編輯送出，讓 TD 存成目前的寫法（人類）。
     if (upgrades.length) this.reportUpgrades(upgrades);
-    if (groupsFixed) this.tell('warning', tr('groups.openFixed', 'Some groups listed nodes that are not in the graph, or the same node twice; they were tidied.'));
+    if (groupsFixed) this.tell('warning', groupsFixedText());
     if (upgrades.length || groupsFixed) { this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
@@ -231,11 +245,10 @@ export class Editor {
    * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
   private upgrade(graph: Graph): Graph {
     // With the registry: nodes made before names were given get one (Refactor.76). 帶 registry：給名字之前做的節點補上名字（R.76）。
-    const { graph: read, changes } = core.upgradeGraph(graph, core.nodeUpgrades, core.registry);
+    const { graph: read, changes, groupsFixed } = readStored(graph);
     if (changes.length) this.reportUpgrades(changes);
-    const current = structuredClone(read);
-    if (core.groups.tidyGroups(current)) this.tell('warning', tr('groups.openFixed', 'Some groups listed nodes that are not in the graph, or the same node twice; they were tidied.'));
-    return current;
+    if (groupsFixed) this.tell('warning', groupsFixedText());
+    return read;
   }
   // The replacement report (Refactor.65, human 2026-10-10): a floating notice that names each node and leads to it, and one
   // log entry. 替換報告（人類）：逐一列出、可點到節點的浮動提示，以及一筆訊息紀錄。
@@ -673,7 +686,7 @@ export class Editor {
     }
     let ids: string[] = [];
     const version = this.state.version;
-    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId); });
+    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId, newGroupId); });
     if (this.state.version === version || !ids.length) return false;
     this.boxSelect(new Set(ids), [...ids].reverse());
     return true;
@@ -696,7 +709,7 @@ export class Editor {
   /** A new group of these nodes (G-3, Ctrl+G); its ID, or null when they cannot make one. 用這些節點建立群組（G-3，Ctrl＋G）；回傳 ID，
    * 不能建立時是 null。 */
   createGroup = (ids: readonly string[], name: string) => {
-    const id = 'g' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), version = this.state.version;
+    const id = newGroupId(), version = this.state.version;
     this.transact(tr('edit.grouped', 'Group created'), net => core.groups.createGroup(net, ids, { id, name }));
     return this.state.version === version ? null : id;
   };
@@ -823,7 +836,6 @@ export class Editor {
   restoreDraft = (saved: Graph) => {
     try {
       const graph = this.upgrade(saved);
-      requireSupported(graph);
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
       const changes = core.changesBetween(before, graph, core.registry);
       if (!changes.changed) return true;
@@ -859,7 +871,6 @@ export class Editor {
     if (!good) return;
     try {
       const graph = this.upgrade(parseDocument(good.document));
-      requireSupported(graph);
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, graph, core.registry));
       this.past.push(before); this.future = []; this.document = next;
@@ -872,7 +883,6 @@ export class Editor {
     try {
       const result = await this.sync.read();
       const stored = parseDocument(result.state.document), remote = this.upgrade(stored);
-      requireSupported(remote);
       const before = this.graph(), next = new core.GraphDocument(remote, core.registry);
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, remote, core.registry));
       this.past.push(before); this.future = []; this.document = next;

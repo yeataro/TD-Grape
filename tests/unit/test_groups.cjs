@@ -5,7 +5,7 @@ const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__d
 const G=context.GrapeGraph,registry=G.registry,groups=G.groups;
 const plain=v=>JSON.parse(JSON.stringify(v));
 const bootstrap=JSON.parse(fs.readFileSync(path.join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8'));
-const OP='a'.repeat(32);let counter=0;const newId=()=>'p'+(++counter);
+const OP='a'.repeat(32);let counter=0;const newId=()=>'p'+(++counter),newGroupId=()=>'g'+(++counter);
 
 // Default graph plus four Add nodes a–d. 預設圖加四個 Add。
 function graph(){
@@ -82,9 +82,28 @@ test('copy and paste bring a group only when all its members come (G-2), under n
   const whole=G.copyNodes(doc,['a','b','c'],OP),part=G.copyNodes(doc,['b','c'],OP);
   assert.deepEqual(plain(whole.stages.pixel.ui.groups).map(g=>g.id),['g1']);
   assert.equal(part.stages.pixel.ui,undefined,'b alone does not bring the group');
-  let ids;const pasted=new G.GraphDocument(doc.change(c=>{ids=G.pasteClip(c,whole,{x:0,y:400},newId);}).after,registry);
+  let ids;const pasted=new G.GraphDocument(doc.change(c=>{ids=G.pasteClip(c,whole,{x:0,y:400},newId,newGroupId);}).after,registry);
   const all=of(pasted);
   assert.equal(all.length,2);
   const fresh=all.find(g=>g.id!=='g1');
   assert.equal(fresh.name,'Pair');assert.deepEqual(fresh.nodes,plain(ids.slice(0,2)),'its members are the pasted copies');
+});
+
+// Deep clean of Refactor.93–102 (2026-10-12): fixes found by the audit. 深度清潔（10-12）：檢查找到的修正。
+test('limits and repeats: a join that would pass the member limit is not offered; the same node twice cannot make a group',()=>{
+  const full=Array.from({length:groups.MEMBER_LIMIT},(_,i)=>'m'+i);
+  const listed=[{id:'g1',name:'Full',nodes:full}];
+  assert.equal(groups.joinTarget(listed,['m0','x']),null,'one more than the limit');
+  assert.equal(groups.joinTarget([{id:'g1',name:'Room',nodes:full.slice(1)}],['m1','x']).id,'g1','fits exactly');
+  assert.equal(groups.canGroup([],['a','a']),false);
+});
+
+test('tidying compares values, not the order fields were written in; source snapshots of subgraphs are left as they are',()=>{
+  const network=nodes=>({nodes:nodes.map(id=>({id,nodeType:'sgrape.builtin.add',params:{}})),edges:[]});
+  const reordered={...network(['a','b']),ui:{groups:[{nodes:['a','b'],name:'One',id:'g1'}]}};
+  assert.equal(groups.tidy(reordered).fixed,false);
+  const snapshot={...network(['a']),ui:{groups:[{id:'g1',name:'Gone',nodes:['missing']}]}};
+  const document={stages:{pixel:network([])},subgraphs:[{id:'s',name:'S',scope:'library',graph:snapshot}]};
+  assert.equal(groups.tidyGroups(document),0);
+  assert.deepEqual(plain(snapshot.ui.groups),[{id:'g1',name:'Gone',nodes:['missing']}],'its authored bytes stay');
 });

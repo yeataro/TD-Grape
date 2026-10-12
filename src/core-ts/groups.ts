@@ -1,5 +1,6 @@
 import { copy, type Graph, type NetworkData, type Value } from './model';
 import type { Network } from './graph';
+import { equal } from './changes';
 
 /** Groups (Refactor.98; design-interview 1-2, G-1–G-3, GLOSSARY "群組與導覽"): a named, coloured list of member nodes, kept in its
  * network's `ui.groups`. A node is in at most one group, groups do not nest, a group stays in one network, and groups never change the
@@ -51,7 +52,8 @@ export function tidy(network: NetworkData): { groups: GraphGroup[]; fixed: boole
       ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
       ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
   }
-  return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
+  // Compared as JSON values, whatever order the fields were written in. 照 JSON 的值比，不管欄位寫的順序。
+  return { groups, fixed: !equal(groups, raw) };
 }
 /** The groups of a network as they are now (tidied, read-only use). 一張網路現在的群組（整理過，只讀用）。 */
 export const groupsOf = (network: NetworkData) => tidy(network).groups;
@@ -63,10 +65,12 @@ function write(network: NetworkData, groups: readonly GraphGroup[]): void {
   if (Object.keys(rest).length) network.ui = rest; else delete network.ui;
 }
 /** Tidy every network of a document in place; how many networks were fixed. Run at the end of every change and when a graph is
- * opened (1-2: the only two gates). 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。 */
+ * opened (1-2: the only two gates). Source snapshots of subgraphs keep their authored bytes, as in GraphDocument's completion.
+ * 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖的來源快照保留原樣，同
+ * GraphDocument 的收尾。 */
 export function tidyGroups(document: Graph): number {
   let fixed = 0;
-  const networks = [...Object.values(document.stages), ...(document.subgraphs ?? []).map(subgraph => subgraph.graph)];
+  const networks = [...Object.values(document.stages), ...(document.subgraphs ?? []).filter(subgraph => subgraph.scope === 'local').map(subgraph => subgraph.graph)];
   for (const network of networks) { const result = tidy(network); if (result.fixed) { write(network, result.groups); fixed++; } }
   return fixed;
 }
@@ -74,16 +78,17 @@ export function tidyGroups(document: Graph): number {
 const groupOf = (groups: readonly GraphGroup[], node: string) => groups.find(group => group.nodes.includes(node));
 /** Whether these nodes can make a new group: two or more, none in a group yet (legacy frames_ui.js:23-27). 這些節點能不能建立新群組：兩個以上、
  * 都還沒在群組裡（照舊產品）。 */
-export const canGroup = (groups: readonly GraphGroup[], ids: readonly string[]) =>
-  ids.length >= 2 && ids.length <= MEMBER_LIMIT && groups.length < GROUP_LIMIT && ids.every(id => !groupOf(groups, id));
-/** The group these nodes would join: the one holding most of them, when it is the only such one and some are outside it (legacy
- * frames_ui.js:38-48). 這些節點會加入哪個群組：裝著最多個的那一個，只有它一個這麼多、且有些不在裡面時（照舊產品）。 */
+export const canGroup = (groups: readonly GraphGroup[], ids: readonly string[]) => new Set(ids).size === ids.length
+  && ids.length >= 2 && ids.length <= MEMBER_LIMIT && groups.length < GROUP_LIMIT && ids.every(id => !groupOf(groups, id));
+/** The group these nodes would join: the one holding most of them, when it is the only such one, some are outside it (legacy
+ * frames_ui.js:38-48), and they all fit under the member limit. 這些節點會加入哪個群組：裝著最多個的那一個，只有它一個這麼多、
+ * 有些不在裡面時（照舊產品），而且全部放得進成員上限。 */
 export function joinTarget(groups: readonly GraphGroup[], ids: readonly string[]): GraphGroup | null {
   const counts = groups.map(group => ({ group, count: ids.filter(id => group.nodes.includes(id)).length })).filter(item => item.count > 0)
     .sort((a, b) => b.count - a.count);
   const best = counts[0];
   if (!best || counts[1]?.count === best.count || ids.every(id => best.group.nodes.includes(id))) return null;
-  return best.group;
+  return new Set([...best.group.nodes, ...ids]).size <= MEMBER_LIMIT ? best.group : null;
 }
 /** Whether some of these nodes are in a group (Remove from group). 這些節點有沒有在群組裡的（移出群組）。 */
 export const inAnyGroup = (groups: readonly GraphGroup[], ids: readonly string[]) => ids.some(id => !!groupOf(groups, id));
@@ -106,7 +111,7 @@ export function joinGroup(network: Network, ids: readonly string[]): void {
   edit(network, groups => {
     const target = joinTarget(groups, ids);
     if (!target) throw Error('No group to join');
-    return groups.map(group => group.id === target.id ? { ...group, nodes: [...group.nodes, ...ids.filter(id => !group.nodes.includes(id))].slice(0, MEMBER_LIMIT) }
+    return groups.map(group => group.id === target.id ? { ...group, nodes: [...group.nodes, ...ids.filter(id => !group.nodes.includes(id))] }
       : { ...group, nodes: group.nodes.filter(id => !ids.includes(id)) });
   });
 }

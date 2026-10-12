@@ -20,7 +20,7 @@ test('create, instantiate and edit a new definition share one graph transaction 
  assert.deepEqual(new GraphDocument(JSON.parse(JSON.stringify(step.after)),registry).snapshot(),step.after);
 });
 
-test('grouping preserves conversion locations and deduplicates only identical source/type pairs',()=>{
+test('a subgraph from a selection preserves conversion locations and deduplicates only identical source/type pairs',()=>{
  const g=empty(),d=g.stages.pixel;
  d.nodes=[node('source','float',{value:.5}),node('a','add',{type:'vec4'}),node('b','add',{type:'float'}),node('out','pixel_out'),node('extra','add',{type:'vec4'})];
  d.edges=[{from:['source','out'],to:['a','a']},{from:['source','out'],to:['a','b']},{from:['source','out'],to:['b','a']},{from:['a','out'],to:['out','color']},{from:['a','out'],to:['extra','a']},{from:['b','out'],to:['extra','b']}];
@@ -35,7 +35,7 @@ test('grouping preserves conversion locations and deduplicates only identical so
  assert.deepEqual(g,step.before);
 });
 
-test('grouping preserves nested references, scopes and data while avoiding boundary identity collisions',()=>{
+test('a subgraph from a selection preserves nested references, scopes and data while avoiding boundary identity collisions',()=>{
  const g=sharedGraph();g.stages.pixel.nodes.push(node('input','float',{value:3}));
  g.structDefinitions=[{id:'shape',fields:[{type:'float['+ScopeReferences.token('pixel',['input','out'])+']'}]}];
  const historical=plain(g.structDefinitions);g.catalogSnapshot={structDefinitions:historical};
@@ -75,7 +75,7 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
 test('capacity, invalid selections and missing type descriptions fail without publishing partial definitions',()=>{
  const g=empty();g.stages.pixel.nodes=[node('a','float',{value:1}),node('out','pixel_out')];
  const model=new GraphDocument(g,registry),before=model.snapshot();
- assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/cannot be grouped/);
+ assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/cannot be made into a subgraph/);
  assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['missing']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/selection/);
  assert.throws(()=>model.change(m=>{for(let i=0;i<65;i++)m.createSubgraph({id:'f'+i,name:'F',stage:'pixel'});}),/64/);
  assert.deepEqual(model.snapshot(),before);

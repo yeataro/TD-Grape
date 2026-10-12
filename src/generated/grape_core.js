@@ -298,12 +298,21 @@ function readClip(text) {
     const pixel = (_a = clip.stages) === null || _a === void 0 ? void 0 : _a.pixel;
     return pixel && Array.isArray(pixel.nodes) && Array.isArray(pixel.edges) ? clip : null;
 }
+/** A copied node's place; a value that is not a number counts as 0 (only hand-made text has one). 複製的節點位置；不是數字的值當 0
+ * （只有手寫的文字會有）。 */
+const placeOf = (node) => {
+    var _a, _b;
+    const x = Number((_a = node.ui) === null || _a === void 0 ? void 0 : _a.x), y = Number((_b = node.ui) === null || _b === void 0 ? void 0 : _b.y);
+    return { x: Number.isFinite(x) ? x : 0, y: Number.isFinite(y) ? y : 0 };
+};
 /** Paste a copy into the top-level pixel network of an editable candidate (inside GraphDocument.change), its top-left node corner
- * at `at`; returns the new nodes' IDs in their copied order. A declaration that is gone since it was copied comes back when its
+ * at `at`; returns the new nodes' IDs in their copied order. `newId` names nodes, `newGroupId` groups (the editor's, the same as
+ * for a new group). A declaration that is gone since it was copied comes back when its
  * ID and name are still free; otherwise its nodes become ghosts, as on opening. Named nodes take the next free name.
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
- * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。 */
-function pasteClip(candidate, clip, at, newId) {
+ * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
+ * 同新建群組）。 */
+function pasteClip(candidate, clip, at, newId, newGroupId) {
     const network = candidate.networks.get('pixel');
     if (!network)
         throw Error('No pixel network to paste into');
@@ -315,11 +324,12 @@ function pasteClip(candidate, clip, at, newId) {
         }
         catch ( /* its nodes stay ghosts 它的節點維持 Ghost */_a) { /* its nodes stay ghosts 它的節點維持 Ghost */ }
     }
-    const nodes = clip.stages.pixel.nodes, x = Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.x) !== null && _b !== void 0 ? _b : 0); })), y = Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.y) !== null && _b !== void 0 ? _b : 0); }));
+    const nodes = clip.stages.pixel.nodes, { x, y } = clipCorner(clip);
     const ids = new Map(nodes.map(node => [node.id, newId()])), taken = (0, node_names_1.namesIn)(network.data);
     const pasted = nodes.map(node => {
-        var _a, _b, _c, _d, _e;
-        const fresh = { ...(0, model_1.copy)(node), id: ids.get(node.id), ui: { ...(0, model_1.copy)((_a = node.ui) !== null && _a !== void 0 ? _a : {}), x: Number((_c = (_b = node.ui) === null || _b === void 0 ? void 0 : _b.x) !== null && _c !== void 0 ? _c : 0) - x + at.x, y: Number((_e = (_d = node.ui) === null || _d === void 0 ? void 0 : _d.y) !== null && _e !== void 0 ? _e : 0) - y + at.y } };
+        var _a;
+        const place = placeOf(node);
+        const fresh = { ...(0, model_1.copy)(node), id: ids.get(node.id), ui: { ...(0, model_1.copy)((_a = node.ui) !== null && _a !== void 0 ? _a : {}), x: place.x - x + at.x, y: place.y - y + at.y } };
         if (node.name !== undefined && (0, node_names_1.takesName)(candidate.registry, node.nodeType)) {
             fresh.name = (0, node_names_1.freeName)(node.name, taken);
             taken.add(fresh.name);
@@ -331,13 +341,13 @@ function pasteClip(candidate, clip, at, newId) {
     network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
     const groups = (0, groups_1.groupsOf)(clip.stages.pixel);
     if (groups.length)
-        (0, groups_1.addCopiedGroups)(network, groups, ids, () => 'g' + newId().replace(/[^A-Za-z0-9]/g, '').slice(-16));
+        (0, groups_1.addCopiedGroups)(network, groups, ids, newGroupId);
     return pasted.map(node => node.id);
 }
 /** Where the copied nodes start: their top-left corner, for Duplicate's offset. 複製的節點從哪裡開始：左上角，給複製副本位移用。 */
 function clipCorner(clip) {
-    const nodes = clip.stages.pixel.nodes;
-    return { x: Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.x) !== null && _b !== void 0 ? _b : 0); })), y: Math.min(...nodes.map(node => { var _a, _b; return Number((_b = (_a = node.ui) === null || _a === void 0 ? void 0 : _a.y) !== null && _b !== void 0 ? _b : 0); })) };
+    const places = clip.stages.pixel.nodes.map(placeOf);
+    return { x: Math.min(...places.map(place => place.x)), y: Math.min(...places.map(place => place.y)) };
 }
 
 },
@@ -1460,6 +1470,7 @@ exports.removeGroup = removeGroup;
 exports.changeGroup = changeGroup;
 exports.addCopiedGroups = addCopiedGroups;
 const model_1 = require("./model");
+const changes_1 = require("./changes");
 /** The body text's size factor, as legacy (graph_ui.js:1688: up to 10). 內文字體倍率範圍（照舊產品：最大 10）。 */
 exports.TEXT_SCALE_MIN = 0.5, exports.TEXT_SCALE_MAX = 10;
 const validScale = (value) => typeof value === 'number' && Number.isFinite(value) && value >= exports.TEXT_SCALE_MIN && value <= exports.TEXT_SCALE_MAX;
@@ -1498,7 +1509,8 @@ function tidy(network) {
             ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
             ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
     }
-    return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
+    // Compared as JSON values, whatever order the fields were written in. 照 JSON 的值比，不管欄位寫的順序。
+    return { groups, fixed: !(0, changes_1.equal)(groups, raw) };
 }
 /** The groups of a network as they are now (tidied, read-only use). 一張網路現在的群組（整理過，只讀用）。 */
 const groupsOf = (network) => tidy(network).groups;
@@ -1518,11 +1530,13 @@ function write(network, groups) {
         delete network.ui;
 }
 /** Tidy every network of a document in place; how many networks were fixed. Run at the end of every change and when a graph is
- * opened (1-2: the only two gates). 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。 */
+ * opened (1-2: the only two gates). Source snapshots of subgraphs keep their authored bytes, as in GraphDocument's completion.
+ * 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖的來源快照保留原樣，同
+ * GraphDocument 的收尾。 */
 function tidyGroups(document) {
     var _a;
     let fixed = 0;
-    const networks = [...Object.values(document.stages), ...((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(subgraph => subgraph.graph)];
+    const networks = [...Object.values(document.stages), ...((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).filter(subgraph => subgraph.scope === 'local').map(subgraph => subgraph.graph)];
     for (const network of networks) {
         const result = tidy(network);
         if (result.fixed) {
@@ -1535,10 +1549,12 @@ function tidyGroups(document) {
 const groupOf = (groups, node) => groups.find(group => group.nodes.includes(node));
 /** Whether these nodes can make a new group: two or more, none in a group yet (legacy frames_ui.js:23-27). 這些節點能不能建立新群組：兩個以上、
  * 都還沒在群組裡（照舊產品）。 */
-const canGroup = (groups, ids) => ids.length >= 2 && ids.length <= exports.MEMBER_LIMIT && groups.length < exports.GROUP_LIMIT && ids.every(id => !groupOf(groups, id));
+const canGroup = (groups, ids) => new Set(ids).size === ids.length
+    && ids.length >= 2 && ids.length <= exports.MEMBER_LIMIT && groups.length < exports.GROUP_LIMIT && ids.every(id => !groupOf(groups, id));
 exports.canGroup = canGroup;
-/** The group these nodes would join: the one holding most of them, when it is the only such one and some are outside it (legacy
- * frames_ui.js:38-48). 這些節點會加入哪個群組：裝著最多個的那一個，只有它一個這麼多、且有些不在裡面時（照舊產品）。 */
+/** The group these nodes would join: the one holding most of them, when it is the only such one, some are outside it (legacy
+ * frames_ui.js:38-48), and they all fit under the member limit. 這些節點會加入哪個群組：裝著最多個的那一個，只有它一個這麼多、
+ * 有些不在裡面時（照舊產品），而且全部放得進成員上限。 */
 function joinTarget(groups, ids) {
     var _a;
     const counts = groups.map(group => ({ group, count: ids.filter(id => group.nodes.includes(id)).length })).filter(item => item.count > 0)
@@ -1546,7 +1562,7 @@ function joinTarget(groups, ids) {
     const best = counts[0];
     if (!best || ((_a = counts[1]) === null || _a === void 0 ? void 0 : _a.count) === best.count || ids.every(id => best.group.nodes.includes(id)))
         return null;
-    return best.group;
+    return new Set([...best.group.nodes, ...ids]).size <= exports.MEMBER_LIMIT ? best.group : null;
 }
 /** Whether some of these nodes are in a group (Remove from group). 這些節點有沒有在群組裡的（移出群組）。 */
 const inAnyGroup = (groups, ids) => ids.some(id => !!groupOf(groups, id));
@@ -1572,7 +1588,7 @@ function joinGroup(network, ids) {
         const target = joinTarget(groups, ids);
         if (!target)
             throw Error('No group to join');
-        return groups.map(group => group.id === target.id ? { ...group, nodes: [...group.nodes, ...ids.filter(id => !group.nodes.includes(id))].slice(0, exports.MEMBER_LIMIT) }
+        return groups.map(group => group.id === target.id ? { ...group, nodes: [...group.nodes, ...ids.filter(id => !group.nodes.includes(id))] }
             : { ...group, nodes: group.nodes.filter(id => !ids.includes(id)) });
     });
 }
@@ -6331,7 +6347,7 @@ function subgraphFromSelection(network, selection, options) {
         const role = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role;
         return role && role !== 'value';
     }))
-        throw Error('Stage outputs and Subgraph boundaries cannot be grouped');
+        throw Error('Stage outputs and Subgraph boundaries cannot be made into a subgraph');
     const unique = (base) => { let id = base, i = 0; while (ids.has(id))
         id = base + '_' + ++i; ids.add(id); return id; };
     const inputId = unique('input'), outputId = unique('output');

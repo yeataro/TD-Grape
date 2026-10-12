@@ -453,18 +453,19 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
         const host = document.querySelector<HTMLElement>('.right-select-host');
         if (host) run(() => onMenu({ ...middle(), touch: false, host }));
       }
-      // Focus graph on and off (legacy graph_ui.js:2522); Esc leaves it (human 2026-10-11). An Esc that closes a menu or ends a drag
-      // is taken before it gets here. 專注編輯開關（照舊產品）；Esc 離開（人類 10-11）。關選單、結束拖曳的 Esc 在這之前就被接走。
+      // Focus graph on and off (legacy graph_ui.js:2522); Esc leaves it (human 2026-10-11). An Esc that closes a menu does not leave it:
+      // focus is in the menu then, so `network` is false. 專注編輯開關（照舊產品）；Esc 離開（人類 10-11）。關選單的 Esc 不會離開：那時焦點
+      // 在選單裡，network 是 false。
       else if (network && matches('focusGraph', event)) run(() => { if (!event.repeat) layout.setFocused(on => !on); });
       else if (network && layout.focused && !event.defaultPrevented && matches('leaveFocus', event)) run(() => layout.setFocused(false));
-      // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、
-      // H 對準全部（照舊產品）。
       // Duplicate the selection (legacy graph_ui.js:2568; the browser's bookmark is not opened). 複製副本（照舊產品；不開瀏覽器的書籤）。
       else if (!draft && network && matches('duplicate', event)) run(clip.duplicate);
       // Groups (legacy graph_ui.js:2550-2556): create, join, remove from. 群組（照舊產品）：建立、加入、移出。
       else if (!draft && network && matches('group', event)) run(grouping.create);
       else if (!draft && network && matches('joinGroup', event)) run(grouping.join);
       else if (!draft && network && matches('leaveGroup', event)) run(grouping.leave);
+      // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、
+      // H 對準全部（照舊產品）。
       else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, flow.getNodes().filter(node => node.selected).map(node => node.id)));
       else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
     };

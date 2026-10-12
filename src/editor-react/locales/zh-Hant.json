@@ -214,7 +214,7 @@
   "group.renameHint": "雙擊或按 F2 改名",
   "group.text": "群組內文",
   "group.textStyle": "文字外觀",
-  "groups.openFixed": "有群組列了圖裡沒有的節點，或同一個節點列了兩次；已整理好。",
+  "groups.openFixed": "有群組的內容無法照原樣保留（列了圖裡沒有的節點、同一個節點列了兩次，或數值不對）；已整理好。",
   "identity.build": "TD {build}",
   "identity.detail": "TouchDesigner {build}：{path}\n位址 {host}\nTD 裡的 TD-Grape：{served}\n這個頁面：{page}",
   "identity.draftLabel": "草稿",

@@ -6,7 +6,7 @@ const G=context.GrapeGraph,registry=G.registry;
 const plain=v=>JSON.parse(JSON.stringify(v));
 const bootstrap=JSON.parse(fs.readFileSync(path.join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8'));
 const OP='a'.repeat(32);
-let counter=0;const newId=()=>'p'+(++counter);
+let counter=0;const newId=()=>'p'+(++counter),newGroupId=()=>'g'+(++counter);
 
 // Default graph plus a constant, its reference, and Add_1 (ref, color) feeding Color Output. 預設圖加常數、引用、Add_1。
 function graph(){
@@ -38,7 +38,7 @@ test('a copy holds the chosen nodes, the wires between them and the declarations
 
 test('pasting gives new IDs and names, keeps the layout from the corner and the wires between, as one change',()=>{
   const doc=graph(),clip=G.copyNodes(doc,['ref','sum'],OP);
-  let ids;const result=doc.change(c=>{ids=G.pasteClip(c,clip,{x:1000,y:500},newId);});
+  let ids;const result=doc.change(c=>{ids=G.pasteClip(c,clip,{x:1000,y:500},newId,newGroupId);});
   const nodes=result.after.stages.pixel.nodes,pasted=ids.map(id=>nodes.find(n=>n.id===id));
   assert.equal(pasted.length,2);assert.ok(!ids.includes('ref')&&!ids.includes('sum'));
   assert.deepEqual(plain(pasted.map(n=>[n.ui.x,n.ui.y])),[[1000,500],[1200,540]],'top-left at the point, the rest as they were');
@@ -52,7 +52,7 @@ test('pasting gives new IDs and names, keeps the layout from the corner and the 
 test('a declaration deleted since the copy comes back; pasting twice names on',()=>{
   const doc=graph(),clip=G.copyNodes(doc,['ref','sum'],OP);
   const gone=new G.GraphDocument(doc.change(c=>c.removeDeclaration('k1')).after,registry);
-  const back=gone.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId);G.pasteClip(c,clip,{x:24,y:24},newId);}).after;
+  const back=gone.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId);G.pasteClip(c,clip,{x:24,y:24},newId,newGroupId);}).after;
   assert.ok(back.declarations.some(d=>d.id==='k1'&&d.name==='kOffset'),'the same declaration again');
   assert.deepEqual(plain(back.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.add').map(n=>n.name)),['Add_1','Add_2','Add_3'],'Add_1 stays (only references go with a declaration); each paste takes the next name');
 });
@@ -60,4 +60,12 @@ test('a declaration deleted since the copy comes back; pasting twice names on',(
 test('duplicate is a paste of a fresh copy from its corner',()=>{
   const doc=graph(),clip=G.copyNodes(doc,['sum'],OP);
   assert.deepEqual(plain(G.clipCorner(clip)),{x:300,y:240});
+});
+
+// Deep clean (2026-10-12): a hand-made copy with a place that is not a number counts it as 0, not NaN. 深度清潔：手寫的複製位置不是數字時當 0。
+test('a place that is not a number counts as 0',()=>{
+  const doc=graph(),clip=G.copyNodes(doc,['ref','sum'],OP);clip.stages.pixel.nodes[0].ui.x='left';
+  assert.ok(Number.isFinite(G.clipCorner(clip).x));
+  let ids;const result=doc.change(c=>{ids=G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId);});
+  assert.ok(ids.every(id=>{const n=result.after.stages.pixel.nodes.find(n=>n.id===id);return Number.isFinite(n.ui.x)&&Number.isFinite(n.ui.y);}));
 });

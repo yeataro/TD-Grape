@@ -40,22 +40,32 @@ export function readClip(text: string): Clip | null {
   return pixel && Array.isArray(pixel.nodes) && Array.isArray(pixel.edges) ? clip as Clip : null;
 }
 
+/** A copied node's place; a value that is not a number counts as 0 (only hand-made text has one). 複製的節點位置；不是數字的值當 0
+ * （只有手寫的文字會有）。 */
+const placeOf = (node: NodeData) => {
+  const x = Number(node.ui?.x), y = Number(node.ui?.y);
+  return { x: Number.isFinite(x) ? x : 0, y: Number.isFinite(y) ? y : 0 };
+};
+
 /** Paste a copy into the top-level pixel network of an editable candidate (inside GraphDocument.change), its top-left node corner
- * at `at`; returns the new nodes' IDs in their copied order. A declaration that is gone since it was copied comes back when its
+ * at `at`; returns the new nodes' IDs in their copied order. `newId` names nodes, `newGroupId` groups (the editor's, the same as
+ * for a new group). A declaration that is gone since it was copied comes back when its
  * ID and name are still free; otherwise its nodes become ghosts, as on opening. Named nodes take the next free name.
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
- * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。 */
-export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string): string[] {
+ * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
+ * 同新建群組）。 */
+export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string): string[] {
   const network = candidate.networks.get('pixel');
   if (!network) throw Error('No pixel network to paste into');
   for (const declaration of clip.declarations) {
     if (candidate.document.declarations.some(d => d.id === declaration.id)) continue;
     try { candidate.addDeclaration(copy(declaration)); } catch { /* its nodes stay ghosts 它的節點維持 Ghost */ }
   }
-  const nodes = clip.stages.pixel!.nodes, x = Math.min(...nodes.map(node => Number(node.ui?.x ?? 0))), y = Math.min(...nodes.map(node => Number(node.ui?.y ?? 0)));
+  const nodes = clip.stages.pixel!.nodes, { x, y } = clipCorner(clip);
   const ids = new Map(nodes.map(node => [node.id, newId()])), taken = namesIn(network.data);
   const pasted: NodeData[] = nodes.map(node => {
-    const fresh: NodeData = { ...copy(node), id: ids.get(node.id)!, ui: { ...copy(node.ui ?? {}), x: Number(node.ui?.x ?? 0) - x + at.x, y: Number(node.ui?.y ?? 0) - y + at.y } };
+    const place = placeOf(node);
+    const fresh: NodeData = { ...copy(node), id: ids.get(node.id)!, ui: { ...copy(node.ui ?? {}), x: place.x - x + at.x, y: place.y - y + at.y } };
     if (node.name !== undefined && takesName(candidate.registry, node.nodeType)) { fresh.name = freeName(node.name, taken); taken.add(fresh.name); }
     return fresh;
   });
@@ -63,12 +73,12 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
     .map(edge => ({ ...copy(edge), id: '', from: [ids.get(edge.from[0])!, edge.from[1]], to: [ids.get(edge.to[0])!, edge.to[1]] }));
   network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
   const groups = groupsOf(clip.stages.pixel!);
-  if (groups.length) addCopiedGroups(network, groups, ids, () => 'g' + newId().replace(/[^A-Za-z0-9]/g, '').slice(-16));
+  if (groups.length) addCopiedGroups(network, groups, ids, newGroupId);
   return pasted.map(node => node.id);
 }
 
 /** Where the copied nodes start: their top-left corner, for Duplicate's offset. 複製的節點從哪裡開始：左上角，給複製副本位移用。 */
 export function clipCorner(clip: Clip): { x: number; y: number } {
-  const nodes = clip.stages.pixel!.nodes;
-  return { x: Math.min(...nodes.map(node => Number(node.ui?.x ?? 0))), y: Math.min(...nodes.map(node => Number(node.ui?.y ?? 0))) };
+  const places = clip.stages.pixel!.nodes.map(placeOf);
+  return { x: Math.min(...places.map(place => place.x)), y: Math.min(...places.map(place => place.y)) };
 }

@@ -214,7 +214,7 @@
   "group.renameHint": "Double-click or F2 to rename",
   "group.text": "Group text",
   "group.textStyle": "Text appearance",
-  "groups.openFixed": "Some groups listed nodes that are not in the graph, or the same node twice; they were tidied.",
+  "groups.openFixed": "Some groups held entries that could not be kept as they were (nodes not in the graph, a node listed twice, or invalid values); they were tidied.",
   "identity.build": "TD {build}",
   "identity.detail": "TouchDesigner {build}: {path}\nat {host}\nTD-Grape in TD: {served}\nThis page: {page}",
   "identity.draftLabel": "Draft",

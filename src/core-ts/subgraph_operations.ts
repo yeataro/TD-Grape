@@ -108,7 +108,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   if (chosen.some(n => {
     const role = graph.registry.get(n.nodeType)?.role;
     return role && role !== 'value';
-  })) throw Error('Stage outputs and Subgraph boundaries cannot be grouped');
+  })) throw Error('Stage outputs and Subgraph boundaries cannot be made into a subgraph');
   const unique = (base:string) => {let id=base,i=0;while(ids.has(id))id=base+'_'+ ++i;ids.add(id);return id;};
   const inputId = unique('input'),outputId = unique('output');
   // Boundary IDs are not members of the original selection.
