@@ -44,14 +44,18 @@ export type Shortcut = keyof typeof SHORTCUTS;
 
 const mac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-/** Whether a key press is this command: exactly its modifiers (Mod is Ctrl or Cmd, not both), letters in either case. A letter is
- * also known by where its key is (`code`): Option+G on a Mac types "©", and other keyboard layouts type other letters (deep clean
- * 2026-10-12). 這次按鍵是不是這個指令：修飾鍵完全相同（Mod 是 Ctrl 或 Cmd、不能兩個都按），字母不分大小寫。字母也看按鍵的位置（code）：
- * Mac 的 Option＋G 打出「©」，其他鍵盤配置打出別的字（10-12 深度清潔）。 */
+/** Whether a key press is this command: exactly its modifiers (Mod is Ctrl or Cmd, not both), letters in either case. When the key
+ * typed no Latin letter (Option+G on a Mac types "©"; a Greek or Russian layout types its own letters), the letter is known by where
+ * its key is (`code`); a Latin letter is always taken as typed, so on AZERTY Ctrl+W (where QWERTY has Z) is not Undo (human
+ * 2026-10-12: do not over-clean). 這次按鍵是不是這個指令：修飾鍵完全相同（Mod 是 Ctrl 或 Cmd、不能兩個都按），字母不分大小寫。按鍵打出的
+ * 不是拉丁字母時（Mac 的 Option＋G 打出「©」；希臘、俄文配置打出自己的字），才看按鍵的位置（code）；打出拉丁字母就照打出的字，所以
+ * AZERTY 的 Ctrl＋W（QWERTY 的 Z 位置）不是復原（人類 10-12：不要清潔過度）。 */
 export function matches(id: Shortcut, event: { key: string; code?: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean }): boolean {
   return SHORTCUTS[id].keys.some(combo => {
     const parts = combo.split('+'), key = parts.pop()!, mod = parts.includes('Mod');
-    return (event.key.toLowerCase() === key.toLowerCase() || (/^[A-Z]$/i.test(key) && event.code === 'Key' + key.toUpperCase()))
+    const typed = event.key.toLowerCase() === key.toLowerCase();
+    const placed = /^[A-Z]$/i.test(key) && !/^[A-Z]$/i.test(event.key) && event.code === 'Key' + key.toUpperCase();
+    return (typed || placed)
       && (mod ? event.ctrlKey !== event.metaKey : !event.ctrlKey && !event.metaKey)
       && event.altKey === parts.includes('Alt') && event.shiftKey === parts.includes('Shift');
   });

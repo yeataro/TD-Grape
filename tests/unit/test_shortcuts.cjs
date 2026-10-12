@@ -26,6 +26,14 @@ test('a key press is the command with exactly its modifiers', () => {
   assert.deepEqual(which(press('Delete')), ['delete']);
 });
 
+// A letter by its key's place only when no Latin letter was typed (2026-10-12). 只有打出的不是拉丁字母時，字母才看按鍵位置（10-12）。
+test('letters: as typed, or by place when the key typed no Latin letter', () => {
+  assert.deepEqual(which(press('©', { altKey: true, code: 'KeyG' })), ['leaveGroup'], 'Option+G on a Mac');
+  assert.deepEqual(which(press('я', { ctrlKey: true, code: 'KeyZ' })), ['undo'], 'a Russian layout');
+  assert.deepEqual(which(press('w', { ctrlKey: true, code: 'KeyZ' })), [], 'AZERTY Ctrl+W is not Undo');
+  assert.deepEqual(which(press('z', { ctrlKey: true, code: 'KeyW' })), ['undo'], 'AZERTY Ctrl+Z is Undo');
+});
+
 test('the keys are written for people from the same table', () => {
   assert.equal(shortcutText('redo'), 'Ctrl＋Shift＋Z');
   assert.equal(shortcutText('delete'), 'Delete / Backspace');
