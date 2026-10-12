@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { core, type Declaration } from './core';
 import { tr, say } from './text';
 import { useSession } from './contexts';
@@ -24,9 +24,6 @@ export function NameField({ declaration }: { declaration: Declaration }) {
 export const groupColor = (group: string) => ({ '--group-color': `var(--group-${group})` }) as CSSProperties;
 export const kindGroup = (declaration: Declaration) => core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'function';
 
-// Dragged onto the canvas, a source is added there, the same way as from the Add Node panel (its add-list id; human
-// 2026-10-09). Only from the card itself, never from its fields and buttons, so text can still be selected.
-// 拖到畫布上就在那裡新增，和 Add Node 面板同一條路（用它在新增清單的代號；人類）。只從卡片本身拖，不從輸入框和按鈕，文字仍可選取。
 
 // One source card (human 2026-10-09, after the legacy card). Two columns: the triangle alone at the left; the head (name,
 // type, use count, "⋯") and, open, the value in the right one, so they share one left edge and one right edge. The count
@@ -41,7 +38,7 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
 }) {
   // Dragged onto the canvas from anywhere that is not a control; a finger from the title bar, so the body still scrolls (Refactor.104,
   // human 2026-10-12). 從不是控制項的地方拖到畫布；手指從標題列，內容照樣捲動（R.104，人類 10-12）。
-  const session = useSession(), [open, setOpen] = useState(false), drag = dragToAdd(choice);
+  const session = useSession(), [open, setOpen] = useState(false), drag = dragToAdd(choice); // its add-list id, as the Add Node panel's (human 2026-10-09) 用它在新增清單的代號，同新增節點面板
   // Pressing the card itself (not a field, a button or its menu) selects it, as legacy (inspector.js:2534); a TD value has no
   // declaration and is not selected (Refactor.103). 按卡片本身（不是欄位、按鈕或選單）就選取它，照舊產品；TD 內建值沒有宣告，不選取（R.103）。
   const declared = !refKey.startsWith('tdValue:');

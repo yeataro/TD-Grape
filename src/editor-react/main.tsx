@@ -145,10 +145,10 @@ function ZoomReadout() {
   </>;
 }
 const NO_TEXT: TextHeights = {};
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null;
-  onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void; onMenu(open: MenuOpen): void;
+  onCreate(request: CreateRequest): void; onMenu(open: MenuOpen): void;
   focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
   textGrows: boolean;
 }) {
@@ -387,20 +387,23 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     selection: session ? selectionKey(session.snapshot()) : '' }), [session]);
   const closeMenu = useCallback(() => setMenuAt(null), []);
   const choicesRef = useRef(choices); choicesRef.current = choices;
-  const onDropChoice = useCallback((id: string, at: { x: number; y: number }) => {
-    const choice = choicesRef.current.find(item => item.id === id);
-    if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
-  }, [session, flow]);
   // Drag to add a node (Refactor.104): the canvas takes the drop; the tile shows the choice's name and its node's colour. A drop also
   // closes the Create node popup it may have come from. 拖曳新增節點（R.104）：畫布接收放下；圖塊顯示選項名稱與節點顏色。放下時也關掉
   // 可能是它來源的浮動新增視窗。
-  useDropToAdd(useMemo(() => ({
-    describe: (id: string) => {
-      const choice = choicesRef.current.find(item => item.id === id);
-      return choice && session ? { label: choice.label, color: session.newNodeColor(choice.spec) ?? 'function' } : null;
-    },
-    drop: (id: string, at: { x: number; y: number }) => { onDropChoice(id, at); setCreating(null); },
-  }), [session, onDropChoice]));
+  useDropToAdd(useMemo(() => {
+    const find = (id: string) => choicesRef.current.find(item => item.id === id);
+    return {
+      describe: (id: string) => {
+        const choice = find(id);
+        return choice && session ? { label: choice.label, color: session.newNodeColor(choice.spec) ?? 'function' } : null;
+      },
+      drop: (id: string, at: { x: number; y: number }) => {
+        const choice = find(id);
+        if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
+        setCreating(null);
+      },
+    };
+  }, [session, flow]));
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
@@ -521,7 +524,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
+            onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();

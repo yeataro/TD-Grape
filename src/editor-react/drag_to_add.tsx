@@ -42,7 +42,8 @@ export function dragToAdd(choice: string, options: { touch?: 'handle' | 'none' }
   return {
     onPointerDown(event: PointerEvent) {
       const element = event.target as Element;
-      if (event.button !== 0 || carried || element.closest(own)) return;
+      // A tile still shrinking or fading from the last drag does not hold the next one. 上一次還在縮小或淡出的圖塊不擋下一次。
+      if (event.button !== 0 || carried?.phase === 'carry' || element.closest(own)) return;
       if (event.pointerType === 'touch' && (options.touch === 'none' || !element.closest('[data-drag-handle]'))) return;
       const pointer = event.pointerId, start = { x: event.clientX, y: event.clientY };
       let started = false;

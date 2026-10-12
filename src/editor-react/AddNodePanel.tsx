@@ -1,7 +1,7 @@
-import { dragToAdd } from './drag_to_add';
 import { Fragment, memo, useMemo, useRef, useState } from 'react';
 import { categoryLabel, searchChoices, sourceLabel, topCategories, type AddChoice } from './add_entries';
 import { Badge } from './controls';
+import { dragToAdd } from './drag_to_add';
 import { Icon } from './icons';
 import { ResizeHandle } from './layout';
 import { say, tr, useLanguage } from './text';
