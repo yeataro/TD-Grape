@@ -1404,15 +1404,16 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
    - whatever else can be clicked (buttons, summaries, menus' items, wires) shows the pointing finger;
    - text fields the text cursor; a value box, a slider to drag, the two-way arrow (dragging it too);
    - everything else the arrow.
-   While a gesture is on, its cursor holds over whatever is under the pointer: panning the four-way arrow, zooming (the wheel; not the
-   zoom buttons or framing) the up-down arrow, drawing a wire the finger. Ports keep React Flow's crosshair; resize handles their
+   While a gesture is on, its cursor holds over whatever is under the pointer: panning the four-way arrow, drawing a wire the finger.
+   Zooming has none (Refactor.105.8, human 2026-10-13: the up-down arrow made it look as if nothing else could be done meanwhile). Ports keep React Flow's crosshair; resize handles their
    two-way arrows (where they are drawn). The clickable rule is :where-weak, so a movable button (a panel tab) is the hand.
    游標規則（R.104.7，人類 10-12，取代 R.54.2「滑過都是箭頭」；例外之後再補）：
    - 可以拿起來移動的（元件標 data-movable，或 React Flow 的節點）是手形，按住是抓握；畫布不算；
    - 其他可以點的（按鈕、摘要、選單項目、線）是手指；
    - 文字框是文字游標；數值框是可以拖的滑桿，左右箭頭（拖曳中也是）；
    - 其他是箭頭。
-   手勢進行中，指標下不論是什麼都用手勢的游標：拖畫布十字方向箭頭、縮放（滾輪；不含縮放按鈕與對準）上下箭頭、拉線手指。接孔保留
+   手勢進行中，指標下不論是什麼都用手勢的游標：拖畫布十字方向箭頭、拉線手指。縮放沒有（R.105.8，人類 10-13：上下箭頭讓人覺得那時不能
+   操作其他東西）。接孔保留
    React Flow 的十字準星；調大小的把手保留雙向箭頭（寫在各自那裡）。「可以點」那條用 :where 降到最弱，可移動的按鈕（面板分頁）就是手形。 */
 :where(button, summary, select, a[href], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"],
   input:is([type="checkbox"], [type="radio"], [type="color"])) { cursor: pointer; }
@@ -1426,7 +1427,6 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__nodesselection-rect { cursor: default; }
 .react-flow__edge { cursor: pointer; }
 :root.panning-canvas, :root.panning-canvas * { cursor: move !important; } /* whole page: see panningCursor (viewport.ts) 整頁，見 panningCursor */
-.react-flow.zooming, .react-flow.zooming * { cursor: ns-resize !important; }
 .react-flow:has(.react-flow__connectionline), .react-flow:has(.react-flow__connectionline) * { cursor: pointer !important; }
 :root.scrubbing-value, :root.scrubbing-value * { cursor: ew-resize !important; user-select: none; } /* the value ladder, held 按住拖的數值階梯 */
 /* A value box is a slider to drag: the two-way arrow until it is typed in, and while dragging its value (human 2026-10-12).
