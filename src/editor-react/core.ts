@@ -7,6 +7,7 @@ import type { Graph as GraphData, formatProblem } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
 import type * as ghosts from '../core-ts/ghosts';
+import type * as connectivity from '../core-ts/connectivity';
 import type * as declarations from '../core-ts/declarations';
 import type * as modelTypes from '../core-ts/model';
 import type * as tdValueTable from '../core-ts/td_values';
@@ -24,7 +25,7 @@ import { tr, TextError, type Message } from './text';
 export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
-  formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
+  formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf; connectedWires: typeof connectivity.connectedWires;
   declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
   declarationLabel: typeof declarations.declarationLabel;
   freeDeclarationName: typeof declarations.freeDeclarationName; freeLegacyName: typeof declarations.freeLegacyName; defaultTextures: typeof declarations.defaultTextures;

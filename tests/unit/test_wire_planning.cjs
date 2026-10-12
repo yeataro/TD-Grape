@@ -58,3 +58,32 @@ test('long chains never require recursive inference or visit downstream signatur
   for(let i=0;i<12000;i++){nodes.push(op('n'+i));edges.push(edge(i?'n'+(i-1):'s','n'+i));}
   const r=plan({nodes,edges},c,wire('s','n0'));assert.equal(r.ok,true);assert.equal(r.inference.choices.size,1);assert.equal(r.inference.ports.size,12001);
 });
+
+// A wire not in effect (a ghost) never constrains its node (Refactor.103.1; Q37 1-3, Q72): a Mix turned vec3 with a vec4 still stored on
+// `a` takes wires on its other inputs; the ghost stays where it is. 沒接通的線（Ghost）從不限制節點（R.103.1）：改成 vec3 的 Mix，`a` 上還存著
+// vec4，其他輸入照樣接得上；Ghost 線留在原地。
+test('a wire not in effect does not constrain its node; it stays stored',()=>{
+  const mix={id:'m',definition:'mix',stored:{inputs:{a:'vec3',b:'vec3',factor:'float'},outputs:{out:'vec3'}},
+    variants:['vec3','vec4'].flatMap(t=>['float',t].map(factor=>({type:t,inputs:{a:t,b:t,factor},outputs:{out:t}})))};
+  const ghost=edge('v4','m','a'),graph={nodes:[source('v4','vec4'),source('f','float'),mix],edges:[ghost]};
+  assert.equal(plan(graph,c,wire('f','m','factor')).diagnostic.code,'input-signature','counted, it blocks every input');
+  const r=plan(graph,c,wire('f','m','factor'),new Set());assert.equal(r.ok,true);
+  assert.ok(r.edges.includes(ghost),'the ghost wire is kept');assert.equal(r.inference.ports.get('m').outputs.out,'vec3');
+  // A wire in effect still constrains: nothing turns into a ghost. 接通的線照樣限制：不會把它變成 Ghost。
+  const live=edge('f','m','b'),fits={...graph,edges:[live]};
+  assert.equal(plan(fits,{...c,conversions:[]},wire('v4','m','factor'),new Set([live])).ok,false);
+});
+
+// The same on a whole graph, as the human met it (Grape_TOP_REF, 2026-10-12). 整張圖上同一件事，照人類遇到的情況。
+test('a graph: the Mix with a ghost on `a` takes Sine on factor; set back to vec4, the ghost is in effect again',()=>{
+  const G=context.GrapeGraph,boot=JSON.parse(fs.readFileSync(require.resolve('../../src/generated/editor-bootstrap.json'),'utf8'));
+  const build=type=>{const g=JSON.parse(JSON.stringify(boot.defaultDocument.graph)),p=g.stages.pixel;
+    p.nodes.push({id:'rgba',nodeType:'sgrape.builtin.color',params:{value:[1,0,0,1]},ui:{x:0,y:0}},
+      {id:'mix',nodeType:'sgrape.builtin.mix',params:{type},ui:{x:200,y:0}},{id:'sine',nodeType:'sgrape.builtin.sin',params:{type:'float'},ui:{x:0,y:200}});
+    p.edges.push({id:'e_a',from:['rgba','out'],to:['mix','a']});return new G.GraphDocument(g,G.registry).networks.get('pixel');};
+  const net=build('vec3'),policy=G.values.policy;
+  assert.deepEqual([...G.ghostsOf(net,policy).edges],['e_a']);
+  assert.equal([...G.connectedWires(net,policy)].some(e=>e.id==='e_a'),false,'not in effect');
+  assert.equal(net.plan(policy,{kind:'wire',from:{node:'sine',port:'out'},to:{node:'mix',port:'factor'}}).ok,true);
+  assert.equal(G.ghostsOf(build('vec4'),policy).edges.size,0,'back to vec4, the wire is in effect again');
+});

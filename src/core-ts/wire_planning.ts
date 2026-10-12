@@ -22,7 +22,7 @@ const same=(a:Readonly<Record<string,string>>,b:Readonly<Record<string,string>>)
 /** No Auto inference. Every existing output is an invariant. Only complete
  * native input tuples can change, and every retained input must still fit.
  * Creation chooses its initial output before entering this planner. */
-function resolve(graph:Graph,c:Capabilities,only?:readonly string[]):Inference|Diagnostic {
+function resolve(graph:Graph,c:Capabilities,only?:readonly string[],counts:(e:Edge)=>boolean=()=>true):Inference|Diagnostic {
   const nodes=new Map(graph.nodes.map(n=>[n.id,n])),incoming=new Map<string,Edge[]>(),outgoing=new Map<string,string[]>(),degrees=new Map<string,number>();
   const ports=new Map(graph.nodes.map(n=>[n.id,n.stored])),choices=new Map<string,string>(),operands=new Map<string,Readonly<Record<string,string>>|null>(),issues=new Map<string,Diagnostic>();
   const signatures=new Map<string,Signature>();
@@ -37,7 +37,8 @@ function resolve(graph:Graph,c:Capabilities,only?:readonly string[]):Inference|D
   if(only?.some(id=>!nodes.has(id)))return {code:'missing-port'};
   for(const n of only===undefined?graph.nodes:only.map(id=>nodes.get(id)!)){
     if(!n.variants)continue;
-    const links=incoming.get(n.id)||[];
+    // Only the wires in effect constrain the node (Refactor.103.1). 只有接通的線限制節點（R.103.1）。
+    const links=(incoming.get(n.id)||[]).filter(counts);
     const source=(e:Edge)=>nodes.get(e.from[0])?.stored.outputs[e.from[1]];
     const candidates=n.variants.filter(v=>same(v.outputs,n.stored.outputs)&&links.every(e=>compatible(source(e),v.inputs[e.to[1]],c.components,c.conversions)));
     const conversions=(v:Signature)=>links.reduce((score,e)=>score+Number(source(e)!==v.inputs[e.to[1]]),0);
@@ -50,21 +51,27 @@ function resolve(graph:Graph,c:Capabilities,only?:readonly string[]):Inference|D
   }
   return {ports,choices,operands,issues,signatures};
 }
-export function plan(graph:Graph,c:Capabilities,intent:Intent):Result {
-  let candidate=graph,displaced:readonly Edge[]=[];
+/** `inEffect`: the stored wires in effect (connectivity.ts); one not in effect (a ghost wire) is kept as it is but never constrains a
+ * node — it is broken between the wire and the port (Q37 1-3, Q72; Refactor.103.1, human 2026-10-12: a node with one ghost wire refused
+ * every other wire). Without it every wire counts. inEffect：接通的線（connectivity.ts）；沒接通的（Ghost 線）原樣保留，但從不限制節點——
+ * 它斷在線和接孔之間（Q37 1-3、Q72；R.103.1，人類 10-12：節點上有一條 Ghost 線，其他線都接不上）。沒給就每條都算。 */
+export function plan(graph:Graph,c:Capabilities,intent:Intent,inEffect?:ReadonlySet<Edge>):Result {
+  let candidate=graph,displaced:readonly Edge[]=[],fresh:Edge|undefined;
   if(intent.kind==='wire'){
     const source=graph.nodes.find(n=>n.id===intent.from.node),target=graph.nodes.find(n=>n.id===intent.to.node);
     if(!source?.stored.outputs[intent.from.port]||!target?.stored.inputs[intent.to.port])return {ok:false,diagnostic:{code:'missing-port'}};
     displaced=graph.edges.filter(e=>e.to[0]===intent.to.node&&e.to[1]===intent.to.port);
-    candidate={nodes:graph.nodes,edges:[...graph.edges.filter(e=>!displaced.includes(e)),{from:[intent.from.node,intent.from.port],to:[intent.to.node,intent.to.port]}]};
+    fresh={from:[intent.from.node,intent.from.port],to:[intent.to.node,intent.to.port]};
+    candidate={nodes:graph.nodes,edges:[...graph.edges.filter(e=>!displaced.includes(e)),fresh]};
   }
-  const inference=resolve(candidate,c,intent.kind==='wire'?[intent.to.node]:intent.nodes);
+  const counts=(e:Edge)=>!inEffect||inEffect.has(e)||e===fresh;
+  const inference=resolve(candidate,c,intent.kind==='wire'?[intent.to.node]:intent.nodes,counts);
   if('code' in inference)return {ok:false,diagnostic:inference};
   if(intent.kind==='wire'){
     const issue=inference.issues.get(intent.to.node);if(issue)return {ok:false,diagnostic:issue};
     // Other nodes' interfaces never change. Validate only the target's inputs;
     // unrelated missing/incompatible draft edges remain editable.
-    for(const e of candidate.edges)if(e.to[0]===intent.to.node){
+    for(const e of candidate.edges)if(e.to[0]===intent.to.node&&counts(e)){
       const sourceType=inference.ports.get(e.from[0])?.outputs[e.from[1]],targetType=inference.ports.get(e.to[0])?.inputs[e.to[1]];
       if(!compatible(sourceType,targetType,c.components,c.conversions))return {ok:false,diagnostic:{code:'downstream',node:intent.to.node,sourceType,targetType}};
     }

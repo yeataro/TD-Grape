@@ -3,6 +3,7 @@ import { tidyGroups } from './groups';
 import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, prepareNodeUnwire, type Configuration, type NodeContext, type Registry } from './node_module';
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
+import { connectedWires } from './connectivity';
 import { changesBetween, equal, type GraphChanges } from './changes';
 import { requireCapacity } from './capacity';
 import { requireStructure } from './structure';
@@ -236,7 +237,8 @@ export class Network {
     const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!;
       return {id:n.id,definition:data.nodeType,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():n.interface.types()),
         ...(module?.supports(data,this.context)&&module.signatures?{variants:module.signatures(data,this.context)}:{})};});
-    const result=plan({nodes,edges:this.data.edges.filter(e=>!removed.includes(e))},policy,intent);
+    // Only the wires in effect constrain (Refactor.103.1). 只有接通的線算數（R.103.1）。
+    const result=plan({nodes,edges:this.data.edges.filter(e=>!removed.includes(e))},policy,intent,connectedWires(this,policy));
     return result.ok?{...result,prepared,displaced:[...removed,...result.displaced]}:{...result,prepared};
   }
   private identity(e:EdgeData,_index:number){

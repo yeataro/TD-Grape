@@ -17,6 +17,7 @@ const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
 const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
+const connectivity_1 = require("./connectivity");
 const subgraph_stages_1 = require("./subgraph_stages");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
@@ -90,7 +91,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -463,6 +464,61 @@ exports.CORE_CONFIG = Object.freeze({
 });
 
 },
+"connectivity":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.unusableNodes = unusableNodes;
+exports.connectedWires = connectedWires;
+const subgraph_stages_1 = require("./subgraph_stages");
+/** The nodes this build cannot use, and why (Q37 1-1; Q45: a reference to a declaration that no longer exists). 這一版用不了的節點與
+ * 原因（Q37 1-1；Q45：引用的宣告已不存在）。 */
+function unusableNodes(network) {
+    var _a;
+    const nodes = new Map();
+    // Subgraph networks have no stage of their own; their nodes follow the calling stage.
+    const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
+    for (const node of network.nodes) {
+        const data = node.data, module = node.definition;
+        const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
+        if (!module)
+            nodes.set(node.id, 'unknown');
+        else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
+            nodes.set(node.id, 'misplaced');
+        // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
+        // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
+        else if (stage && module.referencedGraph && !(0, subgraph_stages_1.subgraphStages)(network.graph.document, module.referencedGraph(data), network.graph.registry).includes(stage))
+            nodes.set(node.id, 'misplaced');
+        // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
+        else if (referred !== undefined && !stage)
+            nodes.set(node.id, 'misplaced');
+        else if (referred !== undefined && !network.context.declaration(referred))
+            nodes.set(node.id, 'missing');
+        else if (!module.supports(data, network.context))
+            nodes.set(node.id, 'unknown');
+        else {
+            // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
+            try {
+                void node.interface;
+            }
+            catch (_b) {
+                nodes.set(node.id, 'unknown');
+            }
+        }
+    }
+    return nodes;
+}
+/** The stored wires in effect, as the stored objects (the same ones the raw list holds). 接通的線，用存著的物件（和原始清單是同一批）。 */
+function connectedWires(network, policy, unusable = unusableNodes(network)) {
+    const connected = new Set();
+    for (const edge of network.edges) {
+        const data = edge.data;
+        if (!unusable.has(data.from[0]) && !unusable.has(data.to[0]) && edge.connection(policy).valid)
+            connected.add(data);
+    }
+    return connected;
+}
+
+},
 "declarations":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -776,48 +832,15 @@ function createEditorContract(registry, target = 'top') {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ghostsOf = ghostsOf;
-const subgraph_stages_1 = require("./subgraph_stages");
+const connectivity_1 = require("./connectivity");
 function ghostsOf(network, policy) {
-    var _a;
-    const nodes = new Map();
-    // Subgraph networks have no stage of their own; their nodes follow the calling stage.
-    const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
-    for (const node of network.nodes) {
-        const data = node.data, module = node.definition;
-        const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
-        if (!module)
-            nodes.set(node.id, 'unknown');
-        else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
-            nodes.set(node.id, 'misplaced');
-        // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
-        // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
-        else if (stage && module.referencedGraph && !(0, subgraph_stages_1.subgraphStages)(network.graph.document, module.referencedGraph(data), network.graph.registry).includes(stage))
-            nodes.set(node.id, 'misplaced');
-        // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
-        else if (referred !== undefined && !stage)
-            nodes.set(node.id, 'misplaced');
-        else if (referred !== undefined && !network.context.declaration(referred))
-            nodes.set(node.id, 'missing');
-        else if (!module.supports(data, network.context))
-            nodes.set(node.id, 'unknown');
-        else {
-            // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
-            try {
-                void node.interface;
-            }
-            catch (_b) {
-                nodes.set(node.id, 'unknown');
-            }
-        }
-    }
+    const nodes = (0, connectivity_1.unusableNodes)(network), connected = (0, connectivity_1.connectedWires)(network, policy, nodes);
     const edges = new Set(), edgeData = new Set();
-    for (const edge of network.edges) {
-        const data = edge.data;
-        if (nodes.has(data.from[0]) || nodes.has(data.to[0]) || !edge.connection(policy).valid) {
+    for (const edge of network.edges)
+        if (!connected.has(edge.data)) {
             edges.add(edge.id);
-            edgeData.add(data);
+            edgeData.add(edge.data);
         }
-    }
     return { nodes, edges, edgeData };
 }
 
@@ -831,6 +854,7 @@ const groups_1 = require("./groups");
 const node_module_1 = require("./node_module");
 const ports_1 = require("./ports");
 const wire_planning_1 = require("./wire_planning");
+const connectivity_1 = require("./connectivity");
 const changes_1 = require("./changes");
 const capacity_1 = require("./capacity");
 const structure_1 = require("./structure");
@@ -1160,7 +1184,8 @@ class Network {
             return { id: n.id, definition: data.nodeType, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : n.interface.types()),
                 ...((module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.signatures ? { variants: module.signatures(data, this.context) } : {}) };
         });
-        const result = (0, wire_planning_1.plan)({ nodes, edges: this.data.edges.filter(e => !removed.includes(e)) }, policy, intent);
+        // Only the wires in effect constrain (Refactor.103.1). 只有接通的線算數（R.103.1）。
+        const result = (0, wire_planning_1.plan)({ nodes, edges: this.data.edges.filter(e => !removed.includes(e)) }, policy, intent, (0, connectivity_1.connectedWires)(this, policy));
         return result.ok ? { ...result, prepared, displaced: [...removed, ...result.displaced] } : { ...result, prepared };
     }
     identity(e, _index) {
@@ -7566,7 +7591,7 @@ const same = (a, b) => Object.keys(a).length === Object.keys(b).length && Object
 /** No Auto inference. Every existing output is an invariant. Only complete
  * native input tuples can change, and every retained input must still fit.
  * Creation chooses its initial output before entering this planner. */
-function resolve(graph, c, only) {
+function resolve(graph, c, only, counts = () => true) {
     const nodes = new Map(graph.nodes.map(n => [n.id, n])), incoming = new Map(), outgoing = new Map(), degrees = new Map();
     const ports = new Map(graph.nodes.map(n => [n.id, n.stored])), choices = new Map(), operands = new Map(), issues = new Map();
     const signatures = new Map();
@@ -7598,7 +7623,8 @@ function resolve(graph, c, only) {
     for (const n of only === undefined ? graph.nodes : only.map(id => nodes.get(id))) {
         if (!n.variants)
             continue;
-        const links = incoming.get(n.id) || [];
+        // Only the wires in effect constrain the node (Refactor.103.1). 只有接通的線限制節點（R.103.1）。
+        const links = (incoming.get(n.id) || []).filter(counts);
         const source = (e) => { var _a; return (_a = nodes.get(e.from[0])) === null || _a === void 0 ? void 0 : _a.stored.outputs[e.from[1]]; };
         const candidates = n.variants.filter(v => same(v.outputs, n.stored.outputs) && links.every(e => (0, ports_1.compatible)(source(e), v.inputs[e.to[1]], c.components, c.conversions)));
         const conversions = (v) => links.reduce((score, e) => score + Number(source(e) !== v.inputs[e.to[1]]), 0);
@@ -7616,17 +7642,23 @@ function resolve(graph, c, only) {
     }
     return { ports, choices, operands, issues, signatures };
 }
-function plan(graph, c, intent) {
+/** `inEffect`: the stored wires in effect (connectivity.ts); one not in effect (a ghost wire) is kept as it is but never constrains a
+ * node — it is broken between the wire and the port (Q37 1-3, Q72; Refactor.103.1, human 2026-10-12: a node with one ghost wire refused
+ * every other wire). Without it every wire counts. inEffect：接通的線（connectivity.ts）；沒接通的（Ghost 線）原樣保留，但從不限制節點——
+ * 它斷在線和接孔之間（Q37 1-3、Q72；R.103.1，人類 10-12：節點上有一條 Ghost 線，其他線都接不上）。沒給就每條都算。 */
+function plan(graph, c, intent, inEffect) {
     var _a, _b;
-    let candidate = graph, displaced = [];
+    let candidate = graph, displaced = [], fresh;
     if (intent.kind === 'wire') {
         const source = graph.nodes.find(n => n.id === intent.from.node), target = graph.nodes.find(n => n.id === intent.to.node);
         if (!(source === null || source === void 0 ? void 0 : source.stored.outputs[intent.from.port]) || !(target === null || target === void 0 ? void 0 : target.stored.inputs[intent.to.port]))
             return { ok: false, diagnostic: { code: 'missing-port' } };
         displaced = graph.edges.filter(e => e.to[0] === intent.to.node && e.to[1] === intent.to.port);
-        candidate = { nodes: graph.nodes, edges: [...graph.edges.filter(e => !displaced.includes(e)), { from: [intent.from.node, intent.from.port], to: [intent.to.node, intent.to.port] }] };
+        fresh = { from: [intent.from.node, intent.from.port], to: [intent.to.node, intent.to.port] };
+        candidate = { nodes: graph.nodes, edges: [...graph.edges.filter(e => !displaced.includes(e)), fresh] };
     }
-    const inference = resolve(candidate, c, intent.kind === 'wire' ? [intent.to.node] : intent.nodes);
+    const counts = (e) => !inEffect || inEffect.has(e) || e === fresh;
+    const inference = resolve(candidate, c, intent.kind === 'wire' ? [intent.to.node] : intent.nodes, counts);
     if ('code' in inference)
         return { ok: false, diagnostic: inference };
     if (intent.kind === 'wire') {
@@ -7636,7 +7668,7 @@ function plan(graph, c, intent) {
         // Other nodes' interfaces never change. Validate only the target's inputs;
         // unrelated missing/incompatible draft edges remain editable.
         for (const e of candidate.edges)
-            if (e.to[0] === intent.to.node) {
+            if (e.to[0] === intent.to.node && counts(e)) {
                 const sourceType = (_a = inference.ports.get(e.from[0])) === null || _a === void 0 ? void 0 : _a.outputs[e.from[1]], targetType = (_b = inference.ports.get(e.to[0])) === null || _b === void 0 ? void 0 : _b.inputs[e.to[1]];
                 if (!(0, ports_1.compatible)(sourceType, targetType, c.components, c.conversions))
                     return { ok: false, diagnostic: { code: 'downstream', node: intent.to.node, sourceType, targetType } };
