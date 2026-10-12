@@ -303,9 +303,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The floating toolbar (Refactor.92): the toolbar's box, placed by its transform over the canvas, under the floating panels.
    浮動工具列（R.92）：和工具列一樣的框，用 transform 放在畫布上，在浮動面板下面。 */
 .floating-toolbar { position: absolute; left: 0; top: 0; z-index: 5; }
-/* Its icons are bright from the start; a hover only adds the background, as legacy (style.css:1007-1008; human 2026-10-12: dimmed they
-   look listless and are harder to tell apart). 圖示一開始就是亮的，滑過只加底色，照舊產品（人類 10-12：暗的看起來沒精神、辨識度差）。 */
-.floating-toolbar .icon-button { color: var(--text); }
+/* The toolbars' icons (the floating toolbar and the network toolbar) are bright from the start; a hover only adds the background, as
+   legacy (style.css:1007-1008; human 2026-10-12: dimmed they look listless and are harder to tell apart; Refactor.104.3: the network
+   toolbar too). :where keeps it as weak as .icon-button itself, so pressed and open buttons keep their colours.
+   工具列（浮動工具列、網路區上方的功能列）的圖示一開始就是亮的，滑過只加底色，照舊產品（人類 10-12：暗的看起來沒精神、辨識度差；
+   R.104.3：上方功能列也比照）。:where 讓它和 .icon-button 一樣弱，按下與展開中的按鈕保留自己的顏色。 */
+:where(.network-bar-group) .icon-button { color: var(--text); }
 /* It rises in when it appears or its buttons change: a short fade with a slight growth (Refactor.104.2, human 2026-10-12: short,
    "floating up"); none with animation effects off. 出現或按鈕改變時浮現：很短的淡入加些微放大（R.104.2，人類 10-12：要短、浮現的感覺）；
    動畫效果關掉時沒有。 */
