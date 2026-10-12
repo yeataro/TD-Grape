@@ -248,6 +248,7 @@
   --text-faint: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-faint), transparent);
   --text-on-accent: color-mix(in srgb, var(--palette-shadow) 85%, transparent);
   --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 55%);
+  --icon-hover: var(--palette-contrast); /* a toolbar icon under the pointer, brighter than --text (R.104.4) 指標下的工具列圖示，比 --text 亮 */
   --accent: var(--palette-accent);
   /* Where a moved panel would go, and where it cannot (Refactor.68): the handles' purple for now (human 2026-10-10), the alarm red.
      搬面板時會放在哪、以及放不下的地方：暫時和把手同一個紫色（人類 10-10），放不下用警示紅。 */

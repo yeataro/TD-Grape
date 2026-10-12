@@ -94,6 +94,7 @@
   --surface-floating: color-mix(in srgb, var(--surface-zone) 92%, transparent);
   --text-on-accent: color-mix(in srgb, var(--palette-lift) 95%, transparent);
   --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 30%);
+  --icon-hover: var(--palette-contrast); /* a toolbar icon under the pointer, brighter than --text (R.104.4) 指標下的工具列圖示，比 --text 亮 */
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 15%);
   --shadow: color-mix(in srgb, var(--palette-shadow) 22%, transparent);
   --surface-dim: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
