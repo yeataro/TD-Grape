@@ -4,7 +4,7 @@ import type { FlowNode } from './projection';
 import type { Editor as EditorSession } from './editor';
 import { say, tr } from './text';
 import { HANDLES, spreadPositions, type Box, type Handle } from './selection_spread';
-import { selectionBounds } from './Groups';
+import { selectionBounds, type TextHeights } from './Groups';
 import type { GraphGroup } from './core';
 
 // Multi-selection frame (Refactor.50.3; human 2026-10-09: shown whenever two or more nodes are selected, never for one — legacy
@@ -19,14 +19,14 @@ import type { GraphGroup } from './core';
 type Spread = { handle: Handle; pointer: number; x: number; y: number; zoom: number; boxes: Box[]; moved: boolean };
 const THRESHOLD = 3;
 
-export function SelectionFrame({ nodes, session, groups }: { nodes: readonly FlowNode[]; session: EditorSession; groups: readonly GraphGroup[] }) {
+export function SelectionFrame({ nodes, session, groups, texts }: { nodes: readonly FlowNode[]; session: EditorSession; groups: readonly GraphGroup[]; texts: TextHeights }) {
   const flow = useReactFlow(), spread = useRef<Spread | null>(null);
   const ids = nodes.filter(node => node.selected).map(node => node.id);
   // The selection's bounds on screen, groups whose members are all selected included (Refactor.98), as a key so the frame draws
   // again only when they change (as the floating toolbar). 選取在螢幕上的範圍（含成員全被選取的群組，R.98），做成字串，變了才重畫（同浮動工具列）。
   const key = useStore(state => {
     if (ids.length < 2) return '';
-    const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups), [x, y, zoom] = state.transform;
+    const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups, texts), [x, y, zoom] = state.transform;
     return [box.x * zoom + x, box.y * zoom + y, (box.x + box.width) * zoom + x, (box.y + box.height) * zoom + y, state.width, state.height].map(Math.round).join(',');
   });
   const move = (positions: Map<string, { x: number; y: number }>, dragging: boolean) =>

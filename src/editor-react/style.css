@@ -654,9 +654,20 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
   border-radius: 10px; background: color-mix(in srgb, var(--group-color) 7%, transparent); pointer-events: none; }
 .group-body.selected { border-color: var(--group-color); }
 .group-title { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; display: flex; align-items: center; gap: 5px; padding: 3px 7px;
-  border: 1px solid transparent; border-radius: 10px 10px 0 0; background: color-mix(in srgb, var(--group-color) 22%, var(--surface-node)) padding-box;
+  border: 1px solid transparent; border-radius: 10px 10px 0 0;
+  /* Legacy's mix, shown at 80% so the wires under it show a little (Refactor.99, human 2026-10-12: the brightness is fine). 照舊產品的混色、
+     80% 顯示，底下的線稍微透出來（R.99，人類 10-12：亮度可以）。 */
+  background: color-mix(in srgb, color-mix(in srgb, var(--group-color) 22%, var(--surface-node)) 80%, transparent) padding-box;
   color: var(--text-strong); font-size: var(--font-md); line-height: var(--line-md); pointer-events: auto; touch-action: none; }
 .group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The body text (Refactor.99): under the title, the box's width less its padding; lines break as written and wrap; it does not take the
+   pointer (pressing it is pressing the box) except while being written. 內文（R.99）：在標題下、寬度是外框扣掉兩側空間；照寫下的換行、也會自動
+   換行；不接滑鼠（按它等於按框身），寫的時候才接。 */
+.group-text { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; padding-top: 8px; color: var(--text-strong);
+  font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; overflow-wrap: anywhere; pointer-events: none; }
+.group-text.writing { pointer-events: auto; }
+.group-text textarea { display: block; width: 100%; box-sizing: border-box; min-height: var(--line-md); padding: 0; border: 0; border-radius: 0; resize: none; overflow: hidden;
+  background: none; color: inherit; font: inherit; line-height: inherit; outline: 1px dashed color-mix(in srgb, var(--group-color) 55%, transparent); outline-offset: 2px; }
 .group-name-input { flex: 1; min-width: 0; height: 22px; font-size: var(--font-md); }
 .group-button { display: grid; place-items: center; flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; opacity: .65; }
 .group-button:not([aria-disabled="true"]):hover { opacity: 1; background: var(--surface-control-hover); }

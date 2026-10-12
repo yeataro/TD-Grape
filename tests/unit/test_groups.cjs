@@ -48,6 +48,16 @@ test('every change tidies: deleted members leave, an empty group goes, a node st
   assert.equal(G.groups.tidyGroups(plain(fixed.document)),0,'already tidy');
 });
 
+test('the body text is kept as written; empty takes it away (Refactor.99)',()=>{
+  let doc=step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'}));
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{text:'Line one\n**two**'}));
+  assert.equal(of(doc)[0].text,'Line one\n**two**');
+  const copied=G.copyNodes(doc,['a','b'],OP);assert.equal(plain(copied.stages.pixel.ui.groups)[0].text,'Line one\n**two**','it comes along with a copy');
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{text:''}));
+  assert.equal(of(doc)[0].text,undefined);assert.ok(!('text' in doc.document.stages.pixel.ui.groups[0]),'no empty field left');
+  assert.throws(()=>step(doc,net=>groups.changeGroup(net,'g1',{text:'x'.repeat(groups.GROUP_TEXT_LIMIT+1)})),/too long/);
+});
+
 test('a ghost node is still a member',()=>{
   const raw=plain(step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'})).document);
   raw.stages.pixel.nodes.find(n=>n.id==='a').nodeType='sgrape.builtin.not_a_node';

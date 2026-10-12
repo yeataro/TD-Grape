@@ -9,10 +9,14 @@ import type { Network } from './graph';
  * 群組（R.98；1-2、G-1～G-3、GLOSSARY）：有名字、顏色的成員節點名單，存在所屬網路的 `ui.groups`。一個節點最多屬一個群組、不巢狀、範圍限
  * 一個網路、不影響產碼。外框畫在哪裡由編輯器依成員算、從不儲存（G-3）。規則在這裡；GraphDocument 只呼叫（單向）。舊產品存在 `ui.frames`；
  * 舊圖的 frames 忽略（1011）。 */
-export interface GraphGroup { id: string; name: string; nodes: string[]; color?: string }
+/** `text`: the body text shown above the members (Refactor.99, human 2026-10-12; new, legacy had none), as written; basic Markdown
+ * is the editor's to show. `text`：顯示在成員上方的內文（R.99，人類 10-12；新的，舊產品沒有），存寫下的原文；基本 Markdown 由編輯器顯示。 */
+export interface GraphGroup { id: string; name: string; nodes: string[]; color?: string; text?: string }
 
 /** Legacy's limits (functions_model.js:10-13). 舊產品的上限。 */
 export const GROUP_LIMIT = 256, MEMBER_LIMIT = 256, GROUP_NAME_LIMIT = 80;
+/** The body text's length (a few pages; Refactor.99). 內文長度上限（幾頁；R.99）。 */
+export const GROUP_TEXT_LIMIT = 10000;
 const ID = /^[A-Za-z][A-Za-z0-9_]{0,63}$/, COLOR = /^#[0-9a-f]{6}$/;
 /** A name people can read: 1 to 80 characters, no control characters, not only spaces. 看得懂的名字：1 到 80 字、沒有控制字元、不是只有空白。 */
 export const validGroupName = (name: unknown): name is string =>
@@ -34,7 +38,8 @@ export function tidy(network: NetworkData): { groups: GraphGroup[]; fixed: boole
     const members = [...new Set(group.nodes)].filter((id): id is string => typeof id === 'string' && nodes.has(id) && !claimed.has(id)).slice(0, MEMBER_LIMIT);
     if (!members.length) continue;
     members.forEach(id => claimed.add(id)); ids.add(group.id);
-    groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}) });
+    groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
+      ...(typeof group.text === 'string' && group.text && group.text.length <= GROUP_TEXT_LIMIT ? { text: group.text } : {}) });
   }
   return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
 }
@@ -103,13 +108,15 @@ export function leaveGroups(network: Network, ids: readonly string[]): void {
 export function removeGroup(network: Network, id: string): void {
   edit(network, groups => groups.filter(group => group.id !== id));
 }
-/** Rename or recolour a group. 群組改名或改色。 */
-export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string }): void {
+/** Rename, recolour or rewrite a group; an empty text takes the text away. 群組改名、改色或改內文；空的內文＝拿掉內文。 */
+export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string; text?: string }): void {
   edit(network, groups => groups.map(group => {
     if (group.id !== id) return group;
     if (patch.name !== undefined && !validGroupName(patch.name)) throw Error('Invalid group name');
     if (patch.color !== undefined && !COLOR.test(patch.color)) throw Error('Invalid group color');
-    return { ...group, ...patch };
+    if (patch.text !== undefined && patch.text.length > GROUP_TEXT_LIMIT) throw Error('Group text too long');
+    const { text, ...rest } = { ...group, ...patch };
+    return text ? { ...rest, text } : rest;
   }));
 }
 

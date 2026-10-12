@@ -154,7 +154,9 @@ export function LocationBar({ layout, file, target, onCramped, onWidth }: {
   </div>;
 }
 
-export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; frameGlide: boolean; errorNodes: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
+export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; frameGlide: boolean; errorNodes: boolean;
+  /** A group's body text makes its box taller (Refactor.99). 群組內文撐高外框（R.99）。 */
+  groupTextGrows: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
 
 /** The network's own toolbar, floating over its top edge (human 2026-10-09): stages on the left; on the right history, box
  * select, Snap and the GLSL panel. The selection's actions are in the floating toolbar (FloatingToolbar.tsx, Refactor.92, human
@@ -386,6 +388,10 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       {/* Floating panels keep clear of each other; off, they may overlap and the one pressed comes to the front (Refactor.89.1, human
           2026-10-12: off by default). 浮動面板彼此避開；關掉時可以重疊、按到的到最前面（R.89.1，人類 10-12：預設關）。 */}
       <label className="check"><input type="checkbox" checked={apart} onChange={event => onApart(event.target.checked)} />{say(tr('foot.floatingApart', 'Forbid floating panels to overlap'))}</label>
+      {/* A group's body text makes its box taller, or sits in the room under the title (Refactor.99, human 2026-10-12: the text and its
+          height are two things, so the height can be turned off later; on by default). 群組內文撐高外框，或放在標題下原本的空間（R.99，人類
+          10-12：內文和高度分開，之後可以關掉高度；預設開）。 */}
+      <label className="check"><input type="checkbox" checked={prefs.groupTextGrows} onChange={event => prefs.set({ groupTextGrows: event.target.checked })} />{say(tr('foot.groupTextGrows', 'Group text makes the box taller'))}</label>
       <ComponentTint />
       <WireGradient />
       <ComponentLetters />

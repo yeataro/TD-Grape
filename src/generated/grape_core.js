@@ -1449,7 +1449,7 @@ function complete(document) {
 "groups":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeGroups = exports.inAnyGroup = exports.canGroup = exports.groupsOf = exports.validGroupName = exports.GROUP_NAME_LIMIT = exports.MEMBER_LIMIT = exports.GROUP_LIMIT = void 0;
+exports.completeGroups = exports.inAnyGroup = exports.canGroup = exports.groupsOf = exports.validGroupName = exports.GROUP_TEXT_LIMIT = exports.GROUP_NAME_LIMIT = exports.MEMBER_LIMIT = exports.GROUP_LIMIT = void 0;
 exports.tidy = tidy;
 exports.tidyGroups = tidyGroups;
 exports.joinTarget = joinTarget;
@@ -1462,6 +1462,8 @@ exports.addCopiedGroups = addCopiedGroups;
 const model_1 = require("./model");
 /** Legacy's limits (functions_model.js:10-13). 舊產品的上限。 */
 exports.GROUP_LIMIT = 256, exports.MEMBER_LIMIT = 256, exports.GROUP_NAME_LIMIT = 80;
+/** The body text's length (a few pages; Refactor.99). 內文長度上限（幾頁；R.99）。 */
+exports.GROUP_TEXT_LIMIT = 10000;
 const ID = /^[A-Za-z][A-Za-z0-9_]{0,63}$/, COLOR = /^#[0-9a-f]{6}$/;
 /** A name people can read: 1 to 80 characters, no control characters, not only spaces. 看得懂的名字：1 到 80 字、沒有控制字元、不是只有空白。 */
 const validGroupName = (name) => typeof name === 'string' && name.trim().length > 0 && name.length <= exports.GROUP_NAME_LIMIT && !/[\u0000-\u001f\u007f]/.test(name);
@@ -1488,7 +1490,8 @@ function tidy(network) {
             continue;
         members.forEach(id => claimed.add(id));
         ids.add(group.id);
-        groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}) });
+        groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
+            ...(typeof group.text === 'string' && group.text && group.text.length <= exports.GROUP_TEXT_LIMIT ? { text: group.text } : {}) });
     }
     return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
 }
@@ -1576,7 +1579,7 @@ function leaveGroups(network, ids) {
 function removeGroup(network, id) {
     edit(network, groups => groups.filter(group => group.id !== id));
 }
-/** Rename or recolour a group. 群組改名或改色。 */
+/** Rename, recolour or rewrite a group; an empty text takes the text away. 群組改名、改色或改內文；空的內文＝拿掉內文。 */
 function changeGroup(network, id, patch) {
     edit(network, groups => groups.map(group => {
         if (group.id !== id)
@@ -1585,7 +1588,10 @@ function changeGroup(network, id, patch) {
             throw Error('Invalid group name');
         if (patch.color !== undefined && !COLOR.test(patch.color))
             throw Error('Invalid group color');
-        return { ...group, ...patch };
+        if (patch.text !== undefined && patch.text.length > exports.GROUP_TEXT_LIMIT)
+            throw Error('Group text too long');
+        const { text, ...rest } = { ...group, ...patch };
+        return text ? { ...rest, text } : rest;
     }));
 }
 /** The groups that come along when these nodes are copied: only those whose members are all among them (G-2). 複製這些節點時帶著的群組：

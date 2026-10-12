@@ -42,7 +42,7 @@ import { forgetPreferences, readPreference, writePreference } from './preference
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
 import { useCopyPaste, type CopyPaste } from './copy_paste';
-import { GroupLayer, useGroupActions, type GroupActions } from './Groups';
+import { GroupLayer, useGroupActions, type GroupActions, type TextHeights } from './Groups';
 import type { GraphGroup } from './core';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
@@ -144,14 +144,22 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus, clip, groups, grouping }: {
+const NO_TEXT: TextHeights = {};
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, onCreate, onDropChoice, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void; onMenu(open: MenuOpen): void;
   focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
+  textGrows: boolean;
 }) {
   const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
   const selectedIds = useMemo(() => new Set(projection.nodes.filter(node => node.selected).map(node => node.id)), [projection.nodes]);
+  // Groups' body text heights, reported by each group when its text or width changes (Refactor.99): the selection's frame and toolbar
+  // go around the grown box. 群組內文的高度，由各群組在內文或寬度改變時回報（R.99）：選取的框與工具列包住長高的外框。
+  // Only with "group text makes the box taller" on (the gear; human 2026-10-12: the text and its height apart, so the height can be
+  // turned off). 只在「群組內文撐高外框」開著時（齒輪；人類 10-12：內文和高度分開，高度可以關掉）。
+  const [measured, setTexts] = useState<TextHeights>({}), texts = textGrows ? measured : NO_TEXT;
+  const onText = useCallback((id: string, height: number) => setTexts(old => (old[id] ?? 0) === height ? old : { ...old, [id]: height }), []);
   // A right-click (or long press) on a port opens Create node for that port, there, instead of the menu (legacy graph_ui.js:2476);
   // elsewhere the menu. 在接孔上按右鍵（或長按）：在那裡打開只列接得上的新增節點，不開選單（照舊產品）；其他地方開選單。
   const menu = useCallback((open: MenuOpen) => {
@@ -303,9 +311,9 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       </Controls>
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       {/* Groups behind and between (Groups.tsx), then the selection's frame and toolbar. 群組在後面與中間，然後是選取的框與工具列。 */}
-      <GroupLayer groups={groups} selected={selectedIds} session={session} actions={grouping} snap={snap} grid={GRID} onMenu={menu} />
-      <SelectionFrame nodes={projection.nodes} session={session} groups={groups} />
-      <FloatingToolbar nodes={projection.nodes} edges={edges} clip={clip} groups={groups} grouping={grouping} />
+      <GroupLayer groups={groups} selected={selectedIds} session={session} actions={grouping} snap={snap} grid={GRID} onMenu={menu} texts={texts} onText={textGrows ? onText : undefined} />
+      <SelectionFrame nodes={projection.nodes} session={session} groups={groups} texts={texts} />
+      <FloatingToolbar nodes={projection.nodes} edges={edges} clip={clip} groups={groups} grouping={grouping} texts={texts} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
@@ -317,13 +325,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
 function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
     bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on',
-    frameGlide: readPreference('canvas.frameGlide') !== 'off', errorNodes: readPreference('canvas.errorNodes') === 'on' }));
+    frameGlide: readPreference('canvas.frameGlide') !== 'off', errorNodes: readPreference('canvas.errorNodes') === 'on',
+    groupTextGrows: readPreference('canvas.groupTextGrows') !== 'off' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
     if (patch.bodyDrag !== undefined) writePreference('canvas.bodyDrag', patch.bodyDrag ? 'on' : 'off');
     if (patch.damping !== undefined) writePreference('canvas.damping', patch.damping ? 'on' : 'off');
     if (patch.frameGlide !== undefined) writePreference('canvas.frameGlide', patch.frameGlide ? 'on' : 'off');
     if (patch.errorNodes !== undefined) writePreference('canvas.errorNodes', patch.errorNodes ? 'on' : 'off');
+    if (patch.groupTextGrows !== undefined) writePreference('canvas.groupTextGrows', patch.groupTextGrows ? 'on' : 'off');
   } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). Typed in full, no cast: a field
@@ -508,7 +518,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} />
+            onCreate={onCreate} onDropChoice={onDropChoice} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();

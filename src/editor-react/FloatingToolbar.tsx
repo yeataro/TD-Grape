@@ -6,7 +6,7 @@ import { IconButton } from './controls';
 import type { IconName } from './icons';
 import { frameNodes } from './viewport';
 import type { CopyPaste } from './copy_paste';
-import { selectionBounds, type GroupActions } from './Groups';
+import { selectionBounds, type GroupActions, type TextHeights } from './Groups';
 import type { GraphGroup } from './core';
 
 // The floating toolbar (浮動工具列, Refactor.92; human 2026-10-12; legacy selection_ui.js:106-176, 415-466): the actions on what is
@@ -32,8 +32,8 @@ const frameOffset = () => (parseFloat(getComputedStyle(document.documentElement)
 
 type Tool = { key: string; icon: IconName; label: Message; run?: () => void; disabled?: boolean; danger?: boolean };
 
-export function FloatingToolbar({ nodes, edges, clip, groups, grouping }: {
-  nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
+export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }: {
+  nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions; texts: TextHeights;
 }) {
   const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
   const selected = nodes.filter(node => node.selected), ids = selected.map(node => node.id);
@@ -42,7 +42,7 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping }: {
   const key = useStore(state => {
     if (!ids.length) return '';
     // Groups whose members are all selected included, as the multi-selection frame (Refactor.98). 含成員全被選取的群組，同多選框（R.98）。
-    const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups), [x, y, zoom] = state.transform;
+    const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups, texts), [x, y, zoom] = state.transform;
     return [box.x * zoom + x, box.y * zoom + y, (box.x + box.width) * zoom + x, (box.y + box.height) * zoom + y].map(Math.round).join(',');
   });
   // Where it may sit: below the toolbar's row and above the canvas controls' row, measured when they change size, not on every move.
