@@ -313,6 +313,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    not text, may grow brighter): --icon-hover. Not --text-strong: that is the title's 74%, dimmer than --text's 78%. 指標下的圖示到主題的
    完全對比色 --icon-hover（R.104.4，人類 10-12：滑過跳不出來；圖示在滑過時還可以更亮）。不用 --text-strong：那是標題的 74%，比 --text 的 78% 還暗。 */
 @media (hover: hover) { :where(.network-bar-group) .icon-button:not([aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"]):hover { color: var(--icon-hover); } }
+/* And its background is the hover surface, which stands out from the bar; --surface-control was about the bar's own surface (Refactor.104.5,
+   human 2026-10-12: the hover background should be brighter; legacy's was #393741). 底色用滑過的表面，從工具列上跳出來；--surface-control
+   和工具列本身的底差不多（R.104.5，人類 10-12：滑過的底色要再亮一點；舊產品是 #393741）。 */
+@media (hover: hover) { :where(.network-bar-group) .icon-button:not([aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"]):hover { background: var(--surface-control-hover); } }
 /* It rises in when it appears or its buttons change: a short fade with a slight growth (Refactor.104.2, human 2026-10-12: short,
    "floating up"); none with animation effects off. 出現或按鈕改變時浮現：很短的淡入加些微放大（R.104.2，人類 10-12：要短、浮現的感覺）；
    動畫效果關掉時沒有。 */
