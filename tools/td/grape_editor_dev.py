@@ -49,6 +49,10 @@ def Deliver(save=True):
         raise RuntimeError('Served {} {} but expected embedded {}; nothing saved'.format(
             report['source'], report['version'], expected))
     if save:
+        # Sourcefolder only shows where the service reads from, written again at every reload; it holds this machine's absolute
+        # path, so it is cleared before saving (2026-10-12: found by the private-path scan). Sourcefolder 只顯示服務從哪裡讀，
+        # 每次重新載入都會再寫；它是這台電腦的絕對路徑，所以存檔前清空（10-12：私人路徑掃描時發現）。
+        editor.par.Sourcefolder = ''
         project.save()
         report['saved'] = project.name
     return report
