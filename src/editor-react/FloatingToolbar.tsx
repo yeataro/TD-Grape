@@ -108,11 +108,16 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
   // Not there yet: greyed, its name saying so. 還沒有的：灰的，名字後面說尚未提供。
   const tool = (item: Tool) => <IconButton key={item.key} icon={item.icon} label={item.label} danger={item.danger} disabled={!item.run || item.disabled}
     title={item.run ? undefined : tr('selection.notYet', '{action} (not available yet)', { action: say(item.label) })} onClick={item.run} />;
-  // Its own: a press here starts no box selection, a wheel here does not zoom the canvas. 自己的：在這裡按下不會開始框選，滾輪不會縮放畫布。
-  return <div ref={bar} className="floating-toolbar network-bar-group nopan nowheel nodrag" role="toolbar" aria-label={say(tr('selection.toolbar', 'Floating toolbar'))}
+  // Its own: a press here starts no box selection, a wheel here does not zoom the canvas. The outer part only places it; the inner one
+  // is what is seen, and it rises in when the bar appears or its buttons change (Refactor.104.2, human 2026-10-12: a short fade with a
+  // slight growth, "floating up"), started again by a new key. 自己的：在這裡按下不會開始框選，滾輪不會縮放畫布。外層只管位置；內層是看到的
+  // 樣子，工具列出現或按鈕改變時浮現（R.104.2，人類 10-12：很短的淡入加些微放大，「浮現出來的感覺」），換 key 重播。
+  return <div ref={bar} className="floating-toolbar nopan nowheel nodrag" role="toolbar" aria-label={say(tr('selection.toolbar', 'Floating toolbar'))}
     style={{ transform: `translate(${Math.round(x)}px, ${Math.round(y)}px)`, visibility: shown ? undefined : 'hidden' }}
     onPointerDown={event => event.stopPropagation()}>
-    <div className="tool-group">{edit.map(tool)}</div>
-    <div className="tool-group">{arrange.map(tool)}</div>
+    <div key={`${many}|${target?.id ?? ''}|${inGroup}`} className="floating-toolbar-face network-bar-group">
+      <div className="tool-group">{edit.map(tool)}</div>
+      <div className="tool-group">{arrange.map(tool)}</div>
+    </div>
   </div>;
 }

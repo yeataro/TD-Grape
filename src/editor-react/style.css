@@ -306,6 +306,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* Its icons are bright from the start; a hover only adds the background, as legacy (style.css:1007-1008; human 2026-10-12: dimmed they
    look listless and are harder to tell apart). 圖示一開始就是亮的，滑過只加底色，照舊產品（人類 10-12：暗的看起來沒精神、辨識度差）。 */
 .floating-toolbar .icon-button { color: var(--text); }
+/* It rises in when it appears or its buttons change: a short fade with a slight growth (Refactor.104.2, human 2026-10-12: short,
+   "floating up"); none with animation effects off. 出現或按鈕改變時浮現：很短的淡入加些微放大（R.104.2，人類 10-12：要短、浮現的感覺）；
+   動畫效果關掉時沒有。 */
+.floating-toolbar-face { animation: floating-toolbar-rise 120ms ease-out; }
+@keyframes floating-toolbar-rise { from { opacity: 0; transform: scale(.95); } }
+:root[data-motion="off"] .floating-toolbar-face { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .floating-toolbar-face { animation: none; } }
 /* One height for the whole toolbar (Refactor.83.6, human 2026-10-11: too tall, and the stage switch should line up with it; legacy
    gave its stage and tool buttons one height, 32px standard / 38px comfortable, style.css:961, 1524): a word button is as tall as
    an icon button, and the stage switch is as tall as the tool group (a transparent line stands in for the group's border).
