@@ -207,6 +207,7 @@
      canvas's dark as much as it is opaque (the more opaque, the darker), 75% opaque. 浮動面板的玻璃（R.89.3–89.4，人類 10-12：定案、不要滑桿）：
      停靠時的面板色，越不透明越往畫布的深色混，75% 不透明。 */
   --surface-glass-panel: color-mix(in srgb, color-mix(in srgb, var(--surface-zone) 25%, var(--surface-canvas)) 75%, transparent);
+  --surface-floating-panel: color-mix(in srgb, var(--surface-canvas) 90%, transparent); /* a floating panel: the docked panels' colour, a little see-through, glass or not (R.105.14) 浮動面板：固定面板的顏色、一點透明，不管玻璃（R.105.14） */
   /* Scrollbars as the legacy dark theme (style.css:299), on every scroll area (human 2026-10-09).
      捲軸照舊產品深色主題，套到所有捲動區（人類）。 */
   --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-zone));

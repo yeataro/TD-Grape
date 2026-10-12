@@ -386,7 +386,16 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   --glass-surface: var(--surface-glass-panel); --glass-solid: var(--surface-zone);
   /* It floats, so it casts a shadow as a menu does (Refactor.89.2, human 2026-10-12: floating panels should have one); the layered
      shadow trial, when on, has its own. 浮著的東西有陰影，和選單一樣（R.89.2，人類 10-12：浮動面板本身應該要有陰影）；層疊微陰影試驗開著時用它自己的。 */
-  box-shadow: 0 8px 24px var(--shadow); }
+  box-shadow: 0 8px 24px var(--shadow);
+  /* Its own layer: what is raised inside it (its tab row) stays inside it, under a panel in front (Refactor.105.14, human 2026-10-13:
+     a panel behind showed its header's chevron over the one in front). 自成一層：裡面墊高的東西（分頁列）留在裡面，在前面的面板之下
+     （R.105.14，人類 10-13：後面面板標題列的收合箭頭露在前面那個上面）。 */
+  isolation: isolate; }
+/* The panels that can be dragged about: the docked panels' colour, a little see-through, whether glass is on or not — glass only adds
+   the blur (Refactor.105.14, human 2026-10-13: they were too bright, brighter than the docked panels; the blend with the canvas looked
+   right; not the Parameters panel). 可以拖來拖去的面板：固定面板的顏色、一點透明，玻璃開不開都一樣——玻璃只加模糊（R.105.14，人類 10-13：
+   太亮，比固定面板亮；混到畫布色的樣子才對；參數面板不算）。 */
+.floating-panel.glass { background: var(--surface-floating-panel); --glass-surface: var(--surface-floating-panel); --glass-solid: var(--surface-floating-panel); }
 .params-card.floating { box-shadow: 0 8px 24px var(--shadow); }
 :root[data-shadow-layers="on"] .floating-panel { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
 .floating-head { display: flex; align-items: center; gap: 2px; flex-shrink: 0; height: calc(var(--bar-height) - 2px); padding: 0 2px;
@@ -1375,6 +1384,8 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
   padding: 10px; border: 1px solid var(--border-control); border-radius: var(--radius-popup); background: var(--surface-raised); box-shadow: 0 10px 30px var(--shadow); }
 .create-head { display: flex; align-items: center; justify-content: space-between; touch-action: none; } /* moved by this bar, a finger too (R.79) 抓這條移動，手指也行（R.79） */
 .create-search, .add-node-search { width: 100%; }
+/* The Add Node search box a little deeper than its panel (Refactor.105.14, human 2026-10-13: maybe deeper — a trial). 新增節點的搜尋框比面板深一點（R.105.14，人類 10-13：也許再深一點——試試看）。 */
+.add-node-search { background: var(--surface-app); }
 .create-columns { display: flex; flex: 1; min-height: 0; gap: 8px; }
 .create-list { flex: 3; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 .create-entry { display: flex; align-items: center; gap: 8px; min-height: var(--row-height); text-align: left; border: 0; background: none; padding: 0 8px; font-size: var(--row-font); }
