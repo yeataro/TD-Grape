@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { searchChoices, sourceLabel, wireOrder, type AddChoice } from './add_entries';
+import { dragToAdd } from './drag_to_add';
 import type { Editor as EditorSession, WireEnd, WireFit } from './editor';
 import { Icon } from './icons';
 import { language, languageSubscribe, say, tr } from './text';
@@ -92,7 +93,10 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
       <div className="create-list" role="listbox" aria-label={say(tr('create.results', 'Nodes'))}>
         {matches.length ? matches.map((match, i) => <button key={match.choice.id} type="button" role="option" aria-selected={i === index}
           className={'create-entry' + (i === index ? ' create-active' : '')} onMouseEnter={() => setIndex(i)}
-          onClick={() => onPick(match.choice, match.port)}>
+          onClick={() => onPick(match.choice, match.port)}
+          // Dragged onto the canvas with a mouse; not when opened from a wire, whose point is to connect it (Refactor.104, human
+          // 2026-10-12: A). 用滑鼠拖到畫布；從線打開時不行，那時的意思是接上那條線（R.104，人類 10-12：A）。
+          {...(wire ? {} : { ...dragToAdd(match.choice.id, { touch: 'none' }), 'data-drag-handle': '' })}>
           <span className="create-name">{match.choice.label}</span>
           {match.port && <small className="create-port">{match.port.port} · {match.port.type}</small>}
           <small className="create-source">{say(sourceLabel[match.choice.source])}</small></button>)

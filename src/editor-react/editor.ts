@@ -1,7 +1,7 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
   type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup } from './core';
-import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
+import { project, type Projection, type FlowNode, type FlowEdge, colorGroupOf } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
@@ -540,6 +540,12 @@ export class Editor {
     const type = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
     return (type && row[end.side][type]) || null;
   };
+  /** The colour group a new node would have, rehearsed on a discarded candidate (Refactor.104: the drag-to-add tile). 新節點會是哪個
+   * 顏色組，在丟棄的候選文件上預演（R.104：拖曳新增的圖塊）。 */
+  newNodeColor = (spec: NewNode): string | null => this.rehearse(document => {
+    const id = insertNew(document, spec, { x: 0, y: 0 }), node = document.networks.get('pixel')!.node(id);
+    return node.definition ? colorGroupOf(node.definition, node.data!, document) : null;
+  });
   /** Which port of a new node would take this wire, rehearsed on a discarded candidate so the answer follows the
    * same rules as the real edit (Refactor.54; no separate core question). A port of exactly the wire's type comes
    * first. null: it does not fit. 新節點的哪個接孔能接這條線：在丟棄的候選文件上預演，答案與真正的修改同一套規則；

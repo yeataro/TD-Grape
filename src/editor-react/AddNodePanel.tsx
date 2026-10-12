@@ -1,3 +1,4 @@
+import { dragToAdd } from './drag_to_add';
 import { Fragment, memo, useMemo, useRef, useState } from 'react';
 import { categoryLabel, searchChoices, sourceLabel, topCategories, type AddChoice } from './add_entries';
 import { Badge } from './controls';
@@ -11,7 +12,6 @@ import { say, tr, useLanguage } from './text';
 // adds it where it is dropped. Same list as Create node (add_entries.ts).
 // 新增節點面板（照舊產品左側）：搜尋、帶數量的分類樹、每列名稱＋來源＋「＋」。點一下選中並在下方顯示說明（先佔位）；
 // 雙擊或「＋」加到網路區中間；拖到網路區放在放開的位置。與 Create node 同一份清單。
-export const DRAG_TYPE = 'application/x-grape-choice';
 const hint = tr('addNode.rowHint', 'Click to see its description; drag, double-click or press + to add');
 
 // Memoised: a node drag re-renders the workspace every move, and this panel only follows its own props (Refactor.79.4; EDITOR_UI_RULES, continuous interactions).
@@ -24,12 +24,13 @@ function AddNodeList({ choices, onAdd }: { choices: readonly AddChoice[]; onAdd(
   const body = useRef<HTMLDivElement>(null), start = useRef(split);
   const found = useMemo(() => searchChoices(choices, query), [choices, query]);
   const toggle = (key: string) => setOpen(old => { const next = new Set(old); if (next.has(key)) next.delete(key); else next.add(key); return next; });
-  const row = (choice: AddChoice) => <div key={choice.id} className={'choice-row' + (choice.id === chosen ? ' chosen' : '')} draggable
+  // Dragged onto the canvas to add it (drag_to_add.tsx): a mouse from anywhere on the row, a finger from its + (human 2026-10-12).
+  // 拖到畫布新增（drag_to_add.tsx）：滑鼠從整列哪裡都可以，手指從 +（人類 10-12）。
+  const row = (choice: AddChoice) => <div key={choice.id} className={'choice-row' + (choice.id === chosen ? ' chosen' : '')}
     title={choice.label + ' · ' + say(sourceLabel[choice.source]) + '\n' + say(hint)}
-    onClick={() => setChosen(choice.id)} onDoubleClick={() => onAdd(choice)}
-    onDragStart={event => { event.dataTransfer.setData(DRAG_TYPE, choice.id); event.dataTransfer.effectAllowed = 'copy'; }}>
+    onClick={() => setChosen(choice.id)} onDoubleClick={() => onAdd(choice)} {...dragToAdd(choice.id)}>
     <span className="choice-name">{choice.label}</span><small className="choice-source">{say(sourceLabel[choice.source])}</small>
-    <button type="button" className="choice-add" aria-label={say(tr('addNode.add', 'Add {name}', { name: choice.label }))}
+    <button type="button" className="choice-add" data-drag-handle="" aria-label={say(tr('addNode.add', 'Add {name}', { name: choice.label }))}
       onClick={event => { event.stopPropagation(); onAdd(choice); }}>+</button></div>;
   // Categories below the top level, shown as the next level of the tree. 頂層之下的分類，作為樹的下一層。
   const level = (items: readonly AddChoice[], depth: number, prefix: string) => {

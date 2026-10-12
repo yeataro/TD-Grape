@@ -4,7 +4,7 @@ import { tr, say } from './text';
 import { useSession } from './contexts';
 import { Badge, MenuButton } from './controls';
 import { Icon } from './icons';
-import { DRAG_TYPE } from './AddNodePanel';
+import { dragToAdd } from './drag_to_add';
 
 // The parts of a card in the Shared Sources panel (Refactor.57–58; split out of SourcesPanel.tsx). Styles: style.css,
 // "A source card". 共用來源面板裡卡片的零件（從 SourcesPanel.tsx 拆出）。樣式在 style.css「A source card」。
@@ -27,15 +27,6 @@ export const kindGroup = (declaration: Declaration) => core.declarationKinds.get
 // Dragged onto the canvas, a source is added there, the same way as from the Add Node panel (its add-list id; human
 // 2026-10-09). Only from the card itself, never from its fields and buttons, so text can still be selected.
 // 拖到畫布上就在那裡新增，和 Add Node 面板同一條路（用它在新增清單的代號；人類）。只從卡片本身拖，不從輸入框和按鈕，文字仍可選取。
-function useDragToCanvas(choice: string) {
-  const grab = useRef(false);
-  return { draggable: true,
-    onPointerDown: (event: PointerEvent) => { grab.current = !(event.target as Element).closest('input, button, .value-row'); },
-    onDragStart: (event: DragEvent) => {
-      if (!grab.current) { event.preventDefault(); return; }
-      event.dataTransfer.setData(DRAG_TYPE, choice); event.dataTransfer.effectAllowed = 'copy';
-    } };
-}
 
 // One source card (human 2026-10-09, after the legacy card). Two columns: the triangle alone at the left; the head (name,
 // type, use count, "⋯") and, open, the value in the right one, so they share one left edge and one right edge. The count
@@ -48,7 +39,9 @@ function useDragToCanvas(choice: string) {
 export function SourceCard({ group, refKey, choice, head, children, uses, onAdd, onRemove }: {
   group: string; refKey: string; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove?(): void;
 }) {
-  const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
+  // Dragged onto the canvas from anywhere that is not a control; a finger from the title bar, so the body still scrolls (Refactor.104,
+  // human 2026-10-12). 從不是控制項的地方拖到畫布；手指從標題列，內容照樣捲動（R.104，人類 10-12）。
+  const session = useSession(), [open, setOpen] = useState(false), drag = dragToAdd(choice);
   // Pressing the card itself (not a field, a button or its menu) selects it, as legacy (inspector.js:2534); a TD value has no
   // declaration and is not selected (Refactor.103). 按卡片本身（不是欄位、按鈕或選單）就選取它，照舊產品；TD 內建值沒有宣告，不選取（R.103）。
   const declared = !refKey.startsWith('tdValue:');
@@ -60,7 +53,7 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
     {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
       : <span className="expand-toggle" aria-hidden="true" />}
-    <div className="source-head">
+    <div className="source-head" data-drag-handle="">
       {head}
       {/* Unused: a plain grey tag; in use: the kind's colour, and a click selects those nodes, as the menu's Select
           references (human 2026-10-09). 沒在用：灰色標籤；有在用：種類色，點了選取那些節點，同選單的選取引用（人類）。 */}
@@ -81,6 +74,6 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
 /** A source not created yet (a time preset): a grey one-line card that can be dragged onto the canvas, closed and
  * without count or menu (human 2026-10-09). 還沒建立的來源（時間）：灰色的一行卡片，可以拖到畫布；不展開、沒有數量與選單（人類）。 */
 export function UnusedCard({ choice, title, children }: { choice: string; title?: string; children: ReactNode }) {
-  return <div className="source-card unused" title={title} {...useDragToCanvas(choice)}>
+  return <div className="source-card unused" title={title} {...dragToAdd(choice)} data-drag-handle="">
     <span className="expand-toggle" aria-hidden="true" />{children}</div>;
 }

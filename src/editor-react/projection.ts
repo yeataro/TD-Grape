@@ -30,7 +30,8 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 // A node in the Logic category wears the logic colour, whatever it is built from (Refactor.81.6, human 2026-10-11: all of them in
 // logic; legacy coloured only Compare and If, graph_ui.js:142). 新增選單分類是「邏輯」的節點用邏輯色，不管它怎麼做出來的（R.81.6，人類：
 // 通通放到邏輯類；舊產品只給 Compare、If）。
-const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+/** A node's colour group (also the drag-to-add tile's, Refactor.104). 節點的顏色組（拖曳新增的圖塊也用，R.104）。 */
+export const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
   if (module.colorGroup) return module.colorGroup;
   if (module.catalog?.browser?.category === 'logic') return 'logic';
   if (module.referencedDeclaration) {

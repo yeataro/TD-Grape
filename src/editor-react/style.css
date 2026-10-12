@@ -461,6 +461,32 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .glsl-string { color: var(--glsl-string); } .glsl-builtin { color: var(--glsl-builtin); }
 /* The Graph JSON View (Refactor.102): no line numbers; long lines wrap under their own start, 2 characters further in.
    Graph JSON View（R.102）：沒有行號；長的一行換行時接在自己開頭的下面、再往內 2 個字。 */
+/* Drag to add a node (Refactor.104): the tile that follows the pointer — a node's title bar at 75% (human 2026-10-12: a tile, the title
+   bar's rounding and the name; a phone made 100% too big), opaque, its node's colour. It pops up when picked up, shrinks away when
+   dropped, fades when given up: transforms and opacity only (rule 六), none of it with animation effects off. While a drag is on,
+   the pointer says "add" everywhere (human 2026-10-09). 拖曳新增節點（R.104）：跟著指標的圖塊——75% 的節點標題列（人類 10-12：圖塊、標題列
+   的圓角加名稱；手機上 100% 太大），不透明、節點的顏色。拿起時彈出、放下時縮小消失、放棄時淡掉：只動變形與透明度（規則六），動畫效果
+   關掉時都沒有。拖曳中指標到處顯示「新增」（人類 10-09）。 */
+/* Above every overlay, the Create node popup (35) and the confirm dialog (200) included: the pointer carries it (human 2026-10-12: it
+   was behind the popup). 在所有覆蓋層之上，包括浮動新增視窗（35）與確認視窗（200）：它在指標上（人類 10-12：原本在浮動視窗後面）。 */
+.drag-tile-place { position: fixed; left: 0; top: 0; z-index: 300; pointer-events: none; }
+.drag-tile { box-sizing: border-box; width: calc(var(--node-min-width) * .75); padding: 9px 11px; border: 1px solid var(--border-node); border-radius: 9px;
+  background: linear-gradient(color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent), color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent)), var(--surface-node);
+  color: var(--text-strong); font-size: calc(var(--font-base) * .75); line-height: calc(var(--line-base) * .75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 5px 16px var(--shadow); transform-origin: 0 0; animation: drag-tile-pop 180ms ease-out; }
+/* Its top left at the pointer, where a dropped node's top left goes (human 2026-10-12: below and right of the pointer, not
+   centred on it); picked up, it starts centred on the pointer and slides there (human: from the middle to the lower right).
+   左上角在指標上，正是放下後節點左上角的位置（人類 10-12：放在指標右下，不是以指標為中心）；拿起時從指標中間滑過去（人類：從中間到右下）。 */
+.drag-tile.drop { animation: drag-tile-drop 150ms ease-in forwards; }
+.drag-tile.cancel { animation: drag-tile-cancel 150ms ease-in forwards; }
+@keyframes drag-tile-pop { from { transform: translate(-50%, -50%) scale(.85); opacity: .5; } 70% { transform: translate(0, 0) scale(1.04); } }
+@keyframes drag-tile-drop { to { transform: scale(.6); opacity: 0; } }
+@keyframes drag-tile-cancel { to { opacity: 0; } }
+:root[data-motion="off"] .drag-tile { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .drag-tile { animation: none; } }
+:root.dragging-to-add, :root.dragging-to-add * { cursor: copy !important; }
+/* A finger starts the drag on these, so they do not scroll the list (drag_to_add.tsx). 手指在這些地方開始拖曳，不捲動清單。 */
+[data-drag-handle] { touch-action: none; }
 .graph-json-scroll { height: 100%; }
 .graph-json-scroll .scroll-fade-content { width: auto; }
 .graph-json .graph-json-line { display: flex; }

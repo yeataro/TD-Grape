@@ -29,7 +29,7 @@ import { Icon } from './icons';
 import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
-import { DRAG_TYPE } from './AddNodePanel';
+import { DragToAddLayer, useDropToAdd } from './drag_to_add';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, LoadingCanvas, useShell, type Shell } from './shell';
@@ -224,7 +224,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
-    <ReactFlow<FlowNode, FlowEdge> ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+    <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left" nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
@@ -262,8 +262,6 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         if (!state.toHandle && edge.targetHandle) session.disconnectInput(edge.target, edge.targetHandle);
       }}
       onDoubleClick={event => { if ((event.target as Element).classList.contains('react-flow__pane')) onCreate({ screen: { x: event.clientX, y: event.clientY } }); }}
-      onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }}
-      onDrop={event => { const id = event.dataTransfer.getData(DRAG_TYPE); if (id) { event.preventDefault(); onDropChoice(id, { x: event.clientX, y: event.clientY }); } }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
       // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
       // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
@@ -393,6 +391,16 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     const choice = choicesRef.current.find(item => item.id === id);
     if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
   }, [session, flow]);
+  // Drag to add a node (Refactor.104): the canvas takes the drop; the tile shows the choice's name and its node's colour. A drop also
+  // closes the Create node popup it may have come from. 拖曳新增節點（R.104）：畫布接收放下；圖塊顯示選項名稱與節點顏色。放下時也關掉
+  // 可能是它來源的浮動新增視窗。
+  useDropToAdd(useMemo(() => ({
+    describe: (id: string) => {
+      const choice = choicesRef.current.find(item => item.id === id);
+      return choice && session ? { label: choice.label, color: session.newNodeColor(choice.spec) ?? 'function' } : null;
+    },
+    drop: (id: string, at: { x: number; y: number }) => { onDropChoice(id, at); setCreating(null); },
+  }), [session, onDropChoice]));
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
@@ -472,17 +480,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, flow.getNodes().filter(node => node.selected).map(node => node.id)));
       else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
     };
-    // While one of our sources or nodes is dragged, the pointer shows "add" everywhere, never "not allowed" (human
-    // 2026-10-09); only the canvas takes the drop, elsewhere nothing happens. 拖我們的來源或節點時，到哪裡都顯示「新增」、
-    // 不顯示禁止符號（人類）；只有畫布接受放下，其他地方什麼都不做。
-    const dragging = (event: DragEvent) => {
-      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return;
-      event.preventDefault(); if (event.type === 'dragover') event.dataTransfer.dropEffect = 'copy';
-    };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
-    addEventListener('dragover', dragging); addEventListener('drop', dragging);
-    return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys);
-      removeEventListener('dragover', dragging); removeEventListener('drop', dragging); };
+    return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
   }, [session, draft, layout.focused, clip, grouping]);
   // Trial (Refactor.63.6, human 2026-10-10): the nodes that wrote a line TD reported, only while this is the GLSL that failed
   // (legacy: only exact lines, only before the graph changes). Worked out only with the setting on and a failure.
@@ -561,6 +560,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           </div></div>
         {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} clip={clip} grouping={grouping} onClose={closeMenu}
           onCreate={at => setCreating({ screen: at })} />}
+        <DragToAddLayer />
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined); }} />}
       </section>;
