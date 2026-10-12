@@ -1,16 +1,17 @@
-import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData } from './model';
+import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value } from './model';
 import type { GraphDocument } from './graph';
 import { freeName, namesIn, takesName } from './node_names';
 import { removable } from './structure';
+import { addCopiedGroups, completeGroups, groupsOf } from './groups';
 
 /** Copy and paste of nodes (Refactor.96; design-interview Q37 1-4, human: the save format plus its version; the copied nodes,
  * the wires between them and the declarations they use; pasting passes the same checks as opening, what is unknown becomes a
- * ghost, every ID is new; a wire with one end outside is dropped). Duplicate is a paste of a fresh copy next to the original
- * (legacy graph_ui.js:2424). One Grape OP only for now (human 2026-10-12: pasting into another Grape OP waits for a rule on
- * declarations of the same name); `source` says which Grape OP it was copied from. Groups do not exist yet.
+ * ghost, every ID is new; a wire with one end outside is dropped; a group comes along only when all its members do, G-2). Duplicate is
+ * a paste of a fresh copy next to the original (legacy graph_ui.js:2424). One Grape OP only for now (human 2026-10-12: pasting into
+ * another Grape OP waits for a rule on declarations of the same name); `source` says which Grape OP it was copied from.
  * 節點的複製貼上（R.96；Q37 1-4，人類：與存檔同一種格式加版本號；選取的節點、其間的線、用到的宣告；貼上走開圖的同一套檢查，不認得的變
- * Ghost，ID 全換新；一端在外面的線丟掉）。複製副本＝在原處旁邊貼上一份新的複製（照舊產品）。目前只在同一個 Grape OP 裡（人類 10-12：
- * 貼到別的 Grape OP 等同名宣告的規則）；source 記下從哪個 Grape OP 複製。群組還不存在。 */
+ * Ghost，ID 全換新；一端在外面的線丟掉；群組只在成員全被複製時跟著，G-2）。複製副本＝在原處旁邊貼上一份新的複製（照舊產品）。目前只在同一個
+ * Grape OP 裡（人類 10-12：貼到別的 Grape OP 等同名宣告的規則）；source 記下從哪個 Grape OP 複製。 */
 export type Clip = Graph & { source: string };
 
 /** The copy of some nodes of the top-level pixel network, or null when none of them can be copied (the Color Output cannot:
@@ -24,8 +25,9 @@ export function copyNodes(graph: GraphDocument, ids: Iterable<string>, source: s
   const kept = new Set(nodes.map(node => node.id));
   const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
   const used = new Set(nodes.flatMap(node => { const id = graph.registry.get(node.nodeType)?.referencedDeclaration?.(node); return id ? [id] : []; }));
+  const groups = completeGroups(groupsOf(network), kept);
   return copy({ format: GRAPH_FORMAT, version: GRAPH_VERSION, target: data.target, declarations: data.declarations.filter(d => used.has(d.id)),
-    stages: { pixel: { nodes, edges } }, source });
+    stages: { pixel: { nodes, edges, ...(groups.length ? { ui: { groups: groups as unknown as Value } } : {}) } }, source });
 }
 
 /** Read what the clipboard holds: a copy, or null when it is not one of ours (any other text). 讀剪貼簿：是我們的複製就回傳，不是就 null。 */
@@ -60,6 +62,8 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   const edges: EdgeData[] = clip.stages.pixel!.edges.filter(edge => ids.has(edge.from[0]) && ids.has(edge.to[0]))
     .map(edge => ({ ...copy(edge), id: '', from: [ids.get(edge.from[0])!, edge.from[1]], to: [ids.get(edge.to[0])!, edge.to[1]] }));
   network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
+  const groups = groupsOf(clip.stages.pixel!);
+  if (groups.length) addCopiedGroups(network, groups, ids, () => 'g' + newId().replace(/[^A-Za-z0-9]/g, '').slice(-16));
   return pasted.map(node => node.id);
 }
 

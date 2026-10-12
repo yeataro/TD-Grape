@@ -27,6 +27,7 @@ const component_names_1 = require("./component_names");
 const upgrades_1 = require("./upgrades");
 const node_names_1 = require("./node_names");
 const clipboard_1 = require("./clipboard");
+const groups = require("./groups");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -89,7 +90,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -263,6 +264,7 @@ exports.clipCorner = clipCorner;
 const model_1 = require("./model");
 const node_names_1 = require("./node_names");
 const structure_1 = require("./structure");
+const groups_1 = require("./groups");
 /** The copy of some nodes of the top-level pixel network, or null when none of them can be copied (the Color Output cannot:
  * there is one per stage, legacy canDeleteNode). 頂層 pixel 網路裡一些節點的複製；一個都不能複製時是 null（Color Output 不能：每個
  * Stage 只有一個，照舊產品）。 */
@@ -276,8 +278,9 @@ function copyNodes(graph, ids, source) {
     const kept = new Set(nodes.map(node => node.id));
     const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
     const used = new Set(nodes.flatMap(node => { var _a, _b; const id = (_b = (_a = graph.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedDeclaration) === null || _b === void 0 ? void 0 : _b.call(_a, node); return id ? [id] : []; }));
+    const groups = (0, groups_1.completeGroups)((0, groups_1.groupsOf)(network), kept);
     return (0, model_1.copy)({ format: model_1.GRAPH_FORMAT, version: model_1.GRAPH_VERSION, target: data.target, declarations: data.declarations.filter(d => used.has(d.id)),
-        stages: { pixel: { nodes, edges } }, source });
+        stages: { pixel: { nodes, edges, ...(groups.length ? { ui: { groups: groups } } : {}) } }, source });
 }
 /** Read what the clipboard holds: a copy, or null when it is not one of ours (any other text). 讀剪貼簿：是我們的複製就回傳，不是就 null。 */
 function readClip(text) {
@@ -326,6 +329,9 @@ function pasteClip(candidate, clip, at, newId) {
     const edges = clip.stages.pixel.edges.filter(edge => ids.has(edge.from[0]) && ids.has(edge.to[0]))
         .map(edge => ({ ...(0, model_1.copy)(edge), id: '', from: [ids.get(edge.from[0]), edge.from[1]], to: [ids.get(edge.to[0]), edge.to[1]] }));
     network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
+    const groups = (0, groups_1.groupsOf)(clip.stages.pixel);
+    if (groups.length)
+        (0, groups_1.addCopiedGroups)(network, groups, ids, () => 'g' + newId().replace(/[^A-Za-z0-9]/g, '').slice(-16));
     return pasted.map(node => node.id);
 }
 /** Where the copied nodes start: their top-left corner, for Duplicate's offset. 複製的節點從哪裡開始：左上角，給複製副本位移用。 */
@@ -811,6 +817,7 @@ function ghostsOf(network, policy) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.ScopeReferences = exports.prepareNodeWire = exports.contextFor = exports.changesBetween = void 0;
 const model_1 = require("./model");
+const groups_1 = require("./groups");
 const node_module_1 = require("./node_module");
 const ports_1 = require("./ports");
 const wire_planning_1 = require("./wire_planning");
@@ -1012,11 +1019,11 @@ class Network {
         if (this.graph.networks.get(this.id) !== this)
             throw Error('Network no longer belongs to this graph');
     }
-    groupSubgraph(ids, options) {
+    subgraphFromSelection(ids, options) {
         this.assertEditable();
         if (this.removedNodes.has(options.callId))
             throw Error('Retired node ID');
-        const call = (0, subgraph_operations_1.groupSubgraph)(this, ids, options);
+        const call = (0, subgraph_operations_1.subgraphFromSelection)(this, ids, options);
         ids.forEach(id => this.removedNodes.add(id));
         return this.node(call.id);
     }
@@ -1409,6 +1416,9 @@ function networkEntries(document) {
     return [...Object.entries(document.stages), ...(document.subgraphs || []).map(raw => { const f = raw; return ['subgraph:' + f.id, f.graph]; })];
 }
 function complete(document) {
+    // Groups are tidied at the end of every change (design-interview 1-2), so no command has to remember them. 每次修改結束時整理群組
+    // （1-2），任何指令都不必記得處理群組。
+    (0, groups_1.tidyGroups)(document);
     const snapshots = new Set((document.subgraphs || []).filter(f => f.scope !== 'local').map(f => f.graph));
     for (const [, data] of networkEntries(document)) {
         const nodes = new Set(), edges = new Set(), taken = new Set();
@@ -1433,6 +1443,160 @@ function complete(document) {
             edges.add(e.id);
         }
     }
+}
+
+},
+"groups":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.completeGroups = exports.inAnyGroup = exports.canGroup = exports.groupsOf = exports.validGroupName = exports.GROUP_NAME_LIMIT = exports.MEMBER_LIMIT = exports.GROUP_LIMIT = void 0;
+exports.tidy = tidy;
+exports.tidyGroups = tidyGroups;
+exports.joinTarget = joinTarget;
+exports.createGroup = createGroup;
+exports.joinGroup = joinGroup;
+exports.leaveGroups = leaveGroups;
+exports.removeGroup = removeGroup;
+exports.changeGroup = changeGroup;
+exports.addCopiedGroups = addCopiedGroups;
+const model_1 = require("./model");
+/** Legacy's limits (functions_model.js:10-13). 舊產品的上限。 */
+exports.GROUP_LIMIT = 256, exports.MEMBER_LIMIT = 256, exports.GROUP_NAME_LIMIT = 80;
+const ID = /^[A-Za-z][A-Za-z0-9_]{0,63}$/, COLOR = /^#[0-9a-f]{6}$/;
+/** A name people can read: 1 to 80 characters, no control characters, not only spaces. 看得懂的名字：1 到 80 字、沒有控制字元、不是只有空白。 */
+const validGroupName = (name) => typeof name === 'string' && name.trim().length > 0 && name.length <= exports.GROUP_NAME_LIMIT && !/[\u0000-\u001f\u007f]/.test(name);
+exports.validGroupName = validGroupName;
+/** The groups of a network, tidied (the automatic fix, 1-2): members that are not nodes of this network are dropped (a ghost node is
+ * still a node), a node claimed by two groups stays with the first, repeats go, an empty group goes; a malformed entry is dropped.
+ * `fixed` says whether anything was changed. 一張網路的群組，整理過（自動修正，1-2）：不是這張網路節點的成員拿掉（Ghost 節點仍是節點）、
+ * 被兩個群組認領的節點留在第一個、重複的拿掉、空群組拿掉；格式不對的整筆拿掉。fixed：有沒有改到東西。 */
+function tidy(network) {
+    var _a;
+    const raw = (_a = network.ui) === null || _a === void 0 ? void 0 : _a.groups;
+    if (raw === undefined)
+        return { groups: [], fixed: false };
+    if (!Array.isArray(raw))
+        return { groups: [], fixed: true };
+    const nodes = new Set(network.nodes.map(node => node.id)), claimed = new Set(), ids = new Set(), groups = [];
+    for (const entry of raw.slice(0, exports.GROUP_LIMIT)) {
+        const group = entry;
+        if (!group || typeof group !== 'object' || typeof group.id !== 'string' || !ID.test(group.id) || ids.has(group.id) || !(0, exports.validGroupName)(group.name)
+            || !Array.isArray(group.nodes))
+            continue;
+        const members = [...new Set(group.nodes)].filter((id) => typeof id === 'string' && nodes.has(id) && !claimed.has(id)).slice(0, exports.MEMBER_LIMIT);
+        if (!members.length)
+            continue;
+        members.forEach(id => claimed.add(id));
+        ids.add(group.id);
+        groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}) });
+    }
+    return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
+}
+/** The groups of a network as they are now (tidied, read-only use). 一張網路現在的群組（整理過，只讀用）。 */
+const groupsOf = (network) => tidy(network).groups;
+exports.groupsOf = groupsOf;
+function write(network, groups) {
+    var _a;
+    if (groups.length) {
+        network.ui = { ...((_a = network.ui) !== null && _a !== void 0 ? _a : {}), groups: (0, model_1.copy)(groups) };
+        return;
+    }
+    if (!network.ui)
+        return;
+    const { groups: _, ...rest } = network.ui;
+    if (Object.keys(rest).length)
+        network.ui = rest;
+    else
+        delete network.ui;
+}
+/** Tidy every network of a document in place; how many networks were fixed. Run at the end of every change and when a graph is
+ * opened (1-2: the only two gates). 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。 */
+function tidyGroups(document) {
+    var _a;
+    let fixed = 0;
+    const networks = [...Object.values(document.stages), ...((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(subgraph => subgraph.graph)];
+    for (const network of networks) {
+        const result = tidy(network);
+        if (result.fixed) {
+            write(network, result.groups);
+            fixed++;
+        }
+    }
+    return fixed;
+}
+const groupOf = (groups, node) => groups.find(group => group.nodes.includes(node));
+/** Whether these nodes can make a new group: two or more, none in a group yet (legacy frames_ui.js:23-27). 這些節點能不能建立新群組：兩個以上、
+ * 都還沒在群組裡（照舊產品）。 */
+const canGroup = (groups, ids) => ids.length >= 2 && ids.length <= exports.MEMBER_LIMIT && groups.length < exports.GROUP_LIMIT && ids.every(id => !groupOf(groups, id));
+exports.canGroup = canGroup;
+/** The group these nodes would join: the one holding most of them, when it is the only such one and some are outside it (legacy
+ * frames_ui.js:38-48). 這些節點會加入哪個群組：裝著最多個的那一個，只有它一個這麼多、且有些不在裡面時（照舊產品）。 */
+function joinTarget(groups, ids) {
+    var _a;
+    const counts = groups.map(group => ({ group, count: ids.filter(id => group.nodes.includes(id)).length })).filter(item => item.count > 0)
+        .sort((a, b) => b.count - a.count);
+    const best = counts[0];
+    if (!best || ((_a = counts[1]) === null || _a === void 0 ? void 0 : _a.count) === best.count || ids.every(id => best.group.nodes.includes(id)))
+        return null;
+    return best.group;
+}
+/** Whether some of these nodes are in a group (Remove from group). 這些節點有沒有在群組裡的（移出群組）。 */
+const inAnyGroup = (groups, ids) => ids.some(id => !!groupOf(groups, id));
+exports.inAnyGroup = inAnyGroup;
+// Commands, inside GraphDocument.change() on the editable candidate. 指令：在 GraphDocument.change() 的可編輯候選文件上使用。
+function edit(network, change) {
+    network.assertEditable();
+    write(network.data, change((0, exports.groupsOf)(network.data)));
+}
+/** A new group of these nodes (G-3, Ctrl+G). 用這些節點建立新群組（G-3，Ctrl＋G）。 */
+function createGroup(network, ids, group) {
+    edit(network, groups => {
+        if (!ID.test(group.id) || groups.some(item => item.id === group.id) || !(0, exports.validGroupName)(group.name))
+            throw Error('Invalid group');
+        if (!(0, exports.canGroup)(groups, ids) || ids.some(id => !network.data.nodes.some(node => node.id === id)))
+            throw Error('These nodes cannot make a group');
+        return [...groups, { id: group.id, name: group.name, nodes: [...ids], ...(group.color ? { color: group.color } : {}) }];
+    });
+}
+/** Move these nodes into the group most of them are in (G-3, Alt+Shift+G). 把這些節點移入多數所在的群組（G-3，Alt＋Shift＋G）。 */
+function joinGroup(network, ids) {
+    edit(network, groups => {
+        const target = joinTarget(groups, ids);
+        if (!target)
+            throw Error('No group to join');
+        return groups.map(group => group.id === target.id ? { ...group, nodes: [...group.nodes, ...ids.filter(id => !group.nodes.includes(id))].slice(0, exports.MEMBER_LIMIT) }
+            : { ...group, nodes: group.nodes.filter(id => !ids.includes(id)) });
+    });
+}
+/** Take these nodes out of their groups (G-3, Alt+G); a group left empty goes. 把這些節點移出群組（G-3，Alt＋G）；空了的群組拿掉。 */
+function leaveGroups(network, ids) {
+    edit(network, groups => groups.map(group => ({ ...group, nodes: group.nodes.filter(id => !ids.includes(id)) })));
+}
+/** Remove a group, keeping its nodes (G-3). 拿掉群組，節點留著（G-3）。 */
+function removeGroup(network, id) {
+    edit(network, groups => groups.filter(group => group.id !== id));
+}
+/** Rename or recolour a group. 群組改名或改色。 */
+function changeGroup(network, id, patch) {
+    edit(network, groups => groups.map(group => {
+        if (group.id !== id)
+            return group;
+        if (patch.name !== undefined && !(0, exports.validGroupName)(patch.name))
+            throw Error('Invalid group name');
+        if (patch.color !== undefined && !COLOR.test(patch.color))
+            throw Error('Invalid group color');
+        return { ...group, ...patch };
+    }));
+}
+/** The groups that come along when these nodes are copied: only those whose members are all among them (G-2). 複製這些節點時帶著的群組：
+ * 只有成員全在裡面的（G-2）。 */
+const completeGroups = (groups, ids) => groups.filter(group => group.nodes.every(id => ids.has(id)));
+exports.completeGroups = completeGroups;
+/** Add copied groups to a network under new IDs, their members renamed by `nodes` (G-2); none past the limit. 把複製的群組加進網路、換新
+ * ID，成員依 nodes 換成新節點（G-2）；超過上限的不加。 */
+function addCopiedGroups(network, copied, nodes, newId) {
+    edit(network, groups => [...groups, ...copied.map(group => ({ ...(0, model_1.copy)(group), id: newId(), nodes: group.nodes.flatMap(id => nodes.has(id) ? [nodes.get(id)] : []) }))]
+        .slice(0, exports.GROUP_LIMIT));
 }
 
 },
@@ -6039,7 +6203,7 @@ exports.withoutStoredUse = withoutStoredUse;
 exports.insertSubgraph = insertSubgraph;
 exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
-exports.groupSubgraph = groupSubgraph;
+exports.subgraphFromSelection = subgraphFromSelection;
 exports.collectSubgraphs = collectSubgraphs;
 const node_names_1 = require("./node_names");
 const model_1 = require("./model");
@@ -6136,7 +6300,7 @@ function defaultValue(type, options) {
 }
 /** Extract selected graph content. UI supplies selection and view metadata;
  * the model owns interface deduplication, rewiring and reference relocation. */
-function groupSubgraph(network, selection, options) {
+function subgraphFromSelection(network, selection, options) {
     var _a, _b, _c, _d, _e;
     network.assertEditable();
     const graph = network.graph, data = network.data;

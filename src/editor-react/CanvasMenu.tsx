@@ -8,6 +8,7 @@ import { frameNodes } from './viewport';
 import { useFullscreen } from './bars';
 import { shortcutText, type Shortcut } from './shortcuts';
 import type { CopyPaste } from './copy_paste';
+import type { GroupActions } from './Groups';
 
 // The right-click menu of the network (Refactor.93; human 2026-10-12: legacy's logic — what shows when, which have icons, which
 // are checked — legacy graph_ui.js:2939-3052; content-wide, in our look). Opened by a right press and release that did not move
@@ -28,13 +29,13 @@ export const selectionKey = (state: EditorState) => [...state.projection.nodes.f
 
 type Row = { key: string; label: Message; icon?: IconName; keys?: Shortcut; hint?: string; run?: () => void; disabled?: boolean; checked?: boolean; toggle?: boolean; group: number };
 
-export function CanvasMenu({ request, session, state, layout, clip, onCreate, onClose }: {
-  request: CanvasMenuRequest; session: EditorSession; state: EditorState; layout: Layout; clip: CopyPaste;
+export function CanvasMenu({ request, session, state, layout, clip, grouping, onCreate, onClose }: {
+  request: CanvasMenuRequest; session: EditorSession; state: EditorState; layout: Layout; clip: CopyPaste; grouping: GroupActions;
   onCreate(at: { x: number; y: number }): void; onClose(): void;
 }) {
   const flow = useReactFlow(), fullscreen = useFullscreen();
   const nodes = state.projection.nodes.filter(node => node.selected), edges = state.projection.edges.filter(edge => edge.selected);
-  const count = nodes.length, ids = nodes.map(node => node.id);
+  const count = nodes.length, ids = nodes.map(node => node.id), target = grouping.joinTarget(ids);
   const remove = () => void flow.deleteElements({ nodes, edges });
   const params: Row = { key: 'params', group: 9, icon: 'floatingPanel', label: tr('canvasMenu.params', 'Floating Parameter panel'), keys: 'floatingParameter',
     toggle: true, checked: !!layout.floating.params, run: () => layout.toggleFloat('params') };
@@ -49,9 +50,9 @@ export function CanvasMenu({ request, session, state, layout, clip, onCreate, on
     { key: 'disconnect', group: 3, icon: 'delete', label: tr('canvasMenu.disconnect', 'Disconnect wire'), run: remove },
     params,
   ] : [
-    // The nodes' menu, for the selection (legacy graph_ui.js:2966-2992). Items about subgraphs and groups that cannot exist yet
-    // (make independent, rename, move into or out of a group) are not shown, as legacy hides them then. 節點的選單，對著選取（照舊產品）。
-    // 子圖與群組相關、現在還不可能出現的（建立獨立副本、重新命名、移入移出群組）不顯示，舊產品這時也不顯示。
+    // The nodes' menu, for the selection (legacy graph_ui.js:2966-2992). Items about subgraphs that cannot exist yet (make
+    // independent, rename) are not shown, as legacy hides them then. 節點的選單，對著選取（照舊產品）。子圖相關、現在還不可能出現的
+    // （建立獨立副本、重新命名）不顯示，舊產品這時也不顯示。
     { key: 'add', group: 1, icon: 'plus', label: tr('canvasMenu.nodes', 'Nodes'), keys: 'add', run: () => onCreate(request) },
     // Paste lands where the menu opened (legacy graph_ui.js:2969). 貼在打開選單的地方（照舊產品）。
     { key: 'copy', group: 2, icon: 'copy', label: tr('selection.copy', 'Copy'), keys: 'copy', disabled: !clip.canCopy(nodes), run: clip.copy },
@@ -63,7 +64,11 @@ export function CanvasMenu({ request, session, state, layout, clip, onCreate, on
     ] as Row[] : [],
     ...count > 1 ? [{ key: 'arrange', group: 3, icon: 'arrange', label: tr('selection.arrange', 'Arrange nodes'), hint: '›' }] as Row[] : [],
     ...count ? [{ key: 'convertWires', group: 3, icon: 'convertWires', label: tr('canvasMenu.convertWires', 'Convert wires'), hint: '›' }] as Row[] : [],
-    ...count > 1 ? [{ key: 'group', group: 4, icon: 'group', label: tr('selection.group', 'Make group'), keys: 'group' }] as Row[] : [],
+    // Groups as legacy (graph_ui.js:2979-2981, 2997): create with two or more; join and remove only when they apply (Refactor.98).
+    // 群組照舊產品：兩個以上可建立；加入、移出只在適用時出現（R.98）。
+    ...count > 1 ? [{ key: 'group', group: 4, icon: 'group', label: tr('selection.group', 'Create group'), keys: 'group', run: grouping.create, disabled: !grouping.canCreate(ids) }] as Row[] : [],
+    ...target ? [{ key: 'joinGroup', group: 4, icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), keys: 'joinGroup', run: grouping.join }] as Row[] : [],
+    ...grouping.inGroup(ids) ? [{ key: 'leaveGroup', group: 4, icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), keys: 'leaveGroup', run: grouping.leave }] as Row[] : [],
     { key: 'subgraph', group: 4, icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph'), keys: 'subgraph' },
     { key: 'linkLines', group: 5, label: tr('canvasMenu.linkLines', 'Show Link lines'), keys: 'linkLines', checked: false },
     { key: 'home', group: 5, icon: 'home', label: tr('canvasMenu.home', 'Home'), keys: 'home', run: () => frameNodes(flow) },

@@ -1,11 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { getNodesBounds, useReactFlow, useStore } from '@xyflow/react';
+import { useReactFlow, useStore } from '@xyflow/react';
 import type { FlowNode, FlowEdge } from './projection';
 import { say, tr, type Message } from './text';
 import { IconButton } from './controls';
 import type { IconName } from './icons';
 import { frameNodes } from './viewport';
 import type { CopyPaste } from './copy_paste';
+import { selectionBounds, type GroupActions } from './Groups';
+import type { GraphGroup } from './core';
 
 // The floating toolbar (浮動工具列, Refactor.92; human 2026-10-12; legacy selection_ui.js:106-176, 415-466): the actions on what is
 // selected, floating by the selection. Always on, for one node or several (human: the new product settles on "single and
@@ -30,14 +32,17 @@ const frameOffset = () => (parseFloat(getComputedStyle(document.documentElement)
 
 type Tool = { key: string; icon: IconName; label: Message; run?: () => void; disabled?: boolean; danger?: boolean };
 
-export function FloatingToolbar({ nodes, edges, clip }: { nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste }) {
+export function FloatingToolbar({ nodes, edges, clip, groups, grouping }: {
+  nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
+}) {
   const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
   const selected = nodes.filter(node => node.selected), ids = selected.map(node => node.id);
   // The selection's bounds on screen: worked out from React Flow's measured nodes and its view, as a key so the bar draws again only
   // when they change. 選取在螢幕上的範圍：從 React Flow 量到的節點與視角算出，做成字串，變了才重畫。
   const key = useStore(state => {
     if (!ids.length) return '';
-    const box = getNodesBounds(ids, { nodeLookup: state.nodeLookup }), [x, y, zoom] = state.transform;
+    // Groups whose members are all selected included, as the multi-selection frame (Refactor.98). 含成員全被選取的群組，同多選框（R.98）。
+    const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups), [x, y, zoom] = state.transform;
     return [box.x * zoom + x, box.y * zoom + y, (box.x + box.width) * zoom + x, (box.y + box.height) * zoom + y].map(Math.round).join(',');
   });
   // Where it may sit: below the toolbar's row and above the canvas controls' row, measured when they change size, not on every move.
@@ -59,7 +64,7 @@ export function FloatingToolbar({ nodes, edges, clip }: { nodes: readonly FlowNo
 
   if (!ids.length) return null;
   const [left, top, right, bottom] = key.split(',').map(Number) as [number, number, number, number];
-  const many = ids.length > 1, wires = edges.filter(edge => edge.selected);
+  const many = ids.length > 1, wires = edges.filter(edge => edge.selected), target = grouping.joinTarget(ids);
   // Legacy's order and groups (selection_ui.js:433-439): what edits the selection, then what arranges it. 舊產品的順序與分組。
   const edit: Tool[] = [
     // Paste from here lands a third into the canvas (legacy graph_ui.js:2811). 從這裡貼上，貼在畫布三分之一處（照舊產品）。
@@ -71,8 +76,12 @@ export function FloatingToolbar({ nodes, edges, clip }: { nodes: readonly FlowNo
   const arrange: Tool[] = [
     { key: 'collapse', icon: 'collapseCards', label: tr('selection.collapse', 'Collapse nodes') },
     { key: 'expand', icon: 'expandCards', label: tr('selection.expand', 'Expand nodes') },
+    // Groups as legacy (selection_ui.js:118-125, 430-439): create with two or more; join when there is a group to join; remove when
+    // some are in one (Refactor.98). 群組照舊產品：兩個以上可建立；有群組可加入時加入；有在群組裡的可移出（R.98）。
+    ...(many ? [{ key: 'group', icon: 'group', label: tr('selection.group', 'Create group'), run: grouping.create, disabled: !grouping.canCreate(ids) }] as Tool[] : []),
+    ...(target ? [{ key: 'joinGroup', icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), run: grouping.join }] as Tool[] : []),
+    ...(grouping.inGroup(ids) ? [{ key: 'leaveGroup', icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), run: grouping.leave }] as Tool[] : []),
     ...(many ? [
-      { key: 'group', icon: 'group', label: tr('selection.group', 'Make group') },
       { key: 'subgraph', icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph') },
       { key: 'arrange', icon: 'arrange', label: tr('selection.arrange', 'Arrange nodes') },
     ] as Tool[] : []),

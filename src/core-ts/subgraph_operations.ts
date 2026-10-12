@@ -8,7 +8,7 @@ import { ScopeReferences } from './scope_references';
 import {types as valueTypes,fill} from './values';
 
 export interface SubgraphOptions {id:string;name:string}
-export interface GroupOptions extends SubgraphOptions {
+export interface SelectionSubgraphOptions extends SubgraphOptions {
   callId:string;
   /** Transitional descriptions only for types/nodes without a migrated module. */
   port?:(node:Node,direction:'input'|'output',key:string)=>PortSpec;
@@ -90,7 +90,7 @@ export function instantiateSubgraph(network:Network,definitionId:string,id:strin
   return network.insertFragment({nodes:[n],edges:[]},{unavailable:'preserve'})[0]!.data!;
 }
 
-function defaultValue(type:string,options:GroupOptions):Value {
+function defaultValue(type:string,options:SelectionSubgraphOptions):Value {
   if (options.defaultValue) return options.defaultValue(type);
   if (valueTypes.includes(type)) return fill(0,type);
   throw Error('A default value description is required for ' + type);
@@ -98,7 +98,7 @@ function defaultValue(type:string,options:GroupOptions):Value {
 
 /** Extract selected graph content. UI supplies selection and view metadata;
  * the model owns interface deduplication, rewiring and reference relocation. */
-export function groupSubgraph(network:Network,selection:ReadonlySet<string>,options:GroupOptions):Node {
+export function subgraphFromSelection(network:Network,selection:ReadonlySet<string>,options:SelectionSubgraphOptions):Node {
   network.assertEditable();
   const graph = network.graph,data = network.data;
   const chosen = data.nodes.filter(n => selection.has(n.id)),ids = new Set(chosen.map(n => n.id));

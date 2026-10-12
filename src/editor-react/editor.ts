@@ -1,6 +1,6 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
-  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip } from './core';
+  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
@@ -183,7 +183,10 @@ export class Editor {
     private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler, editorVersion = 'unknown',
     readonly log = new ReportLog()) {
     checkLoaded(host, bootstrap, loaded);
-    const { graph, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document), core.nodeUpgrades, core.registry);
+    const { graph: read, changes: upgrades } = core.upgradeGraph(parseDocument(loaded.state.document), core.nodeUpgrades, core.registry);
+    // Groups that list nodes not there, or a node twice, are tidied on opening, said, and sent like an upgrade (design-interview
+    // 1-2). 群組名單有不存在的節點、或一個節點被認領兩次：開圖時整理、說出來，像升級一樣送出（1-2）。
+    const graph = structuredClone(read), groupsFixed = core.groups.tidyGroups(graph) > 0;
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
     this.td = loaded.uniforms ?? {};
@@ -211,7 +214,9 @@ export class Editor {
     this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
     // Upgraded as it was read: reported, then sent like any edit so TD stores the current form (human 2026-10-10).
     // 讀圖時升級過：報告，再照一般編輯送出，讓 TD 存成目前的寫法（人類）。
-    if (upgrades.length) { this.reportUpgrades(upgrades); this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
+    if (upgrades.length) this.reportUpgrades(upgrades);
+    if (groupsFixed) this.tell('warning', tr('groups.openFixed', 'Some groups listed nodes that are not in the graph, or the same node twice; they were tidied.'));
+    if (upgrades.length || groupsFixed) { this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
     const over = core.overLimit(graph, core.registry);
@@ -226,8 +231,10 @@ export class Editor {
    * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
   private upgrade(graph: Graph): Graph {
     // With the registry: nodes made before names were given get one (Refactor.76). 帶 registry：給名字之前做的節點補上名字（R.76）。
-    const { graph: current, changes } = core.upgradeGraph(graph, core.nodeUpgrades, core.registry);
+    const { graph: read, changes } = core.upgradeGraph(graph, core.nodeUpgrades, core.registry);
     if (changes.length) this.reportUpgrades(changes);
+    const current = structuredClone(read);
+    if (core.groups.tidyGroups(current)) this.tell('warning', tr('groups.openFixed', 'Some groups listed nodes that are not in the graph, or the same node twice; they were tidied.'));
     return current;
   }
   // The replacement report (Refactor.65, human 2026-10-10): a floating notice that names each node and leads to it, and one
@@ -678,6 +685,35 @@ export class Editor {
     if (!clip) return false;
     const corner = core.clipCorner(clip);
     return this.paste(clip, { x: corner.x + DUPLICATE_OFFSET, y: corner.y + DUPLICATE_OFFSET }, tr('edit.duplicated', 'Duplicated'));
+  };
+  /** The groups of the network being edited (Refactor.98; core groups.ts), worked out once per version of the graph.
+   * 正在編輯的網路的群組（R.98；核心 groups.ts），圖每一版只算一次。 */
+  groups = (): readonly GraphGroup[] => {
+    if (this.grouped?.document !== this.document) this.grouped = { document: this.document, groups: core.groups.groupsOf(this.document.document.stages.pixel!) };
+    return this.grouped.groups;
+  };
+  private grouped: { document: GraphDocument; groups: readonly GraphGroup[] } | null = null;
+  /** A new group of these nodes (G-3, Ctrl+G); its ID, or null when they cannot make one. 用這些節點建立群組（G-3，Ctrl＋G）；回傳 ID，
+   * 不能建立時是 null。 */
+  createGroup = (ids: readonly string[], name: string) => {
+    const id = 'g' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), version = this.state.version;
+    this.transact(tr('edit.grouped', 'Group created'), net => core.groups.createGroup(net, ids, { id, name }));
+    return this.state.version === version ? null : id;
+  };
+  joinGroup = (ids: readonly string[]) => this.transact(tr('edit.joinedGroup', 'Moved into the group'), net => core.groups.joinGroup(net, ids));
+  leaveGroups = (ids: readonly string[]) => this.transact(tr('edit.leftGroup', 'Removed from the group'), net => core.groups.leaveGroups(net, ids));
+  removeGroup = (id: string) => this.transact(tr('edit.ungrouped', 'Group removed (its nodes stay)'), net => core.groups.removeGroup(net, id));
+  changeGroup = (id: string, patch: { name?: string; color?: string }) =>
+    this.transact(tr('edit.groupChanged', 'Group updated'), net => core.groups.changeGroup(net, id, patch));
+  /** Select a group's members (legacy frames_ui.js:182-189): plain = only them; Ctrl toggles them as one (all selected: off);
+   * Shift adds. 選取群組的成員（照舊產品）：一般＝只選它們；Ctrl 整組切換（全選著就取消）；Shift 加選。 */
+  selectGroup = (id: string, how: 'only' | 'toggle' | 'add') => {
+    const group = this.groups().find(item => item.id === id);
+    if (!group) return;
+    const selected = this.selectedNodes(), all = group.nodes.every(node => selected.has(node));
+    if (how === 'only') selected.clear();
+    for (const node of group.nodes) if (how === 'toggle' && all) selected.delete(node); else selected.add(node);
+    this.boxSelect(selected, [...group.nodes].reverse());
   };
   remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact(this.keptNote ?? tr('edit.deleted', 'Selected items deleted'), net => {
     this.keptNote = undefined;

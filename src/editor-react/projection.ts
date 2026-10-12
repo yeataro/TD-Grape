@@ -98,8 +98,10 @@ export function project(document: GraphDocument, previous: Projection, contract:
     const converted = conversions.get(node.id);
     if (data && !same(data.conversions, converted)) data = { ...data, conversions: converted };
     if (old && old.data === data && same(old.position, position)) return old;
+    // Nodes one layer up, so a group's title can sit between the wires (layer 0) and the nodes (Refactor.98; legacy style.css:968-975):
+    // React Flow's own node property. 節點在第 1 層，群組標題才能在線（第 0 層）與節點之間（R.98；照舊產品）：React Flow 自己的節點屬性。
     return { ...old, id: node.id, type: 'grape' as const, position, data: data!,
-      dragHandle: '.node-drag-surface' };
+      dragHandle: '.node-drag-surface', zIndex: 1 };
   });
   const priorEdges = new Map(previous.edges.map(edge => [edge.id, edge])), byId = new Map(nodes.map(node => [node.id, node]));
   const edges = network.edges.map(edge => {

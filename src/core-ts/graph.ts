@@ -1,4 +1,5 @@
 import { copy, type Graph, type Node as NodeData, type Edge as EdgeData, type ObjectValue, type Value, type SubgraphData } from './model';
+import { tidyGroups } from './groups';
 import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, prepareNodeUnwire, type Configuration, type NodeContext, type Registry } from './node_module';
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
@@ -8,7 +9,7 @@ import { requireStructure } from './structure';
 export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
-import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
+import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions } from './subgraph_operations';
 import { appendSubgraphs, localizeSubgraph, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
 import type { Declaration } from './model';
@@ -142,10 +143,10 @@ export class Network {
     this.graph.assertEditable();
     if (this.graph.networks.get(this.id) !== this) throw Error('Network no longer belongs to this graph');
   }
-  groupSubgraph(ids:ReadonlySet<string>,options:GroupOptions):Node {
+  subgraphFromSelection(ids:ReadonlySet<string>,options:SelectionSubgraphOptions):Node {
     this.assertEditable();
     if(this.removedNodes.has(options.callId))throw Error('Retired node ID');
-    const call=groupSubgraph(this,ids,options);
+    const call=subgraphFromSelection(this,ids,options);
     ids.forEach(id=>this.removedNodes.add(id));
     return this.node(call.id);
   }
@@ -405,6 +406,9 @@ function networkEntries(document:Graph):[string,NetworkData][] {
   return [...Object.entries(document.stages),...(document.subgraphs||[]).map(raw=>{const f=raw as {id:string;graph:NetworkData};return ['subgraph:'+f.id,f.graph] as [string,NetworkData];})];
 }
 function complete(document:Graph):void {
+  // Groups are tidied at the end of every change (design-interview 1-2), so no command has to remember them. 每次修改結束時整理群組
+  // （1-2），任何指令都不必記得處理群組。
+  tidyGroups(document);
   const snapshots=new Set((document.subgraphs||[]).filter(f=>f.scope!=='local').map(f=>f.graph));
   for(const [,data] of networkEntries(document)){
     const nodes=new Set<string>(),edges=new Set<string>(),taken=new Set<string|undefined>();

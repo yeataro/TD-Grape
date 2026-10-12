@@ -25,7 +25,7 @@ test('grouping preserves conversion locations and deduplicates only identical so
  d.nodes=[node('source','float',{value:.5}),node('a','add',{type:'vec4'}),node('b','add',{type:'float'}),node('out','pixel_out'),node('extra','add',{type:'vec4'})];
  d.edges=[{from:['source','out'],to:['a','a']},{from:['source','out'],to:['a','b']},{from:['source','out'],to:['b','a']},{from:['a','out'],to:['out','color']},{from:['a','out'],to:['extra','a']},{from:['b','out'],to:['extra','b']}];
  d.nodes[1].inputValues={a:[.1,.2,.3,.4]};
- const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').groupSubgraph(new Set(['a','b']),{id:'group',callId:'call',name:'Group',stage:'pixel'}));
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'group',callId:'call',name:'Group',stage:'pixel'}));
  const f=step.after.subgraphs[0],outside=step.after.stages.pixel;
  assert.deepEqual(f.inputs.map(p=>p.type),['vec4','float']);assert.deepEqual(f.inputs[0].default,[.1,.2,.3,.4]);
  assert.equal(f.outputs.length,2);assert.equal(outside.edges.filter(e=>e.from[0]==='source').length,2);
@@ -39,7 +39,7 @@ test('grouping preserves nested references, scopes and data while avoiding bound
  const g=sharedGraph();g.stages.pixel.nodes.push(node('input','float',{value:3}));
  g.structDefinitions=[{id:'shape',fields:[{type:'float['+ScopeReferences.token('pixel',['input','out'])+']'}]}];
  const historical=plain(g.structDefinitions);g.catalogSnapshot={structDefinitions:historical};
- const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').groupSubgraph(new Set(['input','first']),{id:'outer',callId:'outer_call',name:'Outer',stage:'pixel'}));
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['input','first']),{id:'outer',callId:'outer_call',name:'Outer',stage:'pixel'}));
  const f=step.after.subgraphs.find(f=>f.id==='outer');
  assert.equal(f.graph.nodes.filter(n=>n.id==='input').length,1);assert.ok(f.graph.nodes.some(n=>n.id==='input_1'));
  assert.ok(step.after.subgraphs.some(f=>f.id==='gain'));assert.match(step.after.structDefinitions[0].fields[0].type,new RegExp(ScopeReferences.token('fn_outer',['input','out'])));
@@ -63,9 +63,9 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
  new GraphDocument(g,registry).change(m=>{
   const parent=m.networks.get('pixel'),old=parent.node('value');parent.remove(parent.node('retired'));
   const options={id:'child',callId:'retired',name:'Child',stage:'pixel'};
-  assert.throws(()=>parent.groupSubgraph(new Set(['value']),options),/Retired node ID/);
+  assert.throws(()=>parent.subgraphFromSelection(new Set(['value']),options),/Retired node ID/);
   assert.equal(m.document.subgraphs.length,0);
-  parent.groupSubgraph(new Set(['value']),{...options,callId:'call'});
+  parent.subgraphFromSelection(new Set(['value']),{...options,callId:'call'});
   assert.equal(old.data,undefined);
   assert.throws(()=>parent.create('value','sgrape.builtin.float'),/retired node ID/);
   assert.equal(m.networks.get('subgraph:child').node('value').data.params.value,1);
@@ -75,8 +75,8 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
 test('capacity, invalid selections and missing type descriptions fail without publishing partial definitions',()=>{
  const g=empty();g.stages.pixel.nodes=[node('a','float',{value:1}),node('out','pixel_out')];
  const model=new GraphDocument(g,registry),before=model.snapshot();
- assert.throws(()=>model.change(m=>m.networks.get('pixel').groupSubgraph(new Set(['out']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/cannot be grouped/);
- assert.throws(()=>model.change(m=>m.networks.get('pixel').groupSubgraph(new Set(['missing']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/selection/);
+ assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/cannot be grouped/);
+ assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['missing']),{id:'bad',callId:'call',name:'Bad',stage:'pixel'})),/selection/);
  assert.throws(()=>model.change(m=>{for(let i=0;i<65;i++)m.createSubgraph({id:'f'+i,name:'F',stage:'pixel'});}),/64/);
  assert.deepEqual(model.snapshot(),before);
 });

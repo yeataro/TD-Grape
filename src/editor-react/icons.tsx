@@ -37,6 +37,10 @@ const paths = {
   arrowLeft: <path d="M20 12H4m6-6-6 6 6 6" />,
   arrowRight: <path d="M4 12h16m-6-6 6 6-6 6" />,
   check: <path d="m5 12 4 4L19 6" />,
+  // Groups (Refactor.98; legacy frames_ui.js:257, graph_ui.js:2937, selection_ui.js:431-433). 群組（R.98，取自舊產品）。
+  pencil: <path d="m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4" />,
+  joinGroup: <path d="M10 4H4v16h16v-6M21 3 10 14M10 7v7h7" />,
+  leaveGroup: <path d="M10 4H4v16h16v-6M10 14 21 3M14 3h7v7" />,
   boxSelect: <rect x="4" y="4" width="16" height="16" rx="1" strokeDasharray="3 3" />,
   menu: <><circle cx="12" cy="5" r="1.6" className="icon-dot" /><circle cx="12" cy="12" r="1.6" className="icon-dot" /><circle cx="12" cy="19" r="1.6" className="icon-dot" /></>,
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,

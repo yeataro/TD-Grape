@@ -646,6 +646,27 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .selection-handle[data-handle="se"] { left: 100%; top: 100%; cursor: nwse-resize; } .selection-handle[data-handle="s"] { left: 50%; top: 100%; cursor: ns-resize; }
 .selection-handle[data-handle="sw"] { left: 0; top: 100%; cursor: nesw-resize; } .selection-handle[data-handle="w"] { left: 0; top: 50%; cursor: ew-resize; }
 @media (pointer: coarse) { .selection-handle { width: var(--selection-handle-grab-touch); height: var(--selection-handle-grab-touch); } }
+/* Groups (Refactor.98; legacy style.css:968-1001): the body behind the wires (layer −1), the title above them and below the nodes
+   (layer 0; nodes are on 1). Colours from the group's own colour, in legacy's proportions; all members selected: the line in full.
+   群組（R.98；照舊產品）：框身在線後面（第 −1 層），標題在線前面、節點後面（第 0 層；節點在第 1 層）。顏色用群組自己的顏色、照舊產品的比例；
+   成員全被選取時線用全色。 */
+.group-body { position: absolute; left: 0; top: 0; z-index: -1; box-sizing: border-box; border: 1px solid color-mix(in srgb, var(--group-color) 55%, transparent);
+  border-radius: 10px; background: color-mix(in srgb, var(--group-color) 7%, transparent); pointer-events: none; }
+.group-body.selected { border-color: var(--group-color); }
+.group-title { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; display: flex; align-items: center; gap: 5px; padding: 3px 7px;
+  border: 1px solid transparent; border-radius: 10px 10px 0 0; background: color-mix(in srgb, var(--group-color) 22%, var(--surface-node)) padding-box;
+  color: var(--text-strong); font-size: var(--font-md); line-height: var(--line-md); pointer-events: auto; touch-action: none; }
+.group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-name-input { flex: 1; min-width: 0; height: 22px; font-size: var(--font-md); }
+.group-button { display: grid; place-items: center; flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; opacity: .65; }
+.group-button:not([aria-disabled="true"]):hover { opacity: 1; background: var(--surface-control-hover); }
+.group-button .icon { width: 15px; height: 15px; }
+.group-color { flex: none; width: 14px; height: 14px; padding: 0; border: 0; border-radius: 50%; background: var(--group-color); box-shadow: inset 0 0 0 1px var(--border); }
+/* The palette: four across, legacy's sizes (34px, 44px to the touch). 調色盤：一排四個，照舊產品的大小。 */
+.group-palette { display: grid; grid-template-columns: repeat(4, 34px); gap: 6px; }
+.group-swatch { width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--group-color); }
+.group-swatch[aria-pressed="true"] { outline: 2px solid var(--text-strong); outline-offset: 1px; }
+@media (pointer: coarse) { .group-palette { grid-template-columns: repeat(4, 44px); } .group-swatch { width: 44px; height: 44px; } }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
 .grape-node.box-in { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: var(--wire-width-hover) !important; }

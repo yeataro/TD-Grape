@@ -16,6 +16,7 @@ import type * as componentNames from '../core-ts/component_names';
 import type * as upgrades from '../core-ts/upgrades';
 import type * as nodeNames from '../core-ts/node_names';
 import type * as clipboard from '../core-ts/clipboard';
+import type * as groups from '../core-ts/groups';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -33,7 +34,8 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   componentLetters: typeof componentNames.componentLetters;
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
 } & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>
-  & Pick<typeof clipboard, 'copyNodes' | 'readClip' | 'pasteClip' | 'clipCorner'>;
+  & Pick<typeof clipboard, 'copyNodes' | 'readClip' | 'pasteClip' | 'clipCorner'> & { groups: typeof groups };
+export type { GraphGroup } from '../core-ts/groups';
 export type { Clip } from '../core-ts/clipboard';
 export type { TdValue } from '../core-ts/td_values';
 export type { ComponentStyle } from '../core-ts/component_names';

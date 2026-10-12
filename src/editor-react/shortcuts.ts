@@ -26,6 +26,8 @@ export const SHORTCUTS = {
   duplicate: { section: 'edit', keys: ['Mod+D'] },
   delete: { section: 'edit', keys: ['Delete', 'Backspace'] },
   group: { section: 'edit', keys: ['Mod+G'] },
+  joinGroup: { section: 'edit', keys: ['Alt+Shift+G'] },
+  leaveGroup: { section: 'edit', keys: ['Alt+G'] },
   subgraph: { section: 'core', keys: ['Mod+Shift+G'] },
   home: { section: 'ui', keys: ['H'] },
   frame: { section: 'ui', keys: ['F'] },

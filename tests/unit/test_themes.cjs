@@ -29,8 +29,10 @@ test('colour codes appear only in the palette layer of a theme', () => {
     for (const line of withoutComments(read(file)).split('\n'))
       if (colourCode.test(line)) assert.match(line, /^\s*--palette-[\w-]+\s*:/, `${file}: ${line.trim()}`);
   }
-  // The brand mark is artwork, not a theme colour (icons.tsx). 標誌是圖，不是主題色。
-  const components = ['style.css', 'theme/sizes.css', ...fs.readdirSync(web).filter(file => /\.tsx?$/.test(file) && file !== 'icons.tsx')];
+  // The brand mark is artwork, not a theme colour (icons.tsx); group colours are data kept in the graph, the same in every theme
+  // (group_colors.ts, Refactor.98). 標誌是圖，不是主題色；群組顏色是存在圖裡的資料，每個主題都一樣（R.98）。
+  const exceptions = ['icons.tsx', 'group_colors.ts'];
+  const components = ['style.css', 'theme/sizes.css', ...fs.readdirSync(web).filter(file => /\.tsx?$/.test(file) && !exceptions.includes(file))];
   for (const file of components) {
     const code = withoutComments(read(file));
     assert.ok(!colourCode.test(code), `${file} writes a colour code`);
