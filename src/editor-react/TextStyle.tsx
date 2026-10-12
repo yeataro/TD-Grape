@@ -12,6 +12,8 @@ export type TextAlign = 'left' | 'center' | 'right';
  * 最多 10 倍；小於一半就看不清）。 */
 const SIZE_MIN = 50, SIZE_MAX = 1000;
 const percent = (value: number) => Math.min(SIZE_MAX, Math.max(SIZE_MIN, Math.round(value)));
+/** Sizes offered on the field's right-click list; 100 is the default (Refactor.101.3). 欄位右鍵列出的大小；100 是預設（R.101.3）。 */
+const SIZES = [50, 75, 100, 125, 150, 200, 300];
 
 /** `onPreview`: the size while it is dragged, null when let go (Refactor.101.1: seen at once, stored once). onPreview：拖曳中的大小，放開時
  * 為 null（R.101.1：立刻看得到，只存一次）。 */
@@ -26,7 +28,7 @@ export function TextStyle({ scale, align, onScale, onAlign, onPreview }: {
       {/* The % inside the box, as a value field's component letter (Refactor.101.2, human 2026-10-12). % 放在框裡，同數值欄位的分量字母
           （R.101.2，人類）。 */}
       <span className="value-field with-unit text-style-field">
-        <NumberField label={say(tr('textStyle.size', 'Text size'))} value={Math.round(scale * 100)} integer unsigned
+        <NumberField label={say(tr('textStyle.size', 'Text size'))} value={Math.round(scale * 100)} integer unsigned commonValues={SIZES} defaultValue={100}
           preview={value => onPreview?.(percent(value) / 100)} commit={value => { onPreview?.(null); onScale(percent(value) / 100); }} />
         <span className="field-unit">%</span>
       </span>

@@ -46,6 +46,8 @@ test('common values from high to low, with the default merged in', () => {
   assert.deepEqual(presetValues(false, undefined, 0).map(item => [item.value, item.isDefault]),
     [[1, false], [0.5, false], [0, true], [-0.5, false], [-1, false]]);
   assert.deepEqual(presetValues(false, undefined, 2).map(item => item.value), [2, 1, 0.5, 0, -0.5, -1]);
+  // The caller's own common values replace the built-in ones (Refactor.101.3). 呼叫的人給的常用值取代內建的（R.101.3）。
+  assert.deepEqual(presetValues(true, 0, 100, [50, 100, 150]).map(item => [item.value, item.isDefault]), [[150, false], [100, true], [50, false]]);
   assert.deepEqual(presetValues(false, undefined, 0.25).map(item => item.value), [1, 0.5, 0.25, 0, -0.5, -1]);
   assert.deepEqual(presetValues(true, 0, undefined).map(item => item.value), [1, 0]);
 });

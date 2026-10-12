@@ -70,9 +70,11 @@ export function moveScrub(state: Scrub, x: number, keys: { ctrl: boolean; shift:
 }
 
 /** The right-click common values (legacy), with the value's default merged in when it has one, from high to low (human
- * 2026-10-09). 右鍵常用值（照舊產品），有預設值就併進來、剛好相同就標在那一項；由高到低排（人類）。 */
-export function presetValues(integer: boolean, min: number | undefined, defaultValue: number | undefined): { value: number; isDefault: boolean }[] {
-  const common = (integer ? [0, 1, -1] : [0, 1, 0.5, -0.5, -1]).filter(value => min === undefined || value >= min);
+ * 2026-10-09). `given`: the caller's own common values; none gives the built-in ones (Refactor.101.3, human 2026-10-12: not written
+ * into the widget — the caller decides, and without it the defaults come in). 右鍵常用值（照舊產品），有預設值就併進來、剛好相同就標在
+ * 那一項；由高到低排（人類）。given：呼叫的人自己給的常用值；沒給就用內建的（R.101.3，人類：常用值不寫死，讓呼叫它的人決定，沒寫就帶入預設）。 */
+export function presetValues(integer: boolean, min: number | undefined, defaultValue: number | undefined, given?: readonly number[]): { value: number; isDefault: boolean }[] {
+  const common = (given ?? (integer ? [0, 1, -1] : [0, 1, 0.5, -0.5, -1])).filter(value => min === undefined || value >= min);
   const list = common.map(value => ({ value, isDefault: value === defaultValue }));
   if (defaultValue !== undefined && Number.isFinite(defaultValue) && !common.includes(defaultValue)) list.push({ value: defaultValue, isDefault: true });
   return list.sort((a, b) => b.value - a.value);

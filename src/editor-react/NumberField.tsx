@@ -15,11 +15,13 @@ import { tr, say } from './text';
 /** How long a still left press waits before it opens the value ladder. 左鍵按住不動多久打開數值梯尺。 */
 export const holdMs = 450;
 
-export function NumberField({ value, label, integer = false, unsigned = false, commit, preview, defaultValue }: {
+export function NumberField({ value, label, integer = false, unsigned = false, commit, preview, defaultValue, commonValues }: {
   value: number; label: string; integer?: boolean; unsigned?: boolean;
   commit: (value: number) => void; preview?: (value: number) => void;
   /** The value's default, offered on the right-click list when it has one. 這個值的預設值；有才列在右鍵選單。 */
   defaultValue?: number;
+  /** The right-click common values for this field; none gives the built-in ones (Refactor.101.3). 這個欄位的右鍵常用值；沒給就用內建的（R.101.3）。 */
+  commonValues?: readonly number[];
 }) {
   const [draft, setDraft] = useState(String(value));
   const input = useRef<HTMLInputElement>(null);
@@ -117,7 +119,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   }
 
   useEffect(() => () => { if (press.current) clearTimeout(press.current.timer); scrub.current?.stop.abort(); }, []);
-  const choices = presetValues(integer, unsigned ? 0 : undefined, defaultValue);
+  const choices = presetValues(integer, unsigned ? 0 : undefined, defaultValue, commonValues);
 
   return <>
     <input ref={input} className={'number nodrag nowheel nopan' + (scrubbing ? ' scrubbing' : '')} aria-label={label} aria-invalid={!!error}
