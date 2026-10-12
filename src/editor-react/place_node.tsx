@@ -72,8 +72,22 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
       const at = where();
       if (!at) return;
       const node = g.shown.node, moved = node.position.x !== at.x || node.position.y !== at.y;
-      if (!moved && node.className === 'placing') return;
-      g.shown = { ...g.shown, node: { ...node, position: at, className: 'placing' } };
+      // Its measured size goes with it: React Flow reads the size from the node it is given, and a node without one is drawn hidden
+      // until measured again — a blink on every move (Refactor.105.3). 量到的大小跟著它：React Flow 從交給它的節點讀大小，沒帶大小的
+      // 節點會先藏起來等重新量——每動一次就閃一下（R.105.3）。
+      const size = flow.getInternalNode(id)?.measured;
+      const measured = !node.measured && size?.width && size.height ? { measured: { width: size.width, height: size.height } } : {};
+      // Shown only once React Flow has it at its centred place: showing it in the same update as moving it showed it one frame at the
+      // first, uncentred place (Refactor.105.3, human 2026-10-12: it seemed to flash in from somewhere). 等 React Flow 已把它放在置中的
+      // 位置才顯示：和移動在同一次更新裡顯示，會有一格露在一開始沒置中的位置（R.105.3，人類 10-12：像是從哪裡閃現出來）。
+      if (node.className !== 'placing') {
+        if (moved || 'measured' in measured) { g.shown = { ...g.shown, node: { ...node, ...measured, position: at } }; setPlacing(g.shown); return; }
+        const placed = flow.getInternalNode(id)?.internals.positionAbsolute;
+        if (!placed || placed.x !== at.x || placed.y !== at.y) return;
+        g.shown = { ...g.shown, node: { ...node, className: 'placing' } }; setPlacing(g.shown); return;
+      }
+      if (!moved) return;
+      g.shown = { ...g.shown, node: { ...node, position: at } };
       setPlacing(g.shown);
     };
     frame = requestAnimationFrame(tick);

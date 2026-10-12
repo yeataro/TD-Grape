@@ -514,7 +514,8 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    放置中的節點（R.105，第一版樣式，之後再調；人類 10-12：只有框、標題、標題與內容之間的線、名稱，同舊產品的放置框——紫色，不用它的綠色；
    光暈之後隨外觀預設）。卡片維持真正的大小、裡面藏起來；它的線是虛線。量到大小之前藏著。不擋指標。 */
 .react-flow__node.placing { pointer-events: none; }
-.react-flow__node.placing.measuring { visibility: hidden; }
+.react-flow__node.placing.measuring { opacity: 0; } /* opacity: React Flow writes visibility itself 用透明度：可見度 React Flow 自己會寫 */
+.react-flow:has(.react-flow__node.placing.measuring) .react-flow__edge.placing { opacity: 0; } /* its wire shows with it 線跟它一起出現 */
 .react-flow__node.placing .grape-node { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--surface-node) 40%, transparent); box-shadow: none; }
 .react-flow__node.placing .grape-node > :not(.node-title) { visibility: hidden; }
 .react-flow__node.placing .node-title { background: none; border-bottom: 1.5px solid var(--accent); }
