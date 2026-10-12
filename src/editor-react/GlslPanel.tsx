@@ -6,6 +6,7 @@ import { useSession } from './contexts';
 import { frameNodes } from './viewport';
 import { glslErrors } from './glsl_errors';
 import { ScrollFade } from './controls';
+import { scrollToMiddle } from './scroll_glide';
 import type { EditorState } from './editor';
 import type { MenuItem } from './DropdownMenu';
 import { readPreference, writePreference } from './preferences';
@@ -49,8 +50,15 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
   // 連續互動時不會每一下都跑（畫面規則「連續互動」）。
   const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
   const traced = useSyncExternalStore(traceSubscribe, traceSnapshot) ? primary : null;
-  const scrollTo = (line: number) => box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`)?.scrollIntoView({ block: 'center' });
   useEffect(() => { if (focus.line) scrollTo(focus.line); }, [focus]);
+  // The traced node's first line comes into view when it is chosen, unless it already is (Refactor.102.2, human 2026-10-12: the two
+  // panels trace alike). 選到的節點第一行捲進畫面，已經看得到就不動（R.102.2，人類：兩個面板追蹤的能力對齊）。
+  useEffect(() => {
+    const first = traced && box.current?.querySelector<HTMLElement>('.glsl-line.traced');
+    if (first) scrollToMiddle(first, true);
+  }, [traced]);
+  // Glides or jumps by the gear's animation effects (Refactor.102.2). 照齒輪的動畫效果滑過去或直接跳（R.102.2）。
+  const scrollTo = (line: number) => { const row = box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`); if (row) scrollToMiddle(row); };
   const goToNode = (id: string) => { session.selectNode(id); frameNodes(flow, [id]); };
   // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10);
   // so is the Shader's output (Refactor.63.4). A Uniform's or constant's name selects every node using it, like Shared

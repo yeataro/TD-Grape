@@ -106,6 +106,7 @@
   --loading-mark: 48px;  /* the waiting mark in the middle of the canvas 畫布中央的等待標誌 */
   --text-fade: 150ms;
   --control-slide: 150ms;
+  --code-flash-time: 300ms;  /* a changed code line flashing back to its colour (R.102.2, human 2026-10-12: 1.2s was too slow) 改到的程式碼行亮起後退回原色的時間（R.102.2，人類：1.2 秒太慢） */
   --ghost-float: 32px;  /* how far a ghost on a wire floats, up and down in all (R.75.30) 線上幽靈上下浮動的總範圍 */  /* a segmented control's chosen background sliding to the new choice (R.75.25) 分段控制的底色滑到新選項 */
   --glass-blur: 12px;  /* how much a glass panel blurs what is behind it (R.75.22; 12px as the Codex-era one, R.75.23) 玻璃面板把後面模糊多少 */  /* how long routine news takes to fade in (R.75.20) 例行消息淡入的時間 */
   --loading-cycle: 1.2s;  /* one round of the mark's waiting animation (human chose wave) 標誌等待動畫一輪的長度 */

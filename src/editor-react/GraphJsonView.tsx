@@ -5,6 +5,7 @@ import { changedLines, layJson, type JsonLine } from './json_format';
 import { tr, say, useLanguage } from './text';
 import { frameNodes } from './viewport';
 import { ScrollFade } from './controls';
+import { scrollToMiddle } from './scroll_glide';
 import type { Editor as EditorSession } from './editor';
 import type { MenuItem } from './DropdownMenu';
 import { readPreference, writePreference } from './preferences';
@@ -50,13 +51,11 @@ export const GraphJsonView = memo(function GraphJsonView({ session, version }: {
   const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
   const on = useSyncExternalStore(traceSubscribe, traceSnapshot), traced = on ? primary : null;
   const box = useRef<HTMLPreElement>(null);
-  // The traced node's lines come into view when it is chosen, unless they already are. 選到的節點那幾行捲進畫面，已經看得到就不動。
+  // The traced node's lines come into view when it is chosen, unless they already are; gliding by the gear's animation effects
+  // (Refactor.102.2). 選到的節點那幾行捲進畫面，已經看得到就不動；照齒輪的動畫效果滑過去（R.102.2）。
   useEffect(() => {
     const first = traced && box.current?.querySelector<HTMLElement>('.graph-json-line.traced');
-    const area = first && first.closest('.scroll-fade-area');
-    if (!first || !area) return;
-    const top = first.getBoundingClientRect().top, view = area.getBoundingClientRect();
-    if (top < view.top || top > view.bottom - first.offsetHeight) first.scrollIntoView({ block: 'center' });
+    if (first) scrollToMiddle(first, true);
   }, [traced]);
   const goToNode = (id: string) => { session.selectNode(id); frameNodes(flow, [id]); };
   // Each line: its indent, then its text; a long line wraps under its own start, a little further in. A line that changed is keyed

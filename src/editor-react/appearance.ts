@@ -115,6 +115,11 @@ export function setComponentLetters(on: boolean) {
   if (on !== componentLetters) { componentLetters = on; writePreference('appearance.componentLetters', on ? 'on' : 'off'); changed(); }
 }
 export const effectOf = (effect: Effect) => effects[effect];
+/** Whether animation effects are on now, by the same rule as the CSS (`data-motion`): always on, always off, or the system's
+ * "reduce motion" (Refactor.102.2: for motion made in code, such as a panel's scroll). 動畫效果現在開著沒有，和 CSS（data-motion）同一條
+ * 規則：一律開、一律關，或看系統的「減少動態效果」（R.102.2：給程式做的動態用，例如面板的捲動）。 */
+export const motionOn = () => effects.motion === 'on' || (effects.motion === 'system'
+  && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches));
 export function setEffect(effect: Effect, next: Follow) {
   if (effects[effect] !== next) { effects[effect] = next; writePreference('appearance.' + effect, next); changed(); }
 }
