@@ -1449,7 +1449,7 @@ function complete(document) {
 "groups":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeGroups = exports.inAnyGroup = exports.canGroup = exports.groupsOf = exports.validGroupName = exports.GROUP_TEXT_LIMIT = exports.GROUP_NAME_LIMIT = exports.MEMBER_LIMIT = exports.GROUP_LIMIT = void 0;
+exports.completeGroups = exports.inAnyGroup = exports.canGroup = exports.groupsOf = exports.validGroupName = exports.GROUP_TEXT_LIMIT = exports.GROUP_NAME_LIMIT = exports.MEMBER_LIMIT = exports.GROUP_LIMIT = exports.TEXT_SCALE_MAX = exports.TEXT_SCALE_MIN = void 0;
 exports.tidy = tidy;
 exports.tidyGroups = tidyGroups;
 exports.joinTarget = joinTarget;
@@ -1460,6 +1460,9 @@ exports.removeGroup = removeGroup;
 exports.changeGroup = changeGroup;
 exports.addCopiedGroups = addCopiedGroups;
 const model_1 = require("./model");
+/** The body text's size factor, as legacy (graph_ui.js:1688: up to 10). 內文字體倍率範圍（照舊產品：最大 10）。 */
+exports.TEXT_SCALE_MIN = 0.5, exports.TEXT_SCALE_MAX = 10;
+const validScale = (value) => typeof value === 'number' && Number.isFinite(value) && value >= exports.TEXT_SCALE_MIN && value <= exports.TEXT_SCALE_MAX;
 /** Legacy's limits (functions_model.js:10-13). 舊產品的上限。 */
 exports.GROUP_LIMIT = 256, exports.MEMBER_LIMIT = 256, exports.GROUP_NAME_LIMIT = 80;
 /** The body text's length (a few pages; Refactor.99). 內文長度上限（幾頁；R.99）。 */
@@ -1491,7 +1494,9 @@ function tidy(network) {
         members.forEach(id => claimed.add(id));
         ids.add(group.id);
         groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
-            ...(typeof group.text === 'string' && group.text && group.text.length <= exports.GROUP_TEXT_LIMIT ? { text: group.text } : {}) });
+            ...(typeof group.text === 'string' && group.text && group.text.length <= exports.GROUP_TEXT_LIMIT ? { text: group.text } : {}),
+            ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
+            ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
     }
     return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
 }
@@ -1590,8 +1595,14 @@ function changeGroup(network, id, patch) {
             throw Error('Invalid group color');
         if (patch.text !== undefined && patch.text.length > exports.GROUP_TEXT_LIMIT)
             throw Error('Group text too long');
-        const { text, ...rest } = { ...group, ...patch };
-        return text ? { ...rest, text } : rest;
+        if (patch.textScale !== undefined && !validScale(patch.textScale))
+            throw Error('Invalid text scale');
+        if (patch.textAlign !== undefined && !['left', 'center', 'right'].includes(patch.textAlign))
+            throw Error('Invalid text alignment');
+        // The defaults are not stored: no text, size 1, left. 預設值不存：沒有內文、倍率 1、靠左。
+        const { text, textScale, textAlign, ...rest } = { ...group, ...patch };
+        return { ...rest, ...(text ? { text } : {}), ...(textScale !== undefined && textScale !== 1 ? { textScale } : {}),
+            ...(textAlign && textAlign !== 'left' ? { textAlign } : {}) };
     }));
 }
 /** The groups that come along when these nodes are copied: only those whose members are all among them (G-2). 複製這些節點時帶著的群組：

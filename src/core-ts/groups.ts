@@ -11,7 +11,15 @@ import type { Network } from './graph';
  * 舊圖的 frames 忽略（1011）。 */
 /** `text`: the body text shown above the members (Refactor.99, human 2026-10-12; new, legacy had none), as written; basic Markdown
  * is the editor's to show. `text`：顯示在成員上方的內文（R.99，人類 10-12；新的，舊產品沒有），存寫下的原文；基本 Markdown 由編輯器顯示。 */
-export interface GraphGroup { id: string; name: string; nodes: string[]; color?: string; text?: string }
+export interface GraphGroup { id: string; name: string; nodes: string[]; color?: string; text?: string;
+  /** How the whole body text is shown, not part of the Markdown (Refactor.101; legacy Note noteFontScale, noteTextAlign,
+   * graph_ui.js:1688-1689): its size as a factor (1 is not stored) and its alignment (left is not stored). 整段內文怎麼顯示，不屬於
+   * Markdown（R.101；照舊產品 Note 的 noteFontScale、noteTextAlign）：字體倍率（1 不存）與對齊（靠左不存）。 */
+  textScale?: number; textAlign?: TextAlign }
+export type TextAlign = 'left' | 'center' | 'right';
+/** The body text's size factor, as legacy (graph_ui.js:1688: up to 10). 內文字體倍率範圍（照舊產品：最大 10）。 */
+export const TEXT_SCALE_MIN = 0.5, TEXT_SCALE_MAX = 10;
+const validScale = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= TEXT_SCALE_MIN && value <= TEXT_SCALE_MAX;
 
 /** Legacy's limits (functions_model.js:10-13). 舊產品的上限。 */
 export const GROUP_LIMIT = 256, MEMBER_LIMIT = 256, GROUP_NAME_LIMIT = 80;
@@ -39,7 +47,9 @@ export function tidy(network: NetworkData): { groups: GraphGroup[]; fixed: boole
     if (!members.length) continue;
     members.forEach(id => claimed.add(id)); ids.add(group.id);
     groups.push({ id: group.id, name: group.name, nodes: members, ...(typeof group.color === 'string' && COLOR.test(group.color) ? { color: group.color } : {}),
-      ...(typeof group.text === 'string' && group.text && group.text.length <= GROUP_TEXT_LIMIT ? { text: group.text } : {}) });
+      ...(typeof group.text === 'string' && group.text && group.text.length <= GROUP_TEXT_LIMIT ? { text: group.text } : {}),
+      ...(validScale(group.textScale) && group.textScale !== 1 ? { textScale: group.textScale } : {}),
+      ...(group.textAlign === 'center' || group.textAlign === 'right' ? { textAlign: group.textAlign } : {}) });
   }
   return { groups, fixed: JSON.stringify(groups) !== JSON.stringify(raw) };
 }
@@ -109,14 +119,18 @@ export function removeGroup(network: Network, id: string): void {
   edit(network, groups => groups.filter(group => group.id !== id));
 }
 /** Rename, recolour or rewrite a group; an empty text takes the text away. 群組改名、改色或改內文；空的內文＝拿掉內文。 */
-export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string; text?: string }): void {
+export function changeGroup(network: Network, id: string, patch: { name?: string; color?: string; text?: string; textScale?: number; textAlign?: TextAlign }): void {
   edit(network, groups => groups.map(group => {
     if (group.id !== id) return group;
     if (patch.name !== undefined && !validGroupName(patch.name)) throw Error('Invalid group name');
     if (patch.color !== undefined && !COLOR.test(patch.color)) throw Error('Invalid group color');
     if (patch.text !== undefined && patch.text.length > GROUP_TEXT_LIMIT) throw Error('Group text too long');
-    const { text, ...rest } = { ...group, ...patch };
-    return text ? { ...rest, text } : rest;
+    if (patch.textScale !== undefined && !validScale(patch.textScale)) throw Error('Invalid text scale');
+    if (patch.textAlign !== undefined && !['left', 'center', 'right'].includes(patch.textAlign)) throw Error('Invalid text alignment');
+    // The defaults are not stored: no text, size 1, left. 預設值不存：沒有內文、倍率 1、靠左。
+    const { text, textScale, textAlign, ...rest } = { ...group, ...patch };
+    return { ...rest, ...(text ? { text } : {}), ...(textScale !== undefined && textScale !== 1 ? { textScale } : {}),
+      ...(textAlign && textAlign !== 'left' ? { textAlign } : {}) };
   }));
 }
 

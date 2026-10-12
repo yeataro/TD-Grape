@@ -58,6 +58,18 @@ test('the body text is kept as written; empty takes it away (Refactor.99)',()=>{
   assert.throws(()=>step(doc,net=>groups.changeGroup(net,'g1',{text:'x'.repeat(groups.GROUP_TEXT_LIMIT+1)})),/too long/);
 });
 
+test('the body text\'s size and alignment are kept apart from the text; defaults are not stored (Refactor.101)',()=>{
+  let doc=step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'}));
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{text:'Hi',textScale:1.5,textAlign:'center'}));
+  assert.deepEqual([of(doc)[0].textScale,of(doc)[0].textAlign],[1.5,'center']);
+  doc=step(doc,net=>groups.changeGroup(net,'g1',{textScale:1,textAlign:'left'}));
+  const stored=doc.document.stages.pixel.ui.groups[0];
+  assert.ok(!('textScale' in stored)&&!('textAlign' in stored),'1 and left are not stored');
+  assert.throws(()=>step(doc,net=>groups.changeGroup(net,'g1',{textScale:20})),/text scale/);
+  const raw=plain(doc.document);raw.stages.pixel.ui.groups[0].textAlign='justify';raw.stages.pixel.ui.groups[0].textScale=-1;
+  assert.equal(G.groups.tidyGroups(raw),1,'bad values are tidied away');
+});
+
 test('a ghost node is still a member',()=>{
   const raw=plain(step(graph(),net=>groups.createGroup(net,['a','b'],{id:'g1',name:'G'})).document);
   raw.stages.pixel.nodes.find(n=>n.id==='a').nodeType='sgrape.builtin.not_a_node';

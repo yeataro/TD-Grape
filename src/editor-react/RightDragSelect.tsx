@@ -97,7 +97,7 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
   // that adds it (Refactor.49.1, human 2026-10-09). 只在空白處：接線與節點也在 pane 裡，在接線上 Shift＋按下是加選它。
   const starts = (event: { button: number; shiftKey: boolean; target: EventTarget }) =>
     (event.button === 2 || (event.button === 0 && (event.shiftKey || boxSelect))) && !!(event.target as Element).closest('.react-flow__pane')
-    && !(event.target as Element).closest('.react-flow__edge, .react-flow__node, .group-title, .group-text');
+    && !(event.target as Element).closest('.react-flow__edge, .react-flow__node, .group-title, .group-text.writing');
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
     if (event.pointerType === 'touch') startHold(event);

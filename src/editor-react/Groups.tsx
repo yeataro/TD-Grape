@@ -8,6 +8,7 @@ import { pressKind } from './RightDragSelect';
 import { Popover } from './controls';
 import { Icon } from './icons';
 import { Markdown } from './Markdown';
+import { TextStyle } from './TextStyle';
 import { say, tr, type Message } from './text';
 import { GROUP_COLORS, DEFAULT_GROUP_COLOR as DEFAULT_COLOR } from './group_colors';
 
@@ -31,14 +32,12 @@ export const GROUP_PAD = 24, GROUP_TITLE = 28;
  * grows upwards and the members stay (Refactor.99, human 2026-10-12). 依成員範圍與內文高度算出的群組外框；內文在標題與成員之間，所以外框
  * 往上長、成員不動（R.99，人類 10-12）。 */
 export const groupBox = (members: Rect, text = 0): Rect => {
-  // With text, 12 between it and the members as above it (Refactor.99.1, human 2026-10-12); without, legacy's 24 above the members.
-  // 有內文時，內文和成員之間 12，同內文上方（R.99.1，人類）；沒有內文時，成員上方照舊產品 24。
-  const above = text ? TEXT_GAP + text : GROUP_PAD;
+  // The text block holds its own 12 above and below (Refactor.99.1, 101), so the whole band between the title and the members is the
+  // text's (a double-click there edits it); without text, legacy's 24 above the members. 內文區塊自己帶著上下各 12（R.99.1、101），標題與
+  // 成員之間整條都屬於內文（在那裡雙擊就編輯）；沒有內文時，成員上方照舊產品 24。
+  const above = text || GROUP_PAD;
   return { x: members.x - GROUP_PAD, y: members.y - above - GROUP_TITLE, width: members.width + 2 * GROUP_PAD, height: members.height + GROUP_PAD + above + GROUP_TITLE };
 };
-/** Between the body text and the members (its gap to the title is the text block's own, style.css). 內文和成員之間（和標題之間的空隙是
- * 內文區塊自己的，style.css）。 */
-const TEXT_GAP = 12;
 /** Each group's measured body text height, by group ID (flow units; none = no text). 每個群組量到的內文高度（畫布單位；沒有＝沒有內文）。 */
 export type TextHeights = Readonly<Record<string, number>>;
 /** The selection's bounds in flow units: its nodes, and the box of every group whose members are all selected, so the
@@ -102,7 +101,9 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
   const flow = useReactFlow(), move = useRef<Move | null>(null), [palette, setPalette] = useState<HTMLElement | null>(null);
   // The body text (Refactor.99): edited from the pencil, measured only when it or the box's width changes, never when other nodes move
   // or the view pans (human 2026-10-12). 內文（R.99）：按鉛筆編輯；只在內文或外框寬度改變時量，其他節點移動、平移都不量（人類 10-12）。
-  const [writing, setWriting] = useState(false), block = useRef<HTMLDivElement>(null);
+  const [writing, setWriting] = useState(false), block = useRef<HTMLDivElement>(null), area = useRef<HTMLTextAreaElement | null>(null);
+  // The text appearance panel, from the T that takes the pencil's place while writing (Refactor.101). 文字外觀面板，從寫的時候取代鉛筆的 T 打開（R.101）。
+  const [styling, setStyling] = useState<HTMLElement | null>(null);
   const shown = writing || !!group.text;
   // Measured only while the text makes the box taller (the gear); otherwise it sits in the room under the title. 只在內文撐高外框時
   // （齒輪）量；否則放在標題下原本的空間。
@@ -168,25 +169,33 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
     if (!core.groups.validGroupName(next)) { session.warn(tr('group.invalidName', 'Use 1–80 characters without control characters.')); return; }
     session.changeGroup(group.id, { name: next });
   };
-  const button = (label: Message, icon: 'pencil' | 'close', run: () => void, pressed?: boolean) => <button type="button" className="group-button"
-    aria-label={say(label)} title={say(label)} aria-pressed={pressed} onClick={run}><Icon name={icon} /></button>;
+  const button = (label: Message, icon: 'pencil' | 'close', run: () => void) => <button type="button" className="group-button"
+    aria-label={say(label)} title={say(label)} onClick={run}><Icon name={icon} /></button>;
   // Saved on leaving the field or with Ctrl+Enter, Esc puts it back (as the node's note, ParamsPanel.tsx; legacy textApply).
   // 離開欄位或 Ctrl＋Enter 存，Esc 還原（同節點的註記；照舊產品）。
   const write = (value: string | null) => {
-    setWriting(false);
+    setWriting(false); setStyling(null);
     if (value !== null && value !== (group.text ?? '')) session.changeGroup(group.id, { text: value });
   };
+  // Going to the T or its panel is not leaving the text (Refactor.101); closing the panel anywhere but the text ends the writing, as a
+  // click outside does. 移到 T 或它的面板不算離開內文（R.101）；在內文以外的地方關掉面板就結束編輯，同點外面。
+  const inStyle = (element: EventTarget | null) => !!(element as Element | null)?.closest?.('.text-style, .group-text-style');
+  const closeStyle = () => { setStyling(null); setTimeout(() => { if (area.current && document.activeElement !== area.current) write(area.current.value); }); };
+  const look = { '--text-scale': group.textScale ?? 1, textAlign: group.textAlign ?? 'left' } as CSSProperties;
   return <>
     <div className={'group-body' + (complete ? ' selected' : '')} style={{ ...style, transform: `translate(${box.x}px, ${box.y}px)`, width: box.width, height: box.height }} />
     {/* Under the title, above the members; one line at once when the pencil is pressed, a line more for every line break (human
         2026-10-12). 在標題下、成員上；按鉛筆立刻多一行，每換一行多一行（人類 10-12）。 */}
-    {shown && <div ref={block} className={'group-text' + (writing ? ' writing' : '')}
-      style={{ transform: `translate(${box.x + GROUP_PAD}px, ${box.y + GROUP_TITLE}px)`, width: box.width - 2 * GROUP_PAD }}>
+    {/* A double-click on the text edits it (Refactor.101, human 2026-10-12: the band of the text, so the rest of the box stays canvas).
+        雙擊內文就編輯（R.101，人類：內文那一條，框裡其他地方仍是畫布）。 */}
+    {shown && <div ref={block} className={'group-text' + (writing ? ' writing' : '')} data-align={group.textAlign ?? 'left'}
+      style={{ ...look, transform: `translate(${box.x + GROUP_PAD}px, ${box.y + GROUP_TITLE}px)`, width: box.width - 2 * GROUP_PAD }}
+      onDoubleClick={event => { if (writing || (event.target as Element).closest('a')) return; event.stopPropagation(); setWriting(true); }}>
       {writing ? <textarea className="nodrag nopan" defaultValue={group.text ?? ''} autoFocus rows={1} maxLength={core.groups.GROUP_TEXT_LIMIT}
         aria-label={say(tr('group.text', 'Group text'))}
-        ref={area => { if (area) { area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px'; } }}
-        onInput={event => { const area = event.currentTarget; area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px'; }}
-        onBlur={event => write(event.currentTarget.value)}
+        ref={element => { area.current = element; if (element) { element.style.height = 'auto'; element.style.height = element.scrollHeight + 'px'; } }}
+        onInput={event => { const field = event.currentTarget; field.style.height = 'auto'; field.style.height = field.scrollHeight + 'px'; }}
+        onBlur={event => { if (!inStyle(event.relatedTarget)) write(event.currentTarget.value); }}
         onKeyDown={event => {
           if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.blur(); }
           else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); write(null); }
@@ -210,8 +219,14 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
         : <span className="group-name" title={say(tr('group.renameHint', 'Double-click or F2 to rename'))}>{group.name}</span>}
       <button type="button" className="group-color" aria-label={say(tr('group.color', 'Group color'))} title={say(tr('group.color', 'Group color'))}
         aria-haspopup="dialog" aria-expanded={!!palette} onClick={event => setPalette(palette ? null : event.currentTarget)} />
-      {/* The pencil edits the body text (human 2026-10-12: renaming is the title's double-click). 鉛筆編輯內文（人類 10-12：改名用雙擊標題）。 */}
-      {button(tr('group.editText', 'Edit text'), 'pencil', () => setWriting(true), writing)}
+      {/* The pencil edits the body text (human 2026-10-12: renaming is the title's double-click); while writing, a T in its place opens
+          the text's appearance (Refactor.101, human: keeps the title bar as it is; whether the T stays there for good, later). Pressing it
+          keeps the field focused. 鉛筆編輯內文（人類 10-12：改名用雙擊標題）；寫的時候它的位置換成 T，打開文字外觀（R.101，人類：標題列維持原樣；
+          T 要不要常駐之後再定）。按它不讓輸入框失去焦點。 */}
+      {writing ? <button type="button" className="group-button group-text-style" aria-label={say(tr('group.textStyle', 'Text appearance'))}
+        title={say(tr('group.textStyle', 'Text appearance'))} aria-haspopup="dialog" aria-expanded={!!styling}
+        onMouseDown={event => event.preventDefault()} onClick={event => setStyling(styling ? null : event.currentTarget)}><Icon name="text" /></button>
+        : button(tr('group.editText', 'Edit text'), 'pencil', () => setWriting(true))}
       {button(tr('group.remove', 'Remove group (keep nodes)'), 'close', () => session.removeGroup(group.id))}
     </div>
     {/* Drawn at the page level: inside the moving view a fixed box would follow its transform (as DropdownMenu). 畫在頁面層：在會動的
@@ -220,6 +235,10 @@ function GroupBox({ group, session, actions, snap, grid, complete, onMenu, text,
       {GROUP_COLORS.map(color => <button key={color.value} type="button" className="group-swatch" style={{ '--group-color': color.value } as CSSProperties}
         aria-label={say(color.name)} title={say(color.name)} aria-pressed={(group.color ?? DEFAULT_COLOR) === color.value}
         onClick={() => { setPalette(null); session.changeGroup(group.id, { color: color.value }); }} />)}
+    </Popover>, document.body)}
+    {styling && createPortal(<Popover anchor={styling} label={tr('group.textStyle', 'Text appearance')} className="group-text-style-panel" onClose={closeStyle}>
+      <TextStyle scale={group.textScale ?? 1} align={group.textAlign ?? 'left'}
+        onScale={textScale => session.changeGroup(group.id, { textScale })} onAlign={textAlign => session.changeGroup(group.id, { textAlign })} />
     </Popover>, document.body)}
   </>;
 }
