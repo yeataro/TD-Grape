@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/react';
 
 // A wire's halo (Refactor.105.18, human 2026-10-13: a canvas-coloured edge so crossing wires read clearly): a wider path in the canvas's
@@ -10,8 +11,10 @@ import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/react';
 
 export const WireHalo = ({ path }: { path: string }) => <path className="wire-halo" d={path} />;
 
-/** A plain wire: React Flow's default Bezier wire with its halo. 一般線：React Flow 預設的貝茲線加上底線。 */
-export function WireEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth }: EdgeProps) {
+/** A plain wire: React Flow's default Bezier wire with its halo. Memoised like React Flow's own (R.105.19, measured: without it every wire
+ * re-ran on any selection or node move). 一般線：React Flow 預設的貝茲線加上底線。和 React Flow 自己的一樣包 memo（R.105.19，量過：
+ * 沒包時任何選取或移動節點，每條線都白跑一次）。 */
+export const WireEdge = memo(function WireEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, interactionWidth }: EdgeProps) {
   const [path] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   return <><WireHalo path={path} /><BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} interactionWidth={interactionWidth} /></>;
-}
+});
