@@ -165,10 +165,13 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   textGrows: boolean;
 }) {
   const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
-  // A new set only when the selection changes, not on every drag frame (deep clean 2026-10-12: the groups re-rendered each frame).
-  // 選取變了才換一個新的集合，不是拖曳的每一格（10-12 深度清潔：群組每一格都重繪）。
-  const selectedKey = projection.nodes.filter(node => node.selected).map(node => node.id).join('\u0000');
-  const selectedIds = useMemo(() => new Set(selectedKey ? selectedKey.split('\u0000') : []), [selectedKey]);
+  // The session's own set of selected nodes: a new one only when the selection changes, not on every drag frame (deep clean
+  // 2026-10-12: the groups re-rendered each frame), and never a scan of every node (Refactor.106).
+  // session 自己的選取節點集合：選取變了才換新的，不是拖曳的每一格（10-12 深度清潔：群組每一格都重繪），也不掃描全部節點（R.106）。
+  const selectedIds = useSyncExternalStore(session.subscribe, session.selectionSnapshot);
+  const selectedEdges = useSyncExternalStore(session.subscribe, session.selectedEdges);
+  // In the graph's order, as the toolbar and the frame read them before (Refactor.106). 照圖裡的順序，同之前工具列與多選框讀到的（R.106）。
+  const selectedList = useMemo(() => session.selectedInOrder(), [session, selectedIds]);
   // Groups' body text heights, reported by each group when its text or width changes (Refactor.99): the selection's frame and toolbar
   // go around the grown box. 群組內文的高度，由各群組在內文或寬度改變時回報（R.99）：選取的框與工具列包住長高的外框。
   // Only with "group text makes the box taller" on (the gear; human 2026-10-12: the text and its height apart, so the height can be
@@ -370,8 +373,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       {/* Groups behind and between (Groups.tsx), then the selection's frame and toolbar. 群組在後面與中間，然後是選取的框與工具列。 */}
       <GroupLayer groups={groups} selected={selectedIds} session={session} actions={grouping} snap={snap} grid={GRID} onMenu={menu} texts={texts} onText={textGrows ? onText : undefined} />
-      <SelectionFrame nodes={projection.nodes} session={session} groups={groups} texts={texts} />
-      <FloatingToolbar nodes={projection.nodes} edges={edges} clip={clip} groups={groups} grouping={grouping} texts={texts} />
+      <SelectionFrame ids={selectedList} session={session} groups={groups} texts={texts} />
+      <FloatingToolbar ids={selectedList} wires={selectedEdges} clip={clip} groups={groups} grouping={grouping} texts={texts} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
@@ -445,7 +448,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // The right-click menu (Refactor.93): where it opened, and what was selected then. 右鍵選單（R.93）：在哪裡打開、當時選了什麼。
   const [menuAt, setMenuAt] = useState<CanvasMenuRequest | null>(null);
   const onMenu = useCallback((open: MenuOpen) => setMenuAt({ x: open.x, y: open.y, touch: open.touch, host: open.host, wire: open.wire,
-    selection: session ? selectionKey(session.snapshot()) : '' }), [session]);
+    selection: session ? selectionKey(session) : '' }), [session]);
   const closeMenu = useCallback(() => setMenuAt(null), []);
   const choicesRef = useRef(choices); choicesRef.current = choices;
   // Drag to add a node (Refactor.104): the canvas takes the drop; the tile shows the choice's name and its node's colour. A drop also
@@ -545,7 +548,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       else if (!draft && network && matches('leaveGroup', event)) run(grouping.leave);
       // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、
       // H 對準全部（照舊產品）。
-      else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, flow.getNodes().filter(node => node.selected).map(node => node.id)));
+      else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, session.selectedInOrder()));
       else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
     };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
@@ -626,7 +629,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
-        {session && menuAt && <CanvasMenu request={menuAt} session={session} state={state} layout={layout} clip={clip} grouping={grouping} onClose={closeMenu}
+        {session && menuAt && <CanvasMenu request={menuAt} session={session} layout={layout} clip={clip} grouping={grouping} onClose={closeMenu}
           onCreate={at => setCreating({ screen: at, place: true })} />}
         <DragToAddLayer />
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}

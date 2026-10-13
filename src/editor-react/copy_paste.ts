@@ -30,7 +30,7 @@ export function useCopyPaste(session: EditorSession | null, snap: boolean, grid:
     const canvas = (across: number) => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width * across, y: box.y + box.height / 3 }; };
     // The copy as text, kept in the page too; a new copy starts the steps again. 複製成文字，頁面裡也留一份；新的複製重新開始錯開。
     const copyText = () => {
-      const clip = session?.copyNodes(session.snapshot().projection.nodes.filter(node => node.selected).map(node => node.id));
+      const clip = session?.copyNodes(session.selectedInOrder());
       if (!clip) return null;
       count.current = 0;
       return kept.current = JSON.stringify(clip);
@@ -51,7 +51,7 @@ export function useCopyPaste(session: EditorSession | null, snap: boolean, grid:
       // The system clipboard first (it may hold a copy from another tab of this Grape OP), else the page's own copy. 先讀系統剪貼簿
       // （可能是同一個 Grape OP 另一個分頁複製的），讀不到用頁面裡的那份。
       paste: at => void (navigator.clipboard?.readText() ?? Promise.reject()).catch(() => '').then(text => pasteText(text, at ?? canvas(1 / 3), !at)),
-      duplicate: () => void session?.duplicate(session.snapshot().projection.nodes.filter(node => node.selected).map(node => node.id)),
+      duplicate: () => void session?.duplicate(session.selectedInOrder()),
     };
     return { actions, copyText, pasteText, canvas };
   }, [session, flow]);

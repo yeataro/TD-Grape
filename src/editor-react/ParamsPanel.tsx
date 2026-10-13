@@ -156,7 +156,7 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
 
 export function ParamsPanel({ state }: { state: EditorState }) {
   const session = useSession();
-  const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
+  const primary = useSyncExternalStore(session.primarySubscribe, session.primarySnapshot);
   const node = primary === undefined || primary === null ? undefined : state.projection.nodes.find(n => n.id === primary);
   const floating = useContext(FloatingContext);
   // Nothing selected: one line (legacy inspector.js:1592); floating, under a plain head so it can still be moved and closed.

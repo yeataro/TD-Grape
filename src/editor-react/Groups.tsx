@@ -63,7 +63,8 @@ export type GroupActions = {
 export function useGroupActions(session: EditorSession | null): GroupActions {
   const [renaming, setRenaming] = useState<string | null>(null);
   return useMemo(() => {
-    const groups = () => session?.groups() ?? [], selected = () => session?.snapshot().projection.nodes.filter(node => node.selected).map(node => node.id) ?? [];
+    // The selection in the graph's order, from the session's own list (Refactor.106). 照圖裡順序的選取，來自 session 自己的名單（R.106）。
+    const groups = () => session?.groups() ?? [], selected = () => session?.selectedInOrder() ?? [];
     return {
       canCreate: ids => core.groups.canGroup(groups(), ids), joinTarget: ids => core.groups.joinTarget(groups(), ids),
       inGroup: ids => core.groups.inAnyGroup(groups(), ids),

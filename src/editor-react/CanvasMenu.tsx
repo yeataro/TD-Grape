@@ -1,5 +1,7 @@
+import { useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import type { Editor as EditorSession, EditorState } from './editor';
+import type { Editor as EditorSession } from './editor';
+import type { FlowNode, FlowEdge } from './projection';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { say, tr, type Message } from './text';
 import type { IconName } from './icons';
@@ -24,22 +26,26 @@ import type { GroupActions } from './Groups';
  * after the selection changed does nothing (legacy sameContext, graph_ui.js:2948). 在哪裡、對什麼打開。wire：在哪條接線上打開；
  * selection：當時選了什麼，選取之後變了，選的項目就不做（照舊產品）。 */
 export type CanvasMenuRequest = { x: number; y: number; touch: boolean; host: HTMLElement; wire?: string; selection: string };
-export const selectionKey = (state: EditorState) => [...state.projection.nodes.filter(node => node.selected).map(node => node.id), '|',
-  ...state.projection.edges.filter(edge => edge.selected).map(edge => edge.id)].join(' ');
+// From the session's own selection, not a scan of every node (Refactor.106). 從 session 自己的選取來，不掃描全部節點（R.106）。
+export const selectionKey = (session: EditorSession) => [...session.selectionSnapshot(), '|', ...session.selectedEdges()].join(' ');
 
 type Row = { key: string; label: Message; icon?: IconName; keys?: Shortcut; hint?: string; run?: () => void; disabled?: boolean; checked?: boolean; toggle?: boolean; group: number };
 
-export function CanvasMenu({ request, session, state, layout, clip, grouping, onCreate, onClose }: {
-  request: CanvasMenuRequest; session: EditorSession; state: EditorState; layout: Layout; clip: CopyPaste; grouping: GroupActions;
+export function CanvasMenu({ request, session, layout, clip, grouping, onCreate, onClose }: {
+  request: CanvasMenuRequest; session: EditorSession; layout: Layout; clip: CopyPaste; grouping: GroupActions;
   onCreate(at: { x: number; y: number }): void; onClose(): void;
 }) {
   const flow = useReactFlow(), fullscreen = useFullscreen();
-  const nodes = state.projection.nodes.filter(node => node.selected), edges = state.projection.edges.filter(edge => edge.selected);
-  const count = nodes.length, ids = nodes.map(node => node.id), target = grouping.joinTarget(ids);
+  // The selection from the session's own lists, its nodes and wires found by id (Refactor.106: no scan of every node, and the menu no
+  // longer takes the whole state). 選取來自 session 自己的名單，節點與接線照 id 找（R.106：不掃描全部節點，選單也不再拿整份狀態）。
+  useSyncExternalStore(session.subscribe, session.selectionSnapshot); useSyncExternalStore(session.subscribe, session.selectedEdges);
+  const ids = session.selectedInOrder(), nodes = ids.flatMap(id => { const node = flow.getNode(id) as FlowNode | undefined; return node ? [node] : []; });
+  const edges = [...session.selectedEdges()].flatMap(id => { const edge = flow.getEdge(id) as FlowEdge | undefined; return edge ? [edge] : []; });
+  const count = nodes.length, target = grouping.joinTarget(ids);
   const remove = () => void flow.deleteElements({ nodes, edges });
   const params: Row = { key: 'params', group: 9, icon: 'floatingPanel', label: tr('canvasMenu.params', 'Floating Parameter panel'), keys: 'floatingParameter',
     toggle: true, checked: !!layout.floating.params, run: () => layout.toggleFloat('params') };
-  const wire = request.wire ? state.projection.edges.find(edge => edge.id === request.wire) : undefined;
+  const wire = request.wire ? flow.getEdge(request.wire) : undefined;
   const rows: Row[] = wire ? [
     // The wire's menu (legacy graph_ui.js:2956-2964). 接線的選單。
     { key: 'wireStyle', group: 1, label: tr('canvasMenu.wire', 'Wire'), checked: true },
@@ -86,7 +92,7 @@ export function CanvasMenu({ request, session, state, layout, clip, grouping, on
     params,
   ];
   // Only while the selection is what it was when the menu opened. 只在選取還是打開時那樣時才做。
-  const same = () => selectionKey(session.snapshot()) === request.selection;
+  const same = () => selectionKey(session) === request.selection;
   const items: MenuItem[] = rows.map((row, i) => ({ key: row.key, icon: row.icon, hint: row.keys ? shortcutText(row.keys) : row.hint, checked: row.checked, toggle: row.toggle,
     divider: i > 0 && rows[i - 1]!.group !== row.group, label: say(row.label),
     disabled: !row.run || row.disabled,

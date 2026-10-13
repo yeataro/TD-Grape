@@ -1,4 +1,4 @@
-import { createContext, useRef, useState, type PointerEvent, type MouseEvent, type TouchEvent, type ReactNode } from 'react';
+import { useRef, useState, type PointerEvent, type MouseEvent, type TouchEvent, type ReactNode } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession } from './editor';
 import type { FlowNode, FlowEdge } from './projection';
@@ -21,13 +21,13 @@ import type { FlowNode, FlowEdge } from './projection';
 // if the press did not move. pointer: held (captured) only once it really drags, so a press that does not move stays the pressed
 // thing's own — a field's presets, a text box's browser menu. menu：右鍵還按著時瀏覽器就要開選單（macOS 在按下時開）：放開時沒移動才打開。
 // pointer：真的拖動才鎖定指標，沒移動的按下仍歸按到的東西——數值的常用值、文字框的瀏覽器選單。
-type Drag = { x: number; y: number; origin: { left: number; top: number }; previous: Set<string>; moved: boolean; right: boolean; touched: string[]; result: Set<string>; shown: boolean;
-  target: Element; menu: boolean; pointer: number };
+// touched: the nodes in the order the box touched them, with a set to ask quickly (Refactor.106: the list was searched for each hit).
+// touched：框碰到節點的順序，另有一個集合可以快速查（R.106：之前每碰到一個都搜尋整個清單）。
+type Drag = { x: number; y: number; origin: { left: number; top: number }; previous: ReadonlySet<string>; moved: boolean; right: boolean; touched: string[];
+  seen: Set<string>; result: Set<string>; shown: boolean; target: Element; menu: boolean; pointer: number };
 /** What a right-click or a long press opened the menu on (Refactor.93): a wire, a port, or else the nodes. 右鍵或長按在什麼上面打開選單
  * （R.93）：接線、接孔，或其他（節點）。 */
 export type MenuOpen = { x: number; y: number; touch: boolean; host: HTMLElement; wire?: string; port?: { node: string; port: string; side: 'input' | 'output' } };
-/** What the box would select if released now; null when no box is being dragged. 現在放開會選到哪些；沒在框選時為 null。 */
-export const BoxPreviewContext = createContext<ReadonlySet<string> | null>(null);
 /** Ctrl (or Cmd) toggles, Shift only adds, otherwise only this (TD as measured, Q39). */
 export const pressKind = (event: { ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
   event.ctrlKey || event.metaKey ? 'toggle' as const : event.shiftKey ? 'add' as const : 'only' as const;
@@ -82,7 +82,7 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     const at = { x: event.clientX, y: event.clientY };
     hold.current = { id: event.pointerId, x: at.x, y: at.y, at, target, fired: false, timer: window.setTimeout(() => {
       const held = hold.current; if (!held) return;
-      held.fired = true; drag.current = null; setBox(null); setPreview(null);
+      held.fired = true; drag.current = null; setBox(null); session.previewBox(null);
       open(held.target, held.at.x, held.at.y, true);
     }, HOLD_MS) };
   };
@@ -96,7 +96,6 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     if (hold.current?.id === event.pointerId) { if (hold.current.fired) blockNextClick(); stopHold(); }
   };
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
-  const [preview, setPreview] = useState<ReadonlySet<string> | null>(null);
   // What a press may start a box from. The right button: anywhere on the canvas (R.105.15) — nothing there has a plain right drag of
   // its own; Alt+right on a value box or a value's caption is its ladder. Shift+left (or box select): only on blank canvas — wires and
   // nodes sit inside the pane too, and a Shift press on a wire is a click that adds it (Refactor.49.1, human 2026-10-09).
@@ -118,12 +117,13 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     if (id) { session.pressNode(id, pressKind(event)); return; }
     if (!starts(event)) return;
     if (event.button === 0) event.stopPropagation(); // Shift+left (or box-select) drag selects instead of panning
-    const previous = new Set(event.shiftKey ? flow.getNodes().filter(node => node.selected).map(node => node.id) : []);
+    // The session's own selection, not a scan of every node (Refactor.106). session 自己的選取，不掃描全部節點（R.106）。
+    const previous: ReadonlySet<string> = event.shiftKey ? session.selectionSnapshot() : new Set();
     // Where the canvas is, measured once: it does not move during a box drag (EDITOR_UI_RULES, continuous interactions;
     // Refactor.79.5). 畫布在哪，量一次：框選中它不會動（畫面規則「連續互動」；R.79.5）。
     const { left, top } = host.current!.getBoundingClientRect();
-    drag.current = { x: event.clientX, y: event.clientY, origin: { left, top }, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false,
-      target, menu: false, pointer: event.pointerId };
+    drag.current = { x: event.clientX, y: event.clientY, origin: { left, top }, previous, moved: false, right: event.button === 2, touched: [], seen: new Set(),
+      result: new Set(previous), shown: false, target, menu: false, pointer: event.pointerId };
   };
   // The pane pans on mousedown (d3-zoom), so a Shift+left press must stop there too. 平移由 mousedown 觸發，一併攔下。
   const press = (event: MouseEvent) => { if (event.button === 0 && starts(event)) event.stopPropagation(); };
@@ -132,7 +132,8 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
   const touch = (event: TouchEvent) => {
     if (boxSelect && event.touches.length === 1 && starts({ button: 0, shiftKey: false, altKey: false, target: event.target })) event.stopPropagation();
   };
-  const select = (start: Drag, event: PointerEvent) => {
+  // What the box holds now; whether that changed. 框裡現在有哪些；有沒有變。
+  const hit = (start: Drag, event: PointerEvent) => {
     const a = flow.screenToFlowPosition({ x: Math.min(start.x, event.clientX), y: Math.min(start.y, event.clientY) });
     const b = flow.screenToFlowPosition({ x: Math.max(start.x, event.clientX), y: Math.max(start.y, event.clientY) });
     // partially = true: touching the box is enough. At least one screen pixel each way: React Flow counts every node as
@@ -141,14 +142,15 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     // 框拖出去又拖回原點時所有節點都亮了（人類）。
     const pixel = 1 / flow.getZoom();
     const hits = new Set(flow.getIntersectingNodes({ x: a.x, y: a.y, width: Math.max(b.x - a.x, pixel), height: Math.max(b.y - a.y, pixel) }, true).map(node => node.id));
-    for (const id of hits) if (!start.touched.includes(id)) start.touched.push(id); // in the order touched 依碰到的順序
+    for (const id of hits) if (!start.seen.has(id)) { start.seen.add(id); start.touched.push(id); } // in the order touched 依碰到的順序
     const result = new Set([...start.previous, ...hits]);
-    // Cards redraw only when a node enters or leaves the box, not on every move (the legacy editor's
-    // whole-view refreshes are not copied, human 2026-10-09). 只有節點進出框時卡片才重畫，不是每次移動都重畫。
-    if (start.shown && result.size === start.result.size && [...result].every(id => start.result.has(id))) return;
+    if (start.shown && result.size === start.result.size && [...result].every(id => start.result.has(id))) return false;
     start.result = result; start.shown = true;
-    setPreview(result);
+    return true;
   };
+  // Only when a node enters or leaves the box, and then only those nodes change (session.previewBox; the legacy editor's whole-view
+  // refreshes are not copied, human 2026-10-09). 只有節點進出框時才變，而且只有那些節點變（session.previewBox；不照抄舊產品的整個畫面重刷，人類）。
+  const select = (start: Drag, event: PointerEvent) => { if (hit(start, event)) session.previewBox(start.result); };
   const move = (event: PointerEvent) => {
     moveHold(event);
     const start = drag.current; if (!start) return;
@@ -169,13 +171,12 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     const start = drag.current; drag.current = null; setBox(null);
     if (!start?.moved) { if (start?.menu) open(start.target, start.x, start.y, false); return; }
     if (start.right) blockNextMenu(); // the release may land anywhere, e.g. over the toolbar
-    select(start, event);
-    setPreview(null);
-    // The one real change, on release (wires are cleared: nodes and wires are never selected together).
-    // 放開時才真的改一次（接線清掉：節點與接線不混選）。
+    hit(start, event);
+    // The one real change, on release, with the preview gone in the same publish (wires are cleared: nodes and wires are never selected
+    // together). 放開時才真的改一次，預覽在同一次發布裡拿掉（接線清掉：節點與接線不混選）。
     session.boxSelect(start.result, start.touched);
   }
-  const cancel = (event: PointerEvent) => { endHold(event); drag.current = null; setBox(null); setPreview(null); };
+  const cancel = (event: PointerEvent) => { endHold(event); drag.current = null; setBox(null); session.previewBox(null); };
   // The browser asks for its menu: on the network ours opens instead, unless what was pressed has its own (a value's presets: it
   // has taken the event) or is text (the browser's, to copy and paste). After a right drag the release was a box select (blocked
   // above, wherever it was released); a touch has the long press instead. 瀏覽器要開它的選單：在網路區改開我們的，除非按到的東西有自己的
@@ -190,7 +191,7 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
   };
   return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
     onPointerUp={event => { endHold(event); end(event); }} onPointerCancel={cancel} onLostPointerCapture={event => { if (drag.current) end(event); }} onContextMenu={menu}>
-    <BoxPreviewContext.Provider value={preview}>{children}</BoxPreviewContext.Provider>
+    {children}
     {box && <div className="right-select-box" style={box} />}
   </div>;
 }

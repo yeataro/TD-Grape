@@ -40,7 +40,7 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
   // Re-drawn only when the primary node changes (a box selection settles once on release, a node drag keeps it), so nothing
   // here runs on every move (EDITOR_UI_RULES, continuous interactions). 只在主要選取換人時重畫（框選放開時才定、拖節點不改），
   // 連續互動時不會每一下都跑（畫面規則「連續互動」）。
-  const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot);
+  const primary = useSyncExternalStore(session.primarySubscribe, session.primarySnapshot);
   const traced = useSyncExternalStore(trace.subscribe, trace.snapshot) ? primary : null;
   // Glides or jumps by the gear's animation effects (Refactor.102.2). 照齒輪的動畫效果滑過去或直接跳（R.102.2）。
   const scrollTo = (line: number) => { const row = box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`); if (row) scrollToMiddle(row); };

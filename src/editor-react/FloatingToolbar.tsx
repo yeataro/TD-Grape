@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
-import type { FlowNode, FlowEdge } from './projection';
+import type { FlowNode } from './projection';
 import { say, tr, type Message } from './text';
 import { IconButton } from './controls';
 import type { IconName } from './icons';
@@ -33,14 +33,17 @@ const frameOffset = () => (parseFloat(getComputedStyle(document.documentElement)
 
 type Tool = { key: string; icon: IconName; label: Message; run?: () => void; disabled?: boolean; danger?: boolean };
 
-export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }: {
-  nodes: readonly FlowNode[]; edges: readonly FlowEdge[]; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions; texts: TextHeights;
+// ids, wires: the selection, the session's own (Refactor.106: no scan of every node and wire). ids、wires：選取，session 自己的
+// （R.106：不掃描全部節點與接線）。
+export function FloatingToolbar({ ids, wires, clip, groups, grouping, texts }: {
+  ids: readonly string[]; wires: ReadonlySet<string>; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions; texts: TextHeights;
 }) {
   const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
   // Read again only when the look changes (density), not on every drag or pan frame (deep clean 2026-10-12). 只在外觀（密度）改變時
   // 重讀，不是拖曳或平移的每一格（10-12 深度清潔）。
   const look = useSyncExternalStore(appearanceSubscribe, appearance), gap = useMemo(() => frameOffset(), [look]);
-  const selected = nodes.filter(node => node.selected), ids = selected.map(node => node.id);
+  // The selected nodes as React Flow holds them, found by id. 選取的節點，照 id 從 React Flow 拿。
+  const selected = ids.flatMap(id => { const node = flow.getNode(id) as FlowNode | undefined; return node ? [node] : []; });
   // The selection's bounds on screen: worked out from React Flow's measured nodes and its view, as a key so the bar draws again only
   // when they change. 選取在螢幕上的範圍：從 React Flow 量到的節點與視角算出，做成字串，變了才重畫。
   const key = useStore(state => {
@@ -77,14 +80,13 @@ export function FloatingToolbar({ nodes, edges, clip, groups, grouping, texts }:
 
   if (!ids.length) return null;
   const [left, top, right, bottom] = key.split(',').map(Number) as [number, number, number, number];
-  const wires = edges.filter(edge => edge.selected);
   // Legacy's order and groups (selection_ui.js:433-439): what edits the selection, then what arranges it. 舊產品的順序與分組。
   const edit: Tool[] = [
     // Paste from here lands a third into the canvas (legacy graph_ui.js:2811). 從這裡貼上，貼在畫布三分之一處（照舊產品）。
     { key: 'copy', icon: 'copy', label: tr('selection.copy', 'Copy'), run: clip.copy, disabled: !clip.canCopy(selected) },
     { key: 'paste', icon: 'paste', label: tr('selection.paste', 'Paste'), run: () => clip.paste() },
     // React Flow's own delete path, so the same rules as the Delete key apply. 走 RF 的刪除，與 Delete 鍵同一套規則。
-    { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), run: () => void flow.deleteElements({ nodes: selected, edges: wires }) },
+    { key: 'delete', icon: 'delete', danger: true, label: tr('selection.delete', 'Delete selected'), run: () => void flow.deleteElements({ nodes: selected, edges: [...wires].map(id => ({ id })) }) },
   ];
   const arrange: Tool[] = [
     { key: 'collapse', icon: 'collapseCards', label: tr('selection.collapse', 'Collapse nodes') },

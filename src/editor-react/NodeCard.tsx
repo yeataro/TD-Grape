@@ -4,7 +4,6 @@ import { core, typeColor, type NodeControl, type NodePresentation } from './core
 import type { FlowNode } from './projection';
 import { spareHandle } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
-import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { Icon } from './icons';
@@ -139,19 +138,18 @@ export function PortLabel({ text, components }: { text: string; components?: rea
 
 export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
-  // The primary selection is told from above, never known by the node module (Q33). 主要選取由上往下得知，節點模組不知道。
-  const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot) === id;
-  // While a box is dragged: dashed = will be selected on release (Refactor.50.1). The current selection
-  // stays as it is until release (50.2, human: no fading; the legacy editor kept it, with a frame around it).
-  // 框選拖曳中：虛線＝放開會被選。目前的選取維持原樣到放開（50.2，人類：不淡化；舊產品保留它，外面還有多選框）。
-  const preview = useContext(BoxPreviewContext);
+  // The card is told only whether it is selected (Q33). Being the primary among several and being inside a box being dragged
+  // (Refactor.50.1: dashed = will be selected on release; the current selection stays as it is until then, 50.2) are classes the
+  // session puts on React Flow's wrapper (style.css), so a selection change re-renders no card but the ones selected or unselected
+  // (Refactor.106). 卡片只被告知自己有沒有被選（Q33）。多選時是不是主要選取、在不在拖曳中的框裡（R.50.1：虛線＝放開會被選；目前的選取
+  // 維持原樣到放開，50.2）是 session 放在 React Flow 外框上的 class（style.css），選取改變時只有被選或取消的卡片重繪（R.106）。
   // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
   const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
   // The rows a dropped wire would merge into one, the input it lands on among them, shown as one band in the wire's colour
   // (Refactor.76.16, as the legacy editor marked them; human 2026-10-11: one band, no frame per row).
   // 放開後會併成一列的那幾列（含落點那列），畫成線色的一整條（R.76.16，舊產品也標出它們；人類：一整條、不要每列框線）。
   const band = merging.length ? new Set([mergePreview!.port, ...merging]) : null;
-  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
+  const selection = selected ? 'selected' : '';
   const errorLine = useContext(ErrorNodesContext)?.has(id) ?? false;
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();

@@ -42,7 +42,8 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
   // Pressing the card itself (not a field, a button or its menu) selects it, as legacy (inspector.js:2534); a TD value has no
   // declaration and is not selected (Refactor.103). 按卡片本身（不是欄位、按鈕或選單）就選取它，照舊產品；TD 內建值沒有宣告，不選取（R.103）。
   const declared = !refKey.startsWith('tdValue:');
-  const selected = useSyncExternalStore(session.selectionSubscribe, session.sourceSnapshot) === refKey && declared;
+  // A yes or no, so a card re-renders only when it is chosen or let go (Refactor.106). 是或否，卡片只在被選或放開時重繪（R.106）。
+  const selected = useSyncExternalStore(session.sourceSubscribe, () => session.sourceSnapshot() === refKey) && declared;
   const choose = (event: MouseEvent) => {
     if (declared && !(event.target as Element).closest('input, textarea, select, button, .value-row')) session.selectSource(refKey);
   };

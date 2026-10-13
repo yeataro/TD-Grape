@@ -729,8 +729,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。
    Refactor.106: the canvas marks the node layer with data-multi-select (main.tsx); a :has() over the node layer restyled every node
-   on any selection change. R.106：由畫布在節點層標上 data-multi-select（main.tsx）；節點層的 :has() 在選取每次改變時重算所有節點。 */
-.react-flow__nodes[data-multi-select] .grape-node.selected.primary { --node-select: var(--select-primary); }
+   on any selection change. R.106：由畫布在節點層標上 data-multi-select（main.tsx）；節點層的 :has() 在選取每次改變時重算所有節點。
+   Refactor.106 (C): the primary is a class on React Flow's node wrapper, put there by the session (editor.ts applySelection), so the
+   card itself knows nothing of it. R.106（C）：主要選取是 session 放在 React Flow 節點外框上的 class（editor.ts applySelection），卡片本身不知道。 */
+.react-flow__nodes[data-multi-select] .react-flow__node.primary .grape-node.selected { --node-select: var(--select-primary); }
 /* Outer glow trials (human 2026-10-09; legacy cool styles, without the moving glow), switched in Appearance; each in the
    thing's own colour, its strength --tint-glow-* and reach --glow-*.
    外光暈試驗（人類；舊產品 cool 風格，不含光暈動畫），在外觀面板切換；各用自己的顏色，濃度 --tint-glow-*、範圍 --glow-*。 */
@@ -834,7 +836,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .group-swatch[aria-pressed="true"] { outline: 2px solid var(--text-strong); outline-offset: 1px; }
 @media (pointer: coarse) { .group-palette { grid-template-columns: repeat(4, 44px); } .group-swatch { width: 44px; height: 44px; } }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
-.grape-node.box-in { outline: 2px dashed var(--select); }
+/* Refactor.106 (C): a class on React Flow's node wrapper, put there by the session (editor.ts previewBox), not read by every card from
+   a context. R.106（C）：session 放在 React Flow 節點外框上的 class（editor.ts previewBox），不再由每張卡片從 context 讀。 */
+.react-flow__node.box-in .grape-node { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: var(--wire-width-hover) !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: var(--wire-width-selected) !important; }
 /* A wire's halo (wire_edge.tsx; Refactor.105.18, human 2026-10-13: 1.5px a side to start): the canvas's colour, as wide as the wire plus

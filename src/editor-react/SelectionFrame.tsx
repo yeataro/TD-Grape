@@ -1,6 +1,5 @@
 import { useEffect, useRef, type PointerEvent } from 'react';
 import { useReactFlow, useStore, type NodePositionChange } from '@xyflow/react';
-import type { FlowNode } from './projection';
 import type { Editor as EditorSession } from './editor';
 import { say, tr } from './text';
 import { HANDLES, spreadPositions, type Box, type Handle } from './selection_spread';
@@ -19,9 +18,9 @@ import type { GraphGroup } from './core';
 type Spread = { handle: Handle; pointer: number; x: number; y: number; zoom: number; boxes: Box[]; moved: boolean };
 const THRESHOLD = 3;
 
-export function SelectionFrame({ nodes, session, groups, texts }: { nodes: readonly FlowNode[]; session: EditorSession; groups: readonly GraphGroup[]; texts: TextHeights }) {
+// ids: the selected nodes, the session's own list (Refactor.106: no scan of every node). ids：選取的節點，session 自己的名單（R.106：不掃描全部節點）。
+export function SelectionFrame({ ids, session, groups, texts }: { ids: readonly string[]; session: EditorSession; groups: readonly GraphGroup[]; texts: TextHeights }) {
   const flow = useReactFlow(), spread = useRef<Spread | null>(null);
-  const ids = nodes.filter(node => node.selected).map(node => node.id);
   // The selection's bounds on screen, groups whose members are all selected included (Refactor.98), as a key so the frame draws
   // again only when they change (as the floating toolbar). 選取在螢幕上的範圍（含成員全被選取的群組，R.98），做成字串，變了才重畫（同浮動工具列）。
   const key = useStore(state => {

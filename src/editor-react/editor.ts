@@ -1,4 +1,4 @@
-import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
+import { applyNodeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
   type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge, colorGroupOf } from './projection';
@@ -189,6 +189,14 @@ function namesOf(net: Network, id: string, declarations: readonly Declaration[])
   return count > 1 ? { style: core.componentStyle(module, node.data, net.context), count } : null;
 }
 
+/** Who is selected (Q33): the session's own, never in the graph, Undo or TD (Refactor.106). 誰被選（Q33）：session 自己的，
+ * 不進圖、Undo 或 TD（R.106）。 */
+export type Selection = { readonly nodes: ReadonlySet<string>; readonly edges: ReadonlySet<string>; readonly primary: string | null };
+const NONE: ReadonlySet<string> = new Set();
+const NO_SELECTION: Selection = { nodes: NONE, edges: NONE, primary: null };
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a === b || (a.size === b.size && [...a].every(id => b.has(id)));
+const union = (...sets: (ReadonlySet<string> | null)[]) => { const all = new Set<string>(); for (const set of sets) if (set) for (const id of set) all.add(id); return all; };
+
 export class Editor {
   private document: GraphDocument;
   private state: EditorState;
@@ -364,7 +372,11 @@ export class Editor {
   /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
    * 這張圖有的 Stage，照編輯器顯示的順序（只列圖裡有的）。 */
   stageNames = () => ['vertex', 'pixel'].filter(name => name in this.document.document.stages);
-  private publish() { this.keepPrimary(); this.keepWireKey(); if (!this.disposed) this.listeners.forEach(listener => listener()); }
+  private publish() {
+    if (this.disposed) return;
+    this.listeners.forEach(listener => listener());
+    this.tellSelection();
+  }
   private status(patch: Partial<EditorState>, source = 'editor') {
     if (patch.message) this.log.add(patch.level ?? 'info', patch.message, source);
     this.state = { ...this.state, ...patch }; this.publish();
@@ -421,7 +433,10 @@ export class Editor {
   };
   // Every finished edit is compiled here, then offered to HostSync.
   // 每次修改完成都在這裡產碼，再交給 HostSync。
-  private commit(projection: Projection, label: Message) {
+  // Every new projection is adopted here, so the selection is reconciled with it in this one place (Refactor.106).
+  // 每份新投影都在這裡採用，選取也就在這一處和它對帳（R.106）。
+  private commit(drawn: Projection, label: Message) {
+    const projection = this.reconcile(drawn);
     this.sendChangedUniforms();
     this.codegen = this.compile();
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
@@ -750,7 +765,7 @@ export class Editor {
   selectGroup = (id: string, how: 'only' | 'toggle' | 'add') => {
     const group = this.groups().find(item => item.id === id);
     if (!group) return;
-    const selected = this.selectedNodes(), all = group.nodes.every(node => selected.has(node));
+    const selected = new Set(this.selection.nodes), all = group.nodes.every(node => selected.has(node));
     if (how === 'only') selected.clear();
     for (const node of group.nodes) if (how === 'toggle' && all) selected.delete(node); else selected.add(node);
     this.boxSelect(selected, [...group.nodes].reverse());
@@ -761,120 +776,218 @@ export class Editor {
     net.disconnectAll(net.edges.filter(edge => ids.has(edge.id)));
     net.removeAll(nodes.map(node => net.node(node.id)));
   });
-  // Selection (design-interview Q33, Q39; Refactor.49). Who is selected lives on the projection (React
-  // Flow's `selected`); this decides it, React Flow does not (elementsSelectable is off). Nodes and wires
-  // are never selected together (legacy). The primary node is the last one pressed: never stored, never
-  // undone, never sent to TD. 選取：誰被選存在投影上，由這裡決定（RF 不自己選）。節點與接線不混選（舊產品）。
-  // 主要選取＝最後按下的節點；不存圖、不進 Undo、不送 TD。
-  private primary: string | null = null;
-  private selectionListeners = new Set<() => void>();
-  selectionSubscribe = (listener: () => void) => { this.selectionListeners.add(listener); return () => { this.selectionListeners.delete(listener); }; };
-  primarySnapshot = () => this.primary;
+  // Selection (design-interview Q33, Q39; Refactor.49, 106). The session keeps who is selected — the nodes, the wires and the primary
+  // node — and is its only truth; React Flow does not select (elementsSelectable is off). Nodes and wires are never selected together
+  // (legacy). The primary node is the last one pressed: never stored, never undone, never sent to TD. The cards are told their state
+  // from above: one write point (applySelection) puts `selected` and the wrapper classes (`primary`, `box-in`) on the nodes whose look
+  // changed, and publishes once (Refactor.106: before, a card subscribed to the primary itself and the selection was read back by
+  // scanning every node). 選取（Q33、Q39；R.49、106）：session 保管誰被選——節點、接線與主要選取——是唯一的真相；React Flow 不自己選。
+  // 節點與接線不混選（照舊產品）。主要選取＝最後按下的節點；不存圖、不進 Undo、不送 TD。卡片由上往下得知自己的狀態：唯一的寫入點
+  // （applySelection）只在樣子變了的節點上寫 selected 與外框 class（primary、box-in），並發布一次（R.106：之前每張卡片自己訂閱主要選取，
+  // 選取又靠掃描全部節點讀回來）。
+  private selection: Selection = NO_SELECTION;
+  /** What a box being dragged would select (Refactor.50.1): a look only, until release. 正在拖的框會選到什麼：放開前只是外觀。 */
+  private box: ReadonlySet<string> | null = null;
   // The selected shared source (Refactor.103; legacy selectInputSource, inspector.js:2534): one at a time, never with nodes or wires
   // (legacy); for now it only locates its declaration (human 2026-10-12: what else it does, later; no batch selection yet). Not
   // stored, not undone. 選到的共用來源（R.103；照舊產品）：一次一個，不和節點、接線同時選（照舊產品）；目前只用來定位它的宣告（人類 10-12：
   // 還能做什麼之後再說；先不批次選取）。不存圖、不進 Undo。
   private source: string | null = null;
-  sourceSnapshot = () => this.source;
-  private setSource(id: string | null) {
-    if (this.source === id) return;
-    this.source = id;
-    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
-  }
-  /** Select a shared source: the canvas selection goes. 選取一個共用來源：畫布上的選取清掉。 */
-  selectSource = (id: string) => { this.reselect(new Set(), new Set()); this.setPrimary(null); this.setSource(id); };
   // The selected wires as one key, so a panel follows them without redrawing on every move (Refactor.103). 選到的接線做成一個字串，
   // 面板跟著它、不會每一下都重畫（R.103）。
   private wireKey = '';
+  // Three separate notices, each sent only when its own value changed (Refactor.106): the panels following the primary node do not
+  // wake for a wire or a source. 三條分開的通知，各自只在自己的值變了時送（R.106）：跟著主要選取的面板不會因接線或來源醒來。
+  private readonly primaryListeners = new Set<() => void>();
+  private readonly wireListeners = new Set<() => void>();
+  private readonly sourceListeners = new Set<() => void>();
+  private told: { primary: string | null; wires: string; source: string | null } = { primary: null, wires: '', source: null };
+  primarySubscribe = (listener: () => void) => { this.primaryListeners.add(listener); return () => { this.primaryListeners.delete(listener); }; };
+  primarySnapshot = () => this.selection.primary;
+  wireKeySubscribe = (listener: () => void) => { this.wireListeners.add(listener); return () => { this.wireListeners.delete(listener); }; };
   selectedWiresSnapshot = () => this.wireKey;
-  private keepWireKey() {
-    const key = this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id).join('\u0000');
-    if (key === this.wireKey) return;
-    this.wireKey = key;
-    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
+  sourceSubscribe = (listener: () => void) => { this.sourceListeners.add(listener); return () => { this.sourceListeners.delete(listener); }; };
+  sourceSnapshot = () => this.source;
+  /** The selected nodes: the same set until the selection of nodes changes, so a reader re-renders only then (follow it with
+   * `subscribe`). 選取的節點：選取的節點沒變就是同一個集合，讀的人只在那時重繪（用 subscribe 跟著）。 */
+  selectionSnapshot = () => this.selection.nodes;
+  /** The selected wires, as selectionSnapshot. 選取的接線，同 selectionSnapshot。 */
+  selectedEdges = () => this.selection.edges;
+  /** The selected nodes in the graph's order, for what stores or lists them in order (a group's members, the toolbar), as they were
+   * read from the projection before (Refactor.106). Only the selection is sorted, no node is scanned. 照圖裡順序的選取節點，給會照順序
+   * 存或列出它們的地方（群組成員、工具列），和之前從投影讀出來的一樣（R.106）。只排序選取本身，不掃描節點。 */
+  selectedInOrder = (): string[] => {
+    const at = this.nodesAt(this.state.projection.nodes);
+    return [...this.selection.nodes].filter(id => at.has(id)).sort((a, b) => at.get(a)! - at.get(b)!);
+  };
+  // Who sees a change of the primary, the wires or the source, after the one publish. 一次發布之後，告訴跟著主要選取、接線或來源的人。
+  private tellSelection() {
+    const { primary } = this.selection, told = this.told;
+    if (told.primary !== primary) { told.primary = primary; this.primaryListeners.forEach(listener => listener()); }
+    if (told.wires !== this.wireKey) { told.wires = this.wireKey; this.wireListeners.forEach(listener => listener()); }
+    if (told.source !== this.source) { told.source = this.source; this.sourceListeners.forEach(listener => listener()); }
   }
-  private setPrimary(id: string | null) {
-    if (this.primary === id) return;
-    this.primary = id;
-    if (!this.disposed) this.selectionListeners.forEach(listener => listener());
+  // Where each node and wire sits in the projection's arrays, kept with the array it indexes: worked out again only when the array is
+  // replaced in another order (a recompute), carried over when only some objects inside it were replaced (a selection, a drag frame).
+  // 每個節點與接線在投影陣列裡的位置，跟著它所指的陣列：陣列換成別的順序（重算）才重新算；只換了裡面某些物件時（選取、拖曳的一格）沿用。
+  private nodeIndex: { list: readonly FlowNode[]; at: Map<string, number> } | null = null;
+  private edgeIndex: { list: readonly FlowEdge[]; at: Map<string, number> } | null = null;
+  private nodesAt(list: readonly FlowNode[]) {
+    if (this.nodeIndex?.list !== list) this.nodeIndex = { list, at: new Map(list.map((node, i) => [node.id, i])) };
+    return this.nodeIndex.at;
   }
-  // The primary must stay a selected node (it may be deleted, unselected or undone away).
-  // 主要選取必須是被選的節點（可能被刪、取消或 Undo 掉）。
-  private keepPrimary() {
-    if (this.primary !== null && !this.state.projection.nodes.some(node => node.id === this.primary && node.selected)) this.setPrimary(null);
+  private edgesAt(list: readonly FlowEdge[]) {
+    if (this.edgeIndex?.list !== list) this.edgeIndex = { list, at: new Map(list.map((edge, i) => [edge.id, i])) };
+    return this.edgeIndex.at;
   }
-  private reselect(nodes: ReadonlySet<string>, edges: ReadonlySet<string>) {
-    // Any canvas selection, or clearing it, lets go of a selected source (legacy). 畫布上的選取（或清掉選取）放開選到的來源（照舊產品）。
-    this.setSource(null);
-    const { projection } = this.state;
-    const nodeChanges = projection.nodes.flatMap(node => nodes.has(node.id) === !!node.selected ? []
-      : [{ type: 'select' as const, id: node.id, selected: nodes.has(node.id) }]);
-    const edgeChanges = projection.edges.flatMap(edge => edges.has(edge.id) === !!edge.selected ? []
-      : [{ type: 'select' as const, id: edge.id, selected: edges.has(edge.id) }]);
-    if (!nodeChanges.length && !edgeChanges.length) return;
-    this.state = { ...this.state, projection: { nodes: nodeChanges.length ? applyNodeChanges(nodeChanges, projection.nodes) : projection.nodes,
-      edges: edgeChanges.length ? applyEdgeChanges(edgeChanges, projection.edges) : projection.edges } };
-    this.publish();
+  /** Put the selection's look on the nodes and wires named, replacing only the objects whose look differs; every other object stays
+   * the same (Refactor.106). A node's look: `selected`, and on its wrapper `primary` (the primary among several selected, Q33) and
+   * `box-in` (inside the box being dragged, not yet selected). 把選取的樣子寫到列出的節點與接線上，只換樣子不同的物件；其他物件都不變
+   * （R.106）。節點的樣子：selected，外框上的 primary（多選時的主要選取，Q33）與 box-in（在拖曳中的框裡、還沒被選）。 */
+  private flagged(projection: Projection, nodeIds: Iterable<string>, edgeIds: Iterable<string>): Projection {
+    const { nodes: chosen, edges: wires, primary } = this.selection, box = this.box;
+    let nodes = projection.nodes, edges = projection.edges;
+    const nodeAt = this.nodesAt(nodes);
+    for (const id of nodeIds) {
+      const i = nodeAt.get(id); if (i === undefined) continue;
+      const node = nodes[i]!, selected = chosen.has(id);
+      const className = [primary === id && chosen.size > 1 ? 'primary' : '', box?.has(id) && !selected ? 'box-in' : ''].filter(Boolean).join(' ') || undefined;
+      if (!!node.selected === selected && node.className === className) continue;
+      if (nodes === projection.nodes) nodes = [...nodes];
+      nodes[i] = { ...node, selected, className };
+    }
+    if (nodes !== projection.nodes) this.nodeIndex = { list: nodes, at: nodeAt };
+    const edgeAt = this.edgesAt(edges);
+    for (const id of edgeIds) {
+      const i = edgeAt.get(id); if (i === undefined) continue;
+      const edge = edges[i]!, selected = wires.has(id);
+      if (!!edge.selected === selected) continue;
+      if (edges === projection.edges) edges = [...edges];
+      edges[i] = { ...edge, selected };
+    }
+    if (edges !== projection.edges) this.edgeIndex = { list: edges, at: edgeAt };
+    return nodes === projection.nodes && edges === projection.edges ? projection : { nodes, edges };
   }
-  private selectedNodes = () => new Set(this.state.projection.nodes.filter(node => node.selected).map(node => node.id));
+  /** Adopt a selection (and a box preview, a source): its look onto the nodes and wires that were or are in it, nothing published.
+   * Whether anything changed. Sets that hold the same ids are kept, so selectionSnapshot keeps its identity. 採用一份選取（以及框選預覽、
+   * 來源）：把樣子寫到之前或現在在其中的節點與接線上，不發布。回傳有沒有改變。內容相同的集合沿用舊的，selectionSnapshot 保持同一個。 */
+  private writeSelection(next: Selection, box: ReadonlySet<string> | null, source: string | null) {
+    const before = this.selection, oldBox = this.box;
+    const nodes = sameSet(next.nodes, before.nodes) ? before.nodes : next.nodes, edges = sameSet(next.edges, before.edges) ? before.edges : next.edges;
+    if (nodes === before.nodes && edges === before.edges && next.primary === before.primary && box === oldBox && source === this.source) return false;
+    this.selection = nodes === before.nodes && edges === before.edges && next.primary === before.primary ? before : { nodes, edges, primary: next.primary };
+    this.box = box; this.source = source;
+    if (edges !== before.edges) this.wireKey = [...edges].join('\u0000');
+    const projection = this.flagged(this.state.projection, union(before.nodes, nodes, oldBox, box), union(before.edges, edges));
+    if (projection !== this.state.projection) this.state = { ...this.state, projection };
+    return true;
+  }
+  /** The one write point of the selection: adopted, then published once (Refactor.106). Any canvas selection, or clearing it, lets go
+   * of a selected source (legacy); a box preview stays until its release unless told. 選取唯一的寫入點：採用後發布一次（R.106）。畫布上的
+   * 選取（或清掉選取）放開選到的來源（照舊產品）；框選預覽保留到放開，除非另外指定。 */
+  private applySelection(next: Selection, { box = this.box, source = null }: { box?: ReadonlySet<string> | null; source?: string | null } = {}) {
+    if (this.writeSelection(next, box, source)) this.publish();
+  }
+  /** A new projection adopted (an edit, Undo, a draft, TD's version): ids no longer there leave the selection; a primary that left hands
+   * over to the last selected node still there (Q33; legacy graph_ui.js:1467); the look is written onto the nodes and wires that
+   * differ. Only the selection's own ids are looked at, never every node. 採用新的投影（修改、Undo、草稿、TD 版本）：不在了的 id 離開
+   * 選取；離開的主要選取交給最後一個仍在的被選節點（Q33；照舊產品）；樣子只寫到不同的節點與接線上。只看選取自己的 id，不掃全部節點。 */
+  private reconcile(projection: Projection): Projection {
+    const { nodes, edges, primary } = this.selection, box = this.box;
+    if (!nodes.size && !edges.size && !box?.size) return projection;
+    const nodeAt = this.nodesAt(projection.nodes), edgeAt = this.edgesAt(projection.edges);
+    const keptNodes = [...nodes].filter(id => nodeAt.has(id)), keptEdges = [...edges].filter(id => edgeAt.has(id));
+    const keptPrimary = primary !== null && nodeAt.has(primary) ? primary : keptNodes.at(-1) ?? null;
+    const before = this.selection, oldBox = box;
+    const next = keptNodes.length === nodes.size && keptEdges.length === edges.size && keptPrimary === primary ? before
+      : { nodes: keptNodes.length === nodes.size ? nodes : new Set(keptNodes), edges: keptEdges.length === edges.size ? edges : new Set(keptEdges), primary: keptPrimary };
+    this.selection = next;
+    if (next.edges !== before.edges) this.wireKey = keptEdges.join('\u0000');
+    if (box) { const keptBox = [...box].filter(id => nodeAt.has(id)); if (keptBox.length !== box.size) this.box = new Set(keptBox); }
+    return this.flagged(projection, union(before.nodes, oldBox), before.edges);
+  }
+  /** Select a shared source: the canvas selection goes. 選取一個共用來源：畫布上的選取清掉。 */
+  selectSource = (id: string) => this.applySelection(NO_SELECTION, { source: id });
   /** A node pressed: plain = only it (a node already selected keeps the group, legacy), toggle = Ctrl,
    * add = Shift (TD as measured, Q39). 按下節點：一般＝只選它（已選的保留整組）；Ctrl＝切換；Shift＝只加選。 */
   pressNode = (id: string, how: 'only' | 'toggle' | 'add') => {
-    const selected = this.selectedNodes(), was = selected.has(id), primary = this.primary;
-    if (how === 'only' && !was) selected.clear();
-    if (how === 'toggle' && was) selected.delete(id); else selected.add(id);
-    this.reselect(selected, new Set());
+    const { nodes, primary } = this.selection, was = nodes.has(id), next = new Set(how === 'only' && !was ? [] : nodes);
+    if (how === 'toggle' && was) next.delete(id); else next.add(id);
     // Taking the primary away hands it to the last selected one (legacy graph_ui.js:1467).
     // 取消主要選取時，交給最後一個仍被選的（舊產品）。
-    this.setPrimary(selected.has(id) ? id : primary === id || primary === null ? [...selected].at(-1) ?? null : primary);
+    this.applySelection({ nodes: next, edges: NONE, primary: next.has(id) ? id : primary === id || primary === null ? [...next].at(-1) ?? null : primary });
   };
   /** A wire clicked: the same rules as nodes (human 2026-10-09: wire and node multi-selection behave
    * alike), so a plain click on a selected wire keeps the group too; wires and nodes are not selected
    * together. 點接線：規則和節點一樣（人類：多選行為要一致），一般點擊已選的接線也保留整組；接線與節點不混選。 */
   clickEdge = (id: string, how: 'only' | 'toggle' | 'add') => {
-    const selected = new Set(this.state.projection.edges.filter(edge => edge.selected).map(edge => edge.id)), was = selected.has(id);
-    if (how === 'only' && !was) selected.clear();
-    if (how === 'toggle' && was) selected.delete(id); else selected.add(id);
-    this.reselect(new Set(), selected);
-    this.setPrimary(null);
+    const { edges } = this.selection, was = edges.has(id), next = new Set(how === 'only' && !was ? [] : edges);
+    if (how === 'toggle' && was) next.delete(id); else next.add(id);
+    this.applySelection({ nodes: NONE, edges: next, primary: null });
   };
   /** Select every node that uses a source (legacy Select references; human 2026-10-09). 選取所有用到這個來源的節點（照舊產品）。 */
   selectReferences = (id: string) => {
+    // Finding the users reads every node once; the selection itself is written as any other. 找出使用者要讀過每個節點一次；選取本身照常寫入。
     const entry = id.startsWith('tdValue:') ? id.slice(8) : undefined;
     const nodes = this.state.projection.nodes.filter(node => entry === undefined ? node.data.declaration?.id === id
       : node.data.authored.nodeType === TD_VALUE && node.data.authored.params.entry === entry).map(node => node.id);
     this.boxSelect(new Set(nodes), nodes);
     return nodes;
   };
-  clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
-  /** A box selection, applied once on release (Refactor.50.1): these nodes, no wires. The primary stays
-   * if still selected, else the first node the box touched (Q33). 框選，放開時套用一次：這些節點、沒有接線；
+  clearSelection = () => this.applySelection(NO_SELECTION);
+  /** While a box is dragged, the nodes it would select (null: no box): only those entering or leaving it change (Refactor.106; the cards
+   * read a context before, so every card re-rendered on each change). 拖曳中的框會選到的節點（null：沒有框）：只有進出框的節點改變
+   * （R.106；之前卡片讀 context，每次改變所有卡片都重繪）。 */
+  previewBox = (ids: ReadonlySet<string> | null) => this.applySelection(this.selection, { box: ids, source: this.source });
+  /** A box selection, applied once on release (Refactor.50.1): these nodes, no wires; the preview goes in the same publish. The primary
+   * stays if still selected, else the first node the box touched (Q33). 框選，放開時套用一次：這些節點、沒有接線；預覽在同一次發布裡拿掉。
    * 原主要仍被選就不換，否則換成第一個碰到的。 */
   boxSelect = (nodes: ReadonlySet<string>, touched: readonly string[]) => {
-    const primary = this.primary;
-    this.reselect(nodes, new Set());
-    this.setPrimary(primary !== null && nodes.has(primary) ? primary : touched.find(id => nodes.has(id)) ?? null);
+    const { primary } = this.selection;
+    // In the order they came: those already selected, then as touched (the primary hands over to the last, Q33). 照加入的順序：原本
+    // 就選的、再依碰到的順序（主要選取交給最後一個，Q33）。
+    const order = new Set([...[...this.selection.nodes].filter(id => nodes.has(id)), ...touched.filter(id => nodes.has(id)), ...nodes]);
+    this.applySelection({ nodes: order, edges: NONE, primary: primary !== null && nodes.has(primary) ? primary : touched.find(id => nodes.has(id)) ?? null }, { box: null });
   };
+  // A drag frame replaces only the moved nodes' objects (React Flow's applyNodeChanges keeps every other object, checked in
+  // @xyflow/react 12.12 applyChanges) and publishes; with the panels reading their own slices only the canvas follows it
+  // (Refactor.106). React Flow's own select changes (it unselects when a drag starts on a node that is not selected) go through the
+  // selection's write point, so the session stays its only truth. 拖曳的一格只換被移動節點的物件（React Flow 的 applyNodeChanges 其他物件
+  // 不變，已在 12.12 的 applyChanges 核對）並發布；面板各自讀自己的切片，所以只有畫布跟著（R.106）。React Flow 自己送的選取改變（拖曳從沒被
+  // 選的節點開始時它會取消選取）走選取的寫入點，session 仍是唯一的真相。
   nodeChanges = (changes: NodeChange<FlowNode>[]) => {
-    const runtime = changes.filter(change => change.type !== 'remove' && change.type !== 'add' && change.type !== 'replace');
-    if (!runtime.length) return;
-    const nodes = applyNodeChanges(runtime, this.state.projection.nodes);
-    // Gesture updates never mutate the document; only completion records history.
-    // RF 的量測／選取／拖曳各自可寫，放開時才提交一筆作品交易。
-    this.state = { ...this.state, projection: { ...this.state.projection, nodes } };
+    const runtime = changes.filter(change => change.type === 'position' || change.type === 'dimensions');
+    const picks = changes.flatMap(change => change.type === 'select' ? [change] : []);
+    if (!runtime.length && !picks.length) return;
+    if (runtime.length) {
+      const before = this.state.projection.nodes, nodes = applyNodeChanges(runtime, before);
+      // Same order, same ids: where each node sits carries over. 順序與 id 都不變：位置索引沿用。
+      if (this.nodeIndex?.list === before) this.nodeIndex = { list: nodes, at: this.nodeIndex.at };
+      // Gesture updates never mutate the document; only completion records history.
+      // RF 的量測／拖曳各自可寫，放開時才提交一筆作品交易。
+      this.state = { ...this.state, projection: { ...this.state.projection, nodes } };
+    }
+    let picked = false;
+    if (picks.length) {
+      const next = new Set(this.selection.nodes);
+      for (const pick of picks) if (pick.selected) next.add(pick.id); else next.delete(pick.id);
+      const { primary } = this.selection;
+      picked = this.writeSelection({ nodes: next, edges: this.selection.edges, primary: primary !== null && next.has(primary) ? primary : [...next].at(-1) ?? null }, this.box, this.source);
+    }
     const done = runtime.filter(change => change.type === 'position' && change.dragging === false && change.position);
     const version = this.state.version;
     if (done.length) this.transact(tr('edit.moved', 'Position updated'), net => done.forEach(change => {
       if (change.type === 'position') net.node(change.id).update({ ui: { ...net.node(change.id).data!.ui, ...change.position } });
     }));
-    if (this.state.version === version) this.publish();
+    if (this.state.version === version && (runtime.length || picked)) this.publish();
   };
   edgeChanges = (changes: EdgeChange<FlowEdge>[]) => {
-    const runtime = changes.filter(change => change.type === 'select');
-    if (!runtime.length) return;
-    if (runtime.some(change => change.type === 'select' && change.selected)) this.setSource(null); // a wire chosen 選了接線
-    this.state = { ...this.state, projection: { ...this.state.projection,
-      edges: applyEdgeChanges(runtime, this.state.projection.edges) } }; this.publish();
+    const picks = changes.flatMap(change => change.type === 'select' ? [change] : []);
+    if (!picks.length) return;
+    const next = new Set(this.selection.edges);
+    for (const pick of picks) if (pick.selected) next.add(pick.id); else next.delete(pick.id);
+    // A wire chosen lets go of a selected source. 選了接線就放開選到的來源。
+    this.applySelection({ ...this.selection, edges: next }, { source: picks.some(pick => pick.selected) ? null : this.source });
   };
   history = (redo: boolean) => {
     const source = redo ? this.future : this.past, destination = redo ? this.past : this.future;
@@ -916,7 +1029,7 @@ export class Editor {
   /** Select one node, as clicking it would (a GLSL line leads to its node, Refactor.63). 選取一個節點（GLSL 的行找回它的節點）。 */
   selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
   /** Select one wire, as a click on it (Refactor.103: from the Graph JSON View). 選取一條接線，同點它（R.103：從 Graph JSON View）。 */
-  selectWire = (id: string) => { this.reselect(new Set(), new Set([id])); this.setPrimary(null); };
+  selectWire = (id: string) => this.applySelection({ nodes: NONE, edges: new Set([id]), primary: null });
   /** Back to the graph of the program TD still runs (Last Known Good, design-interview Q38 2-5; Refactor.63): loaded the
    * way TD's version is when a conflict is resolved, as one Undo step, then delivered as any edit; Uniforms take no part
    * of their own (human 2026-10-10). 回到 TD 仍在跑的那一版的圖：照衝突時採用 TD 版本的方式載入、一步 Undo，再照一般編輯送出；
@@ -974,5 +1087,6 @@ export class Editor {
   };
   dispose() {
     if (typeof window !== 'undefined') { removeEventListener('offline', this.deviceOffline); removeEventListener('online', this.deviceOnline); }
-    this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); this.selectionListeners.clear(); }
+    this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear();
+    this.primaryListeners.clear(); this.wireListeners.clear(); this.sourceListeners.clear(); }
 }
