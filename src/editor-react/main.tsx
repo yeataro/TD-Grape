@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
+import { StrictMode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode, type RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes, type ReactFlowProps } from '@xyflow/react';
@@ -32,7 +32,7 @@ import { NodeCard } from './NodeCard';
 import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
 import { DragToAddLayer, useDropToAdd } from './drag_to_add';
-import { usePlaceNode, type Placing } from './place_node';
+import { usePlaceNode } from './place_node';
 import { OperationHint, useOperationHint } from './operation_hint';
 import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
@@ -163,9 +163,13 @@ function ZoomReadout() {
   </>;
 }
 const NO_TEXT: TextHeights = {};
-const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, damping, errorNodes, placing, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
+/** Begin placing a node (place_node.tsx); false when adding it would fail. 開始放置節點（place_node.tsx）；新增會失敗時回 false。 */
+type PlaceStart = ReturnType<typeof usePlaceNode>['start'];
+const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, damping, errorNodes, placer, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
   session: EditorSession; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
-  errorNodes: ReadonlySet<string> | null; placing: Placing | null;
+  errorNodes: ReadonlySet<string> | null;
+  /** Where the canvas puts its way to begin placing, for Create node (Refactor.106). 畫布把「開始放置」放在這裡，給新增節點用（R.106）。 */
+  placer: RefObject<PlaceStart | null>;
   onCreate(request: CreateRequest): void; onMenu(open: MenuOpen): void;
   focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
   textGrows: boolean;
@@ -174,6 +178,13 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // Only the canvas reads the projection (Refactor.106; editor_slice.ts): a drag frame re-renders it and nothing else.
   // 只有畫布讀投影（R.106；editor_slice.ts）：拖曳的一格只讓它重繪。
   const projection = useEditorSlice(session, state => state.projection);
+  // Place a node (Refactor.105): after a pick the node follows the pointer until a press adds it. Its state lives here (Refactor.106):
+  // a frame of it re-renders the canvas alone, no longer the whole workspace. 放置節點（R.105）：選好之後節點跟著指標，按下才新增。它的狀態
+  // 放在這裡（R.106）：每一格只讓畫布重繪，不再是整個工作區。
+  const place = usePlaceNode(session, flow, snap ? GRID : null), placing = place.placing;
+  useLayoutEffect(() => { placer.current = place.start; return () => { placer.current = null; }; }, [placer, place.start]);
+  // While placing, how to finish it (legacy create.place), as an operation hint. 放置時，怎麼完成（照舊產品），用操作提示。
+  useOperationHint(placing && !placing.leaving ? tr('create.place', 'Click to place the node · Esc to cancel') : null);
   // The session's own set of selected nodes: a new one only when the selection changes, not on every drag frame (deep clean
   // 2026-10-12: the groups re-rendered each frame), and never a scan of every node (Refactor.106).
   // session 自己的選取節點集合：選取變了才換新的，不是拖曳的每一格（10-12 深度清潔：群組每一格都重繪），也不掃描全部節點（R.106）。
@@ -250,15 +261,27 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // 即將不見的線改用 replacing、不留原本的 class：和 Ghost 線一樣，不算數的線沒有分量染色（style.css）。以 id 清單當依據，
   // 內容相同的預告沿用同一份線。
   const replacedKey = preview?.replaced.join('\n') ?? '';
+  // One drawn object per wire object, kept while the wire object is (Refactor.106): a wire selected or an edit replaces only the wires it
+  // touched, so React Flow redraws only those, not every wire. 每個線物件對應一個畫出來的物件，線物件不變它就不變（R.106）：選一條線或一次
+  // 修改只換到它碰到的線，React Flow 只重畫那些，不是全部的線。
+  const drawn = useMemo(() => new WeakMap<FlowEdge, FlowEdge>(), [options.wirePickUp]);
   const edges = useMemo(() => {
     const replaced = new Set(replacedKey ? replacedKey.split('\n') : []);
-    return projection.edges.map(edge => ({ ...edge,
-      ...(options.wirePickUp ? { reconnectable: 'target' as const } : {}),
-      ...(replaced.has(edge.id) ? { className: 'replacing' } : {}) }));
-  }, [projection.edges, options.wirePickUp, replacedKey]);
+    return projection.edges.map(edge => {
+      if (replaced.has(edge.id)) return { ...edge, ...(options.wirePickUp ? { reconnectable: 'target' as const } : {}), className: 'replacing' };
+      if (!options.wirePickUp) return edge;
+      let made = drawn.get(edge);
+      if (!made) drawn.set(edge, made = { ...edge, reconnectable: 'target' as const });
+      return made;
+    });
+  }, [projection.edges, options.wirePickUp, replacedKey, drawn]);
   // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
+  // A node being placed is drawn with the graph's, but is not in it (place_node.tsx); the arrays change only when one of their parts does.
+  // 放置中的節點和圖的一起畫，但不在圖裡（place_node.tsx）；陣列只在其中一部分變了時才換。
+  const flowNodes = useMemo(() => placing ? [...projection.nodes, placing.node] : projection.nodes, [projection.nodes, placing?.node]);
+  const flowEdges = useMemo(() => placing ? [...edges, ...placing.edges] : edges, [edges, placing?.edges]);
   // Every handler given to React Flow keeps one identity across renders (Refactor.106): React Flow copies handlers into its store and
   // re-renders what reads them whenever one changes. What changes per render is read through `latest` when the handler runs.
   // 交給 React Flow 的處理函式在每次重繪間保持同一個（R.106）：React Flow 把它們抄進自己的 store，換一個就重繪讀它的部分。每次重繪會變的值，
@@ -324,8 +347,7 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
     <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left"
-      // A node being placed is drawn with the graph's, but is not in it (place_node.tsx). 放置中的節點和圖的一起畫，但不在圖裡。
-      nodes={placing ? [...projection.nodes, placing.node] : projection.nodes} edges={placing ? [...edges, ...placing.edges] : edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+      nodes={flowNodes} edges={flowEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       zoomOnScroll={!damping} onMoveStart={onMoveStart} onMoveEnd={onMoveEnd}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
@@ -452,10 +474,9 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: NewWire) =>
     session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
   const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
-  // Place a node (Refactor.105): after a port's right-click the picked node follows the pointer until a press adds it. 放置節點（R.105）。
-  const place = usePlaceNode(session, flow, prefs.snap ? GRID : null), placing = place.placing;
-  // While placing, how to finish it (legacy create.place), as an operation hint. 放置時，怎麼完成（照舊產品），用操作提示。
-  useOperationHint(placing && !placing.leaving ? tr('create.place', 'Click to place the node · Esc to cancel') : null);
+  // Place a node (Refactor.105): begun here after a pick, kept and drawn by the canvas (Refactor.106). 放置節點（R.105）：選好後從這裡開始，
+  // 由畫布保管與畫出（R.106）。
+  const placer = useRef<PlaceStart | null>(null);
   // The right-click menu (Refactor.93): where it opened, and what was selected then. 右鍵選單（R.93）：在哪裡打開、當時選了什麼。
   const [menuAt, setMenuAt] = useState<CanvasMenuRequest | null>(null);
   const onMenu = useCallback((open: MenuOpen) => setMenuAt({ x: open.x, y: open.y, touch: open.touch, host: open.host, wire: open.wire,
@@ -607,7 +628,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
-            placing={placing} onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
+            placer={placer} onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
@@ -651,7 +672,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           onPick={(choice, port) => {
             setCreating(null);
             const wire = creating.wire && port ? { end: creating.wire.end, port: port.port, configure: port.configure } : undefined;
-            if (!(creating.place && place.start(choice.spec, wire, creating.screen))) addAt(choice, creating.screen, wire);
+            if (!(creating.place && placer.current?.(choice.spec, wire, creating.screen))) addAt(choice, creating.screen, wire);
           }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>

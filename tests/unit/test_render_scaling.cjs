@@ -99,6 +99,25 @@ test('a box preview growing from 8 to 9 nodes replaces exactly 1 node object (Re
   assert.ok(session.snapshot().projection.nodes.every(n => !(n.className ?? '').includes('box-in')));
 });
 
+test('a drag frame publishes, but only the moved node changes and the slices the bars read keep their values (Refactor.106 D, E)', t => {
+  const session = open(t, scalingGraph()), ids = session.snapshot().projection.nodes.map(n => n.id), moved = ids[60];
+  session.pressNode(moved, 'only');
+  const before = session.snapshot(), select = [state => state.undo, state => state.redo, state => state.phase, state => state.version, state => state.message];
+  const values = select.map(pick => pick(before));
+  let published = 0; session.subscribe(() => published++);
+  session.nodeChanges([{ type: 'position', id: moved, position: { x: 123, y: 456 }, dragging: true }]);
+  const after = session.snapshot();
+  assert.equal(published, 1, 'the frame is published (the canvas follows it)');
+  assert.deepEqual(select.map(pick => pick(after)), values, 'what the bars and panels select is unchanged, so they do not re-render');
+  assert.deepEqual(replaced(before.projection.nodes, after.projection.nodes), [moved]);
+  assert.equal(after.projection.edges, before.projection.edges);
+  // The id index carried over: a selection after the frame still touches only its own nodes. 位置索引沿用：拖曳之後的選取仍只碰自己的節點。
+  // Shift adds ids[61], the new primary; the moved node's look (selected, not marked: the primary is the other) stays. Shift 加選 ids[61]，
+  // 它是新的主要選取；被移動的節點樣子不變（被選、沒有標記：主要選取是另一個）。
+  session.pressNode(ids[61], 'add');
+  assert.deepEqual(replaced(after.projection.nodes, session.snapshot().projection.nodes), [ids[61]]);
+});
+
 test('project() after one value changes keeps every other node data object, conversion-wire ends included (Refactor.106 G)', t => {
   const session = open(t, scalingGraph()), document = new GrapeGraph.GraphDocument(session.graph(), GrapeGraph.registry);
   const before = project(document, { nodes: [], edges: [] }, bootstrap.typeContract);
