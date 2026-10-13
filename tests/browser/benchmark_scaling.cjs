@@ -20,6 +20,7 @@ const target = '2'.repeat(32), COPIES = 24, STEP = 48;
 // nodes, 136 wires, 125 of them conversions. 基準圖裡帶轉換線的 9 個節點，複製 24 次（同排查時的 Ctrl＋D）：248 節點、136 線。
 const CLUSTER = ['n14ad3a26b739', 'nd9052a8cfd8c', 'ndacfca70715a4188b4654c397a55c38a', 'ndf1a0d36e8bb43e78c2399e136288865',
   'nc75a3b96a9654918bff5ef13479a7c14', 'n722439006d09', 'nedfb0f9e6dd5', 'n718d19ab3cc3', 'ne852d6bf9732'];
+const COPY_IDS = new Set();
 function fixture() {
   const graph = JSON.parse(fs.readFileSync(path.join(__dirname, '../fixtures/scaling_base_graph.json'), 'utf8'));
   const pixel = graph.stages.pixel, byId = new Map(pixel.nodes.map(n => [n.id, n])), inside = new Set(CLUSTER);
@@ -31,7 +32,7 @@ function fixture() {
       // Stacked copies below the base graph (2400 down), so no base node is covered: with the selected node no longer raised
       // (Refactor.106), a covered node's fields could not be reached. 複本疊在基準圖下方（往下 2400），不蓋住基準節點：選中的節點不再抬高（R.106），
       // 被蓋住的節點的欄位會碰不到。
-      n.id = idOf(id, k); n.name = (n.name ?? 'Node') + '_c' + k; n.ui.x += k * STEP; n.ui.y += 2400 + k * STEP;
+      n.id = idOf(id, k); n.name = (n.name ?? 'Node') + '_c' + k; n.ui.x += k * STEP; n.ui.y += 2400 + k * STEP; COPY_IDS.add(n.id);
       pixel.nodes.push(n);
     }
     for (const e of inner) pixel.edges.push({ id: 'e' + crypto.createHash('md5').update(e.id + ':' + k).digest('hex'),
@@ -81,8 +82,8 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
 
   // In-page recorder: Event Timing, long animation frames, rAF gaps, pointerdown-to-paint latency, and the profiling counters.
   // 頁內記錄器：Event Timing、長畫格、rAF 間隔、按下到畫出的時間、以及量測版的計數。
-  await page.evaluate(() => {
-    const H = globalThis.__H = { on: false };
+  await page.evaluate(copyIds => {
+    const H = globalThis.__H = { on: false, copies: new Set(copyIds) };
     H.reset = () => { H.events = []; H.loaf = []; H.gaps = []; H.latency = []; H.counts = {}; if (globalThis.__prof) { globalThis.__prof.data.clear(); globalThis.__prof.on = true; } };
     new PerformanceObserver(l => { if (H.on) for (const e of l.getEntries()) H.events.push([e.name, e.duration]); }).observe({ type: 'event', durationThreshold: 16 });
     new PerformanceObserver(l => { if (H.on) for (const e of l.getEntries()) H.loaf.push([Math.round(e.duration), Math.round(e.scripts.reduce((s, x) => s + x.forcedStyleAndLayoutDuration, 0))]); }).observe({ type: 'long-animation-frame' });
@@ -94,18 +95,18 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
       const gaps = H.gaps.slice(1); return { events: H.events, loaf: H.loaf, latency: H.latency, gaps, long: gaps.filter(g => g > 50).length, counts: H.counts }; };
     H.clean = () => [...document.querySelectorAll('.react-flow__node')].map(n => { const t = n.querySelector('.node-title'); if (!t) return null; const b = t.getBoundingClientRect(), x = b.x + 24, y = b.y + b.height / 2;
       const pane = document.querySelector('.react-flow').getBoundingClientRect();
-      return document.elementFromPoint(x, y)?.closest('.react-flow__node') === n && x > pane.x + 40 && x < pane.right - 40 && y > pane.y + 60 && y < pane.bottom - 80 ? { id: n.dataset.id, x, y } : null; }).filter(Boolean);
+      return document.elementFromPoint(x, y)?.closest('.react-flow__node') === n && x > pane.x + 40 && x < pane.right - 40 && y > pane.y + 60 && y < pane.bottom - 80 ? { id: n.dataset.id, x, y, copy: H.copies.has(n.dataset.id) } : null; }).filter(Boolean);
     H.empty = () => { const pane = document.querySelector('.react-flow__pane').getBoundingClientRect();
       for (let y = pane.bottom - 120; y > pane.y + 100; y -= 20) for (let x = pane.right - 80; x > pane.x + 80; x -= 20) if (document.elementFromPoint(x, y)?.classList.contains('react-flow__pane')) return { x, y }; return null; };
-  });
+  }, [...COPY_IDS]);
   const run = async (name, fn) => { await page.evaluate(() => globalThis.__H.start()); await fn(); await page.waitForTimeout(400); const r = await page.evaluate(() => globalThis.__H.stop()); results[name] = r; return r; };
   const results = {}, summary = {};
   const clean = await page.evaluate(() => globalThis.__H.clean());
-  const base = clean.filter(n => n.id.length < 20);     // base-graph nodes outside the stacked copies 基準圖裡沒被疊住的節點
-  const tops = clean.filter(n => n.id.length >= 33);     // the topmost copy of each stack 每疊最上面的那個複本
+  const base = clean.filter(n => !n.copy);     // base-graph nodes that can be clicked 基準圖裡點得到的節點
+  const tops = clean.filter(n => n.copy);      // the topmost copy of each stack 每疊最上面的那個複本
   if (base.length < 10 || tops.length < 1) throw Error(`not enough clickable nodes: ${base.length} base, ${tops.length} tops`);
   // The stacks' screen box, for the box selection. 複本疊的螢幕範圍，給框選用。
-  const stacks = await page.evaluate(() => { const r = [...document.querySelectorAll('.react-flow__node')].filter(n => n.dataset.id.length >= 33).map(n => n.getBoundingClientRect());
+  const stacks = await page.evaluate(() => { const r = [...document.querySelectorAll('.react-flow__node')].filter(n => globalThis.__H.copies.has(n.dataset.id)).map(n => n.getBoundingClientRect());
     return { left: Math.min(...r.map(b => b.left)), top: Math.min(...r.map(b => b.top)), right: Math.max(...r.map(b => b.right)), bottom: Math.max(...r.map(b => b.bottom)) }; });
   const [A, B] = base, empty = await page.evaluate(() => globalThis.__H.empty());
   const click = async (p, shift) => { if (shift) await page.keyboard.down('Shift'); await page.mouse.click(p.x, p.y); if (shift) await page.keyboard.up('Shift'); };
@@ -125,10 +126,16 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   if (counts) summary.M2_top = Object.entries(r.counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   // M3: drag 8 selected base nodes (spread out, never stacked). 拖 8 個已選的基準節點（分散、不疊）。
-  const eight = base.slice(2, 10);
-  await click(eight[0]); for (const t of eight.slice(1)) await click(t, true); await page.waitForTimeout(300);
+  // Selected by events on their titles (robust to overlap), then dragged with the real mouse from the first, which is clickable.
+  // 用事件直接選它們的標題（不怕重疊），再用真滑鼠從第一個（點得到的）拖。
+  const eight = base.slice(0, 8);
+  await page.evaluate(ids => { ids.forEach((id, i) => { const t = document.querySelector(`.react-flow__node[data-id="${id}"] .node-title`); const b = t.getBoundingClientRect();
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) t.dispatchEvent(type.startsWith('pointer') ? new PointerEvent(type, { bubbles: true, cancelable: true, clientX: b.x + 20, clientY: b.y + 8, button: 0, buttons: type.endsWith('up') ? 0 : 1, pointerId: 1, pointerType: 'mouse', shiftKey: i > 0, view: window }) : new MouseEvent(type, { bubbles: true, cancelable: true, clientX: b.x + 20, clientY: b.y + 8, button: 0, buttons: type.endsWith('up') || type === 'click' ? 0 : 1, shiftKey: i > 0, view: window })); }); }, eight.map(n => n.id));
+  await page.waitForTimeout(300);
   const selected = await page.locator('.react-flow__node.selected').count();
+  const posBefore = await page.evaluate(id => document.querySelector(`.react-flow__node[data-id="${id}"]`).style.transform, eight[0].id);
   r = await run('M3 drag 8', async () => { await drag(eight[0], 60, 40, 20); });
+  summary.M3_moved = (await page.evaluate(id => document.querySelector(`.react-flow__node[data-id="${id}"]`).style.transform, eight[0].id)) !== posBefore;
   summary.M3_selected = selected; summary.M3_frame_ms_median = median(r.gaps); summary.M3_frame_ms_max = max(r.gaps);
   if (counts) summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0);
   await undo();
@@ -144,7 +151,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
 
   // M5: pan on empty canvas. 平移。
   r = await run('M5 pan', async () => { await drag(empty, -80, -60, 20); });
-  summary.M5_long_frames = r.long + r.loaf.length; summary.M5_frame_ms_max = max(r.gaps);
+  summary.M5_long_frames = r.long; summary.M5_frame_ms_max = max(r.gaps);
   summary.M5_layer_left = await page.locator('.gesture-cursor').count(); // a cursor layer must not outlive the gesture 游標層不能留到手勢之後
 
   // M6 / M8 at 100% around the Color node: its value box and output port must be under the pointer, not under a stacked copy.
@@ -169,12 +176,12 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   const handle = await page.locator('.react-flow__node[data-id="color"] .react-flow__handle.source').first().boundingBox();
   const emptyNear = await page.evaluate(() => globalThis.__H.empty());
   r = await run('M8 wire drag', async () => { await drag({ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }, emptyNear.x - handle.x, emptyNear.y - handle.y, 12); await page.waitForTimeout(300); await page.keyboard.press('Escape'); });
-  summary.M8_long_frames = r.long + r.loaf.length; summary.M8_loaf_ms_max = max(r.loaf.map(l => l[0]));
+  summary.M8_long_frames = r.long; summary.M8_loaf_ms_max = max(r.loaf.map(l => l[0]));
   summary.M8_edges_after = await page.locator('.react-flow__edge').count();
 
   // Back to the whole graph for M7 and M9. 回到全圖。
   await key('h'); await page.waitForTimeout(900);
-  const again = await page.evaluate(() => globalThis.__H.clean()), topsAgain = again.filter(n => n.id.length >= 33), emptyAgain = await page.evaluate(() => globalThis.__H.empty());
+  const again = await page.evaluate(() => globalThis.__H.clean()), topsAgain = again.filter(n => n.copy), emptyAgain = await page.evaluate(() => globalThis.__H.empty());
 
   // M7: delete one copied node (a real Delete press; the canvas gets the key if the press was lost), then undo. 刪除一個複本、Undo。
   await click(topsAgain[3] ?? topsAgain[0]); await page.waitForTimeout(250);
