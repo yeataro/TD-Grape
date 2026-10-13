@@ -2,6 +2,29 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.110 — 子圖進編輯器（B 級：進得去、改得了） — 2026-10-14
+
+執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md` §3。基本設計 §3.3／§3.5／§3.12、附錄一 A3（巢狀入口的可測邊界）、A8（B 級驗收）。
+
+| 舊行為 | 處理 | 原因 | 出處 |
+|---|---|---|---|
+| 雙擊呼叫節點進入子圖；路徑列；上一層 Alt+↑ | 照舊（路徑列放 Stage 標籤那一排：`Pixel ↑ Gain`，另寫「共用 ×N」） | 既有能力 | `graph_ui.js:2034, 2565`；`functions_ui.js:41-59`；§1 路徑列 |
+| 已在路徑上的子圖不能再進（循環） | 照舊 | 同上 | `functions_ui.js:44` `function.cycle` |
+| 進入時清選取 | 照舊 | 同上 | `functions_ui.js:41` `navigateGraph` |
+| 介面編輯：Parameter 改名與預設值、Settings 改型別／排序（↑↓）／移除、+ Port | 改做法：全在邊界節點的參數面板——參數分頁預設值、設定分頁清單（把手拖排序、標籤、型別、移除、新增） | 功能集相同、多了拖曳排序；不照舊版面 | `functions_ui.js:435-477`；§3.5；§4 第 13 列 |
+| 灰點拉線新增接口（名字取對端、預設取對端的值） | 照舊（Input 節點的輸出側、Output 節點的輸入側各一個備用灰點；模組宣告、編輯器的介面修改執行） | 既有能力 | `functions_ui.js:378-434` `materializeSparePort`；§3.5 |
+| 子圖與新增節點同一棵樹 | 改做法：子圖自己一個面板，預設在新增節點下面（本地卡：名稱、呼叫數、打開／加到圖上／選取呼叫／刪除；拖到畫布＝新增呼叫） | 切割乾淨 | §3.12；§4 第 8 列 |
+| 本地子圖進新增節點清單 | 否決（不進；入口是面板與複製貼上） | 人類 R1 | §3.12 |
+| 共用引用的可見性 | 新行為：呼叫節點標題「×N」、路徑列「共用 ×N」、面板卡片數量 | Q74.8 | §3.6；§4 第 9 列 |
+| 子圖裡再放子圖呼叫 | B 級拒絕（面板拖入、加到圖上、貼上含呼叫節點的複製都拒絕並說明）；C 開放 | 附錄一 A3 可測邊界 | A3 |
+| 刪最後一個呼叫，定義不清理 | 照舊（本地留著、面板顯示 0；面板可刪 0 引用的定義） | §3.9 | — |
+| Color Output 不能刪的訊息 | 小改：訊息寫出是哪個固定節點（Color Output、Subgraph Input／Output） | 邊界節點同一條規則 | `structure.ts` |
+
+- 程式（d188686a）：`core.ts`（准入：三個子圖模組進範圍、結構性模組不進新增清單、帶 `libraryId` 的定義仍拒絕整份、每張網路都查）；`editor.ts`（`network`／`trail` 是 session 狀態；`enterSubgraph`／`enterDefinition`／`goUp`／`goToDepth`；所有修改、預演、複製、貼上、群組走目前網路；Undo／草稿／TD 版本刪掉正在編輯的定義時路徑退回；`editInterface`／`addPort`／`renameSubgraph`／`removeSubgraph`／`placeSubgraph`／`selectCalls`；`wire()` 的邊界備用點＝新增接口；`nestedCall` 拒絕；`references()` 算每張網路）；`projection.ts`（`subgraph`／`uses`；呼叫數只在哪裡增減節點或定義變時重算；子圖顏色組）；`bars.tsx`（路徑列）；`NodeCard.tsx`（×N、輸出側備用點）；`ParamsPanel.tsx`（邊界節點的介面編輯、無選取時的子圖卡）；`SubgraphsPanel.tsx`＋`panels.tsx`／`layout_tree.ts`（`below`：預設疊在新增節點下面，權重 2:1）；`main.tsx`（雙擊進入、Alt+↑、卡片拖放）；核心 `clipboard.ts` 帶網路、`removeSubgraph`、`callCounts`、`offered()` 排除結構性模組、邊界模組宣告 spare。
+- 測試：`test_react_session.cjs` 新增兩條（進入／路徑／×N／Undo 切路徑；介面修改／備用點接線／巢狀拒絕／子圖內貼上／有呼叫不能刪／改名），准入測試改用 Library 定義。核心 180、編輯器 172、型別檢查過。
+- 瀏覽器核對（假宿主 `scratchpad/serve110.cjs`＋真 TD 服務 Grape_TOP_test）：開圖、×2 標記、雙擊進入、路徑列「Pixel ↑ Gain 共用 ×2」、選 Input 節點→設定分頁→新增接口→卡片與外面的呼叫節點同步、Alt+↑ 回頂層、面板卡片數量；版本 0.8.315。畫面截圖因瀏覽器窗格沒在前景不穩，核對多用 DOM 讀取。
+- 限制／未做：接口拖排序只做簡單版（拖、放開一次修改）；定義顏色（§3.14）未開放改；GLSL 面板的變數連結指到子圖內節點時不會自動進入；B7-3「刪末引用後本地定義留在面板、可再拉、可刪」做了，但「從面板刪」只在 0 引用時；觸控一律未碰（人類 10-13）。TOE 交付在隨後的 commit。
+
 ## Refactor.109 — 子圖核心清潔（B／C 前提） — 2026-10-14
 
 子圖基本設計（workspace `work/refactor/subgraph-basic-design-2026-10-14.md`＋附錄一、二）審查結束後，人類定第一輪做 B＋C、順序由助手定（執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md`）。本輪只改核心，蓋編輯器之前把 §5 裡 B／C 的前提項做完；編輯器未動。
