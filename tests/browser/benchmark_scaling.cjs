@@ -24,9 +24,10 @@ const buildInfo = JSON.parse(fs.readFileSync(path.join(built, 'build-info.json')
 const sha = data => crypto.createHash('sha256').update(data).digest('hex').slice(0, 12);
 const find = (folder, test) => fs.readdirSync(folder, { withFileTypes: true }).flatMap(e => e.isDirectory() ? find(path.join(folder, e.name), test) : test(e.name) ? [path.join(folder, e.name)] : []);
 const bundles = find(built, name => /^index-.*\.js$/.test(name));
-// A profiling build says so in build-info (Refactor.107.1); an older one is told by the counters in its bundle. 量測版建置在 build-info 裡
-// 標出（R.107.1）；更早的看 bundle 裡有沒有計數器。
-const profilingBuild = !!buildInfo.profiling || bundles.some(file => fs.readFileSync(file, 'utf8').includes('globalThis.__prof'));
+// A profiling build says so in build-info (Refactor.107.1); an older one is told by the shim's own line that creates the counters (the
+// product only reads them, in the probe). 量測版建置在 build-info 裡標出（R.107.1）；更早的看 bundle 裡有沒有 shim 建立計數器的那一行
+// （產品只在探針裡讀它們）。
+const profilingBuild = !!buildInfo.profiling || bundles.some(file => /globalThis\.__prof\s*=\s*globalThis\.__prof\s*\|\|/.test(fs.readFileSync(file, 'utf8')));
 if (counts && !profilingBuild) throw Error('--counts needs the profiling build (build_editor.cjs --jsx-shim)');
 if (!counts && profilingBuild) throw Error('a timing run needs the product build, not the profiling one');
 const target = '2'.repeat(32), COPIES = 24, STEP = 48, VIEWPORT = { width: 1600, height: 1100 };
