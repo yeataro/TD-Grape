@@ -190,7 +190,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   r = await run('M3 drag 8', async () => { await drag(eight[0], 60, 40, 20); });
   summary.M3_moved = (await page.evaluate(id => document.querySelector(`.react-flow__node[data-id="${id}"]`).style.transform, eight[0].id)) !== posBefore;
   summary.M3_selected = selected; summary.M3_frame_ms_median = median(r.gaps); summary.M3_frame_ms_max = max(r.gaps);
-  if (counts) summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0);
+  if (counts) { summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0); summary.M3_toolbar_buttons = r.counts.IconButton ?? 0; }
   await undo();
 
   // M4: right-drag box select from past the stacks' lower-right corner up over them (clipped to the canvas). 右鍵框選：從複本疊右下角外往左上框過去（不出畫布）。
@@ -288,6 +288,9 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   summary.M11_zoom_frame_ms_max = max(r.gaps); summary.M11_zoom_long_frames = r.long; summary.M11_zoom_layout_ms = +r.loaf.reduce((sum, l) => sum + l[1], 0).toFixed(0);
   r = await run('M11 pan selected', async () => { await drag(emptyAgain, -60, -40, 20); });
   summary.M11_pan_frame_ms_max = max(r.gaps); summary.M11_pan_long_frames = r.long;
+  // The bar and the frame while the view moves: the bar's buttons must not be drawn again per frame (Refactor.107, Z11). 視角移動時的工具列
+  // 與多選框：工具列的按鈕不該每格重畫（R.107，Z11）。
+  if (counts) { summary.M11_pan_toolbar_reruns = r.counts.FloatingToolbar ?? 0; summary.M11_pan_toolbar_buttons = r.counts.IconButton ?? 0; summary.M11_pan_frame_reruns = r.counts.SelectionFrame ?? 0; }
   await click(emptyAgain); await page.waitForTimeout(200);
 
   // M10: switch the selection with the Graph JSON panel shown (its tab in the right pane; the pane is opened if collapsed). What an
