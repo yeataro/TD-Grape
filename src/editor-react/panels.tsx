@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { Editor as EditorSession } from './editor';
 import { useEditorFields, useEditorSlice } from './editor_slice';
 import type { AddChoice } from './add_entries';
@@ -24,10 +24,14 @@ import { tr, say, type Message } from './text';
  * 值變了的面板重繪（R.106）。 */
 export type PanelInput = { session: EditorSession | null; choices: readonly AddChoice[]; add(choice: AddChoice): void };
 // Each panel's own slice of the state (Refactor.106; editor_slice.ts). 每個面板自己的狀態切片（R.106；editor_slice.ts）。
-const SOURCE_FIELDS = ['declarations', 'references'] as const;
-const GLSL_FIELDS = ['glsl', 'glslMap', 'glslVariables', 'glslDeclarations', 'stuck'] as const;
+const SOURCE_FIELDS = ['declarations', 'version'] as const;
+const GLSL_FIELDS = ['glsl', 'compiled', 'glslVariables', 'glslDeclarations', 'stuck'] as const;
 function Sources({ session }: { session: EditorSession }) {
-  const { declarations, references } = useEditorFields(session, SOURCE_FIELDS)!;
+  const { declarations, version } = useEditorFields(session, SOURCE_FIELDS)!;
+  // The reference counts are this panel's own derivation (Refactor.107, Z2): asked of the session for each version of the graph it
+  // shows, never worked out while the panel is away. 引用數是這個面板自己的推導（R.107，Z2）：它顯示的每一版圖問 session 一次，面板不在
+  // 時不算。
+  const references = useMemo(() => session.references(), [session, version]);
   return <SourcesPanel declarations={declarations} references={references} />;
 }
 function Glsl({ session }: { session: EditorSession }) {

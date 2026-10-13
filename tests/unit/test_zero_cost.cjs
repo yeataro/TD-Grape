@@ -74,6 +74,43 @@ test('a commit asks the core for ghosts once', t => {
   assert.equal(calls.ghostsOf, 1);
 });
 
+// (1) The reference counts and the GLSL line map are panels' derivations: a commit never works them out; a panel asks the session,
+// which reads the document in place. Codex 2026-10-13 R08: not through session.graph(), which copies the whole document.
+// （1）引用數與 GLSL 行對照是面板的推導：commit 不算；面板問 session，session 就地讀文件。R08：不經 session.graph()（會整份複製）。
+test('a commit works out neither the reference counts nor the line map; a panel asks and gets them without a copy', t => {
+  const session = open(t), id = session.snapshot().projection.nodes[5].id;
+  const references = session.references, graph = session.graph; let asked = 0, copied = 0;
+  session.references = () => { asked++; return references(); }; session.graph = () => { copied++; return graph(); };
+  move(session, id, 300, 300);
+  session.transact('note', net => { net.node(id).update({ comment: 'counted' }); });
+  const state = session.snapshot();
+  assert.equal(asked, 0, 'no commit asked for the reference counts');
+  assert.ok(!('references' in state) && !('glslMap' in state), 'neither lives in the state');
+  const counts = session.references();
+  assert.equal(counts['d09c2ff51ca8d4f49'], 1, 'the declaration the base graph references once');
+  assert.equal(copied, 0, 'counted on the document in place');
+});
+
+// A failed code generation keeps the last program that compiled (as the GLSL shown does), and the line map is derived from that one
+// object — the same list each time it is asked, so a panel opened later still has it. Codex 2026-10-13 R02.
+// 產碼失敗時留最後一次成功的程式（同顯示的 GLSL），行對照從那一個物件推——每次問都是同一份清單，之後才打開的面板也拿得到。
+test('after a failed code generation the last compiled program stays, and its line map is one list', t => {
+  const generator = { fail: false, key: graph => GrapeTopCompiler.key(graph), compile: (...args) => { if (generator.fail) throw Error('forced failure'); return GrapeTopCompiler.compile(...args); } };
+  const session = open(t, graphOf(), generator), { glslMapOf } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  const good = session.snapshot().compiled;
+  assert.ok(good && good.pixel === session.snapshot().glsl);
+  const map = glslMapOf(good);
+  assert.ok(map.length > 0 && map.every(row => row.line > 0 && row.node)); assert.equal(glslMapOf(good), map, 'the same list for the same program');
+  const scalar = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.scalar' && !n.data.ghost);
+  const setValue = value => session.transact('value', net => { const node = net.node(scalar.id); node.edit(node.definition.presentation(node.data, net.context).value.valueCommand, { value }); });
+  generator.fail = true; setValue(0.25);
+  assert.equal(session.snapshot().compiled, good, 'the failed edit keeps the last compiled program');
+  assert.equal(session.snapshot().glsl, good.pixel);
+  generator.fail = false; setValue(0.5);
+  assert.notEqual(session.snapshot().compiled, good, 'a successful edit brings a new program');
+  assert.equal(glslMapOf(session.snapshot().compiled).length, map.length);
+});
+
 // A note is a GLSL comment line (rule B): it follows the document through Undo and Redo, and never asks TD to recompile (the program key
 // is unchanged). Codex 2026-10-13 R01: every way a document is adopted must keep this, not only an ordinary edit.
 // 註記是 GLSL 的註解行（規則 B）：經 Undo／Redo 跟著文件走，也不會要求 TD 重編（程式 key 不變）。每一條採用文件的路都要守住，不只一般修改。

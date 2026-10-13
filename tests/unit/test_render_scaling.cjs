@@ -195,7 +195,7 @@ test('GLSL lines: the same links as the old split, and each node touches exactly
   // Prism 核心照打包工具給的樣子（default 匯出）；它也設好規則檔要用的全域 Prism。
   const prism = require('prismjs/components/prism-core'); prism.default ??= prism;
   const { highlightGlsl } = load(path.join(root, 'src/editor-react/code_highlight.ts'));
-  const { glslRows } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  const { glslRows, glslMapOf } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
   // The 248-node graph's copies do not reach the output, so its GLSL is short; a chain of 200 Floor nodes from the uAbsTime Uniform
   // into the output makes one line and one name per node (232 nodes: within a network's node limit). 248 節點圖的複本不接到輸出，GLSL
   // 很短；從 uAbsTime Uniform 接 200 個 Floor 節點的鏈到輸出，每個節點一行、一個名字（232 個節點：在一個網路的節點上限內）。
@@ -206,7 +206,7 @@ test('GLSL lines: the same links as the old split, and each node touches exactly
     pixel.edges.push({ id: 'efloor' + k, from, to: ['nfloor' + k, 'value'] }); from = ['nfloor' + k, 'out'];
   }
   pixel.edges.find(e => e.to[0] === 'n95a062f14f7d4138ba5e2d764b752351' && e.to[1] === 'x').from = from;
-  const { glsl, glslMap, glslVariables, glslDeclarations } = open(t, graph).snapshot();
+  const { glsl, compiled, glslVariables, glslDeclarations } = open(t, graph).snapshot(), glslMap = glslMapOf(compiled);
   const lines = highlightGlsl(glsl);
   assert.ok(lines.length > 200 && Object.keys(glslVariables).length > 200 && Object.keys(glslDeclarations).length, 'a long GLSL with many names');
   const started = performance.now(), { rows, touching } = glslRows(lines, glslMap, glslVariables, glslDeclarations);

@@ -9,7 +9,7 @@ import { ScrollFade } from './controls';
 import { scrollToMiddle } from './scroll_glide';
 import type { EditorState } from './editor';
 import { traceSwitch, useFollowTrace } from './live_trace';
-import { glslRows, type GlslName, type GlslRow } from './glsl_lines';
+import { glslMapOf, glslRows, type GlslName, type GlslRow } from './glsl_lines';
 
 // Live trace (Refactor.83, human 2026-10-11; new, legacy's GLSL tab did not follow the selection, app.js:1663): the primary
 // node's names are marked and its lines lit as when hovered. On by default; a personal preference, switched from the panel's
@@ -26,9 +26,9 @@ export const glslMenu = trace.menu;
  * 行會標出來，但只在目前就是失敗的那份 GLSL 時（改過之後行號會指錯）。節點本身不標錯：TD 停下的那一行不一定是錯的源頭（人類）。 */
 // Memoised: a node drag re-renders the workspace every move, and this panel only follows its own props (Refactor.79.4; EDITOR_UI_RULES, continuous interactions). It takes only the GLSL's own fields. 只拿 GLSL 自己的欄位。
 // memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props（R.79.4；畫面規則「連續互動」）。
-type GlslInput = Pick<EditorState, 'glsl' | 'glslMap' | 'glslVariables' | 'glslDeclarations' | 'stuck'>;
+type GlslInput = Pick<EditorState, 'glsl' | 'compiled' | 'glslVariables' | 'glslDeclarations' | 'stuck'>;
 export const GlslPanel = memo(GlslView);
-function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: GlslInput) {
+function GlslView({ glsl, compiled, glslVariables, glslDeclarations, stuck }: GlslInput) {
   const language = useLanguage();
   const session = useSession(), flow = useReactFlow();
   const lines = useMemo(() => highlightGlsl(glsl), [glsl]);
@@ -61,8 +61,9 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
     references: id => { const { session, flow } = latest.current; const nodes = session.selectReferences(id); if (nodes.length) frameNodes(flow, nodes); },
   }), []);
   // Split and coloured once per GLSL (Refactor.106 H); a primary change re-draws only the lines of the old and the new traced node.
-  // 每份 GLSL 只切割上色一次（R.106 H）；換主要選取只重畫舊的與新的被追蹤節點那幾行。
-  const { rows, touching } = useMemo(() => glslRows(lines, glslMap, glslVariables, glslDeclarations), [lines, glslMap, glslVariables, glslDeclarations]);
+  // The line map comes from the compiled program, here, when the panel shows it (Refactor.107, Z1). 每份 GLSL 只切割上色一次（R.106 H）；
+  // 換主要選取只重畫舊的與新的被追蹤節點那幾行。行對照從產碼結果推，在這裡、面板顯示它時（R.107，Z1）。
+  const { rows, touching } = useMemo(() => glslRows(lines, glslMapOf(compiled), glslVariables, glslDeclarations), [lines, compiled, glslVariables, glslDeclarations]);
   const tracedLines = useMemo(() => new Set(traced === null ? [] : touching.get(traced) ?? []), [touching, traced]);
   if (!glsl) return <pre className="code-view">{say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>;
   return <div className="glsl-view" ref={box} aria-label={say(tr('glsl.label', 'Generated GLSL'))}>

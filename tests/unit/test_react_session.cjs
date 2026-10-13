@@ -791,7 +791,7 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   session.setDeclarationValue(declaration.id, 0.5);
   assert.equal(session.snapshot().projection.nodes.find(node => node.id === ref.id).data.declaration.value, 0.5);
   session.setDeclarationValue(declaration.id, 0.25);
-  assert.equal(session.snapshot().references[declaration.id], 1);
+  assert.equal(session.references()[declaration.id], 1);
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node(ref.id).outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node('sum').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
@@ -913,7 +913,7 @@ test('a time value placed twice is one declaration with two reference nodes; it 
   assert.equal(builtins.length, 1);
   const refs = session.snapshot().projection.nodes.filter(n => n.data.authored.params.declarationId === builtins[0].id);
   assert.equal(refs.length, 2);
-  assert.equal(session.snapshot().references[builtins[0].id], 2);
+  assert.equal(session.references()[builtins[0].id], 2);
   session.connect({ source: refs[0].id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
   const runtime = JSON.parse(calls.at(-1).body.runtime);

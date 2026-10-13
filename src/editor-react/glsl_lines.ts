@@ -1,5 +1,20 @@
 import type { Piece } from './code_highlight';
 import type { GlslLine } from './editor';
+import type { Compiled } from './host_sync';
+
+/** Which node wrote each line of the GLSL (the core's source map, lines from 1), so a line leads to its node (Refactor.63). One
+ * list per compiled program, worked out when first asked — by the GLSL panel or the error-line trial — and never on a commit
+ * (Refactor.107, Z1); the same program object gives the same list, so what is memoised on it keeps. GLSL 每一行由哪個節點產生（核心的
+ * sourceMap，行號從 1），讓一行能找回它的節點（R.63）。每份程式一份清單，第一次被問時才算——GLSL 面板或錯誤行試驗問——commit 不算
+ * （R.107，Z1）；同一個程式物件給同一份清單，靠它 memo 的東西就留著。 */
+const NO_LINES: readonly GlslLine[] = [];
+const lineMaps = new WeakMap<Compiled, readonly GlslLine[]>();
+export function glslMapOf(compiled: Compiled | null): readonly GlslLine[] {
+  if (!compiled) return NO_LINES;
+  let map = lineMaps.get(compiled);
+  if (!map) lineMaps.set(compiled, map = compiled.sourceMap.pixel.map(row => ({ line: row.line, node: row.node })));
+  return map;
+}
 
 // The GLSL panel's lines, worked out once per GLSL (Refactor.106 H): each line's coloured pieces with the names in its plain text
 // made links, and the node that wrote it; plus, for each node, the lines whose look depends on whether that node is traced (its own

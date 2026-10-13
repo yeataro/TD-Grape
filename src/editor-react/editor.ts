@@ -4,6 +4,7 @@ import { core, compiler, requireSupported, parseDocument, type UpgradeChange, ty
 import { project, type Projection, type FlowNode, type FlowEdge, colorGroupOf } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
+import type { GraphChanges } from './core';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
@@ -138,15 +139,21 @@ const declarationMessage = (error: unknown) => {
   return ['taken', 'reserved', 'format'].includes(e.problem!) ? nameProblem(e.problem as NameProblem, e.subject ?? '')
     : tr('sources.declarationProblem', 'This change to a shared source was not applied ({problem}).', { problem: String(e.problem) });
 };
-const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.subgraphs || []).map(f => f.graph))
-  .map(net => net?.nodes.map(n => n.comment)));
+// A note changed when a node was added or removed, or a node's comment was edited, in any network (Refactor.107, Z3: read from the
+// publication's changes, no summary of every comment). Without changes (the first compile) notes count as changed.
+// 有節點新增、移除，或某個節點的 comment 改了（任一網路），註記就算變了（R.107，Z3：讀發布的 changes，不摘要所有 comment）。沒有 changes
+// （第一次產碼）當作變了。
+const notesChanged = (changes?: GraphChanges) => !changes
+  || changes.networks.some(net => net.added.length > 0 || net.removed.length > 0 || net.nodes.some(node => node.fields.includes('comment')));
 
 // message is data (a Message), worded only when shown (Q34); level says how serious it is (Q35).
-// declarations: the document's own frozen list (no copy); references: how many nodes use each one.
+// declarations: the document's own frozen list (no copy). The reference counts are the Sources panel's own derivation (references()).
+// declarations：文件自己的凍結清單（不複製）。引用數是共用來源面板自己的推導（references()）。
 // TD's Uniform states are kept apart (tdSnapshot): they change every frame while TD moves a value, and
 // only the fields showing them need to follow. TD 的 Uniform 現況另外存（tdSnapshot）：TD 動值時每格都變，只有顯示它的欄位要跟。
-// glslMap: which node wrote each line of the GLSL (the core's source map, lines from 1), so a line leads to its node
-// (Refactor.63). glslMap：GLSL 每一行由哪個節點產生（核心的 sourceMap，行號從 1），讓一行能找回它的節點。
+// compiled: the last program that compiled (kept through a failure, as `glsl` is), so a line map or anything else a panel derives
+// from the program comes from this one object (glsl_lines.ts glslMapOf; Refactor.107, Z1: no line map is built on a commit).
+// compiled：最後一次產碼成功的程式（失敗時留著，同 glsl），面板從程式推的東西（行對照等）都從這一個物件推（glslMapOf；R.107，Z1：commit 不建行對照）。
 // glslVariables: which node each variable belongs to, so its name in the GLSL is a link to the node (human 2026-10-10).
 // glslVariables：每個變數屬於哪個節點，GLSL 裡的名字就是連到節點的超連結（人類）。
 // upgrades: nodes the node upgrades changed when this graph was read (Refactor.65), for the replacement report; cleared when
@@ -155,7 +162,7 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 // node using it. glslDeclarations：GLSL 檔頭寫出的名字是哪個宣告，點名字就選取所有引用它的節點。
 export type GlslLine = { line: number; node: string };
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
-  message: Message | string; level: Level; glsl: string; glslMap: readonly GlslLine[];
+  message: Message | string; level: Level; glsl: string; compiled: Compiled | null;
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   upgrades: readonly UpgradeChange[];
   /** A save this page asked for has no answer yet (Refactor.75.13): the button waits, so pressing again does not ask
@@ -163,7 +170,7 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
   saving?: boolean;
   /** The sync state's own short record (Refactor.70.1, sync_record.ts). 同步狀態自己的短紀錄。 */
   syncRecords: readonly SyncRecord[];
-  declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
+  declarations: readonly Declaration[] };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
 // state, compiles every finished edit, and hands the result to HostSync (design-interview Q38).
@@ -235,9 +242,9 @@ export class Editor {
         syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
-      glslMap: this.glslMap() ?? [], glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
+      compiled: this.codegen.compiled ?? null, glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
-      syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), ...this.sources() };
+      syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
       if (uniforms) this.setTd(uniforms);
@@ -257,7 +264,7 @@ export class Editor {
     const broken = core.structureProblems(graph, core.registry);
     if (broken.length) this.tell('warning', tr('structure.openWarning',
       'Warning: this graph breaks the structure rules; you can fix it and continue: {problems}', { problems: structureText(broken) }));
-    this.ghostTotal = this.reportGhosts(0);
+    this.ghostTotal = this.reportGhosts(0, this.state.projection);
   }
   /** Read a stored graph in its current node forms (Refactor.65): every way a graph comes in goes through here.
    * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
@@ -278,13 +285,15 @@ export class Editor {
   dismissUpgrades = () => { this.state = { ...this.state, upgrades: [] }; this.publish(); };
   // Ghosts (Q37): said when the graph opens with some, and whenever an edit adds more.
   // Ghost：開圖時有就說；修改讓 Ghost 變多時也說。
+  // Counted on the projection, which already asked the core (Refactor.107, Z4: the core is asked once per commit, not twice).
+  // 在投影上數，投影已經問過核心（R.107，Z4：每次 commit 問核心一次，不是兩次）。
   private ghostTotal = 0;
-  private reportGhosts(previous: number) {
-    const ghosts = core.ghostsOf(this.document.networks.get('pixel')!, core.values.policy);
-    const total = ghosts.nodes.size + ghosts.edges.size;
+  private reportGhosts(previous: number, projection: Projection) {
+    const nodes = projection.nodes.filter(node => node.data.ghost).length, wires = projection.edges.filter(edge => edge.type === 'ghost').length;
+    const total = nodes + wires;
     if (total > previous) this.tell('warning', tr('ghost.found',
       'This graph has {nodes} ghost node(s) and {wires} ghost wire(s): kept as they are and left out of the shader; a ghost wire counts as not connected.',
-      { nodes: ghosts.nodes.size, wires: ghosts.edges.size }));
+      { nodes, wires }));
     return total;
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -385,7 +394,10 @@ export class Editor {
   /** Something the person tried did not happen, nothing broke (Refactor.75.8: a refused wire is a warning, not an error).
    * 使用者想做的事沒有發生、但沒有東西壞掉（R.75.8：接線被拒絕是警告，不是錯誤）。 */
   warn = (message: Message) => this.tell('warning', message);
-  private sources() {
+  /** How many nodes use each shared source, read straight from the document (no copy): the Shared Sources panel's own derivation,
+   * asked when it shows a version of the graph, never on a commit (Refactor.107, Z2). 每個共用來源被幾個節點引用，直接讀文件（不複製）：
+   * 共用來源面板自己的推導，面板顯示某一版的圖時才問，commit 不算（R.107，Z2）。 */
+  references = (): Readonly<Record<string, number>> => {
     const references: Record<string, number> = {};
     for (const node of this.document.document.stages.pixel?.nodes ?? []) {
       // A declaration by its ID; a TD value by `tdValue:` and its entry (Refactor.58.1: TD value cards count too).
@@ -394,8 +406,8 @@ export class Editor {
         ?? (node.nodeType === TD_VALUE ? 'tdValue:' + String(node.params.entry) : undefined);
       if (id !== undefined) references[id] = (references[id] ?? 0) + 1;
     }
-    return { declarations: this.document.document.declarations, references };
-  }
+    return references;
+  };
   notice = (error: unknown) => {
     const declaration = declarationMessage(error);
     if (declaration) { this.tell('warning', declaration); return; }
@@ -405,11 +417,9 @@ export class Editor {
   // Skips code generation when neither the fingerprint nor the notes changed (e.g. moving a node).
   // Notes only add GLSL comment lines: they refresh the GLSL shown here, never TD's program (rule B).
   // 指紋與註記都沒變（例如移動節點）就不產碼；註記只影響這裡顯示的 GLSL 註解，不讓 TD 重編（規則 B）。
-  private notes = '';
-  private compile(): Delivery {
-    const graph = this.document.snapshot(), key = this.generator.key(graph), notes = noteKey(graph);
-    if (this.codegen && key === this.codegen.key && notes === this.notes) return { ...this.codegen, graph };
-    this.notes = notes;
+  private compile(changes?: GraphChanges): Delivery {
+    const graph = this.document.snapshot(), key = this.generator.key(graph);
+    if (this.codegen && key === this.codegen.key && !notesChanged(changes)) return { ...this.codegen, graph };
     try { return { graph, key, compiled: this.generator.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
     catch (error) { return { graph, key, error: String(error) }; }
   }
@@ -428,26 +438,29 @@ export class Editor {
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, result.changes);
       this.past.push(result.before); if (this.past.length > 100) this.past.shift();
       this.future = []; this.document = next;
-      this.commit(projection, label);
+      this.commit(projection, label, result.changes);
     } catch (error) { this.notice(error); }
   };
   // Every finished edit is compiled here, then offered to HostSync.
   // 每次修改完成都在這裡產碼，再交給 HostSync。
   // Every new projection is adopted here, so the selection is reconciled with it in this one place (Refactor.106).
   // 每份新投影都在這裡採用，選取也就在這一處和它對帳（R.106）。
-  private commit(drawn: Projection, label: Message) {
+  // `changes`: the publication's own diff, from whichever way the document came in (an edit, Undo, a draft, TD's version), so what
+  // depends on it (the notes) is judged the same on every way in (Refactor.107, Codex R01).
+  // changes：發布自己的差異，不管文件從哪條路進來（修改、Undo、草稿、TD 的版本），靠它判斷的東西（註記）每條路都同樣判（R.107）。
+  private commit(drawn: Projection, label: Message, changes?: GraphChanges) {
     const projection = this.reconcile(drawn);
     this.sendChangedUniforms();
-    this.codegen = this.compile();
+    this.codegen = this.compile(changes);
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
-    this.state = { ...this.state, projection, version: this.state.version + 1, ...this.sources(),
+    this.state = { ...this.state, projection, version: this.state.version + 1, declarations: this.document.document.declarations,
       undo: !!this.past.length, redo: !!this.future.length,
-      glsl: this.codegen.compiled?.pixel ?? this.state.glsl, glslMap: this.glslMap() ?? this.state.glslMap,
+      glsl: this.codegen.compiled?.pixel ?? this.state.glsl, compiled: this.codegen.compiled ?? this.state.compiled,
       glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? this.state.glslDeclarations,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
-    if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal);
+    if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal, projection);
     this.sync.changed();
     this.state = { ...this.state, dirty: this.sync.status.dirty };
     this.publish();
@@ -993,10 +1006,10 @@ export class Editor {
     const source = redo ? this.future : this.past, destination = redo ? this.past : this.future;
     const graph = source.at(-1); if (!graph) return;
     try {
-      const before = this.document.snapshot(), next = new core.GraphDocument(graph, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, graph, core.registry));
+      const before = this.document.snapshot(), next = new core.GraphDocument(graph, core.registry), changes = core.changesBetween(before, graph, core.registry);
+      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
       source.pop(); destination.push(before); this.document = next;
-      this.commit(projection, redo ? tr('edit.redone', 'Redo') : tr('edit.undone', 'Undo'));
+      this.commit(projection, redo ? tr('edit.redone', 'Redo') : tr('edit.undone', 'Undo'), changes);
     } catch (error) { this.notice(error); }
   };
   restoreDraft = (saved: Graph) => {
@@ -1007,7 +1020,7 @@ export class Editor {
       if (!changes.changed) return true;
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
       this.past.push(before); this.future = []; this.document = next;
-      this.commit(projection, tr('draft.restored', "Restored this page's draft; waiting to apply"));
+      this.commit(projection, tr('draft.restored', "Restored this page's draft; waiting to apply"), changes);
       return true;
     } catch (error) { this.notice(error); return false; }
   };
@@ -1016,9 +1029,6 @@ export class Editor {
   // Conflict choice "TD 端" (Q28, 2026-10-07 human chose A): adopt TD's document as an
   // ordinary history step, so one Undo recalls the editor's version without blocking anything.
   // 衝突時選「TD 端」：把 TD 版本當成一般編輯步驟採用；按一次 Undo 即叫回編輯端的修改（重新整理後失效）。
-  private glslMap(): GlslLine[] | undefined {
-    return this.codegen.compiled?.sourceMap.pixel.map(row => ({ line: row.line, node: row.node }));
-  }
   // A line of the GLSL to show (Refactor.63): asked by the compile-failure notice, followed by the GLSL panel; `n` makes
   // asking for the same line again count. 要顯示的 GLSL 行：編譯失敗提示要求、GLSL 面板跟著捲過去；n 讓同一行再要一次也算。
   private glslFocus = { line: 0, n: 0 };
@@ -1039,11 +1049,11 @@ export class Editor {
     if (!good) return;
     try {
       const graph = this.upgrade(parseDocument(good.document));
-      const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, graph, core.registry));
+      const before = this.graph(), next = new core.GraphDocument(graph, core.registry), changes = core.changesBetween(before, graph, core.registry);
+      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
       this.past.push(before); this.future = []; this.document = next;
       this.commit(projection, tr('shader.revertedToLastGood', 'Back to the graph TD runs (revision {revision}); Undo brings back your changes',
-        { revision: good.revision }));
+        { revision: good.revision }), changes);
     } catch (error) { this.notice(error); }
   };
   useRemote = async () => {
@@ -1051,11 +1061,11 @@ export class Editor {
     try {
       const result = await this.sync.read();
       const stored = parseDocument(result.state.document), remote = this.upgrade(stored);
-      const before = this.graph(), next = new core.GraphDocument(remote, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, remote, core.registry));
+      const before = this.graph(), next = new core.GraphDocument(remote, core.registry), changes = core.changesBetween(before, remote, core.registry);
+      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
       this.past.push(before); this.future = []; this.document = next;
       this.sync.blocked = false; // the choice resolves the conflict before the step is recorded
-      this.commit(projection, tr('conflict.usedTd', "Switched to TD's version; Undo brings back the editor's changes"));
+      this.commit(projection, tr('conflict.usedTd', "Switched to TD's version; Undo brings back the editor's changes"), changes);
       this.sync.adopt(result.state); // identical to TD: nothing to send
       if (remote !== stored) this.sync.upgraded(); // unless it was upgraded as it was read 除非讀的時候升級過
     } catch (error) { this.notice(error); }

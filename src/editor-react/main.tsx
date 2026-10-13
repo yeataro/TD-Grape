@@ -44,6 +44,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
+import { glslMapOf } from './glsl_lines';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide, panningCursor } from './viewport';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
 import { useCopyPaste, type CopyPaste } from './copy_paste';
@@ -435,10 +436,10 @@ function usePrefs(): CanvasPrefs {
 // added to EditorState must be added here too (Refactor.63.3: the GLSL panel read a missing glslMap and the page went blank).
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
-  projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
+  projection: { nodes: [], edges: [] }, declarations: [], glsl: '', compiled: null, glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
 /** What the workspace itself shows or passes on (Refactor.106): never the projection — the canvas and the panels read their own.
  * 工作區自己顯示或往下傳的欄位（R.106）：不含投影——畫布與面板各自讀。 */
-const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'glslMap', 'phase', 'upgrades'] as const;
+const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'compiled', 'phase', 'upgrades'] as const;
 
 // The editing frame below the title bar: the layout's panes around the network (location bar, its toolbar, the canvas;
 // the canvas pane of the layout, Refactor.68) and the foot bar; the same layout whether a graph is open, loading or missing (human
@@ -593,8 +594,10 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // (legacy: only exact lines, only before the graph changes). Worked out only with the setting on and a failure.
   // 試驗：TD 回報的錯誤行是哪些節點寫的；只在目前就是失敗的那份 GLSL 時（舊產品：只認確定的行、圖改過就不標）。設定開著且有失敗才算。
   const failure = state.stuck?.failure;
-  const errorNodes = useMemo(() => prefs.errorNodes ? findErrorNodes(failure, state.glsl, state.glslMap) : null,
-    [prefs.errorNodes, failure, state.glsl, state.glslMap]);
+  // The line map is derived from the compiled program only here, when the trial is on and TD reported a failure (Refactor.107, Z1).
+  // 行對照只在這裡、試驗開著且 TD 回報失敗時才從產碼結果推（R.107，Z1）。
+  const errorNodes = useMemo(() => prefs.errorNodes && failure ? findErrorNodes(failure, state.glsl, glslMapOf(state.compiled)) : null,
+    [prefs.errorNodes, failure, state.glsl, state.compiled]);
   // The panels' content, from the graph being edited (Q47 4). Kept while only the layout changes (a splitter drag re-renders
   // this every move): rebuilt when the graph, the choices or the language change (Refactor.79.3; EDITOR_UI_RULES, continuous
   // interactions). 面板內容，來自正在編輯的圖（Q47 4）。只有版面變時沿用（拖分隔線每動一下都會重繪這裡）：圖、可新增的東西或語言變了才重建
