@@ -1,5 +1,6 @@
 import { copy, type InterfacePort, type Value, type Node, type SubgraphData } from './model';
-import { type, literal, reshape } from './values';
+import { type, literal, reshape, fill, opaque } from './values';
+import { validPort } from './subgraph_operations';
 import type { GraphDocument } from './graph';
 import { CORE_CONFIG } from './config';
 
@@ -8,10 +9,10 @@ export type InterfaceEdit =
   | {kind:'add';port:InterfacePort}
   | {kind:'remove';id:string}
   | {kind:'move';id:string;delta:number}
-  | {kind:'update';id:string;patch:Partial<Pick<InterfacePort,'name'|'type'|'default'>>};
+  | {kind:'update';id:string;patch:Partial<Pick<InterfacePort,'label'|'type'|'default'>>};
 
-/** One graph-owned definition and all its instances. Source edits first use
- * the graph's localization operation to preserve their stored snapshot. */
+/** One graph-owned definition and all its instances. Every definition in a graph is editable until the Library round adds
+ * read-only copies (Refactor.109). 圖裡的定義與它的所有引用；Library 那一輪之前每份定義都可改。 */
 export class Subgraph {
   constructor(readonly graph:GraphDocument,readonly id:string) {}
 
@@ -21,7 +22,7 @@ export class Subgraph {
 
   rename(name:string):void {
     this.graph.assertEditable();const f=this.data;
-    if(!f || f.scope!=='local')throw Error('Rename a local Subgraph definition');
+    if(!f)throw Error('Subgraph definition no longer exists');
     if(!name.trim() || name.length>80 || /[\x00-\x1f\x7f]/.test(name))throw Error('Invalid Subgraph name');
     f.name=name.trim();
   }
@@ -29,7 +30,7 @@ export class Subgraph {
   editInterface(direction:Direction,edit:InterfaceEdit):void {
     this.graph.assertEditable();
     const f = this.data;
-    if (!f || f.scope !== 'local') throw Error('Edit a local Subgraph definition');
+    if (!f) throw Error('Subgraph definition no longer exists');
     const list = f[direction];
     if (!Array.isArray(list)) throw Error('Invalid Subgraph interface');
     const next = copy(list);
@@ -42,20 +43,22 @@ export class Subgraph {
         throw Error('Invalid Subgraph port order');
       next.splice(index + edit.delta,0,next.splice(index,1)[0]!);
     } else {
-      if (Object.keys(edit.patch).some(k => !['name','type','default'].includes(k)))
+      if (Object.keys(edit.patch).some(k => !['label','type','default'].includes(k)))
         throw Error('Interface edit cannot change port identity');
       const p = next[index]!;
       const previous = p.type;
       Object.assign(p,copy(edit.patch));
-      if (p.type !== previous && edit.patch.default === undefined) p.default = reshape(p.default,p.type);
+      if (edit.patch.label === '') delete p.label;
+      // A type change keeps the default in shape; an opaque port has none (§3.4). 換型別時預設值跟著換形狀；opaque 沒有預設值。
+      if (opaque.includes(p.type)) {if (edit.patch.default !== undefined) throw Error('An opaque Subgraph port has no default');delete p.default;}
+      else if (p.type !== previous && edit.patch.default === undefined) p.default = opaque.includes(previous) ? fill(0,p.type) : reshape(p.default!,p.type);
     }
     if (next.length > CORE_CONFIG.subgraphPortsPerSide) throw Error('Subgraph supports at most '+CORE_CONFIG.subgraphPortsPerSide+' ports per direction');
     const seen = new Set<string>();
     for (const p of next) {
-      if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
-        throw Error('Invalid or duplicate Subgraph port');
+      if (!validPort(p) || seen.has(p.id)) throw Error('Invalid or duplicate Subgraph port');
       seen.add(p.id);
-      literal(p.default,type(p.type));
+      if (!opaque.includes(p.type)) literal(p.default,type(p.type));
     }
 
     // Prepare every patch before mutation, including instance defaults.
@@ -77,8 +80,11 @@ export class Subgraph {
       if (affected(n,data) !== 'input' || !n.inputValues) continue;
       const values = copy(n.inputValues);
       if (removed) delete values[removed];
-      if (changed && Object.prototype.hasOwnProperty.call(values,changed.id))
-        values[changed.id] = reshape(values[changed.id]!,changed.type);
+      if (changed && Object.prototype.hasOwnProperty.call(values,changed.id)) {
+        // An instance value follows the new shape; an opaque port keeps none. 實例值跟著新形狀；opaque 接口沒有實例值。
+        if (opaque.includes(changed.type)) delete values[changed.id];
+        else values[changed.id] = reshape(values[changed.id]!,changed.type);
+      }
       patches.push({node:n,values});
     }
     f[direction] = next;

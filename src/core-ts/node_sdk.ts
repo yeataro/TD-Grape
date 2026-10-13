@@ -12,7 +12,7 @@ export type { Node, Value, ObjectValue } from './model';
 export type { PortSpec } from './ports';
 export { literal, type, fill } from './numeric';
 export { types as numericTypes } from './numeric';
-export { subgraphPorts, subgraphPresentation, numericInterface, requireSubgraph } from './subgraph_interface';
+export { subgraphPorts, subgraphPresentation, validInterface, requireSubgraph } from './subgraph_interface';
 export { selectedType, reshapeDefaults };
 export { storedOr, componentLetters, type ComponentStyle } from './component_names';
 

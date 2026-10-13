@@ -19,6 +19,7 @@ const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
 const connectivity_1 = require("./connectivity");
 const subgraph_stages_1 = require("./subgraph_stages");
+const subgraph_operations_1 = require("./subgraph_operations");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
 const uniform_presets_1 = require("./uniform_presets");
@@ -91,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -1152,7 +1153,9 @@ class Network {
     remove(node) {
         this.removeAll([node]);
     }
-    removeAll(nodes) {
+    /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last call goes
+     * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個呼叫時可回收的定義，預設沒有。 */
+    removeAll(nodes, collectible = new Set()) {
         this.assertEditable();
         if (nodes.some(n => n.network !== this))
             throw Error('Node belongs to another network');
@@ -1165,7 +1168,7 @@ class Network {
         const removed = this.data.edges.filter(e => ids.has(e.from[0]) || ids.has(e.to[0]));
         this.data.edges = this.data.edges.filter(e => !ids.has(e.from[0]) && !ids.has(e.to[0]));
         this.unwired(removed.filter(e => !ids.has(e.to[0])));
-        (0, subgraph_operations_1.collectSubgraphs)(this.graph, roots, this.data);
+        (0, subgraph_operations_1.collectSubgraphs)(this.graph, roots, this.data, collectible);
     }
     plan(policy, intent, overrides = new Map()) {
         var _a, _b;
@@ -1408,7 +1411,6 @@ class GraphDocument {
     appendSubgraphs(definitions, ids = new Map()) {
         return (0, subgraph_copies_1.appendSubgraphs)(this, definitions, ids).map(f => this.subgraph(f.id));
     }
-    localizeSubgraph(id, next) { return (0, subgraph_copies_1.localizeSubgraph)(this, id, next); }
     subgraph(id) { return new subgraphs_1.Subgraph(this, id); }
     /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
     addDeclaration(entry) { this.assertEditable(); return (0, declarations_1.addDeclaration)(this.document, entry); }
@@ -1454,7 +1456,6 @@ function complete(document) {
     // Groups are tidied at the end of every change (design-interview 1-2), so no command has to remember them. 每次修改結束時整理群組
     // （1-2），任何指令都不必記得處理群組。
     (0, groups_1.tidyGroups)(document);
-    const snapshots = new Set((document.subgraphs || []).filter(f => f.scope !== 'local').map(f => f.graph));
     for (const [, data] of networkEntries(document)) {
         const nodes = new Set(), edges = new Set(), taken = new Set();
         for (const n of data.nodes) {
@@ -1465,10 +1466,6 @@ function complete(document) {
         for (const e of data.edges)
             taken.add(e.id);
         for (const e of data.edges) {
-            // Source snapshots keep their authored bytes. Their read-only Edge
-            // handles already have temporary identities; only local data gets IDs.
-            if (!e.id && snapshots.has(data))
-                continue;
             if (!e.id) {
                 e.id = newEdgeId(taken);
                 taken.add(e.id);
@@ -1556,13 +1553,12 @@ function write(network, groups) {
         delete network.ui;
 }
 /** Tidy every network of a document in place; how many networks were fixed. Run at the end of every change and when a graph is
- * opened (1-2: the only two gates). Source snapshots of subgraphs keep their authored bytes, as in GraphDocument's completion.
- * 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖的來源快照保留原樣，同
- * GraphDocument 的收尾。 */
+ * opened (1-2: the only two gates). Every subgraph network is tidied like a stage (Refactor.109: no read-only snapshots in
+ * a graph). 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖網路和 stage 一樣整理。 */
 function tidyGroups(document) {
     var _a;
     let fixed = 0;
-    const networks = [...Object.values(document.stages), ...((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).filter(subgraph => subgraph.scope === 'local').map(subgraph => subgraph.graph)];
+    const networks = [...Object.values(document.stages), ...((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(subgraph => subgraph.graph)];
     for (const network of networks) {
         const result = tidy(network);
         if (result.fixed) {
@@ -1989,13 +1985,13 @@ const shownName = (name) => name.replace(/_/g, ' ');
 exports.shownName = shownName;
 /** The candidate itself when it is free; otherwise the number after its last underscore goes up to the next free one
  * (`_1` added when there is none). 沒人用就用它；否則最後一個底線後的數字往上加到沒人用的（沒有就加 _1）。 */
-function freeName(candidate, taken) {
+function freeName(candidate, taken, limit = exports.NAME_LIMIT) {
     if (!taken.has(candidate))
         return candidate;
     const numbered = /^(.*)_(\d+)$/.exec(candidate);
     const base = (numbered ? numbered[1] : candidate).replace(/_+$/, '') || 'Node';
     for (let n = numbered ? Number(numbered[2]) + 1 : 1;; n++) {
-        const suffix = '_' + n, name = base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+        const suffix = '_' + n, name = base.slice(0, limit - suffix.length).replace(/_+$/, '') + suffix;
         if (!taken.has(name))
             return name;
     }
@@ -2037,7 +2033,7 @@ function nameMissing(graph, registry) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.componentLetters = exports.storedOr = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.componentLetters = exports.storedOr = exports.selectedType = exports.requireSubgraph = exports.validInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.fixedPorts = fixedPorts;
 exports.literalNode = literalNode;
@@ -2064,7 +2060,7 @@ Object.defineProperty(exports, "numericTypes", { enumerable: true, get: function
 var subgraph_interface_1 = require("./subgraph_interface");
 Object.defineProperty(exports, "subgraphPorts", { enumerable: true, get: function () { return subgraph_interface_1.subgraphPorts; } });
 Object.defineProperty(exports, "subgraphPresentation", { enumerable: true, get: function () { return subgraph_interface_1.subgraphPresentation; } });
-Object.defineProperty(exports, "numericInterface", { enumerable: true, get: function () { return subgraph_interface_1.numericInterface; } });
+Object.defineProperty(exports, "validInterface", { enumerable: true, get: function () { return subgraph_interface_1.validInterface; } });
 Object.defineProperty(exports, "requireSubgraph", { enumerable: true, get: function () { return subgraph_interface_1.requireSubgraph; } });
 var component_names_2 = require("./component_names");
 Object.defineProperty(exports, "storedOr", { enumerable: true, get: function () { return component_names_2.storedOr; } });
@@ -4915,7 +4911,7 @@ const definition = {
     role: 'value',
     referencedGraph: node => String(node.params.subgraphId),
     reference: graphId => ({ subgraphId: graphId }),
-    supports: (node, context) => { var _a; return (0, node_sdk_1.numericInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.subgraphId))); },
+    supports: (node, context) => { var _a; return (0, node_sdk_1.validInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.subgraphId))); },
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
     presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
     validate: (node, context) => {
@@ -4950,7 +4946,7 @@ const definition = {
     },
     structural: true,
     role: 'subgraph-input',
-    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
+    supports: (node, context) => (0, node_sdk_1.validInterface)(context.owner),
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'input'),
     presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'input'),
     validate: (node, context) => {
@@ -4985,7 +4981,7 @@ const definition = {
     },
     structural: true,
     role: 'subgraph-output',
-    supports: (node, context) => (0, node_sdk_1.numericInterface)(context.owner),
+    supports: (node, context) => (0, node_sdk_1.validInterface)(context.owner),
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'output'),
     presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'output'),
     validate: (node, context) => {
@@ -5770,20 +5766,29 @@ exports.StructureError = exports.removable = exports.offered = void 0;
 exports.structureProblems = structureProblems;
 exports.requireStructure = requireStructure;
 const stageOutput = (module) => (module === null || module === void 0 ? void 0 : module.role) === 'output';
+const boundary = (module) => (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-input' || (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-output';
+/** Nodes with a fixed identity: never offered, never deleted. 身分固定的節點：不在新增選單、不能刪。 */
+const fixed = (module) => stageOutput(module) || boundary(module);
 /** Whether a module may be offered for adding a new node. 新增選單只提供這些。 */
-const offered = (module) => !stageOutput(module);
+const offered = (module) => !fixed(module);
 exports.offered = offered;
 /** Whether the user may delete this node. 能不能刪。 */
-const removable = (module) => !stageOutput(module);
+const removable = (module) => !fixed(module);
 exports.removable = removable;
+const rules = [
+    { key: 'stageOutputs', role: 'output', stage: 1, subgraph: 0 },
+    { key: 'subgraphInputs', role: 'subgraph-input', stage: 0, subgraph: 1 },
+    { key: 'subgraphOutputs', role: 'subgraph-output', stage: 0, subgraph: 1 },
+];
 function counts(g, registry) {
-    const count = (data) => data.nodes.filter(n => stageOutput(registry.get(n.nodeType))).length;
-    return [
-        ...Object.entries(g.stages || {}).map(([id, data]) => ({ key: 'stageOutputs', network: id, value: count(data), expected: 1 })),
-        ...(g.subgraphs || []).map(f => ({ key: 'stageOutputs', network: 'subgraph:' + f.id, value: count(f.graph), expected: 0 })),
-    ];
+    const count = (data, role) => data.nodes.filter(n => { var _a; return ((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role) === role; }).length;
+    return rules.flatMap(rule => [
+        ...Object.entries(g.stages || {}).map(([id, data]) => ({ key: rule.key, network: id, value: count(data, rule.role), expected: rule.stage })),
+        ...(g.subgraphs || []).map(f => ({ key: rule.key, network: 'subgraph:' + f.id, value: count(f.graph, rule.role), expected: rule.subgraph })),
+    ]);
 }
 const distance = (p) => Math.abs(p.value - p.expected);
+const slot = (p) => p.key + ' ' + p.network;
 /** Rules the graph currently breaks; used to report a graph when it is opened. */
 function structureProblems(g, registry) {
     return counts(g, registry).filter(p => distance(p) > 0);
@@ -5796,10 +5801,10 @@ class StructureError extends Error {
     }
 }
 exports.StructureError = StructureError;
-/** Refuses edits that move a network further from the rule; repairs are always allowed. */
+/** Refuses edits that move a network further from a rule; repairs are always allowed. */
 function requireStructure(before, after, registry) {
-    const previous = new Map(counts(before, registry).map(p => [p.network, distance(p)]));
-    const worse = counts(after, registry).filter(p => { var _a; return distance(p) > ((_a = previous.get(p.network)) !== null && _a !== void 0 ? _a : 0); });
+    const previous = new Map(counts(before, registry).map(p => [slot(p), distance(p)]));
+    const worse = counts(after, registry).filter(p => { var _a; return distance(p) > ((_a = previous.get(slot(p))) !== null && _a !== void 0 ? _a : 0); });
     if (worse.length)
         throw new StructureError(worse);
 }
@@ -5817,7 +5822,7 @@ const node_module_1 = require("./node_module");
 const subgraph_interface_1 = require("./subgraph_interface");
 const subgraph_stages_1 = require("./subgraph_stages");
 const values_1 = require("./values");
-const numeric_1 = require("./numeric");
+const declarations_1 = require("./declarations");
 const node_names_1 = require("./node_names");
 const relay = {
     catalog: {
@@ -5825,13 +5830,17 @@ const relay = {
         emitter: { id: 'subgraph_relay', version: 1 }, browser: {}
     },
     role: 'value',
-    supports: n => values_1.types.includes(String(n.params.type)),
+    supports: n => values_1.types.includes(String(n.params.type)) || values_1.opaque.includes(String(n.params.type)),
     ports: n => [
         { key: 'value', direction: 'input', type: String(n.params.type) },
         { key: 'out', direction: 'output', type: String(n.params.type) }
     ],
-    validate: n => { (0, values_1.type)(n.params.type); },
-    emit: (_n, c) => ({ outputs: { out: c.input('value') } })
+    validate: n => { if (!values_1.opaque.includes(String(n.params.type)))
+        (0, values_1.type)(n.params.type); },
+    // An opaque relay with nothing wired in passes "nothing" on (its output stays undefined), so the consumer inside or
+    // outside sees an unconnected texture and applies its own rule, e.g. Texture 2D's opaque black (amendment B5).
+    // 沒接線的 opaque 中繼把「沒有」往下傳（輸出留空），裡面或外面的使用者看到的就是未接貼圖，走它自己的規則（如 Texture 2D 的不透明黑）。
+    emit: (n, c) => ({ outputs: { out: values_1.opaque.includes(String(n.params.type)) && !c.connected('value') ? undefined : c.input('value') } })
 };
 function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_CONFIG) {
     const engine = engineFactory((0, node_module_1.createRegistry)([...registry.modules, relay]));
@@ -5842,7 +5851,10 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         if ((0, model_1.formatProblem)(g) || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' ||
             ((_a = g.structDefinitions) === null || _a === void 0 ? void 0 : _a.length) || !Array.isArray(g.subgraphs) || g.subgraphs.length > config.subgraphDefinitions)
             return false;
-        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type)))
+        // Declarations follow the same rule as the flat compiler (top_compiler.ts): a known kind must carry a type it supports,
+        // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
+        // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
+        if (!g.declarations.every(d => !declarations_1.declarationKinds.has(d.kind) || declarations_1.declarationKinds.get(d.kind).types.includes(d.type)))
             return false;
         const scopes = [[g.stages.pixel, undefined], ...g.subgraphs.map(f => [f.graph, f])];
         return scopes.every(([data, owner]) => {
@@ -5851,7 +5863,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 return false;
             // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
             // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
-            if (owner && (!(0, subgraph_interface_1.numericInterface)(owner) || !(0, subgraph_stages_1.subgraphStages)(g, owner.id, registry).includes('pixel')))
+            if (owner && (!(0, subgraph_interface_1.validInterface)(owner) || !(0, subgraph_stages_1.subgraphStages)(g, owner.id, registry).includes('pixel')))
                 return false;
             const context = (0, node_module_1.contextFor)(g, owner);
             return data.nodes.every(n => {
@@ -5869,7 +5881,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         for (const f of g.subgraphs) {
             if (!identity.test(f.id) || definitions.has(f.id))
                 throw Error('Invalid or duplicate Subgraph ID');
-            if (!['local', 'library', 'personal'].includes(f.scope) || typeof f.name !== 'string' || !f.name.length || f.name.length > 80)
+            if (typeof f.name !== 'string' || !f.name.length || f.name.length > 80)
                 throw Error('Invalid Subgraph definition');
             (0, subgraph_interface_1.requireSubgraph)((0, node_module_1.contextFor)(g), f.id);
             definitions.set(f.id, f);
@@ -5948,10 +5960,10 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                                 outputCount++;
                                 maps.set(node.id, { inputs: boundary.outputs, outputs: {} });
                                 for (const [key, value] of Object.entries(node.inputValues || {})) {
-                                    const endpoint = boundary.outputs[key];
-                                    if (!endpoint)
+                                    const endpoint = boundary.outputs[key], target = endpoint && flat.nodes.find(n => n.id === endpoint[0]);
+                                    if (!target || !target.inputValues)
                                         throw Error('Invalid Subgraph port defaults');
-                                    flat.nodes.find(n => n.id === endpoint[0]).inputValues.value = (0, model_1.copy)(value);
+                                    target.inputValues.value = (0, model_1.copy)(value);
                                     origins.set(endpoint[0], origin);
                                 }
                             }
@@ -5966,9 +5978,9 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                                     throw Error('Invalid Subgraph input values');
                             for (const direction of ['inputs', 'outputs'])
                                 for (const p of fn[direction]) {
-                                    const id = allocate();
+                                    const id = allocate(), value = direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default;
                                     add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type },
-                                        inputValues: { value: (0, model_1.copy)(direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default) },
+                                        ...(value === undefined ? {} : { inputValues: { value: (0, model_1.copy)(value) } }),
                                         ...(node.ui ? { ui: (0, model_1.copy)(node.ui) } : {}), ...(node.comment ? { comment: node.comment } : {}) }, origin);
                                     mapped[direction][p.id] = [id, direction === 'inputs' ? 'value' : 'out'];
                                     inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
@@ -6006,7 +6018,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 for (const direction of ['inputs', 'outputs'])
                     for (const p of probe[direction]) {
                         const id = allocate();
-                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, inputValues: { value: (0, model_1.copy)(p.default) } }, { node: '', stage: 'pixel', trail: [probe.id], subgraphId: probe.id });
+                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, ...(p.default === undefined ? {} : { inputValues: { value: (0, model_1.copy)(p.default) } }) }, { node: '', stage: 'pixel', trail: [probe.id], subgraphId: probe.id });
                         inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
                     }
                 expand(probe.graph, [probe.id], probe, inside);
@@ -6047,10 +6059,10 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.appendSubgraphs = appendSubgraphs;
-exports.localizeSubgraph = localizeSubgraph;
 exports.independentSubgraph = independentSubgraph;
 const model_1 = require("./model");
 const subgraph_operations_1 = require("./subgraph_operations");
+const node_names_1 = require("./node_names");
 const scope_references_1 = require("./scope_references");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
 const reference = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
@@ -6125,59 +6137,9 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
         ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(...pending);
     return pending;
 }
-/** Turn a source-owned definition and its source callers into editable local
- * copies. Stored source snapshots remain byte-for-byte authored data. */
-function localizeSubgraph(graph, id, next) {
-    graph.assertEditable();
-    const definitions = graph.document.subgraphs || [], target = definitions.find(f => f.id === id);
-    if (!target || target.scope === 'local')
-        return new Map();
-    const affected = new Set([id]);
-    let added = true;
-    while (added) {
-        added = false;
-        for (const f of definitions) {
-            if (f.scope === 'local' || affected.has(f.id))
-                continue;
-            let depends = f.graph.nodes.some(n => affected.has(reference(graph, n) || ''));
-            scope_references_1.ScopeReferences.walk(f, (ref, old) => { if (ref.scope.startsWith('fn_') && affected.has(ref.scope.slice(3)))
-                depends = true; return old; }, false);
-            if (depends) {
-                affected.add(f.id);
-                added = true;
-            }
-        }
-    }
-    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, affected.size);
-    const ids = new Map(), used = new Set(definitions.map(f => f.id));
-    for (const old of affected)
-        ids.set(old, allocate(used, next));
-    const changed = definitions.filter(f => affected.has(f.id)), snapshots = changed.map(f => (0, model_1.copy)(f));
-    const writable = definitions.filter(f => f.scope === 'local' || affected.has(f.id));
-    const networks = [...Object.values(graph.document.stages), ...writable.map(f => f.graph)];
-    const patches = [];
-    for (const data of networks)
-        for (const n of data.nodes) {
-            const old = reference(graph, n), mapped = old && ids.get(old);
-            if (mapped)
-                patches.push({ node: n, params: parameters(graph, n, mapped) });
-        }
-    // Prepare all IDs, snapshots and module commands before the first write.
-    // Keep node/data objects alive for current editor callbacks during migration.
-    for (const f of changed) {
-        // `origin` already records where a snapshot came from; `scope` tells whether it is still one (Q44).
-        // origin 已記錄來源；是否仍是唯讀副本由 scope 看出。
-        f.id = ids.get(f.id);
-        f.scope = 'local';
-    }
-    for (const p of patches)
-        p.node.params = p.params;
-    remapScopes([...Object.values(graph.document.stages), ...writable, graph.document.structDefinitions || []], ids);
-    definitions.push(...snapshots);
-    return ids;
-}
-/** Copy only this instance's definition. Nested children remain shared, as
- * before; the graph already owns their complete content. */
+/** Make Single User (basic design §3.10): copy only this instance's definition for this one call. Nested children remain
+ * shared; the graph already owns their complete content. The copy is named by the one naming rule (node_names.ts), not
+ * "… Copy". 設為唯一：只為這個呼叫節點複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
 function independentSubgraph(network, nodeId, next) {
     var _a;
     network.assertEditable();
@@ -6191,8 +6153,7 @@ function independentSubgraph(network, nodeId, next) {
     const newId = allocate(new Set(graph.document.subgraphs.map(f => f.id)), next);
     const f = (0, model_1.copy)(source);
     f.id = newId;
-    f.name = f.name.slice(0, 75) + ' Copy';
-    f.scope = 'local';
+    f.name = (0, node_names_1.freeName)(source.name, new Set(graph.document.subgraphs.map(d => d.name)), 80);
     remapScopes(f, new Map([[source.id, newId]]));
     const params = parameters(graph, n, newId);
     const owned = appendSubgraphs(graph, [f])[0];
@@ -6204,15 +6165,19 @@ function independentSubgraph(network, nodeId, next) {
 "subgraph_interface":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.numericInterface = numericInterface;
+exports.validInterface = validInterface;
 exports.requireSubgraph = requireSubgraph;
 exports.subgraphPorts = subgraphPorts;
 exports.subgraphPresentation = subgraphPresentation;
 const config_1 = require("./config");
 const values_1 = require("./values");
-function numericInterface(f) {
+const subgraph_operations_1 = require("./subgraph_operations");
+/** Whether every port carries a built-in type the host can pass (basic design §3.4, amendment A1): the numeric types and the
+ * opaque ones, on both sides — under expansion an opaque port is only an alias. User structs never (§3.4); host built-in
+ * structs when the type table has them. 接口型別是否都是內建型別：數值與 opaque，輸入輸出都可；自訂 struct 不上。 */
+function validInterface(f) {
     return !!f && ['inputs', 'outputs'].every(key => Array.isArray(f[key]) &&
-        f[key].every(p => values_1.types.includes(p.type)));
+        f[key].every(p => values_1.types.includes(p.type) || values_1.opaque.includes(p.type)));
 }
 function requireSubgraph(context, id) {
     var _a;
@@ -6224,10 +6189,11 @@ function requireSubgraph(context, id) {
             throw Error('Subgraph supports at most ' + config_1.CORE_CONFIG.subgraphPortsPerSide + ' ports per direction');
         const seen = new Set();
         for (const p of ports) {
-            if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
+            if (!(0, subgraph_operations_1.validPort)(p) || seen.has(p.id))
                 throw Error('Invalid or duplicate Subgraph port');
             seen.add(p.id);
-            (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
+            if (!values_1.opaque.includes(p.type))
+                (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
         }
     }
     return f;
@@ -6236,19 +6202,17 @@ function subgraphPorts(f, kind) {
     const ports = [];
     if (kind === 'call' || kind === 'input')
         for (const p of f.inputs)
-            ports.push({ key: p.id, direction: kind === 'input' ? 'output' : 'input', type: p.type, default: p.default });
+            ports.push({ key: p.id, direction: kind === 'input' ? 'output' : 'input', type: p.type, ...(p.default === undefined ? {} : { default: p.default }) });
     if (kind === 'call' || kind === 'output')
         for (const p of f.outputs)
-            ports.push({ key: p.id, direction: kind === 'output' ? 'input' : 'output', type: p.type, default: p.default });
+            ports.push({ key: p.id, direction: kind === 'output' ? 'input' : 'output', type: p.type, ...(p.default === undefined ? {} : { default: p.default }) });
     return ports;
 }
 function subgraphPresentation(f, kind) {
-    const names = (ports) => Object.fromEntries(ports.map(p => [p.id, p.name || p.id]));
+    // A port shows its label; with none, nothing but the type (§3.3: the id is never shown). 接孔顯示標籤；沒有就只剩型別。
+    const names = (ports) => Object.fromEntries(ports.map(p => { var _a; return [p.id, (_a = p.label) !== null && _a !== void 0 ? _a : '']; }));
     return {
-        ...(kind === 'call' ? {
-            label: f.name,
-            descriptionKey: f.scope === 'local' ? 'help.function' : f.descriptionKey || 'help.function'
-        } : {}),
+        ...(kind === 'call' ? { label: f.name, descriptionKey: f.descriptionKey || 'help.function' } : {}),
         portLabels: kind === 'call' ? { inputs: names(f.inputs), outputs: names(f.outputs) } :
             kind === 'input' ? { outputs: names(f.inputs) } : { inputs: names(f.outputs) }
     };
@@ -6258,6 +6222,9 @@ function subgraphPresentation(f, kind) {
 "subgraph_operations":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.newPortId = newPortId;
+exports.validPort = validPort;
+exports.portEntry = portEntry;
 exports.ensureSubgraphCapacity = ensureSubgraphCapacity;
 exports.validateSubgraphData = validateSubgraphData;
 exports.withoutStoredUse = withoutStoredUse;
@@ -6272,6 +6239,28 @@ const config_1 = require("./config");
 const scope_references_1 = require("./scope_references");
 const values_1 = require("./values");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
+/** A new port identity: random and unique like node and edge IDs (Q44); the number after `in`/`out` is not an identity
+ * (basic design §4 row 6). 新接口的身分：和節點、接線一樣隨機、不重複；序號不是身分。 */
+function newPortId(taken) {
+    for (;;) {
+        let id = 'p';
+        for (let i = 0; i < 3; i++)
+            id += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0');
+        if (!taken.has(id))
+            return id;
+    }
+}
+const validLabel = (label) => label === undefined || (typeof label === 'string' && label.length <= 80 && !/[\x00-\x1f\x7f]/.test(label));
+/** Whether one port's data is well formed: an opaque port has no default, a numeric one must have one (§3.4, amendment B5).
+ * 一筆接口的資料是否完整：opaque 沒有 default、數值一定有。 */
+function validPort(p) {
+    return validId(p.id) && typeof p.type === 'string' && !!p.type && validLabel(p.label) &&
+        (values_1.opaque.includes(p.type) ? p.default === undefined : p.default !== undefined);
+}
+/** Only fields the format defines, so an absent default is absent, not `undefined`. 只留格式有的欄位。 */
+function portEntry(id, type, label, value) {
+    return { id, ...(label === undefined ? {} : { label }), type, ...(value === undefined ? {} : { default: value }) };
+}
 function structural(graph, role) {
     const matches = graph.registry.modules.filter(m => m.structural &&
         (role === 'call' ? !!m.reference : m.role === 'subgraph-' + role));
@@ -6297,11 +6286,15 @@ function validateSubgraphData(f) {
         throw Error('Invalid Subgraph name');
     // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
     // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
-    if (!['local', 'library', 'personal'].includes(f.scope))
-        throw Error('Invalid Subgraph scope');
+    // `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole, at every entry
+    // (open, paste, append), so no half-protected Library copy can enter a document (amendment 2 B7). libraryId 到 Library
+    // 那一輪才定義；之前帶著它的定義整份拒絕，開檔、貼上、加入都一樣，免得出現沒受保護的 Library 副本。
+    if ('libraryId' in f)
+        throw Object.assign(Error('Subgraph definitions from a Library are not supported in this version'), { code: 'subgraph.library' });
+    if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32))
+        throw Error('Invalid Subgraph color');
     for (const ports of [f.inputs, f.outputs]) {
-        if (ports.length > config_1.CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
-            ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
+        if (!Array.isArray(ports) || ports.length > config_1.CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length || !ports.every(validPort))
             throw Error('Invalid Subgraph interface');
     }
     const ids = new Set(f.graph.nodes.map(n => n.id));
@@ -6316,8 +6309,8 @@ function validate(graph, f) {
     var _a;
     graph.assertEditable();
     ensureSubgraphCapacity(graph, 1);
-    if (f.scope !== 'local' || ((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id)))
-        throw Error('Invalid or duplicate local Subgraph identity');
+    if ((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id))
+        throw Error('Invalid or duplicate Subgraph identity');
     validateSubgraphData(f);
 }
 /** A definition as the graph keeps it: what it can be used in is worked out from its content, not stored (Q46).
@@ -6332,12 +6325,15 @@ function insertSubgraph(graph, f) {
 }
 function createSubgraph(graph, options) {
     const input = structural(graph, 'input'), output = structural(graph, 'output');
+    const taken = new Set(), inId = newPortId(taken);
+    taken.add(inId);
+    const outId = newPortId(taken);
     return insertSubgraph(graph, {
-        id: options.id, name: options.name, scope: 'local',
-        inputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [1, 1, 1, 1] }],
-        outputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [0, 0, 0, 1] }],
+        id: options.id, name: options.name,
+        inputs: [portEntry(inId, 'vec4', 'in1', [1, 1, 1, 1])],
+        outputs: [portEntry(outId, 'vec4', 'out1', [0, 0, 0, 1])],
         graph: { nodes: [{ ...authored(input, 'input', { x: 48, y: 144 }), name: 'Input' }, { ...authored(output, 'output', { x: 624, y: 144 }), name: 'Output' }],
-            edges: [{ id: graph.nextEdgeId({ nodes: [], edges: [] }), from: ['input', 'value'], to: ['output', 'value'] }] }
+            edges: [{ id: graph.nextEdgeId({ nodes: [], edges: [] }), from: ['input', inId], to: ['output', outId] }] }
     });
 }
 function instantiateSubgraph(network, definitionId, id, ui = {}) {
@@ -6382,6 +6378,16 @@ function subgraphFromSelection(network, selection, options) {
     // Boundary IDs are not members of the original selection.
     const selected = new Set(chosen.map(n => n.id));
     const inputs = [], outputs = [], edges = [], outside = [];
+    // Port identities are generated; labels come from the peer port and get a number when one side repeats a label (§3.3).
+    // 接口身分產生式；標籤取對端接孔名，同一邊重複時加編號。
+    const portIds = new Set(), labels = { inputs: new Set(), outputs: new Set() };
+    const newPort = (side, type, label, value) => {
+        const id = newPortId(portIds);
+        portIds.add(id);
+        const text = (0, node_names_1.freeName)(label, labels[side], 80);
+        labels[side].add(text);
+        return portEntry(id, type, text, values_1.opaque.includes(type) ? undefined : value);
+    };
     const incoming = new Map(), outgoing = new Map();
     const byId = new Map(data.nodes.map(n => [n.id, n]));
     const port = (n, direction, key) => {
@@ -6406,21 +6412,21 @@ function subgraphFromSelection(network, selection, options) {
             const n = byId.get(e.to[0]), spec = port(n, 'input', e.to[1]);
             const key = JSON.stringify([e.from, spec.type]);
             if (!incoming.has(key)) {
-                const id = 'in' + (inputs.length + 1);
-                incoming.set(key, id);
-                const value = (_c = (_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[e.to[1]]) !== null && _b !== void 0 ? _b : spec.default) !== null && _c !== void 0 ? _c : defaultValue(spec.type, options);
-                inputs.push({ id, name: ((_d = options.inputName) === null || _d === void 0 ? void 0 : _d.call(options, byId.get(e.from[0]), e.from[1], e.to[1])) || e.to[1], type: spec.type, default: (0, model_1.copy)(value) });
-                outside.push({ ...e, to: [options.callId, id] });
+                const value = values_1.opaque.includes(spec.type) ? undefined : (0, model_1.copy)((_c = (_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[e.to[1]]) !== null && _b !== void 0 ? _b : spec.default) !== null && _c !== void 0 ? _c : defaultValue(spec.type, options));
+                const p = newPort('inputs', spec.type, ((_d = options.inputName) === null || _d === void 0 ? void 0 : _d.call(options, byId.get(e.from[0]), e.from[1], e.to[1])) || e.to[1], value);
+                inputs.push(p);
+                incoming.set(key, p.id);
+                outside.push({ ...e, to: [options.callId, p.id] });
             }
             edges.push({ ...e, from: [inputId, incoming.get(key)] });
         }
         else {
             const n = byId.get(e.from[0]), spec = port(n, 'output', e.from[1]), key = JSON.stringify(e.from);
             if (!outgoing.has(key)) {
-                const id = 'out' + (outputs.length + 1);
-                outgoing.set(key, id);
-                outputs.push({ id, name: e.from[1], type: spec.type, default: defaultValue(spec.type, options) });
-                edges.push({ ...e, to: [outputId, id] });
+                const p = newPort('outputs', spec.type, e.from[1], values_1.opaque.includes(spec.type) ? undefined : defaultValue(spec.type, options));
+                outputs.push(p);
+                outgoing.set(key, p.id);
+                edges.push({ ...e, to: [outputId, p.id] });
             }
             outside.push({ ...e, from: [options.callId, outgoing.get(key)] });
         }
@@ -6436,7 +6442,7 @@ function subgraphFromSelection(network, selection, options) {
     };
     boundary('input', inputId, { x: 24, y: 144 });
     boundary('output', outputId, { x: Math.max(...nodes.map(n => Number(n.ui.x))) + 288, y: 144 });
-    const f = { id: options.id, name: options.name, scope: 'local', inputs, outputs,
+    const f = { id: options.id, name: options.name, inputs, outputs,
         graph: { nodes, edges, ...(options.ui ? { ui: (0, model_1.copy)(options.ui) } : {}) } };
     validate(graph, f);
     const callModule = structural(graph, 'call');
@@ -6451,10 +6457,14 @@ function subgraphFromSelection(network, selection, options) {
         scope_references_1.ScopeReferences.token('fn_' + f.id, ref.source) : old);
     return call;
 }
-/** Collect only the dependency closure of removed instances. Other reusable
- * definitions and the active scope remain independent graph documents. */
-function collectSubgraphs(graph, roots, active) {
-    if (!roots.length)
+/** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
+ * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
+ * Library). A local definition is never collected: deleting a call must not lose the person's work; it stays listed in the
+ * subgraph panel with zero uses. Other reusable definitions and the active scope remain untouched.
+ * 刪掉呼叫後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
+ * 刪錯呼叫不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
+function collectSubgraphs(graph, roots, active, collectible) {
+    if (!roots.length || !collectible.size)
         return;
     const definitions = new Map((graph.document.subgraphs || []).map(f => [f.id, f]));
     const references = (value) => {
@@ -6499,7 +6509,7 @@ function collectSubgraphs(graph, roots, active) {
         if (!candidates.has(id) || f.graph === active)
             retained.add(id);
     const keep = closure(retained);
-    graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
+    graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id) || !collectible.has(f.id));
 }
 
 },
@@ -6548,9 +6558,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subgraph = void 0;
 const model_1 = require("./model");
 const values_1 = require("./values");
+const subgraph_operations_1 = require("./subgraph_operations");
 const config_1 = require("./config");
-/** One graph-owned definition and all its instances. Source edits first use
- * the graph's localization operation to preserve their stored snapshot. */
+/** One graph-owned definition and all its instances. Every definition in a graph is editable until the Library round adds
+ * read-only copies (Refactor.109). 圖裡的定義與它的所有引用；Library 那一輪之前每份定義都可改。 */
 class Subgraph {
     constructor(graph, id) {
         this.graph = graph;
@@ -6563,8 +6574,8 @@ class Subgraph {
     rename(name) {
         this.graph.assertEditable();
         const f = this.data;
-        if (!f || f.scope !== 'local')
-            throw Error('Rename a local Subgraph definition');
+        if (!f)
+            throw Error('Subgraph definition no longer exists');
         if (!name.trim() || name.length > 80 || /[\x00-\x1f\x7f]/.test(name))
             throw Error('Invalid Subgraph name');
         f.name = name.trim();
@@ -6572,8 +6583,8 @@ class Subgraph {
     editInterface(direction, edit) {
         this.graph.assertEditable();
         const f = this.data;
-        if (!f || f.scope !== 'local')
-            throw Error('Edit a local Subgraph definition');
+        if (!f)
+            throw Error('Subgraph definition no longer exists');
         const list = f[direction];
         if (!Array.isArray(list))
             throw Error('Invalid Subgraph interface');
@@ -6591,22 +6602,31 @@ class Subgraph {
             next.splice(index + edit.delta, 0, next.splice(index, 1)[0]);
         }
         else {
-            if (Object.keys(edit.patch).some(k => !['name', 'type', 'default'].includes(k)))
+            if (Object.keys(edit.patch).some(k => !['label', 'type', 'default'].includes(k)))
                 throw Error('Interface edit cannot change port identity');
             const p = next[index];
             const previous = p.type;
             Object.assign(p, (0, model_1.copy)(edit.patch));
-            if (p.type !== previous && edit.patch.default === undefined)
-                p.default = (0, values_1.reshape)(p.default, p.type);
+            if (edit.patch.label === '')
+                delete p.label;
+            // A type change keeps the default in shape; an opaque port has none (§3.4). 換型別時預設值跟著換形狀；opaque 沒有預設值。
+            if (values_1.opaque.includes(p.type)) {
+                if (edit.patch.default !== undefined)
+                    throw Error('An opaque Subgraph port has no default');
+                delete p.default;
+            }
+            else if (p.type !== previous && edit.patch.default === undefined)
+                p.default = values_1.opaque.includes(previous) ? (0, values_1.fill)(0, p.type) : (0, values_1.reshape)(p.default, p.type);
         }
         if (next.length > config_1.CORE_CONFIG.subgraphPortsPerSide)
             throw Error('Subgraph supports at most ' + config_1.CORE_CONFIG.subgraphPortsPerSide + ' ports per direction');
         const seen = new Set();
         for (const p of next) {
-            if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
+            if (!(0, subgraph_operations_1.validPort)(p) || seen.has(p.id))
                 throw Error('Invalid or duplicate Subgraph port');
             seen.add(p.id);
-            (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
+            if (!values_1.opaque.includes(p.type))
+                (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
         }
         // Prepare every patch before mutation, including instance defaults.
         const patches = [];
@@ -6632,8 +6652,13 @@ class Subgraph {
                 const values = (0, model_1.copy)(n.inputValues);
                 if (removed)
                     delete values[removed];
-                if (changed && Object.prototype.hasOwnProperty.call(values, changed.id))
-                    values[changed.id] = (0, values_1.reshape)(values[changed.id], changed.type);
+                if (changed && Object.prototype.hasOwnProperty.call(values, changed.id)) {
+                    // An instance value follows the new shape; an opaque port keeps none. 實例值跟著新形狀；opaque 接口沒有實例值。
+                    if (values_1.opaque.includes(changed.type))
+                        delete values[changed.id];
+                    else
+                        values[changed.id] = (0, values_1.reshape)(values[changed.id], changed.type);
+                }
                 patches.push({ node: n, values });
             }
         f[direction] = next;
@@ -6927,7 +6952,10 @@ function createFlatCompiler(registry, limits) {
                     const declaration = declarations.get(declId), name = useDeclaration(declId), kind = declarations_1.declarationKinds.get(declaration.kind);
                     return kind.reference ? kind.reference(declaration, positions.get(declId)) : { out: name };
                 };
-                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useDeclaration, referenceDeclaration });
+                // Connected means a wire whose source emitted something: an opaque relay with nothing wired in emits nothing, so what
+                // it feeds counts as unconnected (subgraph_compiler.ts). 「有接」＝有線且來源有東西：沒接的 opaque 中繼沒有輸出，它餵的接孔算沒接。
+                const connected = (key) => { const edge = links.get(node.port('input', key)); return !!edge && expressions.get(edge.from) !== undefined; };
+                const emission = d.emit(n, { ...model.context, ports: p, input, connected, useDeclaration, referenceDeclaration });
                 if (Object.keys(emission.outputs).sort().join() !== Object.keys(p.outputs).sort().join())
                     throw Error('Module emitted a different output interface');
                 if (emission.statements)
@@ -6939,10 +6967,13 @@ function createFlatCompiler(registry, limits) {
                     // An opaque value cannot live in a local variable: its expression is written where it is used.
                     // 不透明的值不能放進區域變數：直接代入使用的地方。
                     if (values_1.opaque.includes(p.outputs[port].type)) {
-                        expressions.set(node.port('output', port), expression);
+                        if (expression !== undefined)
+                            expressions.set(node.port('output', port), expression);
                         passed = true;
                         continue;
                     }
+                    if (expression === undefined)
+                        throw Error('Node emitted no expression for ' + port);
                     const symbol = 'sg_n_' + (n.name || id) + (port === 'out' ? '' : '_' + port);
                     lines.push('    ' + (emission.constant ? 'const ' : '') + p.outputs[port].type + ' ' + symbol + ' = ' + expression + ';');
                     expressions.set(node.port('output', port), symbol);
@@ -7147,7 +7178,8 @@ function upgradeGraph(value, rules = exports.nodeUpgrades, registry) {
     if ((0, model_1.formatProblem)(value))
         return { graph: value, changes: [] };
     const graph = (0, model_1.copy)(value);
-    const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => [s.id, s.graph])];
+    // Networks are named as everywhere else: the stage, or 'subgraph:'+id (graph.ts networkEntries). 網路名稱與他處一致。
+    const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => ['subgraph:' + s.id, s.graph])];
     const changes = [];
     for (let pass = 0;; pass++) {
         if (pass > rules.length)

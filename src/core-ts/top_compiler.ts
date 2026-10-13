@@ -124,7 +124,10 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
         const declaration=declarations.get(declId),name=useDeclaration(declId),kind=declarationKinds.get(declaration!.kind)!;
         return kind.reference?kind.reference(declaration!,positions.get(declId)!):{out:name};
       };
-      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useDeclaration,referenceDeclaration});
+      // Connected means a wire whose source emitted something: an opaque relay with nothing wired in emits nothing, so what
+      // it feeds counts as unconnected (subgraph_compiler.ts). 「有接」＝有線且來源有東西：沒接的 opaque 中繼沒有輸出，它餵的接孔算沒接。
+      const connected=(key:string)=>{const edge=links.get(node.port('input',key));return !!edge&&expressions.get(edge.from!)!==undefined;};
+      const emission=d.emit(n,{...model.context,ports:p,input,connected,useDeclaration,referenceDeclaration});
       if(Object.keys(emission.outputs).sort().join()!==Object.keys(p.outputs).sort().join())throw Error('Module emitted a different output interface');
       if(emission.statements)lines.push(...emission.statements);
       for(const name of emission.names??[])variables[name]=id;
@@ -132,7 +135,8 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       for(const [port,expression] of Object.entries(emission.outputs)){
         // An opaque value cannot live in a local variable: its expression is written where it is used.
         // 不透明的值不能放進區域變數：直接代入使用的地方。
-        if(opaque.includes(p.outputs[port]!.type)){expressions.set(node.port('output',port),expression);passed=true;continue;}
+        if(opaque.includes(p.outputs[port]!.type)){if(expression!==undefined)expressions.set(node.port('output',port),expression);passed=true;continue;}
+        if(expression===undefined)throw Error('Node emitted no expression for '+port);
         const symbol='sg_n_'+(n.name||id)+(port==='out'?'':'_'+port);
         lines.push('    '+(emission.constant?'const ':'')+p.outputs[port]!.type+' '+symbol+' = '+expression+';');expressions.set(node.port('output',port),symbol);variables[symbol]=id;
       }

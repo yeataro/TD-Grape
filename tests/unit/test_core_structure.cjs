@@ -62,3 +62,43 @@ test('the core never offers or allows deleting a stage output; other nodes are u
   assert.equal(G.offered(G.registry.get('sgrape.builtin.add')), true);
   assert.equal(G.removable(G.registry.get('sgrape.builtin.add')), true);
 });
+
+// Subgraph boundaries (basic design §3.3, amendment A8 §5 item 7, Refactor.109): exactly one Subgraph Input and one Subgraph
+// Output inside every subgraph, never in a stage, never deleted or offered; a definition arriving without them is refused;
+// one already missing a boundary still opens and can be repaired.
+// 子圖邊界節點：每個子圖各剛好一個、stage 裡不准有、不能刪、不在新增選單；沒帶邊界的定義拒絕進來；已經缺的仍能開、能修。
+const IN = 'sgrape.builtin.subgraph_input', OUT_B = 'sgrape.builtin.subgraph_output';
+const boundary = (id, type) => ({ id, nodeType: type, params: {}, ui: { x: 0, y: 0 } });
+const withSubgraph = () => new G.GraphDocument(open().change(c => { c.createSubgraph({ id: 'sg', name: 'Sub' }); }).after, G.registry);
+const inside = c => c.networks.get('subgraph:sg');
+
+test('a new subgraph has one Input and one Output; deleting either or adding a second is refused', () => {
+  const doc = withSubgraph();
+  assert.deepEqual(clone(G.structureProblems(doc.snapshot(), G.registry)), []);
+  refused(doc, c => inside(c).removeAll([inside(c).node('input')]), /subgraphInputs \(subgraph:sg\) 0, expected 1/);
+  refused(doc, c => inside(c).removeAll([inside(c).node('output')]), /subgraphOutputs \(subgraph:sg\) 0, expected 1/);
+  refused(doc, c => inside(c).insert(boundary('in2', IN)), /subgraphInputs \(subgraph:sg\) 2, expected 1/);
+  refused(doc, c => inside(c).insert(boundary('out2', OUT_B)), /subgraphOutputs \(subgraph:sg\) 2, expected 1/);
+});
+
+test('a boundary in a stage is refused (its module needs an owning subgraph) and reported in data; a definition arriving without boundaries is refused', () => {
+  const doc = open(), before = clone(doc.snapshot());
+  assert.throws(() => doc.change(c => pixel(c).insert(boundary('b', IN))));
+  assert.deepEqual(clone(doc.snapshot()), before);
+  const stray = clone(before); stray.stages.pixel.nodes.push(boundary('b', OUT_B));
+  assert.deepEqual(clone(G.structureProblems(stray, G.registry)), [{ key: 'subgraphOutputs', network: 'pixel', value: 1, expected: 0 }]);
+  refused(withSubgraph(), c => c.appendSubgraphs([{ id: 'bare', name: 'Bare', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]), /subgraphInputs \(subgraph:bare\) 0, expected 1/);
+});
+
+test('a subgraph already missing a boundary still opens and can be repaired', () => {
+  const graph = withSubgraph().snapshot();
+  graph.subgraphs[0].graph.nodes = graph.subgraphs[0].graph.nodes.filter(n => n.nodeType !== OUT_B); graph.subgraphs[0].graph.edges = [];
+  assert.equal(G.structureProblems(graph, G.registry).length, 1);
+  const { after } = open(graph).change(c => inside(c).insert(boundary('output', OUT_B)));
+  assert.deepEqual(clone(G.structureProblems(after, G.registry)), []);
+});
+
+test('boundaries are never offered or deletable', () => {
+  assert.equal(G.offered(G.registry.get(IN)), false); assert.equal(G.offered(G.registry.get(OUT_B)), false);
+  assert.equal(G.removable(G.registry.get(IN)), false); assert.equal(G.removable(G.registry.get(OUT_B)), false);
+});

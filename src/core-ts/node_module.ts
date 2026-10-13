@@ -33,7 +33,9 @@ export interface EmitContext extends NodeContext {
 }
 /** names: variables the statements declare (Refactor.63.4), so a name in the GLSL leads back to this node.
  * names：statements 宣告的變數，讓 GLSL 裡的名字找回這個節點。 */
-export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[];names?:readonly string[]}
+/** `outputs`: each output's GLSL expression; `undefined` only for an opaque output that passes nothing on (subgraph_compiler.ts relay).
+ * 每個輸出的 GLSL 式子；只有「把沒有往下傳」的 opaque 輸出才是 undefined。 */
+export interface Emission {outputs:Record<string,string|undefined>;constant?:boolean;statements?:readonly string[];names?:readonly string[]}
 export interface Signature {type:string;inputs:Readonly<Record<string,string>>;outputs:Readonly<Record<string,string>>;operands?:Readonly<Record<string,string>>}
 export type Configuration={type:string}|{signature:Signature};
 export interface NodeControl {

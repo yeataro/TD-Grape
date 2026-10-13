@@ -52,7 +52,7 @@ test('wires follow at the end that touches the node: inputs too; subgraphs are u
   const {graph,changes}=G.upgradeGraph(g,rules);
   assert.deepEqual(plain(graph.stages.pixel.edges.find(e=>e.id==='e3').to),['rgba','a']);
   assert.deepEqual(plain(graph.subgraphs[0].graph.edges[0].to),['r2','a']);
-  assert.deepEqual(plain(changes.map(c=>c.network)).sort(),['fn1','pixel']);
+  assert.deepEqual(plain(changes.map(c=>c.network)).sort(),['pixel','subgraph:fn1'],'networks are named as everywhere else');
 });
 
 test('a chain of renames is followed to its end; a table that never settles is refused',()=>{

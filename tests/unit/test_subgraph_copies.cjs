@@ -1,3 +1,6 @@
+// Bringing definitions into a graph and Make Single User (basic design 2026-10-14 §3.10, §3.13; Refactor.109). There is no
+// read-only copy and no localization in this version: every definition in a graph is local (amendment 2 B7).
+// 把定義帶進圖與設為唯一。這一版沒有唯讀副本、沒有轉為本地：圖裡每份定義都是本地。
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src/generated/grape_core.js');
 const {sharedGraph,node}=require('../fixtures/shared_subgraphs.cjs');
@@ -5,11 +8,12 @@ const copy=structuredClone;
 const empty=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[],edges:[]}}});
 const call=(id,child)=>({id,nodeType:'sgrape.builtin.subgraph_call',params:{subgraphId:child}});
 const next=(...ids)=>()=>{assert.ok(ids.length,'Unexpected ID allocation');return ids.shift();};
-const source=(id='source')=>({...copy(sharedGraph().subgraphs[0]),id,scope:'library',origin:{id,version:'v1'}});
+const source=(id='source')=>({...copy(sharedGraph().subgraphs[0]),id});
+// A definition with its two boundaries (structure.ts: exactly one Input and one Output). 帶兩個邊界節點的定義。
+const definition=(id,nodes=[])=>({...source(id),graph:{nodes:[node('in','subgraph_input'),...nodes,node('out','subgraph_output')],edges:[]}});
 
 test('batch insertion copies complete authored data and remaps both nested calls and scoped types',()=>{
- const g=empty(),child=source('child'),outer=source('outer');
- outer.graph.nodes=[call('nested','child')];outer.graph.edges=[];
+ const g=empty(),child=source('child'),outer=definition('outer',[call('nested','child')]);
  child.outputs[0].type='float['+ScopeReferences.token('fn_child',['mul','out'])+']';
  const original=copy([outer,child]);
  const step=new GraphDocument(g,registry).change(m=>{
@@ -19,9 +23,8 @@ test('batch insertion copies complete authored data and remaps both nested calls
  });
  assert.deepEqual([outer,child],original);assert.deepEqual(g.subgraphs,[]);
  const [parent,owned]=step.after.subgraphs;
- assert.equal(parent.graph.nodes[0].params.subgraphId,'renamed');
+ assert.equal(parent.graph.nodes[1].params.subgraphId,'renamed');
  assert.equal(owned.outputs[0].type,'float['+ScopeReferences.token('fn_renamed',['mul','out'])+']');
- assert.deepEqual(owned.origin,child.origin);
  child.graph.nodes[0].params.changed=true;assert.equal(owned.graph.nodes[0].params.changed,undefined);
 });
 
@@ -36,66 +39,48 @@ test('invalid bundles leave the active document unchanged even when a caller cat
  });
 });
 
-test('source localization redirects shared and nested callers while preserving exact source snapshots',()=>{
- const g=empty(),child=source('child'),parent=source('parent');
- parent.graph.nodes=[call('nested','child')];parent.graph.edges=[];
- g.subgraphs=[child,parent];g.stages.pixel.nodes=[call('a','parent'),call('b','parent')];
- const before=copy(g);let retired;
- const step=new GraphDocument(g,registry).change(m=>{
-  retired=m.networks.get('subgraph:child');const raw=retired.node('mul').data;
-  const mapping=m.localizeSubgraph('child',next('local_child','local_parent'));
-  assert.deepEqual([...mapping],[['child','local_child'],['parent','local_parent']]);
-  assert.equal(m.networks.get('subgraph:local_child').node('mul').data,raw);
-  assert.throws(()=>retired.node('mul').update({name:'Bad'}),/no longer belongs/);
-  m.subgraph('local_child').rename('Editable gain');
+// `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole (amendment 2 B7).
+// libraryId 到 Library 那一輪才定義；之前帶著它的定義整份拒絕。
+test('a definition from a Library (libraryId) is refused as a whole, and nothing of its batch is written',()=>{
+ new GraphDocument(empty(),registry).change(m=>{
+  const before=m.snapshot();
+  assert.throws(()=>m.appendSubgraphs([source('plain'),{...source('lib'),libraryId:'0f3c'}]),error=>/Library/.test(error.message)&&error.code==='subgraph.library');
+  assert.deepEqual(m.snapshot(),before);
  });
- for(const f of before.subgraphs)assert.deepEqual(step.after.subgraphs.find(d=>d.id===f.id),f);
- assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.subgraphId),['local_parent','local_parent']);
- assert.equal(step.after.subgraphs.find(f=>f.id==='local_parent').graph.nodes[0].params.subgraphId,'local_child');
- assert.equal(step.after.subgraphs.find(f=>f.id==='local_child').name,'Editable gain');
- assert.ok(step.changes.definitions.includes('local_child'));
 });
 
-test('scope-only source dependencies localize together and metadata stays opaque',()=>{
- const g=empty(),child=source('child'),parent=source('parent');
- const token=ScopeReferences.token('fn_child',['mul','out']);parent.outputs[0].type='float['+token+']';
- parent.origin.savedType=token;g.subgraphs=[child,parent];g.structDefinitions=[{id:'shape',type:'float['+token+']'}];
- const step=new GraphDocument(g,registry).change(m=>m.localizeSubgraph('child',next('local_child','local_parent')));
- const local=step.after.subgraphs.find(f=>f.id==='local_parent');
- assert.equal(local.outputs[0].type,'float['+ScopeReferences.token('fn_local_child',['mul','out'])+']');
- assert.equal(local.origin.savedType,token);assert.deepEqual(step.after.subgraphs.find(f=>f.id==='parent'),parent);
- assert.equal(step.after.structDefinitions[0].type,'float['+ScopeReferences.token('fn_local_child',['mul','out'])+']');
-});
-
-test('independence copies only one instance; nested definitions, source and other instances remain shared',()=>{
- const g=empty(),child=source('child'),parent=source('parent');
- parent.name='A'.repeat(80);parent.graph.nodes=[call('nested','child')];parent.graph.edges=[];
+test('Make Single User copies only one instance, named by the one naming rule; nested definitions and other instances stay shared',()=>{
+ const g=empty(),child=source('child'),parent=definition('parent',[call('nested','child')]);
+ parent.name='A'.repeat(80);
  g.subgraphs=[child,parent];g.stages.pixel.nodes=[call('a','parent'),call('b','parent')];
  const step=new GraphDocument(g,registry).change(m=>{
   const network=m.networks.get('pixel'),f=network.independentSubgraph(network.node('a'),next('solo'));
-  assert.equal(f.id,'solo');assert.equal(f.data.name.length,80);
+  assert.equal(f.id,'solo');assert.equal(f.data.name.length,80);assert.match(f.data.name,/_1$/);
  });
  assert.deepEqual(step.after.subgraphs.slice(0,2),g.subgraphs);
  assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.subgraphId),['solo','parent']);
- assert.equal(step.after.subgraphs[2].graph.nodes[0].params.subgraphId,'child');
- assert.deepEqual(step.after.subgraphs[2].origin,parent.origin);
+ assert.equal(step.after.subgraphs[2].graph.nodes[1].params.subgraphId,'child');
+ // A short name takes the next free number, like a node (node_names.ts); no " Copy". 短名稱和節點一樣取下一個沒人用的編號，不加 Copy。
+ const short=empty();short.subgraphs=[definition('wrap'),{...definition('taken'),name:'Wrap_1'}];short.subgraphs[0].name='Wrap';
+ short.stages.pixel.nodes=[call('a','wrap')];
+ const named=new GraphDocument(short,registry).change(m=>{const n=m.networks.get('pixel');n.independentSubgraph(n.node('a'),next('solo'));});
+ assert.equal(named.after.subgraphs[2].name,'Wrap_2');
 });
 
-test('ID allocation or module failure is atomic; a closed transaction cannot make source copies',()=>{
+test('ID allocation or module failure is atomic; a closed transaction cannot add definitions',()=>{
  const g=empty(),child=source();g.subgraphs=[child];g.stages.pixel.nodes=[call('use',child.id)];let closed;
  new GraphDocument(g,registry).change(m=>{
-  closed=m;const before=m.snapshot();
-  assert.throws(()=>m.localizeSubgraph(child.id,next(child.id)),/duplicate/);
-  assert.deepEqual(m.snapshot(),before);
-  const network=m.networks.get('pixel');
+  closed=m;const before=m.snapshot(),network=m.networks.get('pixel');
   assert.throws(()=>network.independentSubgraph(network.node('use'),next('invalid id')),/Invalid/);
   assert.deepEqual(m.snapshot(),before);
+  assert.throws(()=>network.independentSubgraph(network.node('use'),next(child.id)),/duplicate/);
+  assert.deepEqual(m.snapshot(),before);
  });
- assert.throws(()=>closed.localizeSubgraph(child.id,next('closed')),/active transaction/);
  assert.throws(()=>closed.appendSubgraphs([source('closed')]),/active transaction/);
  const custom=createRegistry(registry.modules.map(m=>m.reference?{...m,reference:()=>{throw Error('Module refused');}}:m));
  new GraphDocument(g,custom).change(m=>{
-  const before=m.snapshot();assert.throws(()=>m.localizeSubgraph(child.id,next('local')),/Module refused/);
+  const before=m.snapshot(),network=m.networks.get('pixel');
+  assert.throws(()=>network.independentSubgraph(network.node('use'),next('solo')),/Module refused/);
   assert.deepEqual(m.snapshot(),before);
  });
 });
@@ -105,10 +90,7 @@ test('custom structural identity and reference fields support copies without cen
   reference:id=>({child:id}),referencedGraph:n=>n.params.child,supports:()=>false}:m);
  const custom=createRegistry(modules),g=empty();g.subgraphs=[source()];
  g.stages.pixel.nodes=[{id:'use',nodeType:'example.call',params:{child:'source',label:'keep'}}];
- const step=new GraphDocument(g,custom).change(m=>{
-  m.localizeSubgraph('source',next('local'));
-  const n=m.networks.get('pixel');n.independentSubgraph(n.node('use'),next('solo'));
- });
+ const step=new GraphDocument(g,custom).change(m=>{const n=m.networks.get('pixel');n.independentSubgraph(n.node('use'),next('solo'));});
  assert.deepEqual(step.after.stages.pixel.nodes[0].params,{child:'solo',label:'keep'});
- assert.deepEqual(step.after.subgraphs.find(f=>f.id==='source'),g.subgraphs[0]);
+ assert.deepEqual(step.after.subgraphs[0],g.subgraphs[0]);
 });

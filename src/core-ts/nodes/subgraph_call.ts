@@ -2,7 +2,7 @@ import {
   type NodeModule,
   subgraphPorts,
   subgraphPresentation,
-  numericInterface,
+  validInterface,
   requireSubgraph
 } from '../node_sdk';
 
@@ -33,7 +33,7 @@ const definition: NodeModule = {
   reference: graphId => ({subgraphId: graphId}),
 
   supports: (node, context) =>
-    numericInterface(context.subgraph?.(String(node.params.subgraphId))),
+    validInterface(context.subgraph?.(String(node.params.subgraphId))),
 
   ports: (node, context) =>
     subgraphPorts(requireSubgraph(context, String(node.params.subgraphId)), 'call'),

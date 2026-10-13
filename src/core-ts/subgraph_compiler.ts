@@ -3,10 +3,10 @@
 import { copy, formatProblem, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
 import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
-import { numericInterface, requireSubgraph } from './subgraph_interface';
+import { validInterface, requireSubgraph } from './subgraph_interface';
 import { subgraphStages } from './subgraph_stages';
-import { types, type } from './values';
-import { types as bindingTypes } from './numeric';
+import { types, type, opaque } from './values';
+import { declarationKinds } from './declarations';
 import { validNodeName } from './node_names';
 
 interface Location {node:string;stage:string;trail:string[];subgraphId?:string}
@@ -24,13 +24,16 @@ const relay:NodeModule = {
     emitter:{id:'subgraph_relay',version:1},browser:{}
   },
   role:'value',
-  supports:n=>types.includes(String(n.params.type)),
+  supports:n=>types.includes(String(n.params.type))||opaque.includes(String(n.params.type)),
   ports:n=>[
     {key:'value',direction:'input',type:String(n.params.type)},
     {key:'out',direction:'output',type:String(n.params.type)}
   ],
-  validate:n=>{type(n.params.type);},
-  emit:(_n,c)=>({outputs:{out:c.input('value')}})
+  validate:n=>{if(!opaque.includes(String(n.params.type)))type(n.params.type);},
+  // An opaque relay with nothing wired in passes "nothing" on (its output stays undefined), so the consumer inside or
+  // outside sees an unconnected texture and applies its own rule, e.g. Texture 2D's opaque black (amendment B5).
+  // 沒接線的 opaque 中繼把「沒有」往下傳（輸出留空），裡面或外面的使用者看到的就是未接貼圖，走它自己的規則（如 Texture 2D 的不透明黑）。
+  emit:(n,c)=>({outputs:{out:opaque.includes(String(n.params.type))&&!c.connected('value')?undefined:c.input('value')}})
 };
 
 export function createSubgraphCompiler(registry:Registry,engineFactory:(registry:Registry)=>Engine,config:CoreConfig=CORE_CONFIG) {
@@ -40,13 +43,16 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
   function supports(g:Graph):boolean {
     if (formatProblem(g) || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
         g.structDefinitions?.length || !Array.isArray(g.subgraphs) || g.subgraphs.length>config.subgraphDefinitions) return false;
-    if (!g.declarations.every(d=>d.kind==='uniform'&&bindingTypes.includes(d.type))) return false;
+    // Declarations follow the same rule as the flat compiler (top_compiler.ts): a known kind must carry a type it supports,
+    // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
+    // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
+    if (!g.declarations.every(d=>!declarationKinds.has(d.kind)||declarationKinds.get(d.kind)!.types.includes(d.type))) return false;
     const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.subgraphs.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
     return scopes.every(([data,owner])=>{
       if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
       // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
       // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
-      if (owner && (!numericInterface(owner) || !subgraphStages(g,owner.id,registry).includes('pixel'))) return false;
+      if (owner && (!validInterface(owner) || !subgraphStages(g,owner.id,registry).includes('pixel'))) return false;
       const context = contextFor(g,owner);
       return data.nodes.every(n=>{
         const module=moduleOf(n);
@@ -61,7 +67,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     const definitions=new Map<string,SubgraphData>();
     for (const f of g.subgraphs!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
-      if (!['local','library','personal'].includes(f.scope)||typeof f.name!=='string'||!f.name.length||f.name.length>80) throw Error('Invalid Subgraph definition');
+      if (typeof f.name!=='string'||!f.name.length||f.name.length>80) throw Error('Invalid Subgraph definition');
       requireSubgraph(contextFor(g),f.id);definitions.set(f.id,f);
     }
     const active=new Set<string>(),done=new Set<string>();
@@ -117,8 +123,9 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               else {
                 outputCount++;maps.set(node.id,{inputs:boundary.outputs,outputs:{}});
                 for(const [key,value] of Object.entries(node.inputValues||{})){
-                  const endpoint=boundary.outputs[key];if(!endpoint)throw Error('Invalid Subgraph port defaults');
-                  flat.nodes.find(n=>n.id===endpoint[0])!.inputValues!.value=copy(value);
+                  const endpoint=boundary.outputs[key],target=endpoint&&flat.nodes.find(n=>n.id===endpoint[0]);
+                  if(!target||!target.inputValues)throw Error('Invalid Subgraph port defaults');
+                  target.inputValues.value=copy(value);
                   origins.set(endpoint[0],origin);
                 }
               }
@@ -127,9 +134,9 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               const mapped:Endpoints={inputs:{},outputs:{}},inside:Endpoints={inputs:{},outputs:{}};
               for(const key of Object.keys(node.inputValues||{}))if(!ports.inputs[key])throw Error('Invalid Subgraph input values');
               for(const direction of ['inputs','outputs'] as const)for(const p of fn[direction]){
-                const id=allocate();
+                const id=allocate(),value=direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default;
                 add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},
-                  inputValues:{value:copy(direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default)},
+                  ...(value===undefined?{}:{inputValues:{value:copy(value)}}),
                   ...(node.ui?{ui:copy(node.ui)}:{}),...(node.comment?{comment:node.comment}:{})},origin);
                 mapped[direction][p.id]=[id,direction==='inputs'?'value':'out'];
                 inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
@@ -155,7 +162,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       if(probe){
         const inside:Endpoints={inputs:{},outputs:{}};
         for(const direction of ['inputs','outputs'] as const)for(const p of probe[direction]){
-          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},inputValues:{value:copy(p.default)}},{node:'',stage:'pixel',trail:[probe.id],subgraphId:probe.id});
+          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},...(p.default===undefined?{}:{inputValues:{value:copy(p.default)}})},{node:'',stage:'pixel',trail:[probe.id],subgraphId:probe.id});
           inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
         }
         expand(probe.graph,[probe.id],probe,inside);

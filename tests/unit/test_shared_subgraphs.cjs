@@ -14,7 +14,7 @@ test('module-owned subgraph ports resolve in distinct network scopes with identi
 });
 test('shared interface changes notify direct instances and boundaries, without rewriting their fixed neighbors',()=>{
  const g=sharedGraph();g.stages.other={nodes:[node('unrelated','float',{value:8})],edges:[]};
- const step=doc(g).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'update',id:'value',patch:{name:'Amount',type:'vec3'}}));
+ const step=doc(g).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'update',id:'value',patch:{label:'Amount',type:'vec3'}}));
  assert.deepEqual(plain(step.changes.global),[]);assert.deepEqual(plain(step.changes.definitions),['gain']);
  assert.deepEqual(plain(step.changes.networks.map(n=>n.id)),['pixel','subgraph:gain','subgraph:wrapper']);
  assert.deepEqual(plain(step.changes.networks.find(n=>n.id==='pixel').nodes.map(n=>n.id)),['first']);
@@ -41,7 +41,9 @@ test('adding and reordering ports preserves identity; failures do not publish pa
  const before=base.snapshot();
  assert.throws(()=>base.change(m=>m.subgraph('gain').editInterface('inputs',{kind:'add',port:port('value')})),/duplicate/);
  assert.deepEqual(plain(base.snapshot()),plain(before));
- const library=sharedGraph();library.subgraphs[0].scope='library';assert.throws(()=>doc(library).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'remove',id:'value'})),/local/);
+ // Every definition in a graph is editable in this version (no read-only copies, Refactor.109). 這一版圖裡每份定義都可改。
+ const renamed=doc(sharedGraph()).change(m=>m.subgraph('wrapper').rename('Wrapped'));
+ assert.equal(renamed.after.subgraphs[1].name,'Wrapped');
 });
 
 test('nested compilation keeps graph ownership, bindings and diagnostics scoped to authored nodes',()=>{
@@ -66,6 +68,9 @@ test('subgraph validation rejects cycles, duplicate boundaries and invalid unuse
  const unused=sharedGraph();unused.subgraphs.push({...plain(unused.subgraphs[0]),id:'unused'});unused.subgraphs[2].graph.edges[0].to[1]='missing';
  assert.throws(()=>compiler.compile(unused),error=>error.subgraphId==='unused'&&error.node==='mul');
  const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';assert.equal(compiler.supports(unsupported),false);
+ // An opaque port is a built-in type the host passes, on either side (amendment A1). opaque 接口是宿主能傳的內建型別，兩邊都可。
+ const opaque=sharedGraph();opaque.subgraphs[0].inputs[0]={id:'value',type:'sampler2D'};opaque.subgraphs[0].outputs[0]={id:'result',type:'sampler2D'};
+ assert.equal(compiler.supports(opaque),true);
 });
 test('explicit interface conversion reshapes per-instance defaults without aliasing or changing outputs',()=>{
  const g=sharedGraph();g.stages.pixel.nodes[1].inputValues={value:2};g.subgraphs[1].graph.nodes[1].inputValues={value:4};

@@ -70,12 +70,11 @@ function write(network: NetworkData, groups: readonly GraphGroup[]): void {
   if (Object.keys(rest).length) network.ui = rest; else delete network.ui;
 }
 /** Tidy every network of a document in place; how many networks were fixed. Run at the end of every change and when a graph is
- * opened (1-2: the only two gates). Source snapshots of subgraphs keep their authored bytes, as in GraphDocument's completion.
- * 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖的來源快照保留原樣，同
- * GraphDocument 的收尾。 */
+ * opened (1-2: the only two gates). Every subgraph network is tidied like a stage (Refactor.109: no read-only snapshots in
+ * a graph). 就地整理整份文件的每張網路；回傳修了幾張。在每次修改結束時與開圖時執行（1-2：只有這兩個關卡）。子圖網路和 stage 一樣整理。 */
 export function tidyGroups(document: Graph): number {
   let fixed = 0;
-  const networks = [...Object.values(document.stages), ...(document.subgraphs ?? []).filter(subgraph => subgraph.scope === 'local').map(subgraph => subgraph.graph)];
+  const networks = [...Object.values(document.stages), ...(document.subgraphs ?? []).map(subgraph => subgraph.graph)];
   for (const network of networks) { const result = tidy(network); if (result.fixed) { write(network, result.groups); fixed++; } }
   return fixed;
 }

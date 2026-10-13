@@ -109,12 +109,12 @@ test('limits and repeats: a join that would pass the member limit is not offered
   assert.equal(groups.canGroup([],['a','a']),false);
 });
 
-test('tidying compares values, not the order fields were written in; source snapshots of subgraphs are left as they are',()=>{
+test('tidying compares values, not the order fields were written in; every subgraph network is tidied like a stage (Refactor.109)',()=>{
   const network=nodes=>({nodes:nodes.map(id=>({id,nodeType:'sgrape.builtin.add',params:{}})),edges:[]});
   const reordered={...network(['a','b']),ui:{groups:[{nodes:['a','b'],name:'One',id:'g1'}]}};
   assert.equal(groups.tidy(reordered).fixed,false);
-  const snapshot={...network(['a']),ui:{groups:[{id:'g1',name:'Gone',nodes:['missing']}]}};
-  const document={stages:{pixel:network([])},subgraphs:[{id:'s',name:'S',scope:'library',graph:snapshot}]};
-  assert.equal(groups.tidyGroups(document),0);
-  assert.deepEqual(plain(snapshot.ui.groups),[{id:'g1',name:'Gone',nodes:['missing']}],'its authored bytes stay');
+  const inside={...network(['a']),ui:{groups:[{id:'g1',name:'Gone',nodes:['missing']}]}};
+  const document={stages:{pixel:network([])},subgraphs:[{id:'s',name:'S',graph:inside}]};
+  assert.equal(groups.tidyGroups(document),1);
+  assert.equal(inside.ui?.groups?.length??0,0,'a group whose members are gone leaves, inside a subgraph too');
 });

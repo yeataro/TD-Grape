@@ -31,12 +31,12 @@ export const shownName = (name: string) => name.replace(/_/g, ' ');
 
 /** The candidate itself when it is free; otherwise the number after its last underscore goes up to the next free one
  * (`_1` added when there is none). 沒人用就用它；否則最後一個底線後的數字往上加到沒人用的（沒有就加 _1）。 */
-export function freeName(candidate: string, taken: ReadonlySet<string>): string {
+export function freeName(candidate: string, taken: ReadonlySet<string>, limit = NAME_LIMIT): string {
   if (!taken.has(candidate)) return candidate;
   const numbered = /^(.*)_(\d+)$/.exec(candidate);
   const base = (numbered ? numbered[1]! : candidate).replace(/_+$/, '') || 'Node';
   for (let n = numbered ? Number(numbered[2]) + 1 : 1; ; n++) {
-    const suffix = '_' + n, name = base.slice(0, NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+    const suffix = '_' + n, name = base.slice(0, limit - suffix.length).replace(/_+$/, '') + suffix;
     if (!taken.has(name)) return name;
   }
 }

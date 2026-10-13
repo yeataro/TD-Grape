@@ -1,14 +1,16 @@
 const node=(id,key,params={})=>({id,nodeType:'sgrape.builtin.'+key,params,ui:{x:0,y:0}});
 // Edges always carry an id (Q44); an input takes one wire, so its endpoint names it.
 const edge=(a,b,out='out',input='a')=>({id:'e:'+b+'.'+input,from:[a,out],to:[b,input]});
-const port=(id,type='float',value=1)=>({id,name:id,type,default:value});
+// A port (Refactor.109): in the product its id is generated (newPortId) and its label is free text; the tests name ids for
+// readability. 接口：產品裡 id 是產生式、label 是自由文字；測試為了可讀直接用名字當 id。
+const port=(id,type='float',value=1)=>({id,label:id,type,default:value});
 function sharedGraph(){
- const gain={id:'gain',name:'Gain',scope:'local',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
+ const gain={id:'gain',name:'Gain',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
   nodes:[node('in','subgraph_input'),node('mul','multiply',{type:'float'}),node('out','subgraph_output')],
   edges:[edge('in','mul','value','a'),edge('mul','out','out','result')]
  }};
  gain.graph.nodes[1].inputValues={b:3};
- const wrapper={id:'wrapper',name:'Wrapper',scope:'local',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
+ const wrapper={id:'wrapper',name:'Wrapper',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
   nodes:[node('in','subgraph_input'),node('inner','subgraph_call',{subgraphId:'gain'}),node('out','subgraph_output')],
   edges:[edge('in','inner','value','value'),edge('inner','out','result','result')]
  }};

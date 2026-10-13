@@ -119,10 +119,16 @@ const capacityMessage = (error: unknown) => {
   return measures ? tr('limit.reached', 'Limit reached; this change was not applied: {limits}', { limits: limitText(measures) }) : undefined;
 };
 // Structure rules (Q42) arrive as data as well. 結構規則同樣以資料回報。
-const structureText = (problems: readonly StructureProblem[]) => problems.map(p => p.expected === 0
-  ? tr('structure.outputInSubgraph', 'a subgraph cannot contain a Color Output')
-  : p.value === 0 ? tr('structure.outputMissing', 'the graph needs one Color Output')
-  : tr('structure.outputTooMany', 'only one Color Output is allowed (now {count})', { count: p.value }));
+const structureText = (problems: readonly StructureProblem[]) => problems.map(p => p.key === 'stageOutputs'
+  ? (p.expected === 0
+    ? tr('structure.outputInSubgraph', 'a subgraph cannot contain a Color Output')
+    : p.value === 0 ? tr('structure.outputMissing', 'the graph needs one Color Output')
+    : tr('structure.outputTooMany', 'only one Color Output is allowed (now {count})', { count: p.value }))
+  // Subgraph boundaries (structure.ts, Refactor.109). 子圖邊界節點。
+  : p.expected === 0
+    ? tr('structure.boundaryInStage', 'a Subgraph Input or Output belongs inside a subgraph')
+    : p.value === 0 ? tr('structure.boundaryMissing', 'a subgraph needs one Subgraph Input and one Subgraph Output')
+    : tr('structure.boundaryTooMany', 'a subgraph has one Subgraph Input and one Subgraph Output (now {count})', { count: p.value }));
 const structureMessage = (error: unknown) => {
   const problems = (error as { name?: string; problems?: StructureProblem[] } | null)?.name === 'StructureError' ? (error as { problems?: StructureProblem[] }).problems : undefined;
   return problems ? tr('structure.refused', 'This change was not applied: {problems}', { problems: structureText(problems) }) : undefined;

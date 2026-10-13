@@ -1,6 +1,7 @@
 import { copy, type Node, type SubgraphData, type ObjectValue } from './model';
 import type { GraphDocument, Network } from './graph';
 import { ensureSubgraphCapacity, validateSubgraphData, withoutStoredUse } from './subgraph_operations';
+import { freeName } from './node_names';
 import { ScopeReferences } from './scope_references';
 
 export type AllocateSubgraphId = () => string;
@@ -59,48 +60,9 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
   return pending;
 }
 
-/** Turn a source-owned definition and its source callers into editable local
- * copies. Stored source snapshots remain byte-for-byte authored data. */
-export function localizeSubgraph(graph:GraphDocument,id:string,next:AllocateSubgraphId):Map<string,string> {
-  graph.assertEditable();
-  const definitions=graph.document.subgraphs || [],target=definitions.find(f=>f.id===id);
-  if (!target || target.scope==='local') return new Map();
-  const affected=new Set([id]);let added=true;
-  while (added) {
-    added=false;
-    for (const f of definitions) {
-      if (f.scope==='local' || affected.has(f.id)) continue;
-      let depends=f.graph.nodes.some(n=>affected.has(reference(graph,n) || ''));
-      ScopeReferences.walk(f,(ref,old)=>{if(ref.scope.startsWith('fn_')&&affected.has(ref.scope.slice(3)))depends=true;return old;},false);
-      if (depends) {affected.add(f.id);added=true;}
-    }
-  }
-  ensureSubgraphCapacity(graph,affected.size);
-  const ids=new Map<string,string>(),used=new Set(definitions.map(f=>f.id));
-  for (const old of affected) ids.set(old,allocate(used,next));
-  const changed=definitions.filter(f=>affected.has(f.id)),snapshots=changed.map(f=>copy(f));
-  const writable=definitions.filter(f=>f.scope==='local'||affected.has(f.id));
-  const networks=[...Object.values(graph.document.stages),...writable.map(f=>f.graph)];
-  const patches:{node:Node;params:ObjectValue}[]=[];
-  for (const data of networks) for (const n of data.nodes) {
-    const old=reference(graph,n),mapped=old&&ids.get(old);
-    if(mapped)patches.push({node:n,params:parameters(graph,n,mapped)});
-  }
-  // Prepare all IDs, snapshots and module commands before the first write.
-  // Keep node/data objects alive for current editor callbacks during migration.
-  for (const f of changed) {
-    // `origin` already records where a snapshot came from; `scope` tells whether it is still one (Q44).
-    // origin 已記錄來源；是否仍是唯讀副本由 scope 看出。
-    f.id=ids.get(f.id)!;f.scope='local';
-  }
-  for (const p of patches) p.node.params=p.params;
-  remapScopes([...Object.values(graph.document.stages),...writable,graph.document.structDefinitions || []],ids);
-  definitions.push(...snapshots);
-  return ids;
-}
-
-/** Copy only this instance's definition. Nested children remain shared, as
- * before; the graph already owns their complete content. */
+/** Make Single User (basic design §3.10): copy only this instance's definition for this one call. Nested children remain
+ * shared; the graph already owns their complete content. The copy is named by the one naming rule (node_names.ts), not
+ * "… Copy". 設為唯一：只為這個呼叫節點複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
 export function independentSubgraph(network:Network,nodeId:string,next:AllocateSubgraphId):SubgraphData|null {
   network.assertEditable();
   const graph=network.graph,n=network.nodeData(nodeId);
@@ -109,7 +71,7 @@ export function independentSubgraph(network:Network,nodeId:string,next:AllocateS
   if(!source)return null;
   ensureSubgraphCapacity(graph,1);
   const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
-  const f=copy(source);f.id=newId;f.name=f.name.slice(0,75)+' Copy';f.scope='local';
+  const f=copy(source);f.id=newId;f.name=freeName(source.name,new Set(graph.document.subgraphs!.map(d=>d.name)),80);
   remapScopes(f,new Map([[source.id,newId]]));
   const params=parameters(graph,n,newId);
   const owned=appendSubgraphs(graph,[f])[0]!;

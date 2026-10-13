@@ -11,8 +11,10 @@ test('create, instantiate and edit a new definition share one graph transaction 
   const network=m.networks.get('pixel');network.instantiateSubgraph(f.id,'call');
   stale=m.networks.get('subgraph:new_graph');assert.equal(m.networks.get(stale.id),stale);
   assert.equal(stale.node('input').outputs[0].type,'vec4');
-  f.editInterface('inputs',{kind:'update',id:'value',patch:{name:'Color'}});
-  assert.equal(network.node('call').inputs[0].key,'value');
+  // A port's identity is generated, never a number; its label is what people see (§3.3). 接口身分產生式、不是序號；標籤給人看。
+  const id=f.data.inputs[0].id;assert.match(id,/^p[0-9a-f]{24}$/);assert.equal(f.data.inputs[0].label,'in1');
+  f.editInterface('inputs',{kind:'update',id,patch:{label:'Color'}});
+  assert.equal(network.node('call').inputs[0].key,id);assert.equal(f.data.inputs[0].label,'Color');
  });
  assert.equal(g.subgraphs.length,0);assert.equal(step.after.subgraphs.length,1);
  assert.ok(step.changes.definitions.includes('new_graph'));assert.ok(step.changes.networks.some(n=>n.id==='subgraph:new_graph'));
@@ -29,8 +31,11 @@ test('a subgraph from a selection preserves conversion locations and deduplicate
  const f=step.after.subgraphs[0],outside=step.after.stages.pixel;
  assert.deepEqual(f.inputs.map(p=>p.type),['vec4','float']);assert.deepEqual(f.inputs[0].default,[.1,.2,.3,.4]);
  assert.equal(f.outputs.length,2);assert.equal(outside.edges.filter(e=>e.from[0]==='source').length,2);
- assert.equal(f.graph.edges.filter(e=>e.from[0]==='input'&&e.from[1]==='in1').length,2);
- assert.equal(outside.edges.filter(e=>e.from[0]==='call'&&e.from[1]==='out1').length,2);
+ assert.equal(f.graph.edges.filter(e=>e.from[0]==='input'&&e.from[1]===f.inputs[0].id).length,2);
+ assert.equal(outside.edges.filter(e=>e.from[0]==='call'&&e.from[1]===f.outputs[0].id).length,2);
+ // Labels come from the peer port; a repeat on the same side gets a number (§3.3). 標籤取對端接孔名，同邊重複加編號。
+ assert.deepEqual(f.inputs.map(p=>p.label),['a','a_1']);assert.deepEqual(f.outputs.map(p=>p.label),['out','out_1']);
+ assert.equal(new Set([...f.inputs,...f.outputs].map(p=>p.id)).size,4);
  assert.equal(compiler.supports(step.after),true);assert.ok(compiler.compile(step.after,{reservedNames:[]}).pixel);
  assert.deepEqual(g,step.before);
 });
@@ -46,12 +51,19 @@ test('a subgraph from a selection preserves nested references, scopes and data w
  assert.deepEqual(step.after.catalogSnapshot.structDefinitions,historical);
 });
 
-test('last-call removal invalidates the removed scope before another mutation can use its handles',()=>{
+test('removing the last call keeps a local definition and its network; a collectible one goes and its handles are invalidated',()=>{
  const g=sharedGraph();g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='second');g.stages.pixel.edges=[];
  g.subgraphs=g.subgraphs.filter(f=>f.id==='gain');
- const step=new GraphDocument(g,registry).change(m=>{
+ const kept=new GraphDocument(g,registry).change(m=>{
   const child=m.networks.get('subgraph:gain'),network=m.networks.get('pixel');
   network.remove(network.node('first'));
+  assert.equal(m.networks.has('subgraph:gain'),true,'a local definition stays with zero uses (§3.9)');
+  child.create('more','sgrape.builtin.float');
+ });
+ assert.equal(kept.after.subgraphs.length,1);assert.ok(kept.after.subgraphs[0].graph.nodes.some(n=>n.id==='more'));
+ const step=new GraphDocument(g,registry).change(m=>{
+  const child=m.networks.get('subgraph:gain'),network=m.networks.get('pixel');
+  network.removeAll([network.node('first')],new Set(['gain']));
   assert.equal(m.networks.has('subgraph:gain'),false);
   assert.throws(()=>child.create('bad','sgrape.builtin.float'),/no longer belongs/);
  });
@@ -90,7 +102,7 @@ test('structural creation follows module capabilities rather than built-in ident
   assert.equal(n.data.nodeType,'test.subgraph_call');assert.deepEqual(n.data.params,{child:'custom'});
   m.networks.get('pixel').remove(n);
  });
- assert.deepEqual(step.after.subgraphs,[]);
+ assert.equal(step.after.subgraphs.length,1,'a local definition stays when its last call goes');
 });
 
 test('scope references preserve canonical tokens and skip snapshots, source metadata and code',()=>{
@@ -129,4 +141,62 @@ test('a call whose subgraph content cannot run in this stage is a misplaced ghos
  assert.equal(createCompiler(custom).supports(g),false,'code generation does not take it');
  assert.deepEqual(plain(G.subgraphStages(g,'gain',registry)),['vertex','pixel']);
  assert.equal(G.ghostsOf(new GraphDocument(g,registry).networks.get('pixel'),G.values.policy).nodes.size,0,'with the content fitting again, nothing is a ghost');
+});
+
+// Opaque ports (basic design §3.4, amendments A1/B5; Refactor.109): a texture goes through a subgraph on either side; an
+// unconnected sampler2D port passes nothing on, so Texture 2D's own rule applies (opaque black).
+// opaque 接口：貼圖兩邊都能穿過子圖；沒接的 sampler2D 接口把「沒有」往下傳，Texture 2D 自己的規則接手（不透明黑）。
+const bootstrap=JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8'));
+const {edge}=require('../fixtures/shared_subgraphs.cjs');
+const G=require('../../src/generated/grape_core.js'),policy=G.values.policy;
+const sampler=()=>({id:'tex',name:'Tex',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'rgba',label:'rgba',type:'vec4',default:[0,0,0,1]}],
+ graph:{nodes:[node('in','subgraph_input'),node('sample','texture_sample'),node('out','subgraph_output')],edges:[edge('in','sample','img','sampler'),edge('sample','out','out','rgba')]}});
+const through=()=>({id:'pass',name:'Pass',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'tex',label:'texture',type:'sampler2D'}],
+ graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[edge('in','out','img','tex')]}});
+function withCall(definition,wired){
+ const doc=new GraphDocument(plain(bootstrap.defaultDocument.graph),registry);
+ return doc.change(c=>{
+  c.appendSubgraphs([definition]);
+  const net=c.networks.get('pixel'),output=net.nodes.find(n=>n.data.nodeType==='sgrape.builtin.pixel_out');
+  net.instantiateSubgraph(definition.id,'call',{});
+  if(wired){net.insert({id:'ref',nodeType:'sgrape.builtin.declaration',params:{declarationId:'input1'},ui:{}});
+   net.connect(net.node('ref').port('output','out'),net.node('call').port('input','img'),policy);}
+  if(definition.id==='pass'){net.insert({id:'sample',nodeType:'sgrape.builtin.texture_sample',params:{},ui:{}});
+   net.connect(net.node('call').port('output','tex'),net.node('sample').port('input','sampler'),policy);
+   net.connect(net.node('sample').outputs[0],output.port('input','color'),policy);}
+  else net.connect(net.node('call').port('output','rgba'),output.port('input','color'),policy);
+ }).after;
+}
+test('a sampler2D input port carries a texture into a subgraph; unconnected, the Texture 2D inside is opaque black',()=>{
+ const wired=withCall(sampler(),true);assert.equal(compiler.supports(wired),true);
+ assert.match(compiler.compile(wired,{reservedNames:[]}).pixel,/texture\(sTD2DInputs\[0\], vUV\.st\)/);
+ const bare=withCall(sampler(),false);assert.equal(compiler.supports(bare),true);
+ const pixel=compiler.compile(bare,{reservedNames:[]}).pixel;
+ assert.match(pixel,/vec4\(0\.0, 0\.0, 0\.0, 1\.0\)/);assert.doesNotMatch(pixel,/texture\(/);
+});
+test('a sampler2D output port carries a texture out of a subgraph; unconnected inside, the Texture 2D outside is opaque black',()=>{
+ const wired=withCall(through(),true);
+ assert.match(compiler.compile(wired,{reservedNames:[]}).pixel,/texture\(sTD2DInputs\[0\], vUV\.st\)/);
+ const pixel=compiler.compile(withCall(through(),false),{reservedNames:[]}).pixel;
+ assert.match(pixel,/vec4\(0\.0, 0\.0, 0\.0, 1\.0\)/);assert.doesNotMatch(pixel,/texture\(/);
+});
+test('switching a port to an opaque type drops its default and instance values; back to a value type gives zeros',()=>{
+ const g=sharedGraph();g.stages.pixel.nodes[1].inputValues={value:7};
+ const step=new GraphDocument(g,registry).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'update',id:'value',patch:{type:'sampler2D'}}));
+ assert.equal('default' in step.after.subgraphs[0].inputs[0],false);assert.deepEqual(plain(step.after.stages.pixel.nodes[1].inputValues),{});
+ assert.throws(()=>new GraphDocument(g,registry).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'update',id:'value',patch:{type:'sampler2D',default:1}})),/port/);
+ const back=new GraphDocument(step.after,registry).change(m=>m.subgraph('gain').editInterface('inputs',{kind:'update',id:'value',patch:{type:'vec2'}}));
+ assert.deepEqual(plain(back.after.subgraphs[0].inputs[0].default),[0,0]);
+});
+test('port identities are generated and never reused: removing a middle port and adding one cannot collide (§4 row 6)',()=>{
+ const g=sharedGraph();
+ const step=new GraphDocument(g,registry).change(m=>{
+  const f=m.subgraph('gain'),taken=()=>new Set(f.data.inputs.map(p=>p.id));
+  const a=G.newPortId(taken());f.editInterface('inputs',{kind:'add',port:{id:a,label:'a',type:'float',default:0}});
+  const b=G.newPortId(taken());f.editInterface('inputs',{kind:'add',port:{id:b,label:'b',type:'float',default:0}});
+  f.editInterface('inputs',{kind:'remove',id:a});
+  const c=G.newPortId(taken());f.editInterface('inputs',{kind:'add',port:{id:c,label:'c',type:'float',default:0}});
+  assert.equal(new Set([a,b,c]).size,3);assert.match(c,/^p[0-9a-f]{24}$/);
+ });
+ assert.deepEqual(step.after.subgraphs[0].inputs.map(p=>p.label),['value','b','c']);
 });

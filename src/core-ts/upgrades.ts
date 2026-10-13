@@ -76,7 +76,8 @@ function upgradeNetwork(network: NetworkData, name: string, rule: NodeUpgrade): 
 export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeUpgrades, registry?: Registry): UpgradeResult {
   if (formatProblem(value)) return { graph: value, changes: [] };
   const graph = copy(value);
-  const networks: [string, NetworkData][] = [...Object.entries(graph.stages), ...(graph.subgraphs ?? []).map(s => [s.id, s.graph] as [string, NetworkData])];
+  // Networks are named as everywhere else: the stage, or 'subgraph:'+id (graph.ts networkEntries). 網路名稱與他處一致。
+  const networks: [string, NetworkData][] = [...Object.entries(graph.stages), ...(graph.subgraphs ?? []).map(s => ['subgraph:' + s.id, s.graph] as [string, NetworkData])];
   const changes: UpgradeChange[] = [];
   for (let pass = 0; ; pass++) {
     if (pass > rules.length) throw Error('Node upgrade rules do not settle');

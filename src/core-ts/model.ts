@@ -12,8 +12,15 @@ export interface Node {id:string;nodeType:string;params:ObjectValue;name?:string
 export interface Declaration {id:string;kind:string;name:string;type:string;[key:string]:Value}
 export interface Edge {id:string;from:readonly [string,string];to:readonly [string,string];ui?:ObjectValue;extensions?:ObjectValue}
 export interface NetworkData {nodes:Node[];edges:Edge[];ui?:ObjectValue}
-export interface InterfacePort {id:string;name?:string;type:string;default:Value}
-export interface SubgraphData {id:string;name:string;scope:string;origin?:ObjectValue;descriptionKey?:string;
+/** A subgraph port (basic design 2026-10-14 §3.3, Refactor.109): `id` is a generated identity like a node's, never shown;
+ * `label` is free text for people; the GLSL name is made from the position at code generation and never stored. An opaque
+ * port (sampler2D) has no `default`; a numeric one always has. 接口：id 產生式、不顯示；label 自由文字；產碼名按位置合成不存；
+ * opaque 接口沒有 default，數值接口一定有。 */
+export interface InterfacePort {id:string;label?:string;type:string;default?:Value}
+/** A definition the graph owns (§2). No `scope`/`origin` (Refactor.109): every definition in a graph is local until the
+ * Library round defines `libraryId`; a definition carrying `libraryId` is refused until then. `color` is the definition's
+ * colour (§3.14). 圖裡的定義：沒有 scope／origin；libraryId 到 Library 那一輪才定義，之前遇到整份拒絕；color 是定義的顏色。 */
+export interface SubgraphData {id:string;name:string;color?:string;descriptionKey?:string;
   /** Only on a saved definition (library, export, clipboard), recomputed on load; never in a graph, where they are
    * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
   stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;

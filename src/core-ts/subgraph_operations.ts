@@ -5,7 +5,7 @@ import { CORE_CONFIG } from './config';
 import type { NodeModule } from './node_module';
 import type { PortSpec } from './ports';
 import { ScopeReferences } from './scope_references';
-import {types as valueTypes,fill} from './values';
+import {types as valueTypes,fill,opaque} from './values';
 
 export interface SubgraphOptions {id:string;name:string}
 export interface SelectionSubgraphOptions extends SubgraphOptions {
@@ -18,6 +18,25 @@ export interface SelectionSubgraphOptions extends SubgraphOptions {
 }
 
 const validId = (id:string) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
+/** A new port identity: random and unique like node and edge IDs (Q44); the number after `in`/`out` is not an identity
+ * (basic design §4 row 6). 新接口的身分：和節點、接線一樣隨機、不重複；序號不是身分。 */
+export function newPortId(taken:ReadonlySet<string>):string {
+  for(;;){
+    let id='p';for(let i=0;i<3;i++)id+=Math.floor(Math.random()*0x100000000).toString(16).padStart(8,'0');
+    if(!taken.has(id))return id;
+  }
+}
+const validLabel = (label:unknown) => label === undefined || (typeof label === 'string' && label.length <= 80 && !/[\x00-\x1f\x7f]/.test(label));
+/** Whether one port's data is well formed: an opaque port has no default, a numeric one must have one (§3.4, amendment B5).
+ * 一筆接口的資料是否完整：opaque 沒有 default、數值一定有。 */
+export function validPort(p:InterfacePort):boolean {
+  return validId(p.id) && typeof p.type === 'string' && !!p.type && validLabel(p.label) &&
+    (opaque.includes(p.type) ? p.default === undefined : p.default !== undefined);
+}
+/** Only fields the format defines, so an absent default is absent, not `undefined`. 只留格式有的欄位。 */
+export function portEntry(id:string,type:string,label?:string,value?:Value):InterfacePort {
+  return {id,...(label === undefined ? {} : {label}),type,...(value === undefined ? {} : {default:value})};
+}
 function structural(graph:GraphDocument,role:'call'|'input'|'output'):NodeModule {
   const matches = graph.registry.modules.filter(m => m.structural &&
     (role === 'call' ? !!m.reference : m.role === 'subgraph-' + role));
@@ -39,10 +58,13 @@ export function validateSubgraphData(f:SubgraphData):void {
     throw Error('Invalid Subgraph name');
   // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
   // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
-  if (!['local','library','personal'].includes(f.scope)) throw Error('Invalid Subgraph scope');
+  // `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole, at every entry
+  // (open, paste, append), so no half-protected Library copy can enter a document (amendment 2 B7). libraryId 到 Library
+  // 那一輪才定義；之前帶著它的定義整份拒絕，開檔、貼上、加入都一樣，免得出現沒受保護的 Library 副本。
+  if ('libraryId' in f) throw Object.assign(Error('Subgraph definitions from a Library are not supported in this version'),{code:'subgraph.library'});
+  if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32)) throw Error('Invalid Subgraph color');
   for (const ports of [f.inputs,f.outputs]) {
-    if (ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
-        ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
+    if (!Array.isArray(ports) || ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length || !ports.every(validPort))
       throw Error('Invalid Subgraph interface');
   }
   const ids = new Set(f.graph.nodes.map(n => n.id));
@@ -53,8 +75,8 @@ export function validateSubgraphData(f:SubgraphData):void {
 }
 function validate(graph:GraphDocument,f:SubgraphData):void {
   graph.assertEditable();ensureSubgraphCapacity(graph,1);
-  if (f.scope !== 'local' || graph.document.subgraphs?.some(d => d.id === f.id))
-    throw Error('Invalid or duplicate local Subgraph identity');
+  if (graph.document.subgraphs?.some(d => d.id === f.id))
+    throw Error('Invalid or duplicate Subgraph identity');
   validateSubgraphData(f);
 }
 
@@ -70,12 +92,13 @@ export function insertSubgraph(graph:GraphDocument,f:SubgraphData):SubgraphData 
 
 export function createSubgraph(graph:GraphDocument,options:SubgraphOptions):SubgraphData {
   const input = structural(graph,'input'),output = structural(graph,'output');
+  const taken = new Set<string>(),inId = newPortId(taken);taken.add(inId);const outId = newPortId(taken);
   return insertSubgraph(graph,{
-    id:options.id,name:options.name,scope:'local',
-    inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],
-    outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],
+    id:options.id,name:options.name,
+    inputs:[portEntry(inId,'vec4','in1',[1,1,1,1])],
+    outputs:[portEntry(outId,'vec4','out1',[0,0,0,1])],
     graph:{nodes:[{...authored(input,'input',{x:48,y:144}),name:'Input'},{...authored(output,'output',{x:624,y:144}),name:'Output'}],
-      edges:[{id:graph.nextEdgeId({nodes:[],edges:[]}),from:['input','value'],to:['output','value']}]}
+      edges:[{id:graph.nextEdgeId({nodes:[],edges:[]}),from:['input',inId],to:['output',outId]}]}
   });
 }
 
@@ -114,6 +137,14 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   // Boundary IDs are not members of the original selection.
   const selected = new Set(chosen.map(n => n.id));
   const inputs:InterfacePort[]=[],outputs:InterfacePort[]=[],edges:NetworkData['edges']=[],outside:NetworkData['edges']=[];
+  // Port identities are generated; labels come from the peer port and get a number when one side repeats a label (§3.3).
+  // 接口身分產生式；標籤取對端接孔名，同一邊重複時加編號。
+  const portIds = new Set<string>(),labels = {inputs:new Set<string>(),outputs:new Set<string>()};
+  const newPort = (side:'inputs'|'outputs',type:string,label:string,value:Value|undefined) => {
+    const id = newPortId(portIds);portIds.add(id);
+    const text = freeName(label,labels[side],80);labels[side].add(text);
+    return portEntry(id,type,text,opaque.includes(type) ? undefined : value);
+  };
   const incoming = new Map<string,string>(),outgoing = new Map<string,string>();
   const byId = new Map(data.nodes.map(n => [n.id,n]));
   const port = (n:Node,direction:'input'|'output',key:string):PortSpec => {
@@ -130,18 +161,18 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
       const n = byId.get(e.to[0])!,spec = port(n,'input',e.to[1]);
       const key = JSON.stringify([e.from,spec.type]);
       if (!incoming.has(key)) {
-        const id = 'in'+(inputs.length+1);incoming.set(key,id);
-        const value = n.inputValues?.[e.to[1]] ?? spec.default ?? defaultValue(spec.type,options);
-        inputs.push({id,name:options.inputName?.(byId.get(e.from[0])!,e.from[1],e.to[1]) || e.to[1],type:spec.type,default:copy(value)});
-        outside.push({...e,to:[options.callId,id]});
+        const value = opaque.includes(spec.type) ? undefined : copy(n.inputValues?.[e.to[1]] ?? spec.default ?? defaultValue(spec.type,options));
+        const p = newPort('inputs',spec.type,options.inputName?.(byId.get(e.from[0])!,e.from[1],e.to[1]) || e.to[1],value);
+        inputs.push(p);incoming.set(key,p.id);
+        outside.push({...e,to:[options.callId,p.id]});
       }
       edges.push({...e,from:[inputId,incoming.get(key)!]});
     } else {
       const n = byId.get(e.from[0])!,spec = port(n,'output',e.from[1]),key = JSON.stringify(e.from);
       if (!outgoing.has(key)) {
-        const id = 'out'+(outputs.length+1);outgoing.set(key,id);
-        outputs.push({id,name:e.from[1],type:spec.type,default:defaultValue(spec.type,options)});
-        edges.push({...e,to:[outputId,id]});
+        const p = newPort('outputs',spec.type,e.from[1],opaque.includes(spec.type) ? undefined : defaultValue(spec.type,options));
+        outputs.push(p);outgoing.set(key,p.id);
+        edges.push({...e,to:[outputId,p.id]});
       }
       outside.push({...e,from:[options.callId,outgoing.get(key)!]});
     }
@@ -157,7 +188,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   };
   boundary('input',inputId,{x:24,y:144});
   boundary('output',outputId,{x:Math.max(...nodes.map(n => Number(n.ui!.x)))+288,y:144});
-  const f:SubgraphData = {id:options.id,name:options.name,scope:'local',inputs,outputs,
+  const f:SubgraphData = {id:options.id,name:options.name,inputs,outputs,
     graph:{nodes,edges,...(options.ui ? {ui:copy(options.ui)} : {})}};
   validate(graph,f);
   const callModule = structural(graph,'call');
@@ -171,10 +202,14 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   return call;
 }
 
-/** Collect only the dependency closure of removed instances. Other reusable
- * definitions and the active scope remain independent graph documents. */
-export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],active:NetworkData):void {
-  if (!roots.length) return;
+/** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
+ * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
+ * Library). A local definition is never collected: deleting a call must not lose the person's work; it stays listed in the
+ * subgraph panel with zero uses. Other reusable definitions and the active scope remain untouched.
+ * 刪掉呼叫後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
+ * 刪錯呼叫不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
+export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],active:NetworkData,collectible:ReadonlySet<string>):void {
+  if (!roots.length || !collectible.size) return;
   const definitions = new Map((graph.document.subgraphs || []).map(f => [f.id,f]));
   const references = (value:unknown):Set<string> => {
     const result = new Set<string>();
@@ -202,5 +237,5 @@ export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],act
   const candidates = closure(roots),retained = references({...graph.document,subgraphs:[],catalogSnapshot:undefined});
   for (const [id,f] of definitions) if (!candidates.has(id) || f.graph === active) retained.add(id);
   const keep = closure(retained);
-  graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
+  graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id) || !collectible.has(f.id));
 }

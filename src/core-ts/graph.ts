@@ -11,7 +11,7 @@ export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
 import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions } from './subgraph_operations';
-import { appendSubgraphs, localizeSubgraph, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
+import { appendSubgraphs, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
 import type { Declaration } from './model';
 export { ScopeReferences } from './scope_references';
@@ -212,7 +212,9 @@ export class Network {
   remove(node:Node):void {
     this.removeAll([node]);
   }
-  removeAll(nodes:readonly Node[]):void {
+  /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last call goes
+   * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個呼叫時可回收的定義，預設沒有。 */
+  removeAll(nodes:readonly Node[],collectible:ReadonlySet<string>=new Set()):void {
     this.assertEditable();if(nodes.some(n=>n.network!==this))throw Error('Node belongs to another network');
     const ids=new Set(nodes.filter(n=>this.nodeData(n.id)).map(n=>n.id));if(!ids.size)return;
     const roots=this.data.nodes.filter(n=>ids.has(n.id)).map(n=>this.graph.registry.get(n.nodeType)?.referencedGraph?.(n)).filter((id):id is string=>!!id);
@@ -221,7 +223,7 @@ export class Network {
     const removed=this.data.edges.filter(e=>ids.has(e.from[0])||ids.has(e.to[0]));
     this.data.edges=this.data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
     this.unwired(removed.filter(e=>!ids.has(e.to[0])));
-    collectSubgraphs(this.graph,roots,this.data);
+    collectSubgraphs(this.graph,roots,this.data,collectible);
   }
   plan(policy:ConnectionPolicy,intent:Intent,overrides:ReadonlyMap<string,Ports>=new Map()) {
     const prepared=new Map<string,NodeData>(),removed:EdgeData[]=[];
@@ -374,7 +376,6 @@ export class GraphDocument {
   appendSubgraphs(definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):Subgraph[] {
     return appendSubgraphs(this,definitions,ids).map(f=>this.subgraph(f.id));
   }
-  localizeSubgraph(id:string,next:AllocateSubgraphId):Map<string,string> {return localizeSubgraph(this,id,next);}
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
   /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
   addDeclaration(entry:DeclarationEntry):Declaration {this.assertEditable();return addDeclaration(this.document,entry);}
@@ -411,15 +412,11 @@ function complete(document:Graph):void {
   // Groups are tidied at the end of every change (design-interview 1-2), so no command has to remember them. 每次修改結束時整理群組
   // （1-2），任何指令都不必記得處理群組。
   tidyGroups(document);
-  const snapshots=new Set((document.subgraphs||[]).filter(f=>f.scope!=='local').map(f=>f.graph));
   for(const [,data] of networkEntries(document)){
     const nodes=new Set<string>(),edges=new Set<string>(),taken=new Set<string|undefined>();
     for(const n of data.nodes){if(!n.id||nodes.has(n.id))throw Error('Invalid or duplicate node ID');nodes.add(n.id);}
     for(const e of data.edges)taken.add(e.id);
     for(const e of data.edges){
-      // Source snapshots keep their authored bytes. Their read-only Edge
-      // handles already have temporary identities; only local data gets IDs.
-      if(!e.id&&snapshots.has(data))continue;
       if(!e.id){e.id=newEdgeId(taken);taken.add(e.id);}
       if(edges.has(e.id))throw Error('Duplicate edge ID');edges.add(e.id);
     }
