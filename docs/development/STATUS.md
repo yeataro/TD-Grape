@@ -2,6 +2,27 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.111 — 子圖 C 級（做得出來：從選取建立、設為唯一、複製貼上帶定義、巢狀） — 2026-10-14
+
+執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md` §4。第一輪 B＋C 到此完成（人類 10-14 定）；D（Library）另開。
+
+| 舊行為 | 處理 | 原因 | 出處 |
+|---|---|---|---|
+| Selection to Subgraph：選取的節點、其間的線搬進新定義；跨邊界的線變接口；呼叫節點放原位 | 照舊（右鍵、浮動工具列、Ctrl+Shift+G；完成後呼叫節點被選取；定義名 `Subgraph_N`） | 既有能力 | `functions_ui.js:277` `groupSelection`；§3.2–3.3 |
+| 來源節點（Uniform、貼圖輸入、常數…）不進子圖、留在外面變輸入，輸入名取來源名 | 照舊（引用共用來源的節點留在外面；輸入標籤取來源名） | 子圖不直接引用宣告（§3.4） | `functions_model.js:314` `SubgraphSourcePolicy` |
+| 建立時 Frames 跟著搬 | 照舊（成員全被選的群組原樣進去、部分群組留在外面） | 附錄一 A8 驗收 | `functions_ui.js:296` `GraphFrames.copy`；A8 |
+| Make Independent：一個呼叫拿到自己的定義複本，名稱加「 Copy」 | 小改：名稱走節點撞名規則（`Gain_1`）；叫「設為唯一」 | §3.10、§4 第 5 列（Blender Make Single User） | `graph_ui.js:2971`；`functions_model.js:153` |
+| 複製帶呼叫到的函式（遞迴）、貼上時同圖沿用原 ID、缺的建新本地 | 照舊（複製帶定義閉包；同圖沿用還在的定義、已刪或別張圖的以新身分進來、同批保留共用關係；不按內容合併） | §3.13、附錄一 A5 第 1–2 條 | `functions_model.js:209, 270-275` |
+| 跨圖貼上把 Library 子圖轉本地 | 否決（Library 副本保留 ID、唯讀）——D 做；本輪帶 `libraryId` 的定義整份拒絕 | A5、B7 | `functions_model.js:272` |
+| 貼上造成函式循環整筆失敗（含貼進自己） | 照舊，守在核心關卡（`change()`：造成新循環的修改整筆拒絕；開圖時已有的照樣能編、編譯器會報） | 循環展不開 | `functions_model.js:304` `clipboard.cycle` |
+| 子圖裡放呼叫（巢狀） | 照舊（面板拖入、加到圖上、貼上都可；循環由關卡擋） | 附錄一 A3 C 級開放 | `test_sampler_split.py` 巢狀案 |
+| 解散回上層 | 未做（待決，附錄一 A9） | 舊產品也沒做 | `05-subgraphs.md:101` |
+
+- 程式（4a376872）：核心 `subgraph_operations.ts`（`subgraphFromSelection` 帶完整群組；`subgraphCycle`）、`graph.ts`（關卡：新循環整筆拒絕，code `subgraph.cycle`）、`clipboard.ts`（複製帶定義閉包；`pasteClip(…, networkId, newSubgraphId, sameSource)` 依 A5 沿用／新身分、呼叫跟著新身分）；編輯器 `editor.ts`（`subgraphCandidates`／`selectionToSubgraph`／`makeUnique`；`notice()` 把核心的子圖拒絕碼說成人話；貼上傳定義；B 級的巢狀拒絕拿掉）、`CanvasMenu.tsx`（從選取建立、打開子圖、設為唯一）、`FloatingToolbar.tsx`（從選取建立）、`main.tsx`（Mod+Shift+G）。
+- 測試：核心 `test_clipboard.cjs`（帶定義閉包；同圖沿用、別圖新身分且巢狀關係保留、已刪恢復新身分、Library 拒絕）、`test_subgraph_operations.cjs`（循環關卡、群組跟著搬）；編輯器兩條（從選取建立：來源留在外面變輸入、群組搬、呼叫被選、Undo；設為唯一、同圖貼上沿用、外來定義新身分、巢狀兩層路徑）；B 級測試的「子圖裡不能放呼叫」改為「不能呼叫到自己」。核心 183、編輯器 174、型別檢查過。
+- 瀏覽器核對（假宿主）：選 color＋call2 → Ctrl+Shift+G → 面板多一張 `Subgraph_1`、新呼叫 ×1、原 Gain 仍 ×2（在 Subgraph_1 裡）、選取換到新呼叫；版本 0.8.316。
+- 限制／未做：解散回上層（待決）；接口型別面板不含宿主複合型別（A1 ③ 未決）；Library 一切（D）；觸控未碰。TOE 交付在隨後的 commit。
+
 ## Refactor.110 — 子圖進編輯器（B 級：進得去、改得了） — 2026-10-14
 
 執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md` §3。基本設計 §3.3／§3.5／§3.12、附錄一 A3（巢狀入口的可測邊界）、A8（B 級驗收）。
