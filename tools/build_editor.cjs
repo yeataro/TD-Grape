@@ -7,6 +7,12 @@ const root = path.resolve(__dirname, '..');
 const index = process.argv.indexOf('--out');
 if (index < 0 || !process.argv[index + 1]) throw Error('Usage: node tools/build_editor.cjs --out OUTPUT_FOLDER');
 const out = path.resolve(process.argv[index + 1]);
+// Profiling build (Refactor.107, development only): --jsx-shim PATH wraps every component through that JSX runtime (tools/dev/jsx-shim.js),
+// unminified so the counts keep component names; build-info says `profiling`, so it is never mistaken for the product build.
+// 量測版建置（R.107，只給開發用）：--jsx-shim 路徑把每個元件經過那個 JSX runtime（tools/dev/jsx-shim.js），不壓縮以保留元件名；
+// build-info 標 profiling，不會被當成正式建置。
+const shimAt = process.argv.indexOf('--jsx-shim'), shim = shimAt < 0 ? null : path.resolve(process.argv[shimAt + 1] || '');
+if (shimAt >= 0 && !shim) throw Error('--jsx-shim needs a path');
 const sources = path.join(root, 'src');
 if (out === sources || out.startsWith(sources + path.sep) || sources.startsWith(out + path.sep)) {
   throw Error('Build output must be separate from source directories');
@@ -19,7 +25,9 @@ async function main() {
   // 新編輯器是唯一入口：頁面為 index.html；靜態檔來自 static/，核心產物來自 src/generated/，都放在網址根目錄。
   const { build } = await import('vite');
   const react = await build({ configFile: false, root: path.join(root, 'src/editor-react'), base: '/', publicDir: false,
-    logLevel: 'error', build: { write: false, minify: true, rolldownOptions: {
+    logLevel: 'error', ...(shim ? { resolve: { alias: [{ find: /^react\/jsx-runtime$/, replacement: shim },
+      { find: /^REAL_JSX_RUNTIME$/, replacement: path.join(root, 'node_modules/react/jsx-runtime.js') }] } } : {}),
+    build: { write: false, minify: !shim, rolldownOptions: {
       input: path.join(root, 'src/editor-react/index.html') } } });
   for (const output of (Array.isArray(react) ? react : [react])) {
     for (const asset of output.output) {
@@ -63,7 +71,7 @@ async function main() {
   }
   const assets = Object.fromEntries([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) =>
     [name, createHash('sha256').update(data).digest('hex')]));
-  const metadata = { schemaVersion: 1, version, assets };
+  const metadata = { schemaVersion: 1, version, assets, ...(shim ? { profiling: true } : {}) };
   files.set('build-info.json', Buffer.from(JSON.stringify(metadata, null, 2) + '\n'));
   fs.mkdirSync(out, { recursive: true });
   const metadataPath = path.join(out, 'build-info.json');
