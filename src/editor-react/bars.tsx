@@ -39,6 +39,14 @@ export const SPARE = 8;
 function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: number, full: number) => void): number {
   const [folded, setFolded] = useState(0), widths = useRef(new Map<Element, number>()), now = useRef(0);
   now.current = folded;
+  // The caller's latest callback, read when a fit runs. 呼叫者最新的回呼，量的時候才讀。
+  const report = useRef(measured);
+  report.current = measured;
+  // Measured only when something changed (Refactor.106): once on mount, then when the bar or one of its parts changes size (a resize, the
+  // size preset, a font) or the bar's content changes (a language switch, a longer status or path: text clamped in a part that cannot grow
+  // does not change any size, so the content is watched too). Measuring on every render read the layout of every part each time the
+  // editor published. 只在有東西變了時量（R.106）：掛上時一次，之後在列或它的部分大小改變（視窗、尺寸檔位、字型）或列的內容改變（換語言、
+  // 更長的狀態或路徑：被夾住、不能再長的部分裡文字變長不會改變任何大小，所以也看內容）時。每次重繪都量，編輯器每發布一次就讀一遍所有部分的版面。
   useLayoutEffect(() => {
     const element = bar.current;
     if (!element) return;
@@ -66,17 +74,28 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
       let count = 0;
       while (count < levels && need(count) > element.clientWidth + .5 - (count < now.current ? SPARE : 0)) count++;
       setFolded(count);
+      const measured = report.current;
       if (measured) {
         const full = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + gap(children[0]!) * (children.length - 1)
           + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parts.reduce((sum, part) => sum + (showing(part) ? 0 : widths.current.get(part) ?? 0), 0);
         measured(count, full);
       }
     };
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(element);
-    return () => observer.disconnect();
-  });
+    // One size observer for the bar, its children (what is not a part counts too: a size preset grows the icon buttons) and its parts;
+    // ones that come later (a file name once known) are added as the content changes. The spacer only takes what is left.
+    // 列、它的子元素（不是部分的也算：尺寸檔位會讓圖示按鈕變大）與它的部分共用一個大小觀察器；後來才出現的（知道檔名之後）在內容改變時加進來。
+    // spacer 只是拿剩下的。
+    const sizes = new ResizeObserver(fit), watched = new Set<Element>();
+    const watch = () => {
+      for (const part of [element, ...[...element.children].filter(child => !child.classList.contains('spacer')), ...element.querySelectorAll('[data-fold], [data-appear]')])
+        if (!watched.has(part)) { watched.add(part); sizes.observe(part); }
+      for (const part of watched) if (!part.isConnected) { watched.delete(part); sizes.unobserve(part); }
+    };
+    const content = new MutationObserver(() => { watch(); fit(); });
+    watch(); fit();
+    content.observe(element, { childList: true, characterData: true, subtree: true });
+    return () => { sizes.disconnect(); content.disconnect(); };
+  }, []);
   return folded;
 }
 

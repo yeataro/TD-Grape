@@ -164,7 +164,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   };
   // Read actual committed layout, never serialize control values as a geometry key.
   // 僅在該卡片 commit 後檢查實際接孔；非逐幀掃描，外框變大由 RF 量測。
-  useLayoutEffect(inspect);
+  // Only when this node's data changed (Refactor.106): every other re-render (selection, a preview, the language) either leaves the
+  // ports where they are or changes the card's size, which the observer below hears. Re-measuring on every render read the layout of
+  // every card on each selection change. 只在這個節點的資料變了時（R.106）：其他的重繪（選取、預告、語言）不是不動接孔，就是改變卡片
+  // 大小，那由下面的 observer 聽到。每次重繪都量，選取每改變一次就讀一遍所有卡片的版面。
+  useLayoutEffect(inspect, [data]);
   useEffect(() => {
     if (!card.current) return;
     const observer = new ResizeObserver(inspect);
