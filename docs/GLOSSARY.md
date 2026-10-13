@@ -10,6 +10,8 @@
 
 圖格式裡子圖清單叫 `subgraphs`（Q44）；子圖呼叫節點的參數改為 `subgraphId`，節點種類改為 `sgrape.builtin.subgraph_call`／`subgraph_input`／`subgraph_output`（Q46，Refactor.61 已改；核心內部的網路代號前綴也從 `function:` 改為 `subgraph:`）。舊產品格式的內建子圖庫 `src/library/builtin_subgraphs.json` 仍是舊名稱，子圖那一輪轉換時一併改。子圖能用的 Stage 與 target 由內容推算（Q46；Refactor.61 起圖裡不存 `stages`／`targets`，Stage 由 `subgraph_stages.ts` 推算，target 由裡面每個節點照圖的 target 檢查）。GLSL Code 等真正定義或呼叫 GLSL 函式的地方仍使用 Function。
 
+子圖的身分與生命週期用語（基本設計 2026-10-14，`work/refactor/subgraph-basic-design-2026-10-14.md`＋附錄一、二；未實作，第一輪 B＋C）：**定義**（`subgraphs[]` 裡的一份，宣告一次）與**呼叫節點**（畫布上平等的引用，改定義所有引用一起變）；**接口**是定義上的清單條目，不是節點，`id`（產生式）、`label`（使用者文字）、產碼名稱（按位置）分開；子圖裡**一個** Input、**一個** Output 邊界節點。沒人引用時分三類：**本地子圖**（無 Library ID，可改，留著）、**Library 副本**（有 Library ID 且找得到，整份唯讀，最後引用刪掉且 Library 內容相同時自動回收）、**失聯副本**（有 ID 找不到，唯讀，留著）。**轉為本地**（Make Local）作用在定義：拿掉 Library ID；有唯讀祖先引用時改為**分叉**（複製本地 B′，只改不在唯讀定義裡的呼叫）。**設為唯一**（Make Single User）作用在一個呼叫節點：複製新定義只給它用。**唯讀閉包不變量**：唯讀定義引用到的每份定義也唯讀。**交易帳本**：`change()` 一筆交易內每個唯讀身分只有一個目前有效狀態（內容／已轉本地／已移除），合法操作起點只認它、完成後推進它、末尾關卡只比它。**指紋標準形**：閉包內參照編號取代圖內 ID、保留 Library 身分、排除派生欄位；本地定義永不按內容合併。
+
 ## 型別、接孔與運算
 
 | 建議用語 | 英文／識別碼 | 定義與區分 |
