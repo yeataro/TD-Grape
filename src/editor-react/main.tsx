@@ -15,6 +15,7 @@ import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
 import { Editor as EditorSession, type EditorState, type WireEnd, type NewWire } from './editor';
+import { useEditorFields, useEditorSlice } from './editor_slice';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
 import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
@@ -40,7 +41,7 @@ import { listGrapeOps } from './grape_ops';
 import { sourceNow, draftRow, nowRow, tdRow, detailLabel, tabTitle, type TdIdentity, type DraftSource } from './td_identity';
 import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
-import type { Projection, FlowNode, FlowEdge } from './projection';
+import type { FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide, panningCursor } from './viewport';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
@@ -57,8 +58,8 @@ const edgeTypes: EdgeTypes = { wire: WireEdge, ghost: GhostEdge, convert: Conver
 // 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。
 const addressTarget = () => new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([^/]+)\/$/)?.[1] ?? '';
 const draftKeyOf = (target: string) => 'grape-react-draft:' + target;
-function StuckNotice({ state, session, onShowGlsl }: { state: EditorState; session: EditorSession; onShowGlsl(line?: number): void }) {
-  const { failure, lastKnownGood } = state.stuck!, first = glslErrors(failure.log)[0];
+function StuckNotice({ stuck, session, onShowGlsl }: { stuck: NonNullable<EditorState['stuck']>; session: EditorSession; onShowGlsl(line?: number): void }) {
+  const { failure, lastKnownGood } = stuck, first = glslErrors(failure.log)[0];
   const revision = lastKnownGood?.revision ?? '';
   return <div className="floating-notice error" role="group" aria-label={say(tr('shader.stuckLabel', 'Shader not applied'))}>
     <span>{say(failure.kind === 'internal'
@@ -79,18 +80,23 @@ function StuckNotice({ state, session, onShowGlsl }: { state: EditorState; sessi
 // The replacement report (Refactor.65, human 2026-10-10): nodes the node upgrades changed when the graph was read, each one
 // leading to its node; a floating notice in the general style, dismissed by the person (it is also in the log).
 // 替換報告（人類）：讀圖時被節點升級換掉的節點，每一筆都能帶到那個節點；一般樣式的浮動提示，由人關掉（訊息紀錄也有一份）。
-function UpgradeNotice({ state, session, onGo }: { state: EditorState; session: EditorSession; onGo(id: string): void }) {
-  const text = useContext(TextContext);
+// It reads its own slices (Refactor.106): the list, and the nodes' labels once per version of the graph (a label changes only with an
+// edit), so the workspace does not take the projection for it. 自己讀切片（R.106）：清單，以及圖每一版讀一次節點名稱（名稱只在修改時變），
+// 工作區不必為它拿投影。
+function UpgradeNotice({ session, onGo }: { session: EditorSession; onGo(id: string): void }) {
+  const text = useContext(TextContext), upgrades = useEditorSlice(session, state => state.upgrades);
+  const version = useEditorSlice(session, state => state.version);
+  const nodes = useMemo(() => new Map(session.snapshot().projection.nodes.map(node => [node.id, node])), [session, version]);
   const labelOf = (id: string) => {
-    const node = state.projection.nodes.find(n => n.id === id);
+    const node = nodes.get(id);
     if (!node) return id;
     const { view, label } = node.data;
     return view.literalLabel && view.label ? view.label : text(view.label ?? label);
   };
   return <div className="floating-notice" role="group" aria-label={say(tr('upgrade.label', 'Updated nodes'))}>
     <span>{say(tr('upgrade.title', 'This graph had {count} node(s) in an older form. They were updated, and the graph is sent to TD like any edit.',
-      { count: state.upgrades.length }))}</span>
-    <ul className="upgrade-list">{state.upgrades.map(change => <li key={change.network + '/' + change.node + '/' + change.rule}>
+      { count: upgrades.length }))}</span>
+    <ul className="upgrade-list">{upgrades.map(change => <li key={change.network + '/' + change.node + '/' + change.rule}>
       {change.network === 'pixel'
         ? <button type="button" className="upgrade-link" onClick={() => onGo(change.node)}>{labelOf(change.node)}</button>
         : <span title={say(tr('upgrade.inSubgraph', 'Inside a subgraph; open it to see this node.'))}>{change.node}</span>}
@@ -157,14 +163,17 @@ function ZoomReadout() {
   </>;
 }
 const NO_TEXT: TextHeights = {};
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, placing, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
-  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
+const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, damping, errorNodes, placing, onCreate, onMenu, focused, onFocus, clip, groups, grouping, textGrows }: {
+  session: EditorSession; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
   errorNodes: ReadonlySet<string> | null; placing: Placing | null;
   onCreate(request: CreateRequest): void; onMenu(open: MenuOpen): void;
   focused: boolean; onFocus(on: boolean | ((was: boolean) => boolean)): void; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions;
   textGrows: boolean;
 }) {
   const options = useOptions(), flow = useReactFlow(), fullscreen = useFullscreen();
+  // Only the canvas reads the projection (Refactor.106; editor_slice.ts): a drag frame re-renders it and nothing else.
+  // 只有畫布讀投影（R.106；editor_slice.ts）：拖曳的一格只讓它重繪。
+  const projection = useEditorSlice(session, state => state.projection);
   // The session's own set of selected nodes: a new one only when the selection changes, not on every drag frame (deep clean
   // 2026-10-12: the groups re-rendered each frame), and never a scan of every node (Refactor.106).
   // session 自己的選取節點集合：選取變了才換新的，不是拖曳的每一格（10-12 深度清潔：群組每一格都重繪），也不掃描全部節點（R.106）。
@@ -402,7 +411,9 @@ function usePrefs(): CanvasPrefs {
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
   projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', glslMap: [], glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
-const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
+/** What the workspace itself shows or passes on (Refactor.106): never the projection — the canvas and the panels read their own.
+ * 工作區自己顯示或往下傳的欄位（R.106）：不含投影——畫布與面板各自讀。 */
+const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'glslMap', 'phase', 'upgrades'] as const;
 
 // The editing frame below the title bar: the layout's panes around the network (location bar, its toolbar, the canvas;
 // the canvas pane of the layout, Refactor.68) and the foot bar; the same layout whether a graph is open, loading or missing (human
@@ -416,7 +427,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   session: EditorSession | null; waiting: Waiting; prefs: CanvasPrefs; layout: Layout; file: ReactNode; target: ReactNode;
   text: (key: string) => string; td: TdIdentity | null; opened: TdIdentity | null;
 }) {
-  const state = useSyncExternalStore(session?.subscribe ?? idleSubscribe, session?.snapshot ?? idleSnapshot);
+  const state = useEditorFields(session, WORKSPACE_FIELDS) ?? idle;
   const target = session?.host.target ?? '', draftKey = draftKeyOf(target);
   const tdNow = useRef(td); tdNow.current = td;
   const shell = useShell();
@@ -567,15 +578,19 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   const adding = useRef(addAt); adding.current = addAt;
   const add = useCallback((choice: AddChoice) => adding.current(choice, middle()), []);
   const panels = useMemo<Record<string, PanelView>>(() => {
-    const input: PanelInput = { session, state, choices, add };
+    const input: PanelInput = { session, choices, add };
     return Object.fromEntries((Object.entries(PANELS) as [string, PanelRow][]).map(([id, row]) => [id, { title: row.title, content: row.content(input), menu: row.menu, frame: row.frame }]));
-  }, [session, state, choices, add, text]);
+  }, [session, choices, add, text]);
   // The location bar sits over the canvas; when its file or path would be cut there, it moves to a row of its own under the
   // title bar, as the legacy one always was, and comes back once the canvas can show it whole again, with a little to spare
   // (R.69.5, human 2026-10-10: try it, by what fits rather than a set width).
   // 網址列在畫布上方；在那裡檔名或路徑會被截斷時，移到標題列下方獨立一列（舊產品一直是這樣），等畫布又能完整放下它（多留一點）再移回來
   // （R.69.5，人類 10-10：照放不放得下、不設固定寬度，先試試看）。
   const [above, setAbove] = useState(false), whole = useRef(0), networkElement = useRef<HTMLElement>(null);
+  // One identity, so the location bar's folding does not take a new callback on each render (Refactor.106). 同一個函式，網址列的收合
+  // 不會每次重繪都拿到新的回呼（R.106）。
+  const onCramped = useCallback(() => { whole.current = 0; setAbove(true); }, []);
+  const onWidth = useCallback((width: number) => { whole.current = width; }, []);
   useEffect(() => {
     const element = networkElement.current;
     if (!above || !element) return;
@@ -586,12 +601,12 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // The network is the canvas pane of the layout: one fixed part, never moved or closed (Refactor.68).
   // 網路區是版面裡的畫布那一格：固定、不能移動或關閉。
   const network = <section className="network" ref={networkElement} aria-label={say(tr('network.label', 'Network'))}>
-        {!above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onCramped={() => { whole.current = 0; setAbove(true); }} />}
+        {!above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onCramped={onCramped} />}
         <div className="canvas">
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
-          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
+          {session ? <Canvas session={session} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
             placing={placing} onCreate={onCreate} onMenu={onMenu} focused={layout.focused} onFocus={layout.setFocused} clip={clip} groups={groups} grouping={grouping} textGrows={prefs.groupTextGrows} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
@@ -624,9 +639,9 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           {/* The Shader stuck after a failed apply (Refactor.63, human 2026-10-10): what TD said, where in the GLSL, and back
               to the program TD still runs. Floating, never in the way of editing. 套用失敗、Shader 卡住：TD 說了什麼、在 GLSL 哪裡、
               回到 TD 仍在跑的那一版。浮動，不擋編輯。 */}
-          {session && state.upgrades.length > 0 && !draft && state.phase !== 'conflict' && <UpgradeNotice state={state} session={session}
+          {session && state.upgrades.length > 0 && !draft && state.phase !== 'conflict' && <UpgradeNotice session={session}
             onGo={id => { session.selectNode(id); frameNodes(flow, [id]); }} />}
-          {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice state={state} session={session}
+          {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice stuck={state.stuck} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>
         {session && menuAt && <CanvasMenu request={menuAt} session={session} layout={layout} clip={clip} grouping={grouping} onClose={closeMenu}
@@ -640,7 +655,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           }} />}
       </section>;
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
-    {above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onWidth={width => { whole.current = width; }} />}
+    {above && !layout.focused && <LocationBar layout={layout} file={file} target={where} onWidth={onWidth} />}
     <LayoutView layout={layout} panels={panels} canvas={network} />
     {!layout.focused && <FootBar session={session} waiting={waiting.message} prefs={prefs} project={td?.file} onAppearance={() => layout.show('appearance')} apart={layout.apart} onApart={layout.setApart} onReset={resetSettings} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />}
   </TextContext.Provider></SessionContext.Provider>;

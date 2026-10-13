@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
 import type { Editor as EditorSession, EditorState } from './editor';
+import { useEditorFields } from './editor_slice';
 import { BrandMark, Icon, type IconName } from './icons';
 import type { MenuItem } from './DropdownMenu';
 import type { SyncRecord } from './sync_record';
@@ -20,9 +21,13 @@ import { CalmGate } from './calm';
 
 const noLog: readonly Report[] = [];
 const noSubscribe = () => () => {};
-/** The status of the graph being edited, or nothing. 正在編輯的圖的狀態，沒有圖時為 null。 */
-const useEditorState = (session: EditorSession | null): EditorState | null =>
-  useSyncExternalStore(session?.subscribe ?? noSubscribe, session?.snapshot ?? (() => null));
+// Each bar reads only the fields it shows (Refactor.106; editor_slice.ts): a drag frame or a selection does not re-render them.
+// 每一列只讀自己顯示的欄位（R.106；editor_slice.ts）：拖曳的一格或選取不會讓它們重繪。
+const TITLE_FIELDS = ['phase', 'saving'] as const, NETWORK_FIELDS = ['undo', 'redo'] as const;
+/** What the foot bar and its status panel show. 底列與它的狀態面板顯示的東西。 */
+const FOOT_FIELDS = ['phase', 'dirty', 'checking', 'link', 'saved', 'revision', 'saving', 'retryAt', 'retryMs', 'message', 'level',
+  'syncRecords', 'targetPath'] as const;
+type FootState = Pick<EditorState, typeof FOOT_FIELDS[number]>;
 
 /** How many of a bar's parts to fold away so the rest fits (Refactor.69, human 2026-10-10). Parts are marked `data-fold`
  * (hidden from that count on; 1 folds first) or `data-appear` (shown from that count on: a shorter stand-in for what folded);
@@ -107,7 +112,7 @@ function useFolding(bar: RefObject<HTMLElement | null>, measured?: (count: numbe
  * 標題列照舊產品：圖標、名稱、副標題、版本、About；右邊是常用動作。變窄時照人類的順序收起：About、版號、副標題、匯入與匯出（底列選單裡有）、
  * 語言（底列 AA 也有）、儲存（選單裡也有；套用 Shader 在 R.75.5 拿掉）；圖標與名稱永遠不收（R.75.6 對調匯入匯出與語言，人類：手機上短的語言被長的匯入匯出拖著藏起來）。 */
 export function TitleBar({ session, version }: { session: EditorSession | null; version: string }) {
-  const state = useEditorState(session), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
+  const state = useEditorFields(session, TITLE_FIELDS), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
   const fold = (order: number, className = '') => ({ 'data-fold': order, className: (className + (folded >= order ? ' folded' : '')).trim() || undefined });
   return <header className="title-bar" ref={bar}>
     <BrandMark /><strong className="brand-name">TD-Grape</strong>
@@ -189,7 +194,7 @@ type Tool = { key: string; icon?: IconName; label: Message; hint?: Message; disa
 export function NetworkBar({ session, prefs, onGlsl }: {
   session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
-  const state = useEditorState(session), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
+  const state = useEditorFields(session, NETWORK_FIELDS), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
   const stages = session?.stageNames() ?? [];
   // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
   // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框
@@ -250,14 +255,14 @@ const away = ['offline', 'uncertain'], alarm = ['offline', 'uncertain', 'conflic
 /** Whether the TD project holds this revision (Refactor.75.15, human 2026-10-11): saved green, not saved yellow; unknown
  * (TD-Grape has not seen this project saved) says nothing. Both revisions are TD's own. TD 專案存的是不是這一版（R.75.15，人類）：
  * 已存檔綠、未存檔黃；不知道（TD-Grape 還沒看過這個專案存檔）就不說。兩個版號都是 TD 說的。 */
-const savedMark = (state: EditorState | null): { kind: 'saved' | 'unsaved'; word: Message } | null => {
+const savedMark = (state: Pick<EditorState, 'saved' | 'revision'> | null): { kind: 'saved' | 'unsaved'; word: Message } | null => {
   const saved = state?.saved?.revision;
   if (state == null || saved == null) return null;
   // How many revisions the file is behind (R.75.16, human). 檔案落後幾版（R.75.16，人類）。
   return saved >= state.revision ? { kind: 'saved', word: tr('status.markSaved', 'saved') }
     : { kind: 'unsaved', word: tr('status.markUnsaved', 'not saved ({count})', { count: state.revision - saved }) };
 };
-const canSave = (state: EditorState | null) => !!state && !state.saving && !['offline', 'uncertain', 'conflict'].includes(state.phase);
+const canSave = (state: Pick<EditorState, 'saving' | 'phase'> | null) => !!state && !state.saving && !['offline', 'uncertain', 'conflict'].includes(state.phase);
 // How to recover, by what the editor can see (Refactor.71): it cannot tell which cause it is, so each lists the possible ones
 // and what to check. 如何恢復，照編輯器看得到的症狀分（R.71）：分不出是哪個原因，所以各自列出可能的原因與要檢查的地方。
 const recoveryHelp: Record<Link, Message> = {
@@ -290,7 +295,7 @@ const words = {
 const awayWords: Record<Exclude<Link, 'unreachable'>, Message> = { busy: words.busy, closed: words.closed, stopped: words.serviceStopped,
   reloading: words.reloading, deleted: words.deleted, device: words.device };
 const awayWord = (link?: Link) => !link || link === 'unreachable' ? words.offline : awayWords[link];
-const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: Message } => {
+const lightOf = (state: Pick<EditorState, 'phase' | 'checking' | 'link' | 'dirty'> | null): { tone: Tone; busy: boolean; word: Message } => {
   if (!state) return { tone: 'none', busy: false, word: words.none };
   const busy = state.phase === 'sending' || !!state.checking;
   // Checking the connection is said on the bar itself, with the dot pulsing, so it shows it is at work (R.70.2, human).
@@ -306,7 +311,7 @@ const lightOf = (state: EditorState | null): { tone: Tone; busy: boolean; word: 
 };
 /** While waiting for the next automatic check, the dot is a pie that empties over the wait (R.70.4, human: as the usage ring);
  * otherwise a dot. 等待下一次自動檢查時，圓點是隨等待變空的圓餅（R.70.4，人類：像用量的圓環）；其他時候是圓點。 */
-function LightDot({ state }: { state: EditorState | null }) {
+function LightDot({ state }: { state: Pick<EditorState, 'retryAt' | 'retryMs' | 'checking'> | null }) {
   const waiting = !!state && state.retryAt !== undefined && !state.checking;
   if (!waiting) return <span className="sync-dot" />;
   const left = Math.max(0, state.retryAt! - Date.now());
@@ -315,14 +320,14 @@ function LightDot({ state }: { state: EditorState | null }) {
       style={{ animationDuration: left + 'ms', animationDelay: (left - (state.retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>;
 }
 
-const passing = (state: EditorState | null) => !!state && (state.phase === 'sending' || (state.phase === 'ready' && state.dirty));
+const passing = (state: FootState | null) => !!state && (state.phase === 'sending' || (state.phase === 'ready' && state.dirty));
 /** What the foot bar shows (Refactor.73.2, human 2026-10-10: the bar jumped at every edit, three states within ~20 ms). Sending
  * is not delayed; only the showing is. A result (applied, an error, TD away) shows at once; "on its way" (not sent yet,
  * sending) shows only if it is still so after CALM_MS, read then from the latest state, so it never covers a newer result.
  * 底列顯示什麼（R.73.2，人類：每次修改底列都在約 20 ms 內跳三個狀態）。送出不延後，只有顯示延後。結果（已套用、錯誤、
  * TD 不在）立刻顯示；「途中」（還沒送、送出中）要過了 CALM_MS 仍是如此才顯示，而且那時讀的是最新的狀態，所以不會蓋掉較新的結果。 */
-function useCalm(state: EditorState | null): EditorState | null {
-  const [, changed] = useReducer((n: number) => n + 1, 0), gate = useRef<CalmGate<EditorState | null> | null>(null);
+function useCalm(state: FootState | null): FootState | null {
+  const [, changed] = useReducer((n: number) => n + 1, 0), gate = useRef<CalmGate<FootState | null> | null>(null);
   gate.current ??= new CalmGate(state, passing, changed);
   useEffect(() => { gate.current!.feed(state); }, [state]);
   useEffect(() => () => gate.current!.dispose(), []);
@@ -342,7 +347,7 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
 }) {
   // The light and the message show the calm state; the status panel, opened on purpose, the state as it is (R.73.2).
   // 燈號與訊息顯示平穩後的狀態；刻意打開的狀態面板顯示當下的狀態。
-  const live = useEditorState(session), state = useCalm(live), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
+  const live = useEditorFields(session, FOOT_FIELDS), state = useCalm(live), fullscreen = useFullscreen(), bar = useRef<HTMLElement>(null), folded = useFolding(bar);
   // As it narrows (human 2026-10-10): the latest message gives way first, down to its "…"; then the light's word folds; the
   // icons basically stay, but if they must, they fold from the left; the light (dot and revision), which matters more, folds
   // after them; the ⋮ menu never. 變窄時（人類 10-10）：最新訊息先讓，讓到剩「…」；接著燈號的字收起；圖示原則上留著，非收不可時從左邊收；
@@ -446,7 +451,7 @@ function useHistoryList(lines: unknown) {
 // record does not jump when TD comes back. 狀態面板（R.75.1，人類）：現在的狀態放在下方、貼著打開它的燈號（重要的離入口最近），
 // 紀錄在上方；面板開著時狀態區只長不縮，TD 回來時紀錄不會跳。
 function StatusPanel({ anchor, state, project, line, tone, onRetry, onClose }: {
-  anchor: HTMLElement; state: EditorState | null; project?: string; line: string; tone: Tone; onRetry(): void; onClose(): void;
+  anchor: HTMLElement; state: FootState | null; project?: string; line: string; tone: Tone; onRetry(): void; onClose(): void;
 }) {
   const [, tick] = useState(0), records = state?.syncRecords ?? [], list = useHistoryList(records), mark = savedMark(state);
   const box = useRef<HTMLDivElement>(null), [floor, setFloor] = useState(0);

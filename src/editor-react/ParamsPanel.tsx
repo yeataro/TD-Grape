@@ -1,8 +1,8 @@
-import { useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { useConnection, useReactFlow } from '@xyflow/react';
 import { core, typeColor, type ComponentStyle } from './core';
-import type { EditorState } from './editor';
-import type { FlowNode } from './projection';
+import type { FlowNode, FlowEdge } from './projection';
+import { useEditorSlice } from './editor_slice';
 import { tr, say } from './text';
 import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext, FloatingContext } from './contexts';
@@ -77,7 +77,12 @@ function NodeSettings({ id }: { id: string }) {
       onChange={value => session.setComponentNames(id, value as ComponentStyle)} /></label></div>;
 }
 
-function NodeParameters({ node, state }: { node: FlowNode; state: EditorState }) {
+/** The wire into each input, by `node` + NUL + `port`, and every node by id: made once per version of the graph (Refactor.106; the panel
+ * searched every wire and node for each input on every render). 每個輸入的那條線（以「節點＋NUL＋接孔」為鍵）與每個節點（以 id）：
+ * 圖每一版做一次（R.106；之前每次重繪、每個輸入都搜尋全部的線與節點）。 */
+type Lookup = { nodes: ReadonlyMap<string, FlowNode>; inputs: ReadonlyMap<string, FlowEdge> };
+const inputKey = (node: string, port: string) => node + '\u0000' + port;
+function NodeParameters({ node, lookup }: { node: FlowNode; lookup: Lookup }) {
   const session = useSession(), text = useContext(TextContext), flow = useReactFlow(), floating = useContext(FloatingContext);
   const [tab, setTab] = useState(shownTab), choose = (next: Tab) => { shownTab = next; setTab(next); };
   // While a wire is dragged from an output, the panel's inputs take it (Refactor.85). 從輸出拉線時，面板的輸入接孔可以接。
@@ -86,9 +91,9 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   // Where a wired input's value comes from: the other node's name (or its type) and port. 接線的輸入：另一端節點的名稱（或類型）與接孔。
   const sourceOf = (port: string) => {
-    const edge = state.projection.edges.find(e => e.target === id && e.targetHandle === port);
+    const edge = lookup.inputs.get(inputKey(id, port));
     if (!edge) return undefined;
-    const from = state.projection.nodes.find(n => n.id === edge.source);
+    const from = lookup.nodes.get(edge.source);
     const label = from?.data.authored.name ? core.shownName(from.data.authored.name) : from ? text(from.data.view.label ?? from.data.label) : edge.source;
     return { node: edge.source, text: label + ' · ' + edge.sourceHandle };
   };
@@ -154,10 +159,20 @@ function NodeParameters({ node, state }: { node: FlowNode; state: EditorState })
   </article>;
 }
 
-export function ParamsPanel({ state }: { state: EditorState }) {
+// Memoised, and reading only the primary node and the graph's version (Refactor.106): a node's data and the wires change only with an
+// edit, which moves the version, never with a drag frame or a selection, so the projection is read once per version.
+// memo，只讀主要選取與圖的版本（R.106）：節點資料與接線只在修改時變，修改會讓版本前進，拖曳的一格或選取不會，所以投影每一版只讀一次。
+export const ParamsPanel = memo(function ParamsPanel() {
   const session = useSession();
   const primary = useSyncExternalStore(session.primarySubscribe, session.primarySnapshot);
-  const node = primary === undefined || primary === null ? undefined : state.projection.nodes.find(n => n.id === primary);
+  const version = useEditorSlice(session, state => state.version);
+  const lookup = useMemo<Lookup>(() => {
+    const { nodes, edges } = session.snapshot().projection, inputs = new Map<string, FlowEdge>();
+    // The first wire into an input, as the search before found. 進入一個輸入的第一條線，同之前搜尋找到的。
+    for (const edge of edges) if (edge.targetHandle && !inputs.has(inputKey(edge.target, edge.targetHandle))) inputs.set(inputKey(edge.target, edge.targetHandle), edge);
+    return { nodes: new Map(nodes.map(node => [node.id, node])), inputs };
+  }, [session, version]);
+  const node = primary === null ? undefined : lookup.nodes.get(primary);
   const floating = useContext(FloatingContext);
   // Nothing selected: one line (legacy inspector.js:1592); floating, under a plain head so it can still be moved and closed.
   // 沒選：一行提示（照舊產品）；浮動時放在一個素的頭下面，仍能搬、能關。
@@ -167,5 +182,5 @@ export function ParamsPanel({ state }: { state: EditorState }) {
     {!floating.collapsed && <p className="hint params-pad">{say(tr('params.empty', 'Select a node to edit its parameters.'))}</p>}
   </article> : <p className="hint">{say(tr('params.empty', 'Select a node to edit its parameters.'))}</p>;
   // Keyed by node: moving to another node starts its fields afresh. 依節點分開：換節點時欄位重新開始。
-  return <NodeParameters key={node.id} node={node} state={state} />;
-}
+  return <NodeParameters key={node.id} node={node} lookup={lookup} />;
+});
