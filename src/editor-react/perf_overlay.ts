@@ -102,7 +102,11 @@ export function showPerfOverlay(): () => void {
       else begin('hover', now);
     }
     else if (event.type === 'pointerup' || event.type === 'pointercancel') { if (!active || active.reading.kind !== 'press') return; active.held = false; }
-    else if (event.type === 'keydown') begin('key', now);
+    // A key while a button is held belongs to that press (Shift or Ctrl while scrubbing a value, NumberField.tsx): it does not open a
+    // reading of its own (Refactor.107.2, Codex R1071-S01: it closed the press and the rest of the drag went unrecorded).
+    // 按著按鈕時的按鍵屬於那次按下（拖數值時的 Shift／Ctrl，NumberField.tsx）：不另開一筆（R.107.2，Codex R1071-S01：以前會把按下結案，
+    // 後面的拖曳沒記到）。
+    else if (event.type === 'keydown') { if (active?.held) return; begin('key', now); }
     else if (event.type === 'wheel') { if (!active || active.reading.kind !== 'wheel') begin('wheel', now); }
     settle();
   };

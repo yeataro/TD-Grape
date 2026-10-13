@@ -71,13 +71,16 @@ async function main() {
   }
   const assets = Object.fromEntries([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) =>
     [name, createHash('sha256').update(data).digest('hex')]));
-  // Where the product code came from (Refactor.107.1, Codex R107-05): the commit and whether tracked product files differed from it,
-  // so a report can name the product it measured, not only the version. 產品程式從哪來（R.107.1，Codex R107-05）：commit，以及被追蹤的
-  // 產品檔有沒有和它不同，報告才能指名量的是哪一份產品，不只版號。
+  // Where the product code came from (Refactor.107.1, Codex R107-05): the commit, and whether any tracked file this build reads —
+  // the inputs listed in `dirtyScope` (every folder and file packed above, and these tools) — differed from it, so a report can name
+  // the product it measured, not only the version. `dirty` means only that scope; dependencies and build settings are not covered.
+  // 產品程式從哪來（R.107.1，Codex R107-05）：commit，以及這次建置讀的被追蹤檔——dirtyScope 列的（上面打包的每個資料夾與檔案，加這些工具）
+  // ——有沒有和它不同，報告才能指名量的是哪一份產品，不只版號。dirty 只代表這個範圍；依賴與建置設定不在內。
+  const dirtyScope = ['src/core-ts', 'src/editor-react', 'src/generated', 'src/remote_panel', 'src/version.json', 'tools']; // R.107.2, Codex R1071-P01: remote_panel was missing 漏了 remote_panel
   const source = (() => {
     try {
       const run = cmd => require('node:child_process').execSync(cmd, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-      return { commit: run('git rev-parse --short HEAD'), dirty: run('git status --porcelain -- src/core-ts src/editor-react src/generated src/version.json tools') !== '' };
+      return { commit: run('git rev-parse --short HEAD'), dirty: run('git status --porcelain -- ' + dirtyScope.join(' ')) !== '', dirtyScope };
     } catch { return null; }
   })();
   const metadata = { schemaVersion: 1, version, assets, source, ...(shim ? { profiling: true } : {}) };

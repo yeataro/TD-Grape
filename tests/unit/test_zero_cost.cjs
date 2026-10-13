@@ -138,6 +138,25 @@ test('a commit never reads the program lines; the line map is built on the first
   assert.equal(glslMapOf(compiled), map); assert.equal(reads.pixel, 1, 'asked again: the same list, nothing read');
 });
 
+// What fits a wire is read from the document's live port types: after a port's type changes in the same session the answer changes,
+// and after Undo it is the old one again (Refactor.107.2; Codex R05 / R107-09: Create node re-asks per version, so the session's
+// answer must follow the document). 接得上什麼讀的是文件裡現在的接孔型別：同一 session 裡接孔型別變了答案就變，Undo 後又是原來的
+// （R.107.2；Codex R05／R107-09：新增視窗每版重問，session 的答案要跟著文件）。
+test('what fits a wire follows a port type change and its Undo within one session', t => {
+  const session = open(t), { addChoices } = load(path.join(root, 'src/editor-react/add_entries.ts'));
+  // The reference node of the vec4 Uniform uValue; a Multiply from its output (the table answers by the source's type). 引用 vec4 Uniform
+  // uValue 的節點；從它的輸出接一個 Multiply（查表的答案依來源型別）。
+  const end = { node: 'n91d0481daa0f48fe81fcc16e0f2aa1cf', port: 'out', side: 'output' };
+  const multiply = addChoices(session.snapshot().declarations, key => key).find(choice => choice.spec.nodeType === 'sgrape.builtin.multiply');
+  const fit = () => { const answer = session.wireFit(multiply.id, multiply.spec, end); return answer && { port: answer.port, type: answer.type }; };
+  const before = fit();
+  assert.deepEqual(before, { port: 'a', type: 'vec4' });
+  session.setDeclarationType('d5a5ce4b0920f440a', 'float');
+  assert.deepEqual(fit(), { port: 'a', type: 'float' }, 'a float source gets a float Multiply');
+  session.history(false);
+  assert.deepEqual(fit(), before, 'Undo brings the old answer back');
+});
+
 // A failed code generation keeps the last program that compiled (as the GLSL shown does), and the line map is derived from that one
 // object — the same list each time it is asked, so a panel opened later still has it. Codex 2026-10-13 R02.
 // 產碼失敗時留最後一次成功的程式（同顯示的 GLSL），行對照從那一個物件推——每次問都是同一份清單，之後才打開的面板也拿得到。
