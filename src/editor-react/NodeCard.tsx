@@ -136,20 +136,18 @@ export function PortLabel({ text, components }: { text: string; components?: rea
   return one === undefined ? <>{text}</> : <span className={'component-letter' + (text.length === 1 ? ' letter-slot' : '')} data-component={one}>{text}</span>;
 }
 
-export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
+export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>) {
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
-  // The card is told only whether it is selected (Q33). Being the primary among several and being inside a box being dragged
-  // (Refactor.50.1: dashed = will be selected on release; the current selection stays as it is until then, 50.2) are classes the
-  // session puts on React Flow's wrapper (style.css), so a selection change re-renders no card but the ones selected or unselected
-  // (Refactor.106). 卡片只被告知自己有沒有被選（Q33）。多選時是不是主要選取、在不在拖曳中的框裡（R.50.1：虛線＝放開會被選；目前的選取
-  // 維持原樣到放開，50.2）是 session 放在 React Flow 外框上的 class（style.css），選取改變時只有被選或取消的卡片重繪（R.106）。
+  // The card knows nothing of selection (Q33; Refactor.106.2, human 2026-10-13): selected, the primary among several and inside a box
+  // being dragged (Refactor.50.1/50.2) are all classes on React Flow's wrapper, drawn by style.css, so a selection change re-renders
+  // no card; the memo below ignores every prop but the node's data. 卡片完全不知道選取（Q33；R.106.2，人類 10-13）：被選、多選時的主要、
+  // 在拖曳中的框裡（R.50.1／50.2）都是 React Flow 外框上的 class，由 style.css 畫，選取改變時沒有卡片重跑；下面的 memo 只看節點資料。
   // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
   const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
   // The rows a dropped wire would merge into one, the input it lands on among them, shown as one band in the wire's colour
   // (Refactor.76.16, as the legacy editor marked them; human 2026-10-11: one band, no frame per row).
   // 放開後會併成一列的那幾列（含落點那列），畫成線色的一整條（R.76.16，舊產品也標出它們；人類：一整條、不要每列框線）。
   const band = merging.length ? new Set([mergePreview!.port, ...merging]) : null;
-  const selection = selected ? 'selected' : '';
   const errorLine = useContext(ErrorNodesContext)?.has(id) ?? false;
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
@@ -179,7 +177,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   // the card so the card's fading does not dim it. Ghost 標記（人類選 G4）：右上角的幽靈、一半在外；畫在卡片旁邊，不被卡片的淡化一起變淡。
   if (data.ghost) return <><span className="node-ghost-mark" role="img" title={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}
     aria-label={say(tr('node.ghostMark', 'Ghost: kept as it is, left out of the shader.'))}><GhostMark id={id} on="node" /></span>
-  <article ref={card} className={`grape-node ghost ${selection}`}
+  <article ref={card} className="grape-node ghost"
     style={{ '--group-color': 'var(--group-ghost)' } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{authored.name || text(data.label)}</strong><small>Ghost</small></div>
     <div className="node-body node-drag-surface">
@@ -217,7 +215,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
     <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
   </div>);
-  return <article ref={card} className={`grape-node ${selection}`}
+  return <article ref={card} className="grape-node"
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     {/* Trial (Refactor.63.6.1): TD's error mark on a node that wrote a line TD reported. 試驗：TD 回報的錯誤行由它寫的節點，掛 TD 的錯誤標記。 */}
     {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
@@ -257,4 +255,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {!start && outputRows}
     </div>
   </article>;
-});
+}, (before, after) =>
+  // Only the node's identity and data matter to the card: React Flow also passes selected, dragging, the absolute position and the
+  // z index, which the wrapper handles (Refactor.106.2). 卡片只在乎節點的 id 與資料：React Flow 另外傳的 selected、dragging、絕對位置、
+  // z 都由外框處理（R.106.2）。
+  before.id === after.id && before.data === after.data);
