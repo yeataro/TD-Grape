@@ -179,6 +179,7 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // Only the canvas reads the projection (Refactor.106; editor_slice.ts): a drag frame re-renders it and nothing else.
   // 只有畫布讀投影（R.106；editor_slice.ts）：拖曳的一格只讓它重繪。
   const projection = useEditorSlice(session, state => state.projection);
+  const version = useEditorSlice(session, state => state.version);
   // Place a node (Refactor.105): after a pick the node follows the pointer until a press adds it. Its state lives here (Refactor.106):
   // a frame of it re-renders the canvas alone, no longer the whole workspace. 放置節點（R.105）：選好之後節點跟著指標，按下才新增。它的狀態
   // 放在這裡（R.106）：每一格只讓畫布重繪，不再是整個工作區。
@@ -240,6 +241,9 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // 從輸入拉到空白處，放開會拔線（下面的 onConnectEnd），也預告（R.78.1）。抓著線端拿起的線，移動中 React Flow 本來就不畫，不用預告。
   // `over` is a plain string so React Flow re-renders this only when the place changes: what releasing there does, then
   // its ends. over 是純字串，停的地方換了才重繪：放開會做什麼，接著是兩端。
+  // Rehearsed again only when the place or the graph changes (`version`), not on every projection — a drag frame or a selection
+  // while the wire rests there is no reason to rehearse (Refactor.107, Z13). 只在停的地方或圖（version）變時重新預演，不是每份投影——
+  // 線停著時的拖曳一格或選取不是重演的理由（R.107，Z13）。
   const over = useConnection(state => {
     if (state.inProgress && !state.toHandle && state.fromHandle?.type === 'target' && state.fromHandle.id)
       return ['pull', state.fromHandle.nodeId, state.fromHandle.id].join('\n');
@@ -253,7 +257,7 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
     if (kind !== 'wire') return null;
     const [source, sourceHandle, target, targetHandle] = ends as [string, string, string, string];
     return session.wirePreview({ source, sourceHandle, target, targetHandle });
-  }, [over, session, projection]);
+  }, [over, session, version]);
   // Cards follow only a preview that merges rows, so the other previews do not re-render every card.
   // 卡片只跟著會合併列的預告，其他預告不會讓每張卡片重繪。
   const merging = preview?.merged.length ? preview : null;
