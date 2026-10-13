@@ -2,6 +2,26 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.109 — 子圖核心清潔（B／C 前提） — 2026-10-14
+
+子圖基本設計（workspace `work/refactor/subgraph-basic-design-2026-10-14.md`＋附錄一、二）審查結束後，人類定第一輪做 B＋C、順序由助手定（執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md`）。本輪只改核心，蓋編輯器之前把 §5 裡 B／C 的前提項做完；編輯器未動。
+
+| 舊行為 | 處理 | 原因 | 出處 |
+|---|---|---|---|
+| 接口鍵是 `in1`／`out1` 序號 | 改做法：產生式 ID（`newPortId`）＋自由文字 `label`；產碼名按位置合成不存 | 序號不是身分：刪中間一個再新增會撞號 | legacy `functions_ui.js:277`（`in`/`out`+N）；核心舊 `subgraph_operations.ts:133`；§4 第 6 列 |
+| 子圖接口兩邊都收資源型別（sampler） | 照舊（核心原本比 legacy 窄，補回） | legacy 兩邊同用 `valid_port_type(resources=True)` | `sgrape_core.py:2106`；`test_sampler_split.py`；附錄一 A1 |
+| 未接的 sampler2D＝不透明黑 | 照舊，走 Texture 2D 既有規則（中繼把「沒有」往下傳） | 只有 sampler2D 有 fallback，其他資源型別未接是錯 | `sgrape_core.py:1393-1405`；附錄二 B5 |
+| 邊界節點不能刪 | 照舊，守在核心關卡（`structure.ts`：每個子圖各一個、stage 裡不准有、不在新增選單） | 和 Color Output 同一條規則、同一個關卡 | `functions_ui.js:60` `canDeleteNode`；附錄一 A8 §5 第 7 項 |
+| 第一次改 Library 副本就自動本地化 | 否決（§3.8 已定：整份唯讀、手動轉為本地，D 做）；本輪只拿掉 `scope`／`origin` | 「一改就默默變副本」很亂（Q74） | `functions_ui.js:36` `prepareSemanticEdit` |
+| 沒人用的定義不清理 | 照舊（本地留著、0 個引用）；Library 副本回收是 D 的新行為，核心改成「只收呼叫端指名可回收的」 | 刪錯呼叫不該丟掉人做的子圖 | §3.9；附錄一 A4／附錄二 B2 |
+| Make Independent 名稱加「 Copy」 | 小改：走節點的撞名規則（`Wrap`→`Wrap_1`） | 一條命名規則（R.76） | `functions_model.js:153`；§3.10 |
+| `scope: library／personal`＋`contentHash` 快照 | 改做法：拿掉；`libraryId` 到 D 才定義，之前帶著它的定義整份拒絕 | 一條規則、Library 與 Personal 一致（Q74） | `functions_model.js:128-150`；§4 第 4 列；附錄二 B7 |
+
+- **記錄更正**：主文件 §3.8「核心現況：自動本地化（`subgraph_copies.ts:64`）」與 §5 第 2 項「從：自動本地化」寫錯——核心沒有自動本地化，`localizeSubgraph` 只有明確呼叫，非 local 定義一改就拋錯（`subgraphs.ts:24, 32`）；自動本地化是 legacy 的行為。根因同 10-14 的教訓：引了行號沒開函式。已記在附錄二 B8 與執行計畫 §0。
+- 程式（694e714d）：`model.ts`（`InterfacePort {id,label?,type,default?}`、`SubgraphData` 無 scope／origin、`color?`）；`subgraph_operations.ts`（`newPortId`、`validPort`、`libraryId` 整份拒絕、`collectSubgraphs(…,collectible)`）；`subgraph_copies.ts`（刪 `localizeSubgraph`；`independentSubgraph` 用 `freeName`）；`subgraphs.ts`（patch 鍵 `label`；換到 opaque 丟預設值與實例值、給了預設值就拒絕；換回數值補零）；`subgraph_interface.ts`（`validInterface`＝數值＋opaque 兩邊）；`subgraph_compiler.ts`（relay 收 opaque、未接時輸出留空；宣告規則同平面編譯器——之前有貼圖輸入宣告的圖整張被拒）；`top_compiler.ts`（`connected()`＝有線且來源有輸出）；`structure.ts`（邊界節點規則）；`groups.ts`（子圖網路一律整理）；`graph.ts`（`removeAll(nodes,collectible)`；收尾不再跳過快照）；`upgrades.ts`（網路鍵 `subgraph:`+id）；`node_names.ts`（`freeName` 加長度參數）；編輯器只加三句結構訊息（`editor.ts` `structureText`、兩個 locale）。
+- 測試：四個子圖測試檔改寫（回收、localize、序號 ID、scope 的案例換成新規則）＋新案例（`libraryId` 拒絕、產生式接口 ID 不撞、sampler2D 進出子圖與未接黑、換型別到 opaque 來回、邊界結構規則四條）；`test_groups`、`test_upgrades` 各改一句。結果：核心 180／180、編輯器 170／170（＋1 略過）、型別檢查過。
+- 限制：編輯器對子圖仍零支援（開圖仍拒絕，R.110 做）；opaque 端到端只做了核心的三段（接口、中繼、宣告），面板欄位與線的轉換在 R.110；`collectible` 現在沒有呼叫端傳集合（全是本地），D 才接。
+
 ## Refactor.108 — 觸控四項（Codex ISSUE TOUCH-2026-10-13） — 2026-10-13
 
 人類：「直接處理掉這四項再說吧，子圖還需要討論邊境。」我的評估寫在 workspace `Review/ISSUE-2026-10-13-touch-editing.md` 回覆欄：四項成立，T03 是框架限制。
