@@ -2,6 +2,46 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.106 — 畫面更新規模化：選取由 session 保管、切片訂閱、手勢只動該動的、CSS 不再整頁重算 — 2026-10-13
+
+範圍說明 workspace `work/refactor/render-scaling-scope-2026-10-13.md`（人類 10-13「都照建議，開始吧」）；依據 `perf-audit-2026-10-13.md`（排查）、`perf-review-2026-10-13.md`（審查）、`selection-performance-2026-10-13.md`（原則）。檢查點 `checkpoint/pre-render-scaling-0.8.306`（commit 245a251）。審查者（Fable 5.1）寫範圍、量 before／after、審每段；三個 Opus 5.5 實作代理各做幾個區塊，一輪做完、一次比對。
+
+- **A 量測**（`tests/browser/benchmark_scaling.cjs`、`tests/fixtures/scaling_base_graph.json`）：正式建置、無頭 Chrome、假宿主、Grape_TOP_test 的圖加 9 節點叢集複製 24 次＝248 節點／136 線（複本疊在基準圖下方），真滑鼠操作，固定情境 M1–M9；`--counts` 在量測版（暫存區的 React 計數 shim，不進 repo）量元件重跑次數。報告 `work/refactor/reports/scaling-before*.json`、`scaling-after*.json`。
+- **B CSS**（`style.css`、新 `gesture_cursor.ts`、`viewport.ts`、`useValueLadder.tsx`、`drag_to_add.tsx`、`place_node.tsx`、`main.tsx`）：節點層的 `:has()` 改成畫布標 `data-multi-select`；拉線游標改由根元素 `data-connecting`（開始、結束各重算一次，不再每加減一個元素就重算全畫布；規則仍是 `*`＋`!important`，手指游標在節點、欄位上保持）；平移、拖數值、拖曳新增的游標改成一層透明層（`holdCursor`），不再 `:root.X *` 整頁重算；平移的層在移動 3px 後才出現（按下時由 pane 的 `dragging` 顯示），單擊、雙擊背景照舊；放置中的線用自己的 `measuring` class。
+- **G React Flow 的 props**（`main.tsx`、`projection.ts`、`EDITOR_UI_RULES.md`）：所有處理函式 `useCallback`、經 ref 讀當次值；`snapGrid`、`fitViewOptions`、`deleteKeyCode` 提成常數；**`elevateNodesOnSelect={false}`（React Flow 例外，人類 10-13 定：照舊產品不抬高選中的節點）**；投影比較時帶上 `conversions`（之前接著轉換線的節點每次改圖都重跑）。
+- **F 量尺寸只在變的時候**（`NodeCard.tsx`、`bars.tsx`）：卡片 `useLayoutEffect(inspect, [data])`；四條列的自動收合改成掛載時一次＋一個 ResizeObserver（列、子元素、部件）＋ MutationObserver（內容變），不再每次重繪重量。
+- **C 選取**（`editor.ts`、`NodeCard.tsx`、`RightDragSelect.tsx`、`SourceCard.tsx`、面板、`style.css`）：session 私有 `selection = { nodes, edges, primary }` 與 `box` 是唯一真相；一個寫入點 `applySelection` 只對樣子變了的節點、線換新物件、發布一次；新投影在 `commit()` 對帳（不在了的 id 離開、主要選取依 Q33 換人）；三種通知拆成 `primarySubscribe`／`wireKeySubscribe`／`sourceSubscribe`；卡片不再訂閱主要選取，主要與框選預覽的樣子改畫在 React Flow 外框的 class（`.react-flow__node.primary`、`.box-in`）；`selectedInOrder()` 給群組、複製、對準用。**小改**：主要選取交接改為「最近選的那個」（舊產品 `graph_ui.js:1467`；之前是投影順序最後一個）；刪除、Undo 讓主要選取消失時換人而不是變成沒有。
+- **D 切片訂閱**（新 `editor_slice.ts`：`useEditorSlice`、`useEditorFields`；`bars.tsx`、`main.tsx`、`panels.tsx`、`ParamsPanel.tsx`、`AppearancePanel.tsx`）：只有 Canvas 訂閱投影；工作區讀 8 個欄位、面板各讀自己的；三條列只讀自己顯示的；參數面板包 memo、來源查表改 Map；外觀面板只在打開、外觀或調整值改變時讀 computed style。
+- **E 手勢暫態**（`main.tsx`）：放置狀態搬進 Canvas；交給 React Flow 的 `nodes`／`edges` 只在部分變時換；每條線保留同一個畫圖物件（WeakMap）；`applyNodeChanges` 已確認保留未動節點的物件。
+- **H 面板逐行**（新 `glsl_lines.ts`、`GlslPanel.tsx`、`json_format.ts`、`GraphJsonView.tsx`）：GLSL 一次切行上色（名稱用查表取代全名稱正規表達式），主要選取變時只重畫新舊節點的行；Graph JSON 排版改線性（子樹單行長度由下往上算一次）、行物件沒變就沿用、三種高亮用 id→行號 Map。
+- **測試**：editor 155 → 162（＋1 略過）：物件識別不變量（換主要選取只換 2 個、框選預覽只換 1 個、拖曳格切片值不變、改值後轉換線節點資料不變）、選取隨機 5,000 步對帳、GLSL 切行與舊正規表達式一致、248 節點 JSON 排版 4703 行同雜湊；core 171。
+- **前後比對**（248 節點，正式建置，同一支腳本；重跑次數在量測版）：
+
+| 指標 | before | after | 必達 |
+|---|---|---|---|
+| M1 換點：按下到畫出（中位數） | 247.3 | 19.4 | ≤ 60ms |
+| M2 換點：元件重跑／次 | 4865 | 68 | ≤ 30 |
+| M3 拖 8 個：最長一格 | 116.7 | 25 | ≤ 20ms |
+| M3 拖 8 個：外框重跑／步 | 262 | 8 | ≤ 10 |
+| M4 框選 216 個：最長一格 | 183.4 | 108.3 | ≤ 20ms |
+| M4 放開：長畫格 | 176 | 92 | ≤ 40ms |
+| M4 卡片重跑合計 | 3944 | 224 | ≤ 60 |
+| M5 平移：長畫格數 | 4 | 0 | 0 |
+| M6 改值：事件處理最長 | 64 | 32 | ≤ 25ms |
+| M6 改值／Undo：卡片重跑 | 126 | 1 | ≤ 2 |
+| M7 刪除：長畫格 | 175 | 無（<50ms） | ≤ 70ms |
+| M7 Undo：長畫格 | 153 | 無（<50ms） | ≤ 70ms |
+| M8 拉線：長畫格數 | 4 | 4 | 0 |
+| M8 拉線：最長 | 88 | 97 | — |
+| M9 放置：最長一格 | 108.4 | 16.7 | ≤ 20ms |
+| M9 放置：外框重跑／格 | 250 | 1 | ≤ 5 |
+
+  - 必達未達：**M2**（68：剩下的是被點的兩張卡片各自整棵重畫加浮動工具列，是真的有變的東西；要再降要把卡片內的列各自包 memo，下一輪）；**M4**（每步的大頭是 React Flow 自己的 `getIntersectingNodes` 掃全部節點；放開時 216 個節點真的變成選取。人類 10-13 提：卡片完全不知道選取、樣子只畫在外框層，放開就一張卡片都不用重畫——記為下一輪候選，不在本輪）；**M8**（剩下的是 React Flow 在拉線開始、結束時約 2000 個接孔各重跑一次，框架內部；實驗過把拉線游標規則縮到只套畫布與接孔：長畫格 4 → 2、最長 93 → 60ms，但拉線時滑過節點、欄位的游標會變，屬視覺變更，未套用，待人類決定）。M3、M9 的最長一格 25／17ms 比必達 20 略高或達標邊緣。
+  - M10（圖的 JSON 開著換點）未量：面板在關著的右側窗格，無頭環境打不開那個分頁；H 區塊後理論上只重畫高亮變的行。
+- **真頁面檢查**（TD 重載後 `Grape_TOP_perf`，32 節點，真滑鼠）：點選、Shift 加選（主要選取亮綠、`data-multi-select` 在、z-index 1 不抬高）、右鍵框選預覽虛線 9 個→放開選 10 個、平移（游標層出現後消失、選取不變）、拖 Color 的值→Undo 還原、Tab 放置（提示「點擊放置節點 · Esc 取消」）→Esc、節點右鍵選單、拉線到空白處開新增視窗。深淺主題、手機、Delete 真鍵盤未在本輪看。
+- **發現、未處理**：真的按 Delete 鍵在 248 節點圖上會被吃掉（腳本改送到畫布才刪得掉；與 `deleteKeyCode` 穩定與否無關，原因未明，待人類在 TD 用真鍵盤試）；選中的節點不再抬高後，被別的節點蓋住的節點的欄位碰不到（照舊產品的結果）；`editor.commit()` 每次改圖都做新的 `glslMap` 陣列，所以移動節點也會讓 GLSL 面板重切一次（代理 3 發現）；Graph JSON 每個版本仍整份重排（約 10ms）。
+- **限制**：量測只在一台機器、無頭 Chrome；人類的重繪閃爍與真鍵盤檢查未做；TOE 未交付（等人類驗收）；未推送。
+
 ## Refactor.58.2 — 外觀一批（不碰節點定義的）：拖線高亮… — 2026-10-09
 
 - 人類：外觀項目一起做；動到定義的（分量樣式與染色、分量定義隱藏）排後面。這一批：拖線高亮、畫布內陰影、雙擊節點對準＋平滑過渡、清掉兩個舊設定。
