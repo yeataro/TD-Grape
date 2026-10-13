@@ -186,3 +186,51 @@ test('5,000 random selection steps keep every flag equal to the selection (Refac
     check(step);
   }
 });
+
+// The GLSL panel's lines (Refactor.106 H): split and coloured once per GLSL; each node knows the lines its tracing changes. Checked on
+// a long real GLSL against the old way (one `\b(name|…)\b` over every plain piece). GLSL 面板的行：每份 GLSL 只切一次；每個節點知道
+// 被追蹤時會變的行。用一份長的真正 GLSL，對照以前的做法（每段純文字都用一條 `\b(名字|…)\b` 去切）。
+test('GLSL lines: the same links as the old split, and each node touches exactly the lines that show it (Refactor.106 H)', t => {
+  // Prism's core as the bundler gives it (a default export); it also sets the global Prism its grammar files use.
+  // Prism 核心照打包工具給的樣子（default 匯出）；它也設好規則檔要用的全域 Prism。
+  const prism = require('prismjs/components/prism-core'); prism.default ??= prism;
+  const { highlightGlsl } = load(path.join(root, 'src/editor-react/code_highlight.ts'));
+  const { glslRows } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  // The 248-node graph's copies do not reach the output, so its GLSL is short; a chain of 200 Floor nodes from the uAbsTime Uniform
+  // into the output makes one line and one name per node (232 nodes: within a network's node limit). 248 節點圖的複本不接到輸出，GLSL
+  // 很短；從 uAbsTime Uniform 接 200 個 Floor 節點的鏈到輸出，每個節點一行、一個名字（232 個節點：在一個網路的節點上限內）。
+  const graph = scalingGraph(0), pixel = graph.stages.pixel, floor = pixel.nodes.find(n => n.id === 'n49284b53ac094698861f7f3770a8e591');
+  let from = ['ncd61a81cad554c3f8f8d0d47998ecbb7', 'out'];
+  for (let k = 1; k <= 200; k++) {
+    pixel.nodes.push({ ...JSON.parse(JSON.stringify(floor)), id: 'nfloor' + k, name: 'Floor_c' + k, ui: { x: k * 48, y: 2400 } });
+    pixel.edges.push({ id: 'efloor' + k, from, to: ['nfloor' + k, 'value'] }); from = ['nfloor' + k, 'out'];
+  }
+  pixel.edges.find(e => e.to[0] === 'n95a062f14f7d4138ba5e2d764b752351' && e.to[1] === 'x').from = from;
+  const { glsl, glslMap, glslVariables, glslDeclarations } = open(t, graph).snapshot();
+  const lines = highlightGlsl(glsl);
+  assert.ok(lines.length > 200 && Object.keys(glslVariables).length > 200 && Object.keys(glslDeclarations).length, 'a long GLSL with many names');
+  const started = performance.now(), { rows, touching } = glslRows(lines, glslMap, glslVariables, glslDeclarations);
+  assert.ok(performance.now() - started < 200, 'worked out quickly');
+  const names = [...Object.keys(glslVariables), ...Object.keys(glslDeclarations)].sort((a, b) => b.length - a.length);
+  const pattern = new RegExp('\\b(' + names.join('|') + ')\\b', 'g');
+  const nodeOf = new Map(glslMap.map(row => [row.line, row.node])), shows = new Map();
+  const show = (node, index) => { if (!shows.has(node)) shows.set(node, new Set()); shows.get(node).add(index); };
+  let links = 0;
+  rows.forEach((row, index) => {
+    assert.equal(row.node, nodeOf.get(index + 1));
+    if (row.node !== undefined) show(row.node, index);
+    row.pieces.forEach((piece, i) => {
+      const was = lines[index][i];
+      if (!('linked' in piece)) { assert.equal(piece, was); if (!was.kind) assert.equal(was.text.split(pattern).length, 1); return; }
+      const old = was.text.split(pattern).filter(Boolean), now = piece.linked.map(part => typeof part === 'string' ? part : part.text);
+      assert.deepEqual(now, old, 'line ' + (index + 1));
+      for (const part of piece.linked) if (typeof part !== 'string') {
+        links++;
+        if ('node' in part) { assert.equal(part.node, glslVariables[part.text]); show(part.node, index); }
+        else assert.equal(part.declaration, glslDeclarations[part.text]);
+      }
+    });
+  });
+  assert.ok(links > 200);
+  assert.deepEqual(new Map([...touching].map(([node, list]) => [node, new Set(list)])), shows);
+});

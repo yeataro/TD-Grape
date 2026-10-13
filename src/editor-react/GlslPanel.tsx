@@ -9,6 +9,7 @@ import { ScrollFade } from './controls';
 import { scrollToMiddle } from './scroll_glide';
 import type { EditorState } from './editor';
 import { traceSwitch, useFollowTrace } from './live_trace';
+import { glslRows, type GlslName, type GlslRow } from './glsl_lines';
 
 // Live trace (Refactor.83, human 2026-10-11; new, legacy's GLSL tab did not follow the selection, app.js:1663): the primary
 // node's names are marked and its lines lit as when hovered. On by default; a personal preference, switched from the panel's
@@ -28,10 +29,9 @@ export const glslMenu = trace.menu;
 type GlslInput = Pick<EditorState, 'glsl' | 'glslMap' | 'glslVariables' | 'glslDeclarations' | 'stuck'>;
 export const GlslPanel = memo(GlslView);
 function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: GlslInput) {
-  useLanguage();
+  const language = useLanguage();
   const session = useSession(), flow = useReactFlow();
   const lines = useMemo(() => highlightGlsl(glsl), [glsl]);
-  const nodeOf = useMemo(() => new Map(glslMap.map(row => [row.line, row.node])), [glslMap]);
   const failure = stuck?.failure;
   const errors = useMemo(() => failure && failure.pixel === glsl ? glslErrors(failure.log) : [], [failure, glsl]);
   const marked = useMemo(() => new Map(errors.map(error => [error.line, error.text])), [errors]);
@@ -48,28 +48,22 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
   // The traced node's first line comes into view when it is chosen (Refactor.102.2, human 2026-10-12: the two panels trace alike).
   // 選到的節點第一行捲進畫面（R.102.2，人類：兩個面板追蹤的能力對齊）。
   const chooseHere = useFollowTrace(box, '.glsl-line.traced', traced);
-  const goToNode = (id: string) => { chooseHere(id); session.selectNode(id); frameNodes(flow, [id]); };
-  // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10);
-  // so is the Shader's output (Refactor.63.4). A Uniform's or constant's name selects every node using it, like Shared
-  // Sources' "Select references" (63.4). 節點的變數是連到那個節點的超連結，照核心的表找，不從文字猜（人類）；Shader 的輸出也是。
-  // Uniform 或常數的名字選取所有引用它的節點，同 Shared Sources 的「選取引用」。
-  const goToReferences = (id: string) => { const nodes = session.selectReferences(id); if (nodes.length) frameNodes(flow, nodes); };
-  const names = useMemo(() => [...Object.keys(glslVariables), ...Object.keys(glslDeclarations)].sort((a, b) => b.length - a.length),
-    [glslVariables, glslDeclarations]);
-  const pattern = useMemo(() => names.length ? new RegExp('\\b(' + names.join('|') + ')\\b', 'g') : null, [names]);
-  const link = (name: string, key: number) => {
-    const node = glslVariables[name], declaration = glslDeclarations[name];
-    return node !== undefined
-      ? <button key={key} type="button" className={'glsl-link' + (node === traced ? ' traced' : '')} onClick={() => goToNode(node)}
-        title={say(tr('glsl.goToVariable', 'Select the node {node}', { node }))}>{name}</button>
-      : <button key={key} type="button" className="glsl-link" onClick={() => goToReferences(declaration!)}
-        title={say(tr('glsl.selectReferences', 'Select every node using {name}', { name }))}>{name}</button>;
-  };
-  const linked = (text: string, key: number) => {
-    if (!pattern) return text;
-    const parts = text.split(pattern);
-    return parts.length === 1 ? text : <span key={key}>{parts.map((part, i) => i % 2 ? link(part, i) : part)}</span>;
-  };
+  // The lines' handlers stay the same function for the panel's life (a memoised line keeps them); what changes per render is read
+  // when they run. 行的處理函式在面板存在期間都是同一個（memo 的行留著它們）；每次重繪會變的東西在執行時才讀。
+  const latest = useRef({ session, flow, chooseHere });
+  latest.current = { session, flow, chooseHere };
+  const go = useMemo((): GlslGo => ({
+    node: id => { const { session, flow, chooseHere } = latest.current; chooseHere(id); session.selectNode(id); frameNodes(flow, [id]); },
+    // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10);
+    // so is the Shader's output (Refactor.63.4). A Uniform's or constant's name selects every node using it, like Shared
+    // Sources' "Select references" (63.4). 節點的變數是連到那個節點的超連結，照核心的表找，不從文字猜（人類）；Shader 的輸出也是。
+    // Uniform 或常數的名字選取所有引用它的節點，同 Shared Sources 的「選取引用」。
+    references: id => { const { session, flow } = latest.current; const nodes = session.selectReferences(id); if (nodes.length) frameNodes(flow, nodes); },
+  }), []);
+  // Split and coloured once per GLSL (Refactor.106 H); a primary change re-draws only the lines of the old and the new traced node.
+  // 每份 GLSL 只切割上色一次（R.106 H）；換主要選取只重畫舊的與新的被追蹤節點那幾行。
+  const { rows, touching } = useMemo(() => glslRows(lines, glslMap, glslVariables, glslDeclarations), [lines, glslMap, glslVariables, glslDeclarations]);
+  const tracedLines = useMemo(() => new Set(traced === null ? [] : touching.get(traced) ?? []), [touching, traced]);
   if (!glsl) return <pre className="code-view">{say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>;
   return <div className="glsl-view" ref={box} aria-label={say(tr('glsl.label', 'Generated GLSL'))}>
     {failure && <div className={'glsl-failure ' + (errors.length ? 'current' : 'earlier')}>
@@ -83,16 +77,34 @@ function GlslView({ glsl, glslMap, glslVariables, glslDeclarations, stuck }: Gls
           {say(tr('glsl.lineError', 'Line {line}: {message}', { line: error.line, message: error.text }))}</button></li>)}</ul>
         : <pre className="glsl-log">{failure.log}</pre>}
     </div>}
-    <ScrollFade className="glsl-scroll"><pre className="code-view glsl-code">{lines.map((pieces, index) => {
-      const line = index + 1, node = nodeOf.get(line), error = marked.get(line);
-      return <div key={line} data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focus.line === line ? ' focused' : '') + (node !== undefined && node === traced ? ' traced' : '')}
-        title={error}>
-        {node ? <button type="button" className="glsl-gutter" onClick={() => goToNode(node)}
-          title={say(tr('glsl.goToNode', 'Select the node that wrote this line ({node})', { node }))}>{line}</button>
-          : <span className="glsl-gutter">{line}</span>}
-        <span className="glsl-text">{pieces.map((piece, i) => piece.kind
-          ? <span key={i} className={'glsl-' + piece.kind}>{piece.text}</span> : linked(piece.text, i))}{pieces.length ? null : ' '}</span>
-      </div>;
+    <ScrollFade className="glsl-scroll"><pre className="code-view glsl-code">{rows.map((row, index) => {
+      const line = index + 1;
+      return <Line key={line} line={line} row={row} error={marked.get(line)} focused={focus.line === line}
+        traced={tracedLines.has(index) ? traced : null} language={language} go={go} />;
     })}</pre></ScrollFade>
   </div>;
 }
+
+type GlslGo = { node: (id: string) => void; references: (id: string) => void };
+/** One line of the GLSL (Refactor.106 H). Memoised: it takes its pieces and what decides its look — `traced` is the traced node only
+ * when this line shows it (its own node or one of its variables), else null, so a primary change leaves the other lines alone;
+ * `language` re-draws the titles. GLSL 的一行（R.106 H）。memo：只拿自己的片段與決定外觀的值——traced 只在這一行有顯示它（自己的節點
+ * 或它的變數）時才是被追蹤的節點、否則是 null，換主要選取時其他行不動；language 讓提示文字跟著換語言。 */
+const Line = memo(function Line({ line, row, error, focused, traced, go }: { line: number; row: GlslRow; error: string | undefined;
+  focused: boolean; traced: string | null; language: string; go: GlslGo }) {
+  const node = row.node;
+  const link = (name: GlslName, key: number) => 'node' in name
+    ? <button key={key} type="button" className={'glsl-link' + (name.node === traced ? ' traced' : '')} onClick={() => go.node(name.node)}
+      title={say(tr('glsl.goToVariable', 'Select the node {node}', { node: name.node }))}>{name.text}</button>
+    : <button key={key} type="button" className="glsl-link" onClick={() => go.references(name.declaration)}
+      title={say(tr('glsl.selectReferences', 'Select every node using {name}', { name: name.text }))}>{name.text}</button>;
+  return <div data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focused ? ' focused' : '') + (node !== undefined && node === traced ? ' traced' : '')}
+    title={error}>
+    {node ? <button type="button" className="glsl-gutter" onClick={() => go.node(node)}
+      title={say(tr('glsl.goToNode', 'Select the node that wrote this line ({node})', { node }))}>{line}</button>
+      : <span className="glsl-gutter">{line}</span>}
+    <span className="glsl-text">{row.pieces.map((piece, i) => 'linked' in piece
+      ? <span key={i}>{piece.linked.map((part, j) => typeof part === 'string' ? part : link(part, j))}</span>
+      : piece.kind ? <span key={i} className={'glsl-' + piece.kind}>{piece.text}</span> : piece.text)}{row.pieces.length ? null : ' '}</span>
+  </div>;
+});
