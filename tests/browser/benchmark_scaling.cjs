@@ -203,6 +203,17 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   // M10 (the Graph JSON panel open) is measured by hand: the panel sits in the closed right pane and its tab cannot be reached the same way in every layout.
   // M10（圖的 JSON 面板）手動量：面板在關著的右側窗格裡，各版面下沒有一致的打開路徑。
 
+  // M11: wheel zoom with every stack node selected (216 selection rings on screen), then pan with them selected: what a selection
+  // look costs while the view moves. 216 個被選節點在畫面上時滾輪縮放、再平移：視角移動時選取的樣子要花多少。
+  await click(emptyAgain); await page.waitForTimeout(200);
+  r = await run('M11 box all', async () => { await drag(corner, to.x - corner.x, to.y - corner.y, 10, 'right', 30); });
+  summary.M11_selected = await page.locator('.react-flow__node.selected').count();
+  r = await run('M11 wheel zoom selected', async () => { for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, i % 2 ? 120 : -120); await page.waitForTimeout(60); } });
+  summary.M11_zoom_frame_ms_max = max(r.gaps); summary.M11_zoom_long_frames = r.long; summary.M11_zoom_layout_ms = +r.loaf.reduce((sum, l) => sum + l[1], 0).toFixed(0);
+  r = await run('M11 pan selected', async () => { await drag(emptyAgain, -60, -40, 20); });
+  summary.M11_pan_frame_ms_max = max(r.gaps); summary.M11_pan_long_frames = r.long;
+  await click(emptyAgain); await page.waitForTimeout(200);
+
   summary.errors = errors; summary.build = built; summary.counts = counts;
   const out = path.join(reportFolder, `scaling-${label}${counts ? '-counts' : ''}.json`);
   fs.writeFileSync(out, JSON.stringify({ summary, results }, null, 1));
