@@ -51,16 +51,33 @@ function oneLine(value: Json): string {
   return items.length ? '{ ' + items.join(', ') + ' }' : '{}';
 }
 
+/** The length of oneLine(value), worked out bottom-up once per object or array and kept in `lengths` (Refactor.106 H): laying out
+ * asks it at every level, and writing the whole subtree there each time cost size x depth. oneLine(value) 的長度，每個物件或陣列由下往上
+ * 只算一次、存在 lengths（R.106 H）：排版每一層都要問，以前每次都把整棵子樹寫一遍，成本是大小 × 深度。 */
+function lengthOf(value: Json, lengths: Map<object, number>): number {
+  if (!isOpenable(value)) return JSON.stringify(value).length;
+  const known = lengths.get(value);
+  if (known !== undefined) return known;
+  const items = entriesOf(value);
+  // '[' ']' or '{ ' ' }' around the items, ', ' between them; empty: '[]' or '{}'. 外面是 [ ] 或 { }，項目之間 ', '；空的是 [] 或 {}。
+  let length = !items.length ? 2 : (Array.isArray(value) ? 2 : 4) + 2 * (items.length - 1);
+  for (const [key, item] of items) length += keyOf(key).length + lengthOf(item, lengths);
+  lengths.set(value, length);
+  return length;
+}
+
 /** `path`: the keys down to here; a canvas node is an item of `stages.<stage>.nodes`, a wire of `stages.<stage>.edges`, a declaration
  * of `declarations`. path：走到這裡的鍵；畫布上的節點是 stages.<stage>.nodes 的項目，接線是 stages.<stage>.edges 的，宣告是 declarations 的。 */
-function lay(value: Json, indent: string, key: string | null, comma: string, path: readonly string[], owner: Owner, lines: JsonLine[]) {
+function lay(value: Json, indent: string, key: string | null, comma: string, path: readonly string[], owner: Owner, lines: JsonLine[],
+  lengths: Map<object, number>) {
   // The path written as JSON, so no key can run into another; an opening and a closing line get their own last step.
   // 路徑寫成 JSON，任何鍵都不會撞在一起；開頭與結尾的行各自多一步。
   const place = JSON.stringify(path), edge = (mark: string) => JSON.stringify([...path, mark]);
-  const flat = indent + keyOf(key) + oneLine(value) + comma;
-  if (!isOpenable(value) || flat.length <= WIDTH || !entriesOf(value).length) {
+  // Written on one line only when it stays there: a value that opens is never written whole. 只有留在一行時才寫成一行：會展開的值不整個寫出來。
+  const head = indent + keyOf(key);
+  if (!isOpenable(value) || head.length + lengthOf(value, lengths) + comma.length <= WIDTH || !entriesOf(value).length) {
     const links = targets(value, path);
-    lines.push({ text: flat, place, ...owner, ...(links.some(Boolean) ? { links } : {}) });
+    lines.push({ text: head + oneLine(value) + comma, place, ...owner, ...(links.some(Boolean) ? { links } : {}) });
     return;
   }
   const items = entriesOf(value), [open, close] = Array.isArray(value) ? ['[', ']'] : ['{', '}'];
@@ -75,7 +92,7 @@ function lay(value: Json, indent: string, key: string | null, comma: string, pat
     // An item with an id is placed by it (@), others by their index (#): an id "3" is not the fourth item. 有 id 的項目用 id（@）、其他用
     // 索引（#）：id 是「3」不等於第四項。
     const step = childKey ?? (idOf(item) !== null ? '@' + idOf(item) : '#' + index);
-    lay(item, indent + INDENT, childKey, index < items.length - 1 ? ',' : '', [...path, step], ownerOf(item), lines);
+    lay(item, indent + INDENT, childKey, index < items.length - 1 ? ',' : '', [...path, step], ownerOf(item), lines, lengths);
   });
   at({ text: indent + close + comma, place: edge('\u0001}') });
 }
@@ -87,7 +104,7 @@ export function layJson(value: unknown): JsonLine[] {
   const text = JSON.stringify(value);
   if (text === undefined) return [];
   const lines: JsonLine[] = [];
-  lay(JSON.parse(text) as Json, '', null, '', [], {}, lines);
+  lay(JSON.parse(text) as Json, '', null, '', [], {}, lines, new Map());
   return lines;
 }
 /** The same as text; read as JSON it is the same value. 同上的文字；當 JSON 讀回來是同一個值。 */
@@ -116,4 +133,28 @@ export function removedLines(before: readonly JsonLine[], after: readonly JsonLi
     if (index !== undefined) at = index + 1; else gone.push({ at, line });
   }
   return gone;
+}
+
+/** `after` with the line objects of `before` kept where a line is the same — place, text, owner and links (Refactor.106 H): the Graph
+ * JSON View draws a line again only when its object changes, so an edit re-draws only the lines it changed. after 裡跟 before 相同的行
+ * ——位置、文字、所屬、連結都一樣——沿用 before 的那個物件（R.106 H）：Graph JSON View 只在一行的物件換了時重畫它，修改只重畫改到的行。 */
+export function keepSameLines(before: readonly JsonLine[], after: readonly JsonLine[]): JsonLine[] {
+  const was = new Map(before.map(line => [line.place, line]));
+  const same = (a: JsonLine, b: JsonLine) => a.text === b.text && a.node === b.node && a.edge === b.edge && a.declaration === b.declaration
+    && (a.links === b.links || JSON.stringify(a.links) === JSON.stringify(b.links));
+  return after.map(line => { const old = was.get(line.place); return old && same(old, line) ? old : line; });
+}
+
+/** For each node, wire and declaration, the lines its object holds (Refactor.106 H): what the Graph JSON View lights for the primary
+ * node, the selected wires and the selected source, found without reading every line. 每個節點、接線、宣告的物件佔哪幾行（R.106 H）：
+ * Graph JSON View 為主要節點、選到的接線、選到的來源點亮的行，不必每一行都讀一遍就找得到。 */
+export function linesByOwner(lines: readonly JsonLine[]) {
+  const node = new Map<string, number[]>(), edge = new Map<string, number[]>(), declaration = new Map<string, number[]>();
+  const add = (map: Map<string, number[]>, id: string, index: number) => { const list = map.get(id); if (list) list.push(index); else map.set(id, [index]); };
+  lines.forEach((line, index) => {
+    if (line.node !== undefined) add(node, line.node, index);
+    if (line.edge !== undefined) add(edge, line.edge, index);
+    if (line.declaration !== undefined) add(declaration, line.declaration, index);
+  });
+  return { node, edge, declaration };
 }
