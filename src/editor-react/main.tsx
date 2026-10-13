@@ -1,7 +1,7 @@
 import { StrictMode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, useStore, useReactFlow, useConnection, getBezierPath,
-  type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
+  type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes, type ReactFlowProps } from '@xyflow/react';
 import { GhostEdge } from './GhostMark';
 import { WireEdge } from './wire_edge';
 import { ConvertEdge } from './ConvertEdge';
@@ -126,6 +126,14 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
 // dots are at least 14px apart on screen and the dots shrink with the zoom; Snap keeps the 22-unit grid.
 // 拉遠時網格變疏（照舊產品）：螢幕上點距小於 14px 就把間距加倍，點跟著縮小；Snap 仍對齊 22 單位的網格。
 const GRID = 22;
+// React Flow's props that are objects or arrays, made once (Refactor.106): a new one on each render made React Flow redo its work —
+// a new deleteKeyCode re-registered its Delete key listener on every render, and on a 248-node graph a real Delete press was lost.
+// 給 React Flow 的物件與陣列 props 只建一次（R.106）：每次重繪都給新的，React Flow 就重做一次——新的 deleteKeyCode 每次重繪都重掛 Delete
+// 的按鍵監聽，248 個節點的圖上真的按 Delete 會被吃掉。
+const SNAP_GRID: [number, number] = [GRID, GRID];
+const FIT_VIEW = { maxZoom: 1, padding: .2 };
+const DELETE_KEYS = reactFlowKeys('delete');
+type FlowHandler<K extends keyof ReactFlowProps<FlowNode, FlowEdge>> = NonNullable<ReactFlowProps<FlowNode, FlowEdge>[K]>;
 function AdaptiveGrid() {
   const zoom = useStore(state => state.transform[2]);
   let gap = GRID;
@@ -239,73 +247,96 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
+  // Every handler given to React Flow keeps one identity across renders (Refactor.106): React Flow copies handlers into its store and
+  // re-renders what reads them whenever one changes. What changes per render is read through `latest` when the handler runs.
+  // 交給 React Flow 的處理函式在每次重繪間保持同一個（R.106）：React Flow 把它們抄進自己的 store，換一個就重繪讀它的部分。每次重繪會變的值，
+  // 在函式執行時從 latest 讀。
+  const latest = useRef({ session, projection, options, onCreate, flow });
+  latest.current = { session, projection, options, onCreate, flow };
+  const onMoveStart = useCallback<FlowHandler<'onMoveStart'>>(event => {
+    if (event) damper.current?.interrupt();
+    if (event?.type === 'mousedown') panningCursor(true, event as MouseEvent);
+  }, []);
+  // Only a gesture's end: the damped pan moves the view by code, and each such move ends with no event. 只在手勢結束時：阻尼的平移
+  // 用程式移動畫面，每次這樣的移動結束時都沒有事件。
+  const onMoveEnd = useCallback<FlowHandler<'onMoveEnd'>>(event => { if (event) panningCursor(false); }, []);
+  const onConnectEnd = useCallback<FlowHandler<'onConnectEnd'>>((event, state) => {
+    surface.current?.toggleAttribute('data-connecting', false);
+    if (reconnecting.current) return;
+    const { session, projection, options, onCreate } = latest.current;
+    // A warning, not an error: nothing broke, the wire just does not fit (Refactor.75.8, human 2026-10-11: red was too much).
+    // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。
+    // Released on an input of the floating Parameter panel: wired to that input of the node it shows (Refactor.85; legacy
+    // inspector.js:1571). 放在浮動參數面板的輸入接孔上：接到它顯示的那個節點的那個輸入（R.85；照舊產品）。
+    const released = 'changedTouches' in event ? event.changedTouches[0]! : event;
+    const panelPort = (document.elementFromPoint(released.clientX, released.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-panel-port]');
+    if (panelPort && state.fromNode && state.fromHandle?.id && state.fromHandle.type === 'source') {
+      const wire = { source: state.fromNode.id, sourceHandle: state.fromHandle.id, target: panelPort.dataset.panelNode!, targetHandle: panelPort.dataset.panelPort! };
+      if (session.valid(wire)) session.connect(wire); else session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.'));
+      return;
+    }
+    if (state.toHandle && !state.isValid) { session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.')); return; }
+    if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
+    const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
+    // Released on empty canvas from a connected input: pull that input's wire (Q33). 從接了線的輸入拉到空白處：拔線。
+    if (side === 'input' && projection.edges.some(edge => edge.target === node && edge.targetHandle === port)) { session.disconnectInput(node, port); return; }
+    // Otherwise Create node opens there with what fits (legacy graph_ui.js:15–20). 其他情況：在那裡打開新增節點，只列接得上的。
+    if (!options.wireDropCreates) return;
+    const data = state.fromNode.data as FlowNode['data'], point = 'changedTouches' in event ? event.changedTouches[0]! : event;
+    const type = (side === 'output' ? data.outputs : data.inputs).find(item => item.key === port)?.type ?? '';
+    onCreate({ screen: { x: point.clientX, y: point.clientY }, wire: { end: { node, port, side } as WireEnd, type } });
+  }, []);
+  const onReconnectStart = useCallback(() => { reconnecting.current = true; }, []);
+  const onReconnect = useCallback<FlowHandler<'onReconnect'>>((edge, connection) => {
+    if (connection.target && connection.targetHandle && (connection.target !== edge.target || connection.targetHandle !== edge.targetHandle))
+      latest.current.session.moveWire(edge.id, { node: connection.target, port: connection.targetHandle });
+  }, []);
+  // Dropped where no input takes it: the wire is pulled, as from the input itself (Q33). 放到沒有輸入的地方：拔線。
+  const onReconnectEnd = useCallback<FlowHandler<'onReconnectEnd'>>((_event, edge, _type, state) => {
+    setTimeout(() => { reconnecting.current = false; });
+    if (!state.toHandle && edge.targetHandle) latest.current.session.disconnectInput(edge.target, edge.targetHandle);
+  }, []);
+  const onDoubleClick = useCallback<FlowHandler<'onDoubleClick'>>(event => {
+    if ((event.target as Element).classList.contains('react-flow__pane'))
+      latest.current.onCreate({ screen: { x: event.clientX, y: event.clientY }, place: true });
+  }, []);
+  const onNodeDragStart = useCallback(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }, []);
+  // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
+  // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
+  const onNodeDoubleClick = useCallback<FlowHandler<'onNodeDoubleClick'>>((event, node) => {
+    if (!(event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row'))
+      frameNodes(latest.current.flow, [node.id]);
+  }, []);
+  const onEdgeClick = useCallback<FlowHandler<'onEdgeClick'>>((event, edge) => latest.current.session.clickEdge(edge.id, pressKind(event)), []);
+  const onPaneClick = useCallback(() => latest.current.session.clearSelection(), []);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={merging}><ErrorNodesContext.Provider value={errorNodes}>
     <RightDragSelect session={session} boxSelect={boxSelect} onMenu={menu}>
     <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left"
       // A node being placed is drawn with the graph's, but is not in it (place_node.tsx). 放置中的節點和圖的一起畫，但不在圖裡。
       nodes={placing ? [...projection.nodes, placing.node] : projection.nodes} edges={placing ? [...edges, ...placing.edges] : edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); if (event?.type === 'mousedown') panningCursor(true, event as MouseEvent); }}
-      // Only a gesture's end: the damped pan moves the view by code, and each such move ends with no event. 只在手勢結束時：阻尼的平移
-      // 用程式移動畫面，每次這樣的移動結束時都沒有事件。
-      onMoveEnd={event => { if (event) panningCursor(false); }}
+      zoomOnScroll={!damping} onMoveStart={onMoveStart} onMoveEnd={onMoveEnd}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
-      onConnectStart={onConnectStart}
-      onConnectEnd={(event, state) => {
-        surface.current?.toggleAttribute('data-connecting', false);
-        if (reconnecting.current) return;
-        // A warning, not an error: nothing broke, the wire just does not fit (Refactor.75.8, human 2026-10-11: red was too much).
-        // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。
-        // Released on an input of the floating Parameter panel: wired to that input of the node it shows (Refactor.85; legacy
-        // inspector.js:1571). 放在浮動參數面板的輸入接孔上：接到它顯示的那個節點的那個輸入（R.85；照舊產品）。
-        const released = 'changedTouches' in event ? event.changedTouches[0]! : event;
-        const panelPort = (document.elementFromPoint(released.clientX, released.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-panel-port]');
-        if (panelPort && state.fromNode && state.fromHandle?.id && state.fromHandle.type === 'source') {
-          const wire = { source: state.fromNode.id, sourceHandle: state.fromHandle.id, target: panelPort.dataset.panelNode!, targetHandle: panelPort.dataset.panelPort! };
-          if (session.valid(wire)) session.connect(wire); else session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.'));
-          return;
-        }
-        if (state.toHandle && !state.isValid) { session.warn(tr('edit.wireRefused', 'Cannot connect: the types or the graph structure do not fit.')); return; }
-        if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
-        const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
-        // Released on empty canvas from a connected input: pull that input's wire (Q33). 從接了線的輸入拉到空白處：拔線。
-        if (side === 'input' && projection.edges.some(edge => edge.target === node && edge.targetHandle === port)) { session.disconnectInput(node, port); return; }
-        // Otherwise Create node opens there with what fits (legacy graph_ui.js:15–20). 其他情況：在那裡打開新增節點，只列接得上的。
-        if (!options.wireDropCreates) return;
-        const data = state.fromNode.data as FlowNode['data'], point = 'changedTouches' in event ? event.changedTouches[0]! : event;
-        const type = (side === 'output' ? data.outputs : data.inputs).find(item => item.key === port)?.type ?? '';
-        onCreate({ screen: { x: point.clientX, y: point.clientY }, wire: { end: { node, port, side } as WireEnd, type } });
-      }}
-      edgesReconnectable={options.wirePickUp}
-      onReconnectStart={() => { reconnecting.current = true; }}
-      onReconnect={(edge, connection) => { if (connection.target && connection.targetHandle && (connection.target !== edge.target || connection.targetHandle !== edge.targetHandle))
-        session.moveWire(edge.id, { node: connection.target, port: connection.targetHandle }); }}
-      // Dropped where no input takes it: the wire is pulled, as from the input itself (Q33). 放到沒有輸入的地方：拔線。
-      onReconnectEnd={(_event, edge, _type, state) => {
-        setTimeout(() => { reconnecting.current = false; });
-        if (!state.toHandle && edge.targetHandle) session.disconnectInput(edge.target, edge.targetHandle);
-      }}
-      onDoubleClick={event => { if ((event.target as Element).classList.contains('react-flow__pane')) onCreate({ screen: { x: event.clientX, y: event.clientY }, place: true }); }}
-      onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
-      // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
-      // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
-      onNodeDoubleClick={(event, node) => {
-        if (!(event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row'))
-          frameNodes(flow, [node.id]);
-      }}
+      onConnectStart={onConnectStart} onConnectEnd={onConnectEnd}
+      edgesReconnectable={options.wirePickUp} onReconnectStart={onReconnectStart} onReconnect={onReconnect} onReconnectEnd={onReconnectEnd}
+      onDoubleClick={onDoubleClick} onNodeDragStart={onNodeDragStart} onNodeDoubleClick={onNodeDoubleClick}
       // Selection is decided by the session, not React Flow (Refactor.49; reported to the human as an
       // exception): nodes on press (RightDragSelect), wires on click, blank canvas clears.
       // 選取由 session 決定、不是 RF（R.49，已向人類報告的例外）：節點在按下時、接線在點擊時、點空白清掉。
       elementsSelectable={false} multiSelectionKeyCode={null}
-      onEdgeClick={(event, edge) => session.clickEdge(edge.id, pressKind(event))}
-      onPaneClick={() => session.clearSelection()}
+      onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
+      // The selected node is not raised above the others (Refactor.106, human 2026-10-13; an exception, EDITOR_UI_RULES.md): legacy did
+      // not raise it (legacy style.css:155), and raising re-rasterises the whole node layer on each selection change.
+      // 選中的節點不抬到最上層（R.106，人類 10-13；例外，見 EDITOR_UI_RULES.md）：舊產品不抬高（legacy style.css:155），抬高會在每次選取
+      // 改變時重新光柵化整個節點層。
+      elevateNodesOnSelect={false}
       // Double-click on blank canvas opens Create node (legacy), so React Flow's double-click zoom is off
       // (reported to the human as an exception, Refactor.54). 雙擊空白處打開新增節點（照舊），所以關掉 RF 的雙擊放大（已報告的例外）。
       zoomOnDoubleClick={false}
       // A wire snaps to a port within 28px (React Flow's own setting; 20 by default). 拉線放開時 28px 內吸附到接孔。
       connectionRadius={28}
-      snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
-      minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={reactFlowKeys('delete')}
+      snapToGrid={snap} snapGrid={SNAP_GRID} fitView fitViewOptions={FIT_VIEW}
+      minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={DELETE_KEYS}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
       {/* React Flow's own view controls, with the zoom as a number (human 2026-10-09: its default is fine), without its plus and

@@ -93,6 +93,7 @@
 | 內建功能 | 怎麼處理 | 理由 | 出處 |
 | --- | --- | --- | --- |
 | 選取（`elementsSelectable`、`multiSelectionKeyCode`） | 關掉，選取由編輯協調者決定 | 對齊 TD 的選取規則（Ctrl 切換、Shift 加選、節點與線不混選） | Refactor.49 |
+| 選中的節點抬到最上層（`elevateNodesOnSelect`） | 關掉，選中的節點留在原本的層次；拖曳中也不另外抬 | 舊產品不抬高（legacy `style.css:155`）；抬高會在每次選取改變時重新光柵化整個節點層（248 節點約 40ms） | Refactor.106，人類 10-13 |
 | 預設的線（`default` 貝茲線） | 一般線改用自己的 `WireEdge`（`wire_edge.tsx`），畫法和預設線相同（`getBezierPath`＋`BaseEdge`），只多一條畫布色底線 | 人類 10-13：線邊加畫布色的框，交疊時比較清楚；底線要和線在同一組、畫在線之前，預設線放不進去；顯示上和預設線沒有差別（人類 10-13：既然沒有本質差異，就用我們自己的線） | Refactor.105.18 |
 | 框選（`selectionKeyCode`） | 關掉，用自己的 RightDragSelect | 人類：內建框選「看著煩」；碰到就算、Shift 加選 | Q33、Q39 |
 | 雙擊縮放（`zoomOnDoubleClick`） | 關掉 | 雙擊空白＝新增節點、雙擊節點＝對準 | Refactor.54、58.2 |

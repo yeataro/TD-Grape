@@ -82,11 +82,15 @@ export function project(document: GraphDocument, previous: Projection, contract:
     const position = { x: Number(authored.ui?.x ?? 0), y: Number(authored.ui?.y ?? 0) };
     let data = old?.data;
     const ghost = ghosts.nodes.get(node.id);
+    // The conversions are part of what is compared (Refactor.106): left out, a recomputed node never matched its old data, and every node
+    // at a conversion wire's end was drawn again on each recompute. 轉換也算在比較裡（R.106）：漏掉的話，重算的節點永遠不等於舊資料，
+    // 每次重算時所有轉換線終點的節點都重畫。
+    const converted = conversions.get(node.id);
     if (ghost) {
       // Recomputed every time: a node can turn ghost without being edited (e.g. its declaration is gone).
       const next = { authored, label: node.definition?.catalog.definition.label ?? authored.nodeType, colorGroup: 'ghost',
         view: {}, types: [], inputs: ghostPorts(stored.get(node.id), 'input'), outputs: ghostPorts(storedOut.get(node.id), 'output'),
-        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [], ghost };
+        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [], ghost, conversions: converted };
       data = data && same(data, next) ? data : next;
     // A wire can come into effect or drop out without this node being edited (a type changed upstream): drawn again then too.
     // 線可能在這個節點沒被編輯時接通或斷開（上游改了型別）：那時也重畫。
@@ -101,11 +105,13 @@ export function project(document: GraphDocument, previous: Projection, contract:
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [],
-        declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined };
+        declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined,
+        conversions: converted };
       data = data && same(data, next) ? data : next;
-    }
-    const converted = conversions.get(node.id);
-    if (data && !same(data.conversions, converted)) data = { ...data, conversions: converted };
+    // Not recomputed, the node still follows a type change upstream through its wires (conversions are taken from the wires every
+    // time); its old data already carries conversions, so this matches unless they really changed.
+    // 沒重算的節點仍要跟著上游經由線的型別變化（轉換每次都從線算）；它的舊資料已帶著轉換，所以只有真的變了才換。
+    } else if (data && !same(data.conversions, converted)) data = { ...data, conversions: converted };
     if (old && old.data === data && same(old.position, position)) return old;
     // Nodes one layer up, so a group's title can sit between the wires (layer 0) and the nodes (Refactor.98; legacy style.css:968-975):
     // React Flow's own node property. 節點在第 1 層，群組標題才能在線（第 0 層）與節點之間（R.98；照舊產品）：React Flow 自己的節點屬性。
