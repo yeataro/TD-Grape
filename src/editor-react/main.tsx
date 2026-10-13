@@ -4,6 +4,7 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, useS
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes, type ReactFlowProps } from '@xyflow/react';
 import { GhostEdge } from './GhostMark';
 import { WireEdge } from './wire_edge';
+import { showPerfOverlay } from './perf_overlay';
 import { ConvertEdge } from './ConvertEdge';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
@@ -418,6 +419,7 @@ function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
     bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on',
     frameGlide: readPreference('canvas.frameGlide') !== 'off', errorNodes: readPreference('canvas.errorNodes') === 'on',
+    perfOverlay: readPreference('canvas.perfOverlay') === 'on',
     groupTextGrows: readPreference('canvas.groupTextGrows') !== 'off' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
@@ -425,6 +427,7 @@ function usePrefs(): CanvasPrefs {
     if (patch.damping !== undefined) writePreference('canvas.damping', patch.damping ? 'on' : 'off');
     if (patch.frameGlide !== undefined) writePreference('canvas.frameGlide', patch.frameGlide ? 'on' : 'off');
     if (patch.errorNodes !== undefined) writePreference('canvas.errorNodes', patch.errorNodes ? 'on' : 'off');
+    if (patch.perfOverlay !== undefined) writePreference('canvas.perfOverlay', patch.perfOverlay ? 'on' : 'off');
     if (patch.groupTextGrows !== undefined) writePreference('canvas.groupTextGrows', patch.groupTextGrows ? 'on' : 'off');
   } }), [prefs]);
 }
@@ -693,6 +696,8 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
   const prefs = usePrefs(), layout = useLayout();
+  // The probe lives outside React (perf_overlay.ts); it is only mounted and unmounted here. 探針在 React 之外；這裡只負責掛上與拿掉。
+  useEffect(() => prefs.perfOverlay ? showPerfOverlay() : undefined, [prefs.perfOverlay]);
   // Which TD answers (Refactor.52): asked once at start, then updated by every reply that says so.
   // 哪個 TD 在回應：開頁時問一次，之後每個回覆都更新。
   const [td, setTd] = useState<TdIdentity | null>(null), [opened, setOpened] = useState<TdIdentity | null>(null);

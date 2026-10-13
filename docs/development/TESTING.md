@@ -2,6 +2,21 @@
 
 > **現行做法（2026-10-08）**：自動測試用 `npm run test:core`、`npm run test:editor` 與 `python tools/dev/run_tests.py`。舊 Python 核心與只測它的測試已於清理第 5 條刪除（design-interview Q48），以下各段中引用 `src/core`、`sgrape_*` 或已刪測試的指令只作歷史紀錄。
 
+## 效能探針疊層與規模化基準（Refactor.106 起）
+
+**疊層（Refactor.106.1，人類 10-13）**：底列齒輪 →「效能探針疊層（開發用）」。打開後畫布左下角多一小塊，純 DOM、不經 React，不會自己製造 React 工作，也不算進畫布改動。程式在 `src/editor-react/perf_overlay.ts`。
+
+- **上面一行＝當下這一次操作**（從第一個輸入到最後一個輸入後 0.5 秒）：
+  - 按下到畫出：第一個輸入到下一次畫面畫出之後的時間。人唯一感覺得到的就是這個。
+  - 最慢一格：操作期間畫面兩格之間最長的間隔；長畫格：超過 50 ms 的格數。拖曳中這兩個比「按下到畫出」更重要。
+  - 被迫排版：長畫格裡腳本逼瀏覽器先排版的時間（瀏覽器只在長畫格回報；0 不代表沒有排版，代表沒有長到被記下）。
+  - 畫布改動：`.react-flow` 裡被改的屬性、子元素、文字的次數。一次只改一個節點的操作，這個數字應該很小；數字隨節點數放大就是「叫醒太多人」。
+  - 元件叫醒：只在量測版（審查者暫存區的 React 計數 shim）才有，正式版不顯示。
+- **下面一行＝清除後的累計**：幾次操作、最慢一格、長畫格總數、最久的按下到畫出。**點一下疊層就清除**；要單看某個操作，先點一下再做。最近 50 筆也放在 `globalThis.__perfReadings`，要倒出來時從開發者工具或瀏覽器面板讀；不寫剪貼簿。
+- 怎麼用：先用 Ctrl＋D 把圖複製到兩百個節點左右，再做換點、拖曳、框選、拉線、放置，看「畫布改動」與「最慢一格」是否隨節點數放大。它顯示的是症狀，哪個元件造成的要用下面的基準腳本配量測版。
+
+**基準腳本**：`node tests/browser/benchmark_scaling.cjs <建置資料夾> <報告資料夾> <標籤> [--counts]`（Playwright、真 Chrome、假宿主、`tests/fixtures/scaling_base_graph.json` 複製成 248 節點；情境 M1–M9）。`--counts` 要配量測版建置（React 計數 shim，不在 repo）。報告與 before／after 表在 workspace `work/refactor/reports/`。
+
 ## 新增型別或改節點模組後要重跑：拉線新增表的完整稽核（Refactor.77 起）
 
 拉線放到空白處的新增面板查的是建置時寫好的表（`src/core-ts/wire_drop.ts`，寫進 `editor-bootstrap.json` 的 `typeContract.wireDrop`）。以下任一種改動之後要重跑 `npm run build:core`，再跑：

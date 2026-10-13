@@ -179,6 +179,8 @@ export function LocationBar({ layout, file, target, onCramped, onWidth }: {
 }
 
 export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; frameGlide: boolean; errorNodes: boolean;
+  /** The performance probe overlay (Refactor.106.1, dev). 效能探針疊層（R.106.1，開發用）。 */
+  perfOverlay: boolean;
   /** A group's body text makes its box taller (Refactor.99). 群組內文撐高外框（R.99）。 */
   groupTextGrows: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
 
@@ -409,6 +411,10 @@ export function FootBar({ session, waiting, onDownload, onReset, prefs, project,
       {/* Trial (Refactor.63.6, human 2026-10-10): outline the nodes that wrote a line TD reported, as the legacy editor did; only
           while the GLSL is the one that failed. 試驗：TD 回報的錯誤行是哪個節點寫的，就框起來（照舊產品）；只在 GLSL 就是失敗的那份時。 */}
       <label className="check"><input type="checkbox" checked={prefs.errorNodes} onChange={event => prefs.set({ errorNodes: event.target.checked })} />{say(tr('toolbar.errorNodes', 'Mark nodes on TD error lines (trial)'))}</label>
+      {/* The performance probe (Refactor.106.1, human 2026-10-13): what a person can feel but not see, put where they work; see
+          docs/development/TESTING.md. 效能探針（R.106.1，人類 10-13）：人感覺得到、看不到的數字，放在操作的地方；見 docs/development/TESTING.md。 */}
+      <label className="check" title={say(tr('toolbar.perfOverlayHint', 'For the last interaction: input to paint, slowest frame, long frames, forced layout, canvas changes. How to read it: docs/development/TESTING.md'))}>
+        <input type="checkbox" checked={prefs.perfOverlay} onChange={event => prefs.set({ perfOverlay: event.target.checked })} />{say(tr('toolbar.perfOverlay', 'Performance probe overlay (dev)'))}</label>
       {/* Floating panels keep clear of each other; off, they may overlap and the one pressed comes to the front (Refactor.89.1, human
           2026-10-12: off by default). 浮動面板彼此避開；關掉時可以重疊、按到的到最前面（R.89.1，人類 10-12：預設關）。 */}
       <label className="check"><input type="checkbox" checked={apart} onChange={event => onApart(event.target.checked)} />{say(tr('foot.floatingApart', 'Forbid floating panels to overlap'))}</label>

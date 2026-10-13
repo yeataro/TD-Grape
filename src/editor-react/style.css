@@ -1356,6 +1356,13 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .log-list.more-above { -webkit-mask-image: linear-gradient(to bottom, transparent, var(--fade-solid) var(--fade-edge));
   mask-image: linear-gradient(to bottom, transparent, var(--fade-solid) var(--fade-edge)); }
 .settings-panel { display: flex; flex-direction: column; gap: 10px; width: 280px; padding: 12px; }
+/* The performance probe (perf_overlay.ts, Refactor.106.1): bottom-left over the canvas, above the foot bar, never under the pointer.
+   效能探針（perf_overlay.ts，R.106.1）：畫布左下、底列之上，不擋指標。 */
+.perf-overlay { position: fixed; left: 8px; bottom: 44px; z-index: 6; pointer-events: auto; cursor: pointer; user-select: none; max-width: min(720px, calc(100vw - 16px)); padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface-floating-panel, var(--surface-raised)); color: var(--text);
+  font-family: ui-monospace, Consolas, monospace; font-size: var(--font-md); line-height: 1.5; box-shadow: 0 5px 16px var(--shadow); }
+.perf-overlay-title, .perf-overlay-totals { color: var(--text-muted); font-size: var(--font-sm); }
+.perf-overlay-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .settings-panel .segmented button { flex: 1; }
 .settings-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .settings-row > span { text-align: center; }

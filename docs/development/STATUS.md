@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.106.1 — 效能探針疊層（開發用，齒輪開關） — 2026-10-13
+
+人類 10-13（討論 R.106 時）：計數器是給程式看的，人在實際操作裡唯一感覺得到的差異是反應時間；要有一個 debug 疊層或面板，把數字放在操作的地方，不然要知道哪裡多叫了人只能盯著三千行 CSS。人類：「第一個現在就可以做了」，並要求它要介紹自己在幹嘛、文件在哪；之後補：要能清除、分「當下」與「累計」兩塊。
+
+- 新 `src/editor-react/perf_overlay.ts`：純 DOM、不經 React、掛在 body（不在畫布裡，所以探針自己不製造 React 工作、不算進改動）。一次操作一筆（第一個輸入到最後一個輸入後 0.5 秒）：按下到畫出（第一個輸入到下一次畫出之後的那一格）、最慢一格與長畫格數（rAF 間隔）、被迫排版（長畫格裡腳本的 forcedStyleAndLayoutDuration）、畫布改動（`.react-flow` 內 MutationObserver 的筆數）、元件叫醒（只在量測版有 `globalThis.__prof` 時）。下面一行是清除後的累計（次數、最慢一格、長畫格總數、最久的按下到畫出）；點疊層清除；最近 50 筆在 `globalThis.__perfReadings`，不寫剪貼簿。標題寫明「怎麼讀：docs/development/TESTING.md」。
+- 齒輪多一個「效能探針疊層（開發用）」（偏好 `canvas.perfOverlay`，預設關；`bars.tsx`、`main.tsx` 只負責掛上與拿掉）。文字全走 tr()，繁中已補；CSS 用字級變數（`test_ui_rules` 把關）。
+- `docs/development/TESTING.md` 新一節：每個數字的意思、怎麼用（先複製到兩百個節點再操作）、基準腳本的用法。
+- 驗證：editor 162（＋1 略過）、check:editor；TD 重載後 `Grape_TOP_perf`：齒輪打開探針、真滑鼠換點兩次→「按下到畫出 11 ms · 最慢一格 8 ms · 長畫格 0 · 被迫排版 0 ms · 畫布改動 13」、累計 2 次。
+- 已知：疊層在畫布左下、底列之上，會蓋到下方窗格的分頁列一角；位置之後再調。人類同日另提：會改卡片大小的實驗選項（切換時全部卡片重排）要評估影響範圍、該拿的拿掉——列入候選。
+
 ## Refactor.106 — 畫面更新規模化：選取由 session 保管、切片訂閱、手勢只動該動的、CSS 不再整頁重算 — 2026-10-13
 
 範圍說明 workspace `work/refactor/render-scaling-scope-2026-10-13.md`（人類 10-13「都照建議，開始吧」）；依據 `perf-audit-2026-10-13.md`（排查）、`perf-review-2026-10-13.md`（審查）、`selection-performance-2026-10-13.md`（原則）。檢查點 `checkpoint/pre-render-scaling-0.8.306`（commit 245a251）。審查者（Fable 5.1）寫範圍、量 before／after、審每段；三個 Opus 5.5 實作代理各做幾個區塊，一輪做完、一次比對。
