@@ -107,9 +107,16 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     if (event.button === 2) return !(event.altKey && target.closest('input.number, .value-caption'));
     return event.button === 0 && (event.shiftKey || boxSelect) && !target.closest('.react-flow__edge, .react-flow__node, .group-title, .group-text.writing');
   };
+  // A box in progress is given up, the selection untouched. 進行中的框選放棄，選取不動。
+  const abandon = () => { drag.current = null; setBox(null); session.previewBox(null); };
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
     if (event.pointerType === 'touch') startHold(event);
+    // A second finger: the one-finger box is given up and both fingers are React Flow's (pan, zoom); the selection stays as it was
+    // (Refactor.108, Codex ISSUE T02: the second finger took over the box and the release cleared the selection).
+    // 第二根手指：單指框選放棄，兩指都交給 React Flow（平移、縮放）；選取維持原狀（R.108，Codex ISSUE T02：以前第二指接管框選，放開時把選取清掉）。
+    if (drag.current && event.pointerId !== drag.current.pointer) { abandon(); return; }
+    if (event.pointerType === 'touch' && touches.current.size > 1) return;
     // A press on a node (not on a port: that starts a wire) selects it before any drag starts.
     // 按在節點上（不是接孔：那是開始拉線）就在拖曳開始前選取。
     const card = event.button === 0 && !target.closest('.react-flow__handle') ? target.closest('.react-flow__node') : null;
@@ -151,9 +158,10 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
   // Only when a node enters or leaves the box, and then only those nodes change (session.previewBox; the legacy editor's whole-view
   // refreshes are not copied, human 2026-10-09). 只有節點進出框時才變，而且只有那些節點變（session.previewBox；不照抄舊產品的整個畫面重刷，人類）。
   const select = (start: Drag, event: PointerEvent) => { if (hit(start, event)) session.previewBox(start.result); };
+  // The box follows the pointer that began it, no other (Refactor.108). 框只跟著開始它的那個指標（R.108）。
   const move = (event: PointerEvent) => {
     moveHold(event);
-    const start = drag.current; if (!start) return;
+    const start = drag.current; if (!start || event.pointerId !== start.pointer) return;
     // The button is no longer held but the release never arrived (it can be lost, e.g. outside an embedded
     // browser): end here, or the box would follow the pointer and cover every node.
     // 按鍵已放開、卻沒收到放開事件（例如在內嵌瀏覽器外放開時可能遺失）：在這裡結束，否則框會一直跟著游標、蓋住所有節點。
@@ -176,7 +184,14 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     // together). 放開時才真的改一次，預覽在同一次發布裡拿掉（接線清掉：節點與接線不混選）。
     session.boxSelect(start.result, start.touched);
   }
-  const cancel = (event: PointerEvent) => { endHold(event); drag.current = null; setBox(null); session.previewBox(null); };
+  const cancel = (event: PointerEvent) => { endHold(event); if (!drag.current || event.pointerId === drag.current.pointer) abandon(); };
+  // Ending on release, or when this element really loses the dragging pointer. A touch pointer is first held by what it pressed (the
+  // pane); taking it here when the drag begins makes the pane lose it, and that loss bubbles up — it is a handover, not the end
+  // (Refactor.108, Codex ISSUE T04: a one-finger box ended on its first move). 放開時結束，或這個元素真的失去正在拖的指標。觸控指標一開始
+  // 由按到的東西（pane）持有；開始拖曳時改由這裡持有，pane 失去它、那個事件會冒上來——那是交接，不是結束（R.108，Codex ISSUE T04：單指框選
+  // 在第一次移動就結束）。
+  const release = (event: PointerEvent) => { if (!drag.current || event.pointerId === drag.current.pointer) end(event); };
+  const lost = (event: PointerEvent) => { const start = drag.current; if (start && event.target === host.current && event.pointerId === start.pointer) end(event); };
   // The browser asks for its menu: on the network ours opens instead, unless what was pressed has its own (a value's presets: it
   // has taken the event) or is text (the browser's, to copy and paste). After a right drag the release was a box select (blocked
   // above, wherever it was released); a touch has the long press instead. 瀏覽器要開它的選單：在網路區改開我們的，除非按到的東西有自己的
@@ -190,7 +205,7 @@ export function RightDragSelect({ session, boxSelect = false, onMenu, children }
     open(target, event.clientX, event.clientY, false);
   };
   return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
-    onPointerUp={event => { endHold(event); end(event); }} onPointerCancel={cancel} onLostPointerCapture={event => { if (drag.current) end(event); }} onContextMenu={menu}>
+    onPointerUp={event => { endHold(event); release(event); }} onPointerCancel={cancel} onLostPointerCapture={lost} onContextMenu={menu}>
     {children}
     {box && <div className="right-select-box" style={box} />}
   </div>;

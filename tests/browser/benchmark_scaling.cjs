@@ -13,9 +13,10 @@
  * `summary.identity` names the product (build version, bundle hash), the script, the fixture, the shim and the browser, so a before
  * and an after can be told apart and a changed script cannot pass for the same one.
  */
-const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), crypto = require('node:crypto');
+const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
 const { chromium } = require('playwright');
+const { serve } = require('./fake_host.cjs');
 const args = process.argv.slice(2), counts = args.includes('--counts');
 const plain = args.filter(a => !a.startsWith('--')), [built, reportFolder] = plain.slice(0, 2).map(x => x && path.resolve(x)), label = plain[2];
 if (!built || !reportFolder || !label) throw Error('Usage: node tests/browser/benchmark_scaling.cjs BUILD REPORT LABEL [--counts]');
@@ -87,34 +88,10 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
 
 (async () => {
   fs.mkdirSync(reportFolder, { recursive: true });
-  let state = { graph: fixture(), revision: 1, targetId: target };
-  const server = http.createServer(async (req, res) => {
-    try {
-      if (req.url.startsWith('/api/')) {
-        const action = req.url.split('?')[0].split('/').at(-1); let raw = ''; for await (const chunk of req) raw += chunk;
-        const body = raw && JSON.parse(raw); res.setHeader('Content-Type', 'application/json');
-        const wire = { document: JSON.stringify(state.graph), revision: state.revision, targetId: target };
-        if (action === 'state') return res.end(JSON.stringify({ state: wire, format: 'grape-next-1', target: '/test/scaling', shaderKind: 'top',
-          frontendCompiler: { protocol: 'grape.top.ts.1', catalogHash: bootstrap.catalogHash, required: true } }));
-        if (action === 'save') return res.end(JSON.stringify({ saved: 'fixture.toe' }));
-        if (action === 'identity') return res.end(JSON.stringify({ targetId: target }));
-        if (req.method === 'GET' || !raw) return res.end('{}');
-        if (!body || body.revision !== state.revision) { res.statusCode = 409; return res.end(JSON.stringify({ error: 'Conflict' })); }
-        state = { graph: JSON.parse(body.document), revision: state.revision + 1, targetId: target };
-        return res.end(JSON.stringify({ state: { document: body.document, revision: state.revision, targetId: target } }));
-      }
-      const asked = decodeURIComponent(req.url.split('?')[0]);
-      const name = asked === '/' || /^\/shader\/[a-f0-9]{32}\/$/.test(asked) ? '/index.html' : asked;
-      const file = path.resolve(built, '.' + name);
-      if (!file.startsWith(built + path.sep)) throw Error('outside build');
-      res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' })[path.extname(file)] || 'application/octet-stream');
-      res.end(fs.readFileSync(file));
-    } catch (e) { res.statusCode = 404; res.end(String(e)); }
-  });
-  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const host = await serve(built, fixture(), target);
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   identity.browser = browser.version();
-  const url = `http://127.0.0.1:${server.address().port}/shader/${target}/`, errors = [];
+  const url = host.url, errors = [];
   // A page on the graph the server holds now, with the in-page recorder installed. 開在伺服器現在持有的圖上的頁面，裝好頁內記錄器。
   const openPage = async (expectNodes) => {
     const page = await browser.newPage({ viewport: VIEWPORT });
@@ -325,7 +302,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   // M13: on the long-GLSL graph (232 nodes, one GLSL line each), with the GLSL panel shown, drag one base node and release: what the
   // GLSL panel costs on a layout-only edit. 在長 GLSL 圖上（232 節點、每節點一行）顯示 GLSL 面板，拖一個基準節點並放開：純版面修改時 GLSL
   // 面板的成本。
-  state = { graph: longFixture(), revision: 1, targetId: target };
+  host.setGraph(longFixture());
   const page2 = await openPage(32 + FLOORS);
   await openTab(page2, 'glsl');
   summary.M13_glsl_lines = await page2.locator('.glsl-line').count();
@@ -345,5 +322,5 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   console.log('identity:', JSON.stringify(identity));
   if (errors.length) console.log('page errors:', errors);
   console.log('written', out);
-  await browser.close(); server.close();
+  await browser.close(); host.close();
 })().catch(e => { console.error(e); process.exit(1); });

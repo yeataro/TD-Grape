@@ -1170,6 +1170,12 @@ svg.react-flow__connectionline:has(.ready) { z-index: auto; }
 :root[data-component-letters="off"][data-component-tint="on"] .value-field[data-component="3"] > :is(input, .select-button) { color: var(--component-w); }
 /* The slider fill (legacy numeric slider): how far the value is through its decade. 填色：值在它那一段走到哪裡。 */
 input.number { background-image: linear-gradient(to right, var(--field-fill) 0 var(--fill), transparent var(--fill) 100%); }
+/* A finger dragging sideways is the value's (as the mouse); up and down still scrolls the panel it sits in. Without this a field outside
+   the canvas (the Parameter panel) lost its touch to the browser's scroll gesture at once — pointercancel, value put back (Refactor.108,
+   Codex ISSUE T01). The canvas's own fields were covered by React Flow's touch-action: none. 手指橫拖歸數值（同滑鼠）；上下仍捲它所在的面板。
+   沒有這條，畫布外的欄位（參數面板）一碰就被瀏覽器的捲動手勢拿走——pointercancel、值放回（R.108，Codex ISSUE T01）。畫布上的欄位本來就在
+   React Flow 的 touch-action: none 之下。 */
+input.number { touch-action: pan-y; }
 .control-field .select-button { background: var(--field-bg); }
 input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { display: block; width: 100%; height: var(--io-field); padding: 0; border: 0; background: none; overflow: hidden; }
 /* The whole rounded box is the colour: no browser frame or inset around the swatch. 整個圓角框就是顏色，沒有瀏覽器的框與內縮。 */
