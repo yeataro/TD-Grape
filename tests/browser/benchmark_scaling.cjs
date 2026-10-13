@@ -28,7 +28,10 @@ function fixture() {
   for (let k = 1; k <= COPIES; k++) {
     for (const id of CLUSTER) {
       const n = JSON.parse(JSON.stringify(byId.get(id)));
-      n.id = idOf(id, k); n.name = (n.name ?? 'Node') + '_c' + k; n.ui.x += k * STEP; n.ui.y += k * STEP;
+      // Stacked copies below the base graph (2400 down), so no base node is covered: with the selected node no longer raised
+      // (Refactor.106), a covered node's fields could not be reached. 複本疊在基準圖下方（往下 2400），不蓋住基準節點：選中的節點不再抬高（R.106），
+      // 被蓋住的節點的欄位會碰不到。
+      n.id = idOf(id, k); n.name = (n.name ?? 'Node') + '_c' + k; n.ui.x += k * STEP; n.ui.y += 2400 + k * STEP;
       pixel.nodes.push(n);
     }
     for (const e of inner) pixel.edges.push({ id: 'e' + crypto.createHash('md5').update(e.id + ':' + k).digest('hex'),
@@ -100,7 +103,10 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   const clean = await page.evaluate(() => globalThis.__H.clean());
   const base = clean.filter(n => n.id.length < 20);     // base-graph nodes outside the stacked copies 基準圖裡沒被疊住的節點
   const tops = clean.filter(n => n.id.length >= 33);     // the topmost copy of each stack 每疊最上面的那個複本
-  if (base.length < 2 || tops.length < 8) throw Error(`not enough clickable nodes: ${base.length} base, ${tops.length} tops`);
+  if (base.length < 10 || tops.length < 1) throw Error(`not enough clickable nodes: ${base.length} base, ${tops.length} tops`);
+  // The stacks' screen box, for the box selection. 複本疊的螢幕範圍，給框選用。
+  const stacks = await page.evaluate(() => { const r = [...document.querySelectorAll('.react-flow__node')].filter(n => n.dataset.id.length >= 33).map(n => n.getBoundingClientRect());
+    return { left: Math.min(...r.map(b => b.left)), top: Math.min(...r.map(b => b.top)), right: Math.max(...r.map(b => b.right)), bottom: Math.max(...r.map(b => b.bottom)) }; });
   const [A, B] = base, empty = await page.evaluate(() => globalThis.__H.empty());
   const click = async (p, shift) => { if (shift) await page.keyboard.down('Shift'); await page.mouse.click(p.x, p.y); if (shift) await page.keyboard.up('Shift'); };
   // Keys go to the canvas as the editor's own tests send them (a real Delete press is lost when React Flow re-registers its key
@@ -118,17 +124,20 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   summary.M1_long_frames = r.long; if (counts) summary.M2_renders_per_click = +(Object.values(r.counts).reduce((s, n) => s + n, 0) / 10).toFixed(0);
   if (counts) summary.M2_top = Object.entries(r.counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-  // M3: drag 8 selected nodes. 拖 8 個已選節點。
-  await click(tops[0]); for (const t of tops.slice(1, 8)) await click(t, true); await page.waitForTimeout(300);
+  // M3: drag 8 selected base nodes (spread out, never stacked). 拖 8 個已選的基準節點（分散、不疊）。
+  const eight = base.slice(2, 10);
+  await click(eight[0]); for (const t of eight.slice(1)) await click(t, true); await page.waitForTimeout(300);
   const selected = await page.locator('.react-flow__node.selected').count();
-  r = await run('M3 drag 8', async () => { await drag(tops[0], 60, 40, 20); });
+  r = await run('M3 drag 8', async () => { await drag(eight[0], 60, 40, 20); });
   summary.M3_selected = selected; summary.M3_frame_ms_median = median(r.gaps); summary.M3_frame_ms_max = max(r.gaps);
   if (counts) summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0);
   await undo();
 
-  // M4: right-drag box select over the stacks. 右鍵框選。
-  const corner = { x: tops[0].x + 160, y: tops[0].y + 120 };
-  r = await run('M4 box select', async () => { await drag(corner, -300, -220, 15, 'right', 30); });
+  // M4: right-drag box select from past the stacks' lower-right corner up over them (clipped to the canvas). 右鍵框選：從複本疊右下角外往左上框過去（不出畫布）。
+  const pane = await page.locator('.react-flow__pane').boundingBox();
+  const corner = { x: Math.min(stacks.right + 30, pane.x + pane.width - 20), y: Math.min(stacks.bottom + 30, pane.y + pane.height - 60) };
+  const to = { x: Math.max(stacks.left - 30, pane.x + 20), y: Math.max(stacks.top - 30, pane.y + 80) };
+  r = await run('M4 box select', async () => { await drag(corner, to.x - corner.x, to.y - corner.y, 15, 'right', 30); });
   summary.M4_frame_ms_max = max(r.gaps); summary.M4_release_loaf_ms = max(r.loaf.map(l => l[0])); summary.M4_selected_after = await page.locator('.react-flow__node.selected').count();
   if (counts) summary.M4_cards_total = r.counts.NodeCard ?? 0;
   await click(empty); await page.waitForTimeout(300);
@@ -136,6 +145,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   // M5: pan on empty canvas. 平移。
   r = await run('M5 pan', async () => { await drag(empty, -80, -60, 20); });
   summary.M5_long_frames = r.long + r.loaf.length; summary.M5_frame_ms_max = max(r.gaps);
+  summary.M5_layer_left = await page.locator('.gesture-cursor').count(); // a cursor layer must not outlive the gesture 游標層不能留到手勢之後
 
   // M6 / M8 at 100% around the Color node: its value box and output port must be under the pointer, not under a stacked copy.
   // M6、M8 在 Color 節點對準到 100%：數值框與輸出接孔要真的在指標下，不被疊著的複本蓋住。
@@ -148,6 +158,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   const fieldAt = { x: fieldBox.x + fieldBox.width / 2, y: fieldBox.y + fieldBox.height / 2 };
   const valueOf = () => page.locator('.react-flow__node[data-id="color"] input.number').first().inputValue();
   summary.M6_field_hit = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.matches('input.number') ?? false, [fieldAt.x, fieldAt.y]);
+  summary.M6_field_under = await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? e.tagName + '.' + String(e.className).slice(0, 40) + ' in ' + (e.closest('.react-flow__node')?.dataset.id ?? '-') : null; }, [fieldAt.x, fieldAt.y]);
   const valueBefore = await valueOf();
   r = await run('M6 scrub', async () => { await drag(fieldAt, 40, 0, 10); });
   summary.M6_value_changed = (await valueOf()) !== valueBefore; summary.M6_scrub_loaf_ms = max(r.loaf.map(l => l[0])); summary.M6_scrub_event_ms = max(r.events.map(e => e[1])); if (counts) summary.M6_scrub_cards = r.counts.NodeCard ?? 0;
