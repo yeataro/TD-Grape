@@ -15,9 +15,14 @@ export type FlowNode = RFNode<{
    * Taken from the wires every time, so a node follows when the node upstream changes type. 接進另一種型別的輸入與那個型別
    * （R.77.6：寫在接孔上，同舊產品）。每次都從線算，上游換型別時跟著變。 */
   conversions?: Record<string, string>;
+  /** A call node: the definition it points at, and how many calls that definition has in the whole document (the "×N" mark, basic
+   * design §3.6; Refactor.110). 呼叫節點：它指向的定義，以及這份定義在整份文件裡有幾個呼叫（「×N」標記，§3.6；R.110）。 */
+  subgraph?: string; uses?: number;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
-export type Projection = { nodes: FlowNode[]; edges: FlowEdge[] };
+/** `uses`: each definition's call count, kept with the projection and reused while no node was added or removed anywhere and no
+ * definition changed (Refactor.110). uses：每份定義的呼叫數，跟著投影放，哪裡都沒有節點增減、定義也沒變時沿用。 */
+export type Projection = { nodes: FlowNode[]; edges: FlowEdge[]; uses?: ReadonlyMap<string, number> };
 const retainArray = <T,>(next: T[], old: T[]) =>
   next.length === old.length && next.every((item, i) => item === old[i]) ? old : next;
 
@@ -31,8 +36,10 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 // logic; legacy coloured only Compare and If, graph_ui.js:142). 新增選單分類是「邏輯」的節點用邏輯色，不管它怎麼做出來的（R.81.6，人類：
 // 通通放到邏輯類；舊產品只給 Compare、If）。
 /** A node's colour group (also the drag-to-add tile's, Refactor.104). 節點的顏色組（拖曳新增的圖塊也用，R.104）。 */
-export const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+export const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string; referencedGraph?: (node: Node) => string }, node: Node, document: GraphDocument) => {
   if (module.colorGroup) return module.colorGroup;
+  // A subgraph call wears the subgraph colour (basic design §3.14: a definition's own colour comes later). 子圖呼叫用子圖色。
+  if (module.referencedGraph) return 'subgraph';
   if (module.catalog?.browser?.category === 'logic') return 'logic';
   if (module.referencedDeclaration) {
     const kind = document.document.declarations.find(d => d.id === module.referencedDeclaration!(node))?.kind;
@@ -41,10 +48,17 @@ export const colorGroupOf = (module: { role: string; colorGroup?: string; catalo
   return module.role === 'output' ? 'output' : 'function';
 };
 
-export function project(document: GraphDocument, previous: Projection, contract: Bootstrap['typeContract'], changes?: GraphChanges): Projection {
-  const network = document.networks.get('pixel')!;
-  const delta = changes?.networks.find(item => item.id === 'pixel');
+/** The projection of one network: the stage, or a subgraph's ('subgraph:'+id) when one is entered (Refactor.110). 一張網路的投影：
+ * stage，或進入的子圖的（subgraph:+id）。 */
+export function project(document: GraphDocument, previous: Projection, contract: Bootstrap['typeContract'], changes?: GraphChanges, networkId = 'pixel'): Projection {
+  const network = document.networks.get(networkId)!;
+  const delta = changes?.networks.find(item => item.id === networkId);
   const all = !changes || !!changes.global.length || !!changes.definitions.length || delta?.complete === false;
+  // Call counts over the whole document, only with subgraphs, only when a node was added or removed somewhere or a definition
+  // changed; else the previous ones (Refactor.110). 整份文件的呼叫數：只在有子圖時算，且只在哪裡增減了節點或定義變了時；否則沿用。
+  const uses = !document.document.subgraphs?.length ? undefined
+    : previous.uses && changes && !changes.definitions.length && !changes.networks.some(item => item.added.length || item.removed.length) ? previous.uses
+    : core.callCounts(document);
   // A move (ui x, y) redraws nothing but the position; any other change, in ui too (component names, Refactor.85), redraws the node.
   // 移動（ui 的 x、y）只改位置；其他改變，包括 ui 裡的（分量名稱，R.85），重畫節點。
   const dirty = new Set(delta?.nodes.filter(item => item.fields.some(key => key !== 'ui') || item.ui.some(key => key !== 'x' && key !== 'y')).map(item => item.id));
@@ -94,8 +108,10 @@ export function project(document: GraphDocument, previous: Projection, contract:
       data = data && same(data, next) ? data : next;
     // A wire can come into effect or drop out without this node being edited (a type changed upstream): drawn again then too.
     // 線可能在這個節點沒被編輯時接通或斷開（上游改了型別）：那時也重畫。
-    } else if (!data || all || dirty.has(node.id) || data.ghost || !sameList(data.connected, connected.get(node.id)) || !sameList(data.wired, outgoing.get(node.id))) {
-      const module = node.definition!;
+    } else if (!data || all || dirty.has(node.id) || data.ghost || !sameList(data.connected, connected.get(node.id)) || !sameList(data.wired, outgoing.get(node.id))
+      // A call's count can change without the call being edited (a call added or removed elsewhere). 呼叫數可能在這個呼叫沒被編輯時變。
+      || (data.subgraph !== undefined && data.uses !== (uses?.get(data.subgraph) ?? 0))) {
+      const module = node.definition!, subgraph = module.referencedGraph?.(authored);
       const described = contract.definitions[authored.nodeType];
       const types: string[] = described?.selector === 'parameter'
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
@@ -106,7 +122,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [],
         declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined,
-        conversions: converted };
+        conversions: converted, ...(subgraph === undefined ? {} : { subgraph, uses: uses?.get(subgraph) ?? 0 }) };
       data = data && same(data, next) ? data : next;
     // Not recomputed, the node still follows a type change upstream through its wires (conversions are taken from the wires every
     // time); its old data already carries conversions, so this matches unless they really changed.
@@ -144,6 +160,6 @@ export function project(document: GraphDocument, previous: Projection, contract:
       data: label ? { to: typeColor(targetType), fromType: sourceType, toType: targetType, component: components?.length === 1 ? components[0] : undefined } : undefined,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
-  const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges) };
-  return next.nodes === previous.nodes && next.edges === previous.edges ? previous : next;
+  const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges), ...(uses ? { uses } : {}) };
+  return next.nodes === previous.nodes && next.edges === previous.edges && uses === previous.uses ? previous : next;
 }

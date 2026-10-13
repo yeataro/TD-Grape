@@ -1,6 +1,6 @@
 import { applyNodeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type UpgradeChange, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
-  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup } from './core';
+  type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup, type SubgraphData, type InterfaceEdit } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge, colorGroupOf } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
@@ -69,8 +69,8 @@ function presetDeclaration(document: GraphDocument, entry: string) {
     ?? document.addDeclaration({ id: newDeclarationId(),
       kind: 'uniform', name: preset.name, type: preset.type, entry });
 }
-function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition) {
-  const net = document.networks.get('pixel')!, id = newId();
+function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition, networkId: string) {
+  const net = document.networks.get(networkId)!, id = newId();
   if ('preset' in spec) {
     const declaration = presetDeclaration(document, spec.preset);
     net.insert({ id, nodeType: 'sgrape.builtin.declaration', params: { declarationId: declaration.id }, ui: { ...position } });
@@ -84,16 +84,48 @@ function nameFor(net: Network, nodeType: string): { name?: string } {
   return { name: core.newNodeName(String(core.registry.get(nodeType)!.catalog.definition.label), core.namesIn(net.data)) };
 }
 class Rehearsed extends Error {}
+const EMPTY_PROJECTION: Projection = { nodes: [], edges: [] };
+/** A wire dropped on a boundary node's spare port adds an interface port to the definition being edited (basic design §3.5; legacy
+ * functions_ui.js:405 materializeSparePort): the wire's type, the peer port's label, the peer's value as the default (an opaque port
+ * has none). The new port's id. 線放在邊界節點的備用灰點上＝給正在編輯的定義新增一個接口（§3.5；照舊產品）：線的型別、對端接孔的標籤、
+ * 對端的值當預設值（opaque 沒有）。回傳新接口的 id。 */
+function addBoundaryPort(net: Network, direction: 'inputs' | 'outputs', type: string, label: string, value?: Value): string {
+  const owner = net.graph.document.subgraphs?.find(f => f.graph === net.data);
+  if (!owner) throw Error('Not inside a subgraph');
+  const id = core.newPortId(new Set([...owner.inputs, ...owner.outputs].map(p => p.id)));
+  const text = core.freeName(label || (direction === 'inputs' ? 'in' : 'out'), new Set(owner[direction].map(p => p.label ?? '')), 80);
+  const port = { id, label: text, type, ...(core.values.opaque.includes(type) ? {} : { default: value ?? core.values.fill(0, type) }) };
+  net.graph.subgraph(owner.id).editInterface(direction, { kind: 'add', port });
+  return id;
+}
+const portLabel = (net: Network, id: string, side: 'inputs' | 'outputs', key: string) => {
+  const node = net.node(id);
+  return node.data && node.definition?.presentation?.(node.data, net.context)?.portLabels?.[side]?.[key] || key;
+};
 function wire(net: Network, c: Connection | FlowEdge) {
   if (!c.sourceHandle || !c.targetHandle) throw Error('Missing port');
-  let port = c.targetHandle;
+  let port = c.targetHandle, from = c.sourceHandle;
   if (port === spareHandle) {
     const node = net.node(c.target), spare = node.definition!.presentation?.(node.data!, net.context)?.spare;
     if (spare?.direction !== 'input' || spare.count >= spare.limit) throw Error('No spare input');
-    node.edit(spare.command, {});
-    port = spare.key;
+    // A boundary's spare adds a definition port (the Output node: an output of the subgraph); a module's spare runs its command.
+    // 邊界節點的備用點新增定義的接口（Output 節點：子圖的一個輸出）；模組的備用點執行它的指令。
+    if (spare.command === 'interface') {
+      const type = net.node(c.source).interface.outputs[from]?.type;
+      if (!type) throw Error('Missing port');
+      port = addBoundaryPort(net, 'outputs', type, portLabel(net, c.source, 'outputs', from));
+    } else { node.edit(spare.command, {}); port = spare.key; }
   }
-  net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
+  if (from === spareHandle) {
+    // From the Input node's spare port to an input: a new input of the subgraph, with that input's value as its default.
+    // 從 Input 節點的備用點拉到某個輸入：子圖的新輸入，預設值是那個輸入現在的值。
+    const node = net.node(c.source), spare = node.definition!.presentation?.(node.data!, net.context)?.spare;
+    if (spare?.direction !== 'output' || spare.count >= spare.limit || spare.command !== 'interface') throw Error('No spare output');
+    const target = net.node(c.target), into = target.interface.inputs[port];
+    if (!into) throw Error('Missing port');
+    from = addBoundaryPort(net, 'inputs', into.type, portLabel(net, c.target, 'inputs', port), target.data?.inputValues?.[port] ?? into.default);
+  }
+  net.connect(net.node(c.source).port('output', from), net.node(c.target).port('input', port), core.values.policy);
 }
 // The wires of `before` that `after` no longer has (a rehearsal's answer). before 有、after 沒有的線（預演的答案）。
 function gone(before: Network, after: Network): string[] {
@@ -167,7 +199,10 @@ const notesChanged = (changes?: GraphChanges) => !changes
 // glslDeclarations: which declaration each name written at the top of the GLSL is (Refactor.63.4), so its name selects every
 // node using it. glslDeclarations：GLSL 檔頭寫出的名字是哪個宣告，點名字就選取所有引用它的節點。
 export type GlslLine = { line: number; node: string };
-export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
+// network / trail (Refactor.110, basic design §1 路徑列): the network being edited — the stage, or 'subgraph:'+id — and the path of
+// definition ids entered from the stage down to it; the projection is of that network. network／trail（R.110）：正在編輯的網路——stage
+// 或 subgraph:+id——與從 stage 一路進入的定義 id；投影是那張網路的。
+export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean; network: string; trail: readonly string[];
   message: Message | string; level: Level; glsl: string; compiled: Compiled | null;
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   upgrades: readonly UpgradeChange[];
@@ -246,8 +281,8 @@ export class Editor {
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
       (status, said) => this.status({ ...status, ...said,
         syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
-    this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
-      version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
+    this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
+      version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
       compiled: this.codegen.compiled ?? null, glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
       syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
@@ -384,6 +419,107 @@ export class Editor {
   }
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
+  // The path into subgraphs (Refactor.110, basic design §3.12 路徑列; legacy functions_ui.js:21 graphTrail): definition ids from the
+  // stage down; empty at the top level. Session state, as the selection: never in the graph, Undo or TD. 進入子圖的路徑（R.110）：從 stage
+  // 往下的定義 id；最外層是空的。同選取一樣是 session 的狀態：不進圖、Undo 或 TD。
+  private trail: readonly string[] = [];
+  private networkId = () => this.trail.length ? 'subgraph:' + this.trail[this.trail.length - 1] : 'pixel';
+  private net = () => this.document.networks.get(this.networkId())!;
+  /** The definition being edited, or null at the top level. 正在編輯的定義；最外層是 null。 */
+  currentSubgraph = (): SubgraphData | null => this.trail.length ? this.document.document.subgraphs?.find(f => f.id === this.trail[this.trail.length - 1]) ?? null : null;
+  /** The document's definitions: the same list until the document changes (a panel memoises on it). 文件的定義清單：文件沒變就是同一份。 */
+  definitions = (): readonly SubgraphData[] => this.document.document.subgraphs ?? [];
+  /** How many calls each definition has, over every network: the subgraph panel's own derivation, asked per version (as references()).
+   * 每份定義有幾個呼叫，算遍每張網路：子圖面板自己的推導，每一版問一次（同 references()）。 */
+  callCounts = () => core.callCounts(this.document);
+  /** Enter the subgraph a call node points at (a double-click on it; legacy functions_ui.js:44 enterFunction): the path grows by
+   * one, the selection is cleared (legacy navigateGraph). 進入呼叫節點指向的子圖（雙擊它；照舊產品）：路徑多一層、選取清掉。 */
+  enterSubgraph = (callId: string) => {
+    const node = this.net().node(callId), id = node.data && node.definition?.referencedGraph?.(node.data);
+    if (id) this.navigate([...this.trail, id]);
+  };
+  /** Enter a definition from the subgraph panel: the path is the stage, then it. 從子圖面板進入定義：路徑是 stage、再來是它。 */
+  enterDefinition = (id: string) => this.navigate([id]);
+  /** Up one level (legacy Alt+ArrowUp, graph_ui.js:2565). 上一層。 */
+  goUp = () => { if (this.trail.length) this.navigate(this.trail.slice(0, -1)); };
+  /** To a level of the path: 0 is the stage. 到路徑的某一層：0 是 stage。 */
+  goToDepth = (depth: number) => this.navigate(this.trail.slice(0, depth));
+  private navigate(trail: readonly string[]) {
+    const id = trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel';
+    // A subgraph already on the path cannot be entered again (legacy function.cycle). 已在路徑上的子圖不能再進（照舊產品）。
+    if (new Set(trail).size !== trail.length) { this.warn(tr('subgraph.cycle', 'This subgraph is already open on the path.')); return; }
+    if (!this.document.networks.has(id)) { this.warn(tr('subgraph.gone', 'This subgraph no longer exists.')); return; }
+    if (id === this.networkId()) return;
+    this.trail = [...trail];
+    this.writeSelection(NO_SELECTION, null, null);
+    const projection = project(this.document, EMPTY_PROJECTION, this.bootstrap.typeContract, undefined, id);
+    // Another network drawn: the version moves, so what reads the projection once per version reads it again (the Parameter
+    // panel's lookup, the groups). 畫另一張網路：版本前進，每一版讀一次投影的部分（參數面板的查表、群組）會重讀。
+    this.state = { ...this.state, projection, version: this.state.version + 1, network: id, trail: this.trail };
+    this.grouped = null;
+    // Ghosts here were reported when the graph opened or the edit was made; entering says nothing. 這裡的 Ghost 在開圖或修改時已報過；進入不說。
+    this.ghostTotal = projection.nodes.filter(node => node.data.ghost).length + projection.edges.filter(edge => edge.type === 'ghost').length;
+    this.publish();
+  }
+  /** The next document drawn for the network being edited; when that network is gone from it (the subgraph was deleted by this
+   * step), nothing yet: commit() cuts the path and draws the network it lands on. 下一份文件畫成正在編輯的網路；那張網路在裡面已經沒了
+   * （這一步刪掉了子圖）就先不畫：commit() 切路徑、畫落到的那張網路。 */
+  private projectFor(next: GraphDocument, changes?: GraphChanges): Projection {
+    const id = this.networkId();
+    return next.networks.has(id) ? project(next, this.state.projection, this.bootstrap.typeContract, changes, id) : EMPTY_PROJECTION;
+  }
+  /** The path cut back to what still exists (a definition deleted by an edit, Undo, a draft, TD's version); whether it was cut.
+   * 路徑切回仍存在的部分（定義被修改、Undo、草稿、TD 版本刪掉）；回傳有沒有切。 */
+  private cutTrail() {
+    let trail = this.trail;
+    while (trail.length && !this.document.networks.has('subgraph:' + trail[trail.length - 1])) trail = trail.slice(0, -1);
+    if (trail === this.trail) return false;
+    this.trail = trail; return true;
+  }
+  /** Edit the interface of the subgraph being edited (its boundary nodes' panel, basic design §3.5): one step, one Undo; the core
+   * keeps every call and boundary in step. 修改正在編輯的子圖的介面（邊界節點的面板，§3.5）：一步、一次 Undo；核心讓每個呼叫與邊界跟上。 */
+  editInterface = (direction: 'inputs' | 'outputs', edit: InterfaceEdit) => {
+    const id = this.trail[this.trail.length - 1];
+    if (!id) return;
+    this.transactGraph(tr('subgraph.interfaceChanged', 'Subgraph interface updated'), document => document.subgraph(id).editInterface(direction, edit));
+  };
+  /** A new port from the Settings tab's Add: a generated id, label in1／out1… (the next free), float 0 (§3.3). 設定分頁「新增」的新接口：
+   * 產生式 id、標籤 in1／out1…（下一個沒人用的）、float、0（§3.3）。 */
+  addPort = (direction: 'inputs' | 'outputs') => {
+    const f = this.currentSubgraph();
+    if (!f) return;
+    const labels = new Set(f[direction].map(p => p.label ?? '')), base = direction === 'inputs' ? 'in' : 'out';
+    let n = f[direction].length + 1; while (labels.has(base + n)) n++;
+    const id = core.newPortId(new Set([...f.inputs, ...f.outputs].map(p => p.id)));
+    this.editInterface(direction, { kind: 'add', port: { id, label: base + n, type: 'float', default: 0 } });
+  };
+  renameSubgraph = (id: string, name: string) => {
+    const text = name.trim();
+    if (!text || text === this.document.document.subgraphs?.find(f => f.id === id)?.name) return;
+    this.transactGraph(tr('subgraph.renamed', 'Subgraph renamed'), document => document.subgraph(id).rename(text));
+  };
+  /** Delete a definition nobody calls, from the subgraph panel (basic design §3.9). 從子圖面板刪掉沒人呼叫的定義（§3.9）。 */
+  removeSubgraph = (id: string) => this.transactGraph(tr('subgraph.removed', 'Subgraph deleted'), document => document.removeSubgraph(id));
+  /** Place a call to a definition (the subgraph panel's Add to graph, or a card dragged onto the canvas). Inside a subgraph it is refused
+   * for now (basic design amendment A3: nested calls are made in the C round). 放一個呼叫節點（子圖面板的加到圖上、卡片拖到畫布）。在子圖裡
+   * 目前拒絕（附錄一 A3：巢狀呼叫在 C 那一輪）。 */
+  placeSubgraph = (id: string, position: XYPosition) => {
+    const module = core.registry.modules.find(m => m.structural && m.reference);
+    if (!module) return;
+    this.addNode({ nodeType: module.catalog.definition.definitionUuid!, params: module.reference!(id) }, position);
+  };
+  /** Select the calls of a definition in the network being edited (the subgraph panel's count). 選取正在編輯的網路裡這份定義的呼叫（子圖面板的數量）。 */
+  selectCalls = (id: string) => {
+    const nodes = this.state.projection.nodes.filter(node => node.data.subgraph === id).map(node => node.id);
+    this.boxSelect(new Set(nodes), nodes);
+    return nodes;
+  };
+  /** Whether adding this node here is refused: a call inside a subgraph, until the C round. 在這裡新增這個節點是否被拒：子圖裡的呼叫節點，C 那一輪之前。 */
+  private nestedCall(nodeType: string) {
+    if (!this.trail.length || !core.registry.get(nodeType)?.referencedGraph) return false;
+    this.warn(tr('subgraph.nestedNotYet', 'A subgraph cannot be placed inside a subgraph yet; add it at the top level.'));
+    return true;
+  }
   /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
    * 這張圖有的 Stage，照編輯器顯示的順序（只列圖裡有的）。 */
   stageNames = () => ['vertex', 'pixel'].filter(name => name in this.document.document.stages);
@@ -405,7 +541,9 @@ export class Editor {
    * 共用來源面板自己的推導，面板顯示某一版的圖時才問，commit 不算（R.107，Z2）。 */
   references = (): Readonly<Record<string, number>> => {
     const references: Record<string, number> = {};
-    for (const node of this.document.document.stages.pixel?.nodes ?? []) {
+    // Every network: a TD value works inside a subgraph too (Refactor.110). 每張網路：TD 內建值在子圖裡也能用（R.110）。
+    const networks = [...Object.values(this.document.document.stages), ...(this.document.document.subgraphs ?? []).map(f => f.graph)];
+    for (const node of networks.flatMap(data => data.nodes)) {
       // A declaration by its ID; a TD value by `tdValue:` and its entry (Refactor.58.1: TD value cards count too).
       // 宣告用 ID；TD 內建值用「tdValue:」加 entry（TD 內建值卡片也有數量）。
       const id = core.registry.get(node.nodeType)?.referencedDeclaration?.(node)
@@ -433,7 +571,7 @@ export class Editor {
   // Build the entire candidate before committing history or notifying React.
   // 多個 node／edge 改動共用一次發布；任何例外都不留下半份作品。
   transact = (label: Message, edit: (network: Network) => void) =>
-    this.transactGraph(label, candidate => edit(candidate.networks.get('pixel')!));
+    this.transactGraph(label, candidate => edit(candidate.networks.get(this.networkId())!));
   // Edits at the document level (declarations) go through the same single path. 文件層級的修改走同一條路。
   transactGraph = (label: Message, edit: (document: GraphDocument) => void) => {
     try {
@@ -441,7 +579,7 @@ export class Editor {
       if (!result.changes.changed) return;
       const next = new core.GraphDocument(result.after, core.registry);
       requireSupported(result.after);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, result.changes);
+      const projection = this.projectFor(next, result.changes);
       this.past.push(result.before); if (this.past.length > 100) this.past.shift();
       this.future = []; this.document = next;
       this.commit(projection, label, result.changes);
@@ -455,7 +593,9 @@ export class Editor {
   // depends on it (the notes) is judged the same on every way in (Refactor.107, Codex R01).
   // changes：發布自己的差異，不管文件從哪條路進來（修改、Undo、草稿、TD 的版本），靠它判斷的東西（註記）每條路都同樣判（R.107）。
   private commit(drawn: Projection, label: Message, changes?: GraphChanges) {
-    const projection = this.reconcile(drawn);
+    // The subgraph being edited may be gone (deleted by the edit, Undo, a draft, TD's version): back up the path, draw that network.
+    // 正在編輯的子圖可能沒了（被修改、Undo、草稿、TD 版本刪掉）：路徑退回去、畫那張網路。
+    const projection = this.reconcile(this.cutTrail() ? project(this.document, EMPTY_PROJECTION, this.bootstrap.typeContract, undefined, this.networkId()) : drawn);
     this.sendChangedUniforms();
     this.codegen = this.compile(changes);
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
@@ -468,9 +608,9 @@ export class Editor {
     // edited leaves every GroupBox with the group it had. A member deleted changes that data (the tidy at the end of the change), so
     // the list is made again then. 網路自己的資料（它的 ui，群組住在那裡）沒變時群組也沿用（R.107，Z6）：移動或修改節點時每個 GroupBox
     // 拿到的還是原來的群組。刪掉成員會改到那份資料（修改結束時的整理），那時才重做清單。
-    const pixel = changes?.networks.find(net => net.id === 'pixel');
-    if (this.grouped && changes && !pixel?.metadata) this.grouped = { document: this.document, groups: this.grouped.groups };
-    this.state = { ...this.state, projection, version: this.state.version + 1, declarations,
+    const here = changes?.networks.find(net => net.id === this.networkId());
+    if (this.grouped && this.grouped.network === this.networkId() && changes && !here?.metadata) this.grouped = { ...this.grouped, document: this.document };
+    this.state = { ...this.state, projection, version: this.state.version + 1, declarations, network: this.networkId(), trail: this.trail,
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl, compiled: this.codegen.compiled ?? this.state.compiled,
       glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,
@@ -514,7 +654,7 @@ export class Editor {
    * next free number, as a new node or a copy would (one rule, as TD); a name GLSL cannot use is refused and said. One Undo step.
    * 依輸入改名（R.76，人類）：空白變底線；撞名時往上加到沒人用的號碼，和新增、複製同一套（照 TD）；GLSL 用不了的名稱拒絕並說明。一步 Undo。 */
   rename = (id: string, typed: string) => {
-    const name = core.storedName(typed), current = this.document.networks.get('pixel')!.node(id).data?.name;
+    const name = core.storedName(typed), current = this.net().node(id).data?.name;
     if (!name || name === current) return;
     if (!core.validNodeName(name, this.bootstrap.typeContract.glslCode.reservedNames)) {
       this.warn(tr('name.invalid', 'A node name starts with a letter, cannot start with gl_, TD or sg_, and cannot be a GLSL word: {name}', { name: core.shownName(name) }));
@@ -527,7 +667,7 @@ export class Editor {
     });
   };
   /** A node's component names and count, or null (see namesOf). 節點的分量名稱與分量數，或 null（見 namesOf）。 */
-  componentNamesOf = (id: string) => namesOf(this.document.networks.get('pixel')!, id, this.document.document.declarations);
+  componentNamesOf = (id: string) => namesOf(this.net(), id, this.document.document.declarations);
   /** Name a node's vector components (Refactor.85; legacy inspector.js:1358): appearance only, kept in the graph, one Undo; the
    * node's own default is kept as nothing, so the graph only records a choice. 設定節點的分量名稱（R.85；照舊產品）：只是外觀、存在
    * 圖裡、一次 Undo；選回節點自己的預設就不記，圖裡只記真正的選擇。 */
@@ -541,7 +681,7 @@ export class Editor {
   };
   /** A node's note (Refactor.76; the graph's `comment`). 節點的註記（R.76；圖裡的 comment）。 */
   setNote = (id: string, text: string) => {
-    if ((this.document.networks.get('pixel')!.node(id).data?.comment ?? '') === text) return;
+    if ((this.net().node(id).data?.comment ?? '') === text) return;
     this.transact(tr('edit.noteChanged', 'Note updated'), net => net.node(id).update({ comment: text }));
   };
   // `params` come from the menu entry the module declared (Q37 1-5); the graph does not record the entry.
@@ -549,19 +689,21 @@ export class Editor {
   add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
-  addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) =>
+  addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) => {
+    if ('nodeType' in spec && this.nestedCall(spec.nodeType)) return;
     this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => { this.insertWired(document, spec, position, wire); });
+  };
   /** What adding this node (wired when given) would draw, rehearsed on a discarded candidate with the same edit as addNode
    * (Refactor.105: place a node): the new node and the wires touching it, as the canvas draws them. null: adding it fails.
    * 新增這個節點（有給線就接上）會畫出什麼，用和 addNode 同一個修改在丟棄的候選上預演（R.105：放置節點）：新節點與碰到它的線，
    * 照畫布畫的樣子。null＝新增會失敗。 */
   placementPreview = (spec: NewNode, wire?: NewWire) => this.rehearse(document => {
-    const id = this.insertWired(document, spec, { x: 0, y: 0 }, wire), drawn = project(document, this.state.projection, this.bootstrap.typeContract);
+    const id = this.insertWired(document, spec, { x: 0, y: 0 }, wire), drawn = project(document, this.state.projection, this.bootstrap.typeContract, undefined, this.networkId());
     const node = drawn.nodes.find(item => item.id === id);
     return node ? { node, edges: drawn.edges.filter(edge => edge.source === id || edge.target === id) } : null;
   });
   private insertWired(document: GraphDocument, spec: NewNode, position: XYPosition, wire?: NewWire) {
-    const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
+    const id = insertNew(document, spec, position, this.networkId()), net = document.networks.get(this.networkId())!;
     if (!wire) return id;
     const { end, port, configure } = wire;
     // Made in the configuration the wire-drop table chose (e.g. Add as vec4), in the same step (Refactor.77).
@@ -594,14 +736,14 @@ export class Editor {
   wireFit = (id: string, spec: NewNode, end: WireEnd): WireFit | null => {
     const row = this.bootstrap.typeContract.wireDrop[id];
     if (!row) return this.portFor(spec, end);
-    const net = this.document.networks.get('pixel')!;
+    const net = this.net();
     const type = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
     return (type && row[end.side][type]) || null;
   };
   /** The colour group a new node would have, rehearsed on a discarded candidate (Refactor.104: the drag-to-add tile). 新節點會是哪個
    * 顏色組，在丟棄的候選文件上預演（R.104：拖曳新增的圖塊）。 */
   newNodeColor = (spec: NewNode): string | null => this.rehearse(document => {
-    const id = insertNew(document, spec, { x: 0, y: 0 }), node = document.networks.get('pixel')!.node(id);
+    const id = insertNew(document, spec, { x: 0, y: 0 }, this.networkId()), node = document.networks.get(this.networkId())!.node(id);
     return node.definition ? colorGroupOf(node.definition, node.data!, document) : null;
   });
   /** Which port of a new node would take this wire, rehearsed on a discarded candidate so the answer follows the
@@ -609,7 +751,7 @@ export class Editor {
    * first. null: it does not fit. 新節點的哪個接孔能接這條線：在丟棄的候選文件上預演，答案與真正的修改同一套規則；
    * 型別完全相同的優先。null＝接不上。 */
   portFor = (spec: NewNode, end: WireEnd): { port: string; type: string } | null => this.rehearse(document => {
-    const id = insertNew(document, spec, { x: 0, y: 0 }), net = document.networks.get('pixel')!;
+    const id = insertNew(document, spec, { x: 0, y: 0 }, this.networkId()), net = document.networks.get(this.networkId())!;
     const there = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
     const ports = Object.entries(net.node(id).interface[end.side === 'output' ? 'inputs' : 'outputs']);
     const fits = ports.filter(([key]) => net.plan(core.values.policy, { kind: 'wire',
@@ -682,8 +824,8 @@ export class Editor {
     try {
       // A spare port does not exist yet: rehearse the real edit on a discarded candidate.
       // 待新增接孔尚不存在：在丟棄的候選文件上走與提交相同的路徑。
-      if (c.targetHandle === spareHandle) { this.document.change(candidate => wire(candidate.networks.get('pixel')!, c)); return true; }
-      return this.document.networks.get('pixel')!.plan(core.values.policy, { kind: 'wire',
+      if (c.targetHandle === spareHandle || c.sourceHandle === spareHandle) { this.document.change(candidate => wire(candidate.networks.get(this.networkId())!, c)); return true; }
+      return this.net().plan(core.values.policy, { kind: 'wire',
         from: { node: c.source, port: c.sourceHandle }, to: { node: c.target, port: c.targetHandle } }).ok;
     } catch { return false; }
   };
@@ -695,11 +837,11 @@ export class Editor {
    * 線放在這個輸入上會改變什麼（R.57、78；Q72）：目標節點會被併掉的輸入、會被換掉的線，任何節點都一樣。用放開時同一個修改預演，
    * 預告就是實際結果。也帶上輸入與線的型別，會合併的列才能畫成線色的一整條（R.76.16）。null＝沒有要預告的或接不上。 */
   wirePreview = (c: Connection): WirePreview | null => {
-    if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle) return null;
-    const net = this.document.networks.get('pixel')!, inputs = Object.keys(net.node(c.target).interface.inputs);
+    if (!c.sourceHandle || !c.targetHandle || c.targetHandle === spareHandle || c.sourceHandle === spareHandle) return null;
+    const net = this.net(), inputs = Object.keys(net.node(c.target).interface.inputs);
     const type = net.node(c.source).interface.outputs[c.sourceHandle]?.type ?? '';
     const found = this.rehearse(candidate => {
-      const after = candidate.networks.get('pixel')!;
+      const after = candidate.networks.get(this.networkId())!;
       wire(after, c);
       const kept = after.node(c.target).interface.inputs;
       return { merged: inputs.filter(key => !(key in kept)), replaced: gone(net, after) };
@@ -712,9 +854,9 @@ export class Editor {
    * 從這個輸入拉到空白處放開會改變什麼：拔掉它的線（Q33），那條線預告為即將不見（R.78.1，人類：和即將被換掉的線一樣；
    * 新的，舊產品只寫提示）。用放開時同一個修改預演；null＝這個輸入沒有線。 */
   pullPreview = (node: string, port: string): WirePreview | null => {
-    const net = this.document.networks.get('pixel')!;
+    const net = this.net();
     const replaced = this.rehearse(candidate => {
-      const after = candidate.networks.get('pixel')!;
+      const after = candidate.networks.get(this.networkId())!;
       unwire(after, node, port);
       return gone(net, after);
     });
@@ -736,17 +878,19 @@ export class Editor {
   // Delete skips nodes the core keeps (Color Output) and those nodes' unselected wires; the rest goes.
   // 刪除時跳過核心不准刪的節點（Color Output）及其未被選取的接線，其餘照刪。
   beforeDelete = async ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {
-    const kept = new Set(nodes.filter(node => !core.removable(core.registry.get(node.data.authored.nodeType))).map(node => node.id));
-    this.keptNote = kept.size ? tr('edit.outputKeptOthersDeleted', 'Color Output cannot be deleted; the other selected items were deleted') : undefined;
+    const fixed = nodes.filter(node => !core.removable(core.registry.get(node.data.authored.nodeType))), kept = new Set(fixed.map(node => node.id));
+    // Named by what they are: the Color Output, a Subgraph Input or Output (structure.ts; Refactor.110). 寫出是什麼：Color Output、Subgraph Input／Output。
+    const names = [...new Set(fixed.map(node => node.data.label))].join(', ');
+    this.keptNote = kept.size ? tr('edit.fixedKeptOthersDeleted', '{names} cannot be deleted; the other selected items were deleted', { names }) : undefined;
     if (!kept.size) return true;
-    if (kept.size === nodes.length && edges.every(edge => !edge.selected)) this.tell('warning', tr('edit.outputKept', 'Color Output cannot be deleted'));
+    if (kept.size === nodes.length && edges.every(edge => !edge.selected)) this.tell('warning', tr('edit.fixedKept', '{names} cannot be deleted', { names }));
     return { nodes: nodes.filter(node => !kept.has(node.id)),
       edges: edges.filter(edge => edge.selected || !(kept.has(edge.source) || kept.has(edge.target))) };
   };
   private keptNote?: Message;
   /** Copy, paste and duplicate (Refactor.96; core clipboard.ts): a copy of the selected nodes, or null when none can be copied.
    * 複製、貼上、複製副本（R.96；核心 clipboard.ts）：選取節點的複製，一個都不能複製時是 null。 */
-  copyNodes = (ids: Iterable<string>) => core.copyNodes(this.document, ids, this.host.target);
+  copyNodes = (ids: Iterable<string>) => core.copyNodes(this.document, ids, this.host.target, this.networkId());
   /** Paste a copy with its top-left at `at` (flow coordinates); the pasted nodes become the selection, the last one primary (legacy
    * graph_ui.js:2823). Only a copy from this Grape OP for now (human 2026-10-12). Whether it was pasted. 把複製貼上、左上角在 at
    * （畫布座標）；貼上的節點變成選取，最後一個是主要選取（照舊產品）。目前只接受這個 Grape OP 的複製（人類 10-12）。回傳有沒有貼上。 */
@@ -755,9 +899,12 @@ export class Editor {
       this.warn(tr('edit.pasteOtherOp', 'Pasting nodes copied from another Grape OP is not available yet.'));
       return false;
     }
+    // Pasted into the network being edited; a copy holding subgraph calls is not pasted inside a subgraph yet (amendment A3, C round).
+    // 貼進正在編輯的網路；含子圖呼叫的複製目前不貼進子圖裡（附錄一 A3，C 那一輪）。
+    if (this.trail.length && clip.stages.pixel?.nodes.some(node => this.nestedCall(node.nodeType))) return false;
     let ids: string[] = [];
     const version = this.state.version;
-    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId, newGroupId); });
+    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId, newGroupId, this.networkId()); });
     if (this.state.version === version || !ids.length) return false;
     this.boxSelect(new Set(ids), [...ids].reverse());
     return true;
@@ -773,10 +920,11 @@ export class Editor {
   /** The groups of the network being edited (Refactor.98; core groups.ts), worked out once per version of the graph.
    * 正在編輯的網路的群組（R.98；核心 groups.ts），圖每一版只算一次。 */
   groups = (): readonly GraphGroup[] => {
-    if (this.grouped?.document !== this.document) this.grouped = { document: this.document, groups: core.groups.groupsOf(this.document.document.stages.pixel!) };
+    if (this.grouped?.document !== this.document || this.grouped.network !== this.networkId())
+      this.grouped = { document: this.document, network: this.networkId(), groups: core.groups.groupsOf(this.net().data) };
     return this.grouped.groups;
   };
-  private grouped: { document: GraphDocument; groups: readonly GraphGroup[] } | null = null;
+  private grouped: { document: GraphDocument; network: string; groups: readonly GraphGroup[] } | null = null;
   /** A new group of these nodes (G-3, Ctrl+G); its ID, or null when they cannot make one. 用這些節點建立群組（G-3，Ctrl＋G）；回傳 ID，
    * 不能建立時是 null。 */
   createGroup = (ids: readonly string[], name: string) => {
@@ -1023,7 +1171,7 @@ export class Editor {
     const graph = source.at(-1); if (!graph) return;
     try {
       const before = this.document.snapshot(), next = new core.GraphDocument(graph, core.registry), changes = core.changesBetween(before, graph, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
+      const projection = this.projectFor(next, changes);
       source.pop(); destination.push(before); this.document = next;
       this.commit(projection, redo ? tr('edit.redone', 'Redo') : tr('edit.undone', 'Undo'), changes);
     } catch (error) { this.notice(error); }
@@ -1034,7 +1182,7 @@ export class Editor {
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry);
       const changes = core.changesBetween(before, graph, core.registry);
       if (!changes.changed) return true;
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
+      const projection = this.projectFor(next, changes);
       this.past.push(before); this.future = []; this.document = next;
       this.commit(projection, tr('draft.restored', "Restored this page's draft; waiting to apply"), changes);
       return true;
@@ -1066,7 +1214,7 @@ export class Editor {
     try {
       const graph = this.upgrade(parseDocument(good.document));
       const before = this.graph(), next = new core.GraphDocument(graph, core.registry), changes = core.changesBetween(before, graph, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
+      const projection = this.projectFor(next, changes);
       this.past.push(before); this.future = []; this.document = next;
       this.commit(projection, tr('shader.revertedToLastGood', 'Back to the graph TD runs (revision {revision}); Undo brings back your changes',
         { revision: good.revision }), changes);
@@ -1078,7 +1226,7 @@ export class Editor {
       const result = await this.sync.read();
       const stored = parseDocument(result.state.document), remote = this.upgrade(stored);
       const before = this.graph(), next = new core.GraphDocument(remote, core.registry), changes = core.changesBetween(before, remote, core.registry);
-      const projection = project(next, this.state.projection, this.bootstrap.typeContract, changes);
+      const projection = this.projectFor(next, changes);
       this.past.push(before); this.future = []; this.document = next;
       this.sync.blocked = false; // the choice resolves the conflict before the step is recorded
       this.commit(projection, tr('conflict.usedTd', "Switched to TD's version; Undo brings back the editor's changes"), changes);

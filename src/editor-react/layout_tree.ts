@@ -52,7 +52,9 @@ export type FloatPlace = { corner: Corner; width: number; height: number; collap
  * Given by the panel table, not stored. 只浮在某一角的面板，那一角別人不能用（人類 10-11：參數面板留在右上角）。由面板表給，不存。 */
 export type Homes = Readonly<Record<string, Corner>>;
 /** Each panel's default side, in the default tab order; `first` is the tab shown first. 每個面板的預設側與分頁順序。 */
-export type PanelDefaults = readonly (readonly [id: string, side: Side, first?: boolean])[];
+/** `below`: by default in a pane of its own under its side's tabs (the subgraph panel under Add Node, basic design §3.12). below：預設在
+ * 那一側分頁下面自己一格（子圖面板在新增節點下面，§3.12）。 */
+export type PanelDefaults = readonly (readonly [id: string, side: Side, first?: boolean, below?: boolean])[];
 /** Where a tab pane sits: indices from the root. 窗格的位置：從根往下的索引。 */
 export type Path = readonly number[];
 
@@ -153,8 +155,12 @@ export function setCollapsed(layout: LayoutData, path: Path, collapsed: boolean)
 
 export function defaultLayout(panels: PanelDefaults): LayoutData {
   const side = (which: Side): Pane | null => {
-    const ids = panels.filter(row => row[1] === which).map(row => row[0]);
-    return ids.length ? { kind: 'tabs', panels: ids, active: panels.find(row => row[1] === which && row[2])?.[0] ?? ids[0]! } : null;
+    const ids = panels.filter(row => row[1] === which && !row[3]).map(row => row[0]), under = panels.filter(row => row[1] === which && row[3]).map(row => row[0]);
+    const tabs = ids.length ? { kind: 'tabs' as const, panels: ids, active: panels.find(row => row[1] === which && row[2])?.[0] ?? ids[0]! } : null;
+    const below = under.length ? { kind: 'tabs' as const, panels: under, active: under[0]! } : null;
+    // Weights, as a split without the canvas is sized (layout.tsx): the tabs two thirds, the pane below one third. 權重（沒有畫布的分割這樣算）：
+    // 分頁三分之二、下面那格三分之一。
+    return tabs && below ? { kind: 'split', direction: 'column', children: [tabs, below], sizes: [2, 1] } : tabs ?? below;
   };
   const left = side('left'), right = side('right');
   const children = [left, { kind: 'canvas' } as Pane, right].filter((pane): pane is Pane => !!pane);

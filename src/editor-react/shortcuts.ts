@@ -31,6 +31,8 @@ export const SHORTCUTS = {
   /** Rename the focused group (legacy has none; Refactor.98). 改名焦點所在的群組（舊產品沒有；R.98）。 */
   renameGroup: { section: 'edit', keys: ['F2'] },
   subgraph: { section: 'core', keys: ['Mod+Shift+G'] },
+  /** Up one level out of a subgraph (legacy graph_ui.js:2565; Refactor.110). 離開子圖、上一層（照舊產品；R.110）。 */
+  up: { section: 'ui', keys: ['Alt+ArrowUp'] },
   home: { section: 'ui', keys: ['H'] },
   frame: { section: 'ui', keys: ['F'] },
   focusGraph: { section: 'ui', keys: ['Mod+Enter'] },

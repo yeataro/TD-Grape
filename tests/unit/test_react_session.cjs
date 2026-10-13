@@ -245,7 +245,8 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.builtin.subgraph_input', params: {} }));
+  // A definition from a Library is outside this version (amendment 2 B7; Refactor.110). 來自 Library 的定義這一版不支援。
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -327,14 +328,11 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   const { session, calls, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), error => /版本不一致/.test(zh(errorText(error))));
-  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
-  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*子圖 1 個/.test(zh(errorText(error))));
-  // A known node this entry has not taken over: the message names it. 本入口還沒接管的節點：訊息指出是哪一個。
-  const known = loaded(); withDoc(known.state, graph => {
-    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.subgraph_input', params: {} }];
-  });
-  // Named as it opened (Refactor.76), so the message gives its name too. 開圖時補了名字（R.76），訊息也寫出名字。
-  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /subgraph_input 節點.*（nu）/.test(zh(errorText(error))));
+  // A definition from a Library is outside this version and is named (amendment 2 B7; Refactor.110). Every registered node is in the
+  // slice since Refactor.110; the refusal of a known node outside it stays in unsupportedReasons for a module added later.
+  // 來自 Library 的定義這一版不支援、訊息點名；R.110 起所有登記的節點都在範圍內，範圍外已知節點的拒絕留在 unsupportedReasons 給之後的模組。
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
+  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*Library 的子圖「Lib」/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
   assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));
@@ -521,7 +519,9 @@ test('every offered node can be added, wired to the output and compiled', t => {
   };
   const failures = [];
   // The reference node needs a declaration; its own test below covers it. 引用宣告節點需要宣告，另有測試。
-  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value'))) {
+  // Structural nodes (a subgraph call and its boundaries) need a definition; the subgraph tests below cover them (Refactor.110).
+  // 結構性節點（子圖呼叫與邊界）需要定義；下面的子圖測試涵蓋（R.110）。
+  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value') && !u.includes('.subgraph_'))) {
     const { session } = open(t);
     session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
     const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
@@ -542,7 +542,8 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
   // Stage outputs are never offered (Q42); the reference nodes are made from the Sources panel (Q45).
   // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
-  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
+  // Structural nodes are made from a definition, never from the menu (Refactor.110; node_module.ts). 結構性節點從定義來，不從選單來。
+  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value', 'sgrape.builtin.subgraph_call', 'sgrape.builtin.subgraph_input', 'sgrape.builtin.subgraph_output'];
   assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
   // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
@@ -766,9 +767,9 @@ test('a graph with an unknown node and a bad wire opens; ghosts survive edits an
   assert.ok(calls.length >= 2);
 });
 
-test('a known node outside this entry still refuses: as a ghost it would silently leave TD', t => {
+test('a Library subgraph definition still refuses the document: as a ghost it would silently leave TD', t => {
   const { loaded } = open(t), state = loaded();
-  withDoc(state.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
+  withDoc(state.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(new HostClient(target, '', async () => new Response('{}')), bootstrap, state), error => error instanceof UnsupportedGraphError);
 });
 
@@ -1791,4 +1792,74 @@ test('trial: any node with names to choose, made from a wire, takes the names of
   const made = session.snapshot().projection.nodes.find(n => !before.has(n.id));
   assert.equal(made.data.authored.nodeType, 'sgrape.builtin.add');
   assert.equal(made.data.componentStyle, 'rgba', 'Add (vec3) takes RGBA from the node it was dragged from');
+});
+
+// Subgraphs, B level (basic design 2026-10-14 §3.5, §3.12, amendment A3; Refactor.110): entering, the path, ×N, the interface edited
+// from inside, the boundary nodes' spare ports, no call inside a subgraph yet. 子圖 B 級（R.110）：進入、路徑、×N、在裡面改介面、
+// 邊界節點的備用接孔、子圖裡還不能放呼叫。
+test('subgraphs: entering shows the definition network, the path and ×N; up returns; Undo past the definition cuts the path', t => {
+  const { session } = open(t);
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
+    net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
+  const call = session.snapshot().projection.nodes.find(n => n.id === 'call1');
+  assert.equal(call.data.subgraph, 'gain'); assert.equal(call.data.uses, 2); assert.equal(call.data.colorGroup, 'subgraph');
+  const version = session.snapshot().version;
+  session.enterSubgraph('call1');
+  const inside = session.snapshot();
+  assert.equal(inside.network, 'subgraph:gain'); assert.deepEqual(clone(inside.trail), ['gain']); assert.equal(inside.version, version + 1);
+  assert.deepEqual(clone(inside.projection.nodes.map(n => n.id).sort()), ['input', 'output']);
+  assert.equal(session.currentSubgraph().name, 'Gain'); assert.equal(session.selectionSnapshot().size, 0, 'entering clears the selection');
+  // An edit inside goes to the subgraph's network. 在裡面的修改進子圖的網路。
+  session.transact('add', net => net.insert({ id: 'f', nodeType: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
+  assert.ok(session.graph().subgraphs[0].graph.nodes.some(n => n.id === 'f')); assert.ok(!session.graph().stages.pixel.nodes.some(n => n.id === 'f'));
+  assert.equal(session.snapshot().projection.nodes.length, 3);
+  session.goUp(); assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.snapshot().trail), []);
+  assert.ok(session.snapshot().projection.nodes.some(n => n.id === 'call2'));
+  session.enterDefinition('gain'); assert.deepEqual(clone(session.snapshot().trail), ['gain']);
+  session.history(false); assert.equal(session.snapshot().network, 'subgraph:gain', 'undoing the float stays inside');
+  session.history(false); assert.equal(session.snapshot().network, 'pixel', 'undoing the definition cuts the path to the stage');
+  assert.ok(session.snapshot().projection.nodes.some(n => n.id === 'pixel_out'));
+  session.history(true); session.history(true); assert.equal(session.graph().subgraphs.length, 1);
+});
+
+test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; no call inside a subgraph yet', t => {
+  const { session } = open(t);
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); c.networks.get('pixel').instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); });
+  session.enterSubgraph('call1');
+  session.addPort('inputs');
+  let f = session.currentSubgraph();
+  assert.deepEqual(clone(f.inputs.map(p => p.label)), ['in1', 'in2']); assert.match(f.inputs[1].id, /^p[0-9a-f]{24}$/);
+  session.editInterface('inputs', { kind: 'update', id: f.inputs[1].id, patch: { label: 'Amount', type: 'vec2' } });
+  f = session.currentSubgraph(); assert.equal(f.inputs[1].label, 'Amount'); assert.deepEqual(clone(f.inputs[1].default), [0, 0]);
+  // The Output node's spare port: a wire from a float inside adds an output of that type, wired. Output 節點的備用點：裡面的 float 拉過來＝新增同型別的輸出並接上。
+  session.transact('add', net => net.insert({ id: 'f', nodeType: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
+  assert.equal(session.valid({ source: 'f', sourceHandle: 'out', target: 'output', targetHandle: spareHandle }), true);
+  session.connect({ source: 'f', sourceHandle: 'out', target: 'output', targetHandle: spareHandle });
+  f = session.currentSubgraph(); assert.equal(f.outputs.length, 2); assert.equal(f.outputs[1].type, 'float');
+  assert.ok(session.graph().subgraphs[0].graph.edges.some(e => e.from[0] === 'f' && e.to[0] === 'output' && e.to[1] === f.outputs[1].id));
+  // The Input node's spare port: a wire to an input adds an input of that type, its value as the default. Input 節點的備用點：拉到某個輸入＝新增同型別的輸入，它的值當預設。
+  session.transact('add', net => net.insert({ id: 'm', nodeType: 'sgrape.builtin.multiply', params: { type: 'float' }, inputValues: { b: 3 }, ui: { x: 0, y: 0 } }));
+  assert.equal(session.valid({ source: 'input', sourceHandle: spareHandle, target: 'm', targetHandle: 'b' }), true);
+  session.connect({ source: 'input', sourceHandle: spareHandle, target: 'm', targetHandle: 'b' });
+  f = session.currentSubgraph(); assert.equal(f.inputs.length, 3); assert.equal(f.inputs[2].type, 'float'); assert.equal(f.inputs[2].default, 3); assert.equal(f.inputs[2].label, 'b');
+  const callNow = () => session.graph().stages.pixel.nodes.find(n => n.id === 'call1');
+  session.history(false); assert.equal(session.currentSubgraph().inputs.length, 2, 'one Undo per step');
+  session.history(true);
+  // A call cannot be placed inside a subgraph yet (amendment A3): refused with a warning, nothing changes. 子圖裡還不能放呼叫（A3）：拒絕並警告，什麼都不變。
+  const version = session.snapshot().version;
+  session.placeSubgraph('gain', { x: 0, y: 0 });
+  assert.equal(session.snapshot().version, version); assert.match(zh(session.snapshot().message), /還不能把子圖放進子圖/);
+  // Copy and paste work inside the subgraph; a copy holding a call is refused inside. 子圖裡能複製貼上；含呼叫的複製在裡面拒絕。
+  const clip = session.copyNodes(['m']);
+  assert.ok(session.paste(clip, { x: 10, y: 10 })); assert.equal(session.graph().subgraphs[0].graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.multiply').length, 2);
+  session.goUp(); const callClip = session.copyNodes(['call1']); session.enterSubgraph('call1');
+  assert.equal(session.paste(callClip, { x: 0, y: 0 }), false); assert.match(zh(session.snapshot().message), /還不能把子圖放進子圖/);
+  // The call outside follows the interface (the core keeps it in step). 外面的呼叫跟著介面走（核心讓它跟上）。
+  session.goUp();
+  assert.deepEqual(clone(session.snapshot().projection.nodes.find(n => n.id === 'call1').data.inputs.map(p => p.type)), ['vec4', 'vec2', 'float']);
+  assert.equal(callNow().params.subgraphId, 'gain');
+  // The definition cannot be deleted while called; renaming goes through the one path. 還有呼叫就不能刪定義；改名走同一條路。
+  assert.equal(session.callCounts().get('gain'), 1);
+  const before = clone(session.graph()); session.removeSubgraph('gain'); assert.deepEqual(clone(session.graph()), before);
+  session.renameSubgraph('gain', ' Tint '); assert.equal(session.definitions()[0].name, 'Tint');
 });

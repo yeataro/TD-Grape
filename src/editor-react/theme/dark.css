@@ -125,6 +125,8 @@
   --group-attribute: var(--palette-olive);
   --group-runtime: var(--palette-rose);
   --group-logic: var(--palette-graphite);
+  /* A subgraph call (basic design §3.14: a definition's own colour comes later); between function and constant. 子圖呼叫（§3.14：定義自己的顏色之後做）。 */
+  --group-subgraph: color-mix(in srgb, var(--palette-violet), var(--palette-blue) 55%);
   /* Ghost (Q37): no colour of its own; the card is shown faded and dashed. Ghost 沒有自己的顏色，卡片淡化加虛線。 */
   --group-ghost: var(--palette-node);
   /* Every selected node is green; when several are, the current one is a little brighter (human 2026-10-09).

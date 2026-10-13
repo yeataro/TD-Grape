@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -267,11 +267,13 @@ const model_1 = require("./model");
 const node_names_1 = require("./node_names");
 const structure_1 = require("./structure");
 const groups_1 = require("./groups");
-/** The copy of some nodes of the top-level pixel network, or null when none of them can be copied (the Color Output cannot:
- * there is one per stage, legacy canDeleteNode). 頂層 pixel 網路裡一些節點的複製；一個都不能複製時是 null（Color Output 不能：每個
- * Stage 只有一個，照舊產品）。 */
-function copyNodes(graph, ids, source) {
-    const data = graph.document, network = data.stages.pixel, chosen = new Set(ids);
+/** The copy of some nodes of one network (`networkId`: a stage, or 'subgraph:'+id; the top-level pixel network by default), or
+ * null when none of them can be copied (a node with a fixed identity cannot: the Color Output, a subgraph boundary; structure.ts).
+ * The copy is always written as a pixel network, whichever network it came from. 一張網路（networkId：stage 或 subgraph:+id；預設頂層
+ * pixel）裡一些節點的複製；一個都不能複製時是 null（身分固定的節點不能：Color Output、子圖邊界節點）。不管從哪張網路複製，都寫成 pixel 網路。 */
+function copyNodes(graph, ids, source, networkId = 'pixel') {
+    var _a;
+    const data = graph.document, network = (_a = graph.networks.get(networkId)) === null || _a === void 0 ? void 0 : _a.data, chosen = new Set(ids);
     if (!network)
         return null;
     const nodes = network.nodes.filter(node => chosen.has(node.id) && (0, structure_1.removable)(graph.registry.get(node.nodeType)));
@@ -314,10 +316,10 @@ const placeOf = (node) => {
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
-function pasteClip(candidate, clip, at, newId, newGroupId) {
-    const network = candidate.networks.get('pixel');
+function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel') {
+    const network = candidate.networks.get(networkId);
     if (!network)
-        throw Error('No pixel network to paste into');
+        throw Error('No network to paste into');
     for (const declaration of clip.declarations) {
         if (candidate.document.declarations.some(d => d.id === declaration.id))
             continue;
@@ -1407,6 +1409,8 @@ class GraphDocument {
         return this.networkHandles;
     }
     createSubgraph(options) { return this.subgraph((0, subgraph_operations_1.createSubgraph)(this, options).id); }
+    /** Remove a definition nobody calls (subgraph_operations.ts). 刪掉沒人呼叫的定義。 */
+    removeSubgraph(id) { (0, subgraph_operations_1.removeSubgraph)(this, id); }
     ensureSubgraphCapacity(additional = 0) { (0, subgraph_operations_1.ensureSubgraphCapacity)(this, additional); }
     appendSubgraphs(definitions, ids = new Map()) {
         return (0, subgraph_copies_1.appendSubgraphs)(this, definitions, ids).map(f => this.subgraph(f.id));
@@ -4925,6 +4929,7 @@ exports.default = definition;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_sdk_1 = require("../node_sdk");
+const config_1 = require("../config");
 // The common compiler expands this structural module using its declared role
 // and graph reference. Only ordinary value modules need an emit callback.
 const definition = {
@@ -4948,7 +4953,15 @@ const definition = {
     role: 'subgraph-input',
     supports: (node, context) => (0, node_sdk_1.validInterface)(context.owner),
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'input'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'input'),
+    // The spare grey port (basic design §3.5; legacy functions_ui.js:378-434): a wire dropped on it adds an interface port of the
+    // wire's type. The command is the editor's interface edit, not a node command: the ports live on the definition.
+    // 備用灰點（§3.5；照舊產品）：線放上來就新增一個那條線型別的接口。指令是編輯器的介面修改，不是節點指令：接口住在定義上。
+    presentation: (node, context) => {
+        const f = (0, node_sdk_1.requireSubgraph)(context);
+        return { ...(0, node_sdk_1.subgraphPresentation)(f, 'input'),
+            spare: { direction: 'output', key: '', type: '', command: 'interface', count: f.inputs.length, limit: config_1.CORE_CONFIG.subgraphPortsPerSide,
+                label: 'subgraph.addInput', limitLabel: 'subgraph.portLimit' } };
+    },
     validate: (node, context) => {
         (0, node_sdk_1.requireSubgraph)(context);
     }
@@ -4960,6 +4973,7 @@ exports.default = definition;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_sdk_1 = require("../node_sdk");
+const config_1 = require("../config");
 // The common compiler expands this structural module using its declared role
 // and graph reference. Only ordinary value modules need an emit callback.
 const definition = {
@@ -4983,7 +4997,15 @@ const definition = {
     role: 'subgraph-output',
     supports: (node, context) => (0, node_sdk_1.validInterface)(context.owner),
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context), 'output'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context), 'output'),
+    // The spare grey port (basic design §3.5; legacy functions_ui.js:378-434): a wire dropped on it adds an interface port of the
+    // wire's type. The command is the editor's interface edit, not a node command: the ports live on the definition.
+    // 備用灰點（§3.5；照舊產品）：線放上來就新增一個那條線型別的接口。指令是編輯器的介面修改，不是節點指令：接口住在定義上。
+    presentation: (node, context) => {
+        const f = (0, node_sdk_1.requireSubgraph)(context);
+        return { ...(0, node_sdk_1.subgraphPresentation)(f, 'output'),
+            spare: { direction: 'input', key: '', type: '', command: 'interface', count: f.outputs.length, limit: config_1.CORE_CONFIG.subgraphPortsPerSide,
+                label: 'subgraph.addOutput', limitLabel: 'subgraph.portLimit' } };
+    },
     validate: (node, context) => {
         (0, node_sdk_1.requireSubgraph)(context);
     }
@@ -5769,8 +5791,10 @@ const stageOutput = (module) => (module === null || module === void 0 ? void 0 :
 const boundary = (module) => (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-input' || (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-output';
 /** Nodes with a fixed identity: never offered, never deleted. 身分固定的節點：不在新增選單、不能刪。 */
 const fixed = (module) => stageOutput(module) || boundary(module);
-/** Whether a module may be offered for adding a new node. 新增選單只提供這些。 */
-const offered = (module) => !fixed(module);
+/** Whether a module may be offered for adding a new node: not one with a fixed identity, nor a structural one (a subgraph call is made
+ * from a definition — the subgraph panel, a copy — never from the palette; node_module.ts). 新增選單只提供這些：身分固定的不行，結構性的
+ * 也不行（子圖呼叫從定義來——子圖面板、複製——不從目錄來）。 */
+const offered = (module) => !fixed(module) && !module.structural;
 exports.offered = offered;
 /** Whether the user may delete this node. 能不能刪。 */
 const removable = (module) => !fixed(module);
@@ -6232,6 +6256,8 @@ exports.insertSubgraph = insertSubgraph;
 exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
 exports.subgraphFromSelection = subgraphFromSelection;
+exports.callCounts = callCounts;
+exports.removeSubgraph = removeSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
 const node_names_1 = require("./node_names");
 const model_1 = require("./model");
@@ -6456,6 +6482,30 @@ function subgraphFromSelection(network, selection, options) {
     scope_references_1.ScopeReferences.walk(graph.document, (ref, old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
         scope_references_1.ScopeReferences.token('fn_' + f.id, ref.source) : old);
     return call;
+}
+/** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
+ * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */
+function callCounts(graph) {
+    var _a, _b, _c;
+    const counts = new Map();
+    for (const data of [...Object.values(graph.document.stages), ...(graph.document.subgraphs || []).map(f => f.graph)])
+        for (const n of data.nodes) {
+            const ref = (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (ref)
+                counts.set(ref, ((_c = counts.get(ref)) !== null && _c !== void 0 ? _c : 0) + 1);
+        }
+    return counts;
+}
+/** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
+ * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
+function removeSubgraph(graph, id) {
+    graph.assertEditable();
+    const definitions = graph.document.subgraphs || [];
+    if (!definitions.some(f => f.id === id))
+        throw Error('Subgraph definition no longer exists');
+    if (callCounts(graph).get(id))
+        throw Object.assign(Error('The Subgraph definition is still in use'), { code: 'subgraph.inUse' });
+    graph.document.subgraphs = definitions.filter(f => f.id !== id);
 }
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
  * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a

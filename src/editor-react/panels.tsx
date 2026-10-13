@@ -5,6 +5,7 @@ import type { AddChoice } from './add_entries';
 import type { Corner, Side } from './layout_tree';
 import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
+import { SubgraphsPanel } from './SubgraphsPanel';
 import { GlslPanel, glslMenu } from './GlslPanel';
 import { GraphJsonView, graphJsonMenu } from './GraphJsonView';
 import type { MenuItem } from './DropdownMenu';
@@ -26,6 +27,7 @@ export type PanelInput = { session: EditorSession | null; choices: readonly AddC
 // Each panel's own slice of the state (Refactor.106; editor_slice.ts). 每個面板自己的狀態切片（R.106；editor_slice.ts）。
 const SOURCE_FIELDS = ['declarations', 'version'] as const;
 const GLSL_FIELDS = ['glsl', 'compiled', 'glslVariables', 'glslDeclarations', 'stuck'] as const;
+const SUBGRAPH_FIELDS = ['version', 'trail'] as const;
 function Sources({ session }: { session: EditorSession }) {
   const { declarations, version } = useEditorFields(session, SOURCE_FIELDS)!;
   // The reference counts are this panel's own derivation (Refactor.107, Z2): asked of the session for each version of the graph it
@@ -33,6 +35,14 @@ function Sources({ session }: { session: EditorSession }) {
   // 時不算。
   const references = useMemo(() => session.references(), [session, version]);
   return <SourcesPanel declarations={declarations} references={references} />;
+}
+function Subgraphs({ session }: { session: EditorSession }) {
+  const { version, trail } = useEditorFields(session, SUBGRAPH_FIELDS)!;
+  // The definitions and their call counts are this panel's own derivation, per version of the graph (as the Sources panel's references).
+  // 定義與呼叫數是這個面板自己的推導，圖每一版算一次（同共用來源面板的引用數）。
+  const definitions = useMemo(() => session.definitions(), [session, version]);
+  const counts = useMemo(() => session.callCounts(), [session, version]);
+  return <SubgraphsPanel definitions={definitions} counts={counts} current={trail[trail.length - 1] ?? null} />;
 }
 function Glsl({ session }: { session: EditorSession }) {
   return <GlslPanel {...useEditorFields(session, GLSL_FIELDS)!} />;
@@ -45,7 +55,8 @@ function GraphJson({ session }: { session: EditorSession }) {
  * keeps the top right). corner：只浮在那一角、別的面板不能用（R.84，人類 10-11：參數面板佔右上角）。 */
 /** `frame: 'own'`: floating, it draws its own frame and head (Refactor.85: the Parameter panel is a node card). frame：浮動時自己畫外殼與頭
  * （R.85：參數面板是一張節點卡）。 */
-export type PanelRow = { title: Message; side: Side; first?: true; corner?: Corner; frame?: 'own'; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
+/** `below`: by default in a pane of its own under its side's tabs (Refactor.110). below：預設在那一側分頁下面自己一格（R.110）。 */
+export type PanelRow = { title: Message; side: Side; first?: true; below?: true; corner?: Corner; frame?: 'own'; content(input: PanelInput): ReactNode; menu?(): readonly MenuItem[] };
 
 export const PANELS = {
   sources: { title: tr('sources.title', 'Shared Sources'), side: 'left', content: ({ session }) => session
@@ -54,6 +65,10 @@ export const PANELS = {
   addNode: { title: tr('addNode.title', 'Add Node'), side: 'left', first: true, content: ({ session, choices, add }) => session
     ? <AddNodePanel choices={choices} onAdd={add} />
     : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
+  // The subgraph panel (basic design §3.12; Refactor.110): under Add Node by default. 子圖面板（§3.12；R.110）：預設在新增節點下面。
+  subgraphs: { title: tr('subgraphs.title', 'Subgraphs'), side: 'left', below: true, content: ({ session }) => session
+    ? <Subgraphs session={session} />
+    : <p className="hint">{say(tr('subgraphs.noGraph', 'Open a Grape OP to see its subgraphs.'))}</p> },
   // The GLSL panel links lines and names to nodes, so it needs the graph being edited (Refactor.63.3: without one it broke the page).
   // GLSL 面板把行與名字連到節點，需要正在編輯的圖（63.3：沒有圖時曾讓整頁壞掉）。
   glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ session }) => session

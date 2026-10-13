@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties, type RefObject, type UIEvent } from 'react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { useEditorFields } from './editor_slice';
 import { BrandMark, Icon, type IconName } from './icons';
@@ -23,7 +23,7 @@ const noLog: readonly Report[] = [];
 const noSubscribe = () => () => {};
 // Each bar reads only the fields it shows (Refactor.106; editor_slice.ts): a drag frame or a selection does not re-render them.
 // 每一列只讀自己顯示的欄位（R.106；editor_slice.ts）：拖曳的一格或選取不會讓它們重繪。
-const TITLE_FIELDS = ['phase', 'saving'] as const, NETWORK_FIELDS = ['undo', 'redo'] as const;
+const TITLE_FIELDS = ['phase', 'saving'] as const, NETWORK_FIELDS = ['undo', 'redo', 'trail', 'version'] as const;
 /** What the foot bar and its status panel show. 底列與它的狀態面板顯示的東西。 */
 const FOOT_FIELDS = ['phase', 'dirty', 'checking', 'link', 'saved', 'revision', 'saving', 'retryAt', 'retryMs', 'message', 'level',
   'syncRecords', 'targetPath'] as const;
@@ -197,7 +197,11 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
   const state = useEditorFields(session, NETWORK_FIELDS), bar = useRef<HTMLDivElement>(null), folded = useFolding(bar);
-  const stages = session?.stageNames() ?? [];
+  const stages = session?.stageNames() ?? [], trail = state?.trail ?? [];
+  // The path's names and the current subgraph's call count, once per version of the graph (Refactor.110). 路徑上的名字與目前子圖的
+  // 呼叫數，圖每一版讀一次（R.110）。
+  const names = useMemo(() => new Map((session?.definitions() ?? []).map(f => [f.id, f.name])), [session, state?.version]);
+  const uses = useMemo(() => trail.length && session ? session.callCounts().get(trail[trail.length - 1]!) ?? 0 : 0, [session, state?.version, trail]);
   // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
   // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框
   // （R.83.7，人類：GLSL 不是編輯工具）。
@@ -229,7 +233,20 @@ export function NetworkBar({ session, prefs, onGlsl }: {
     <div className="network-bar-stages">
       {/* Only the stages this graph has (human 2026-10-09); only Pixel can be edited so far.
           只顯示這張圖有的 Stage（人類）；目前只能編輯 Pixel。 */}
-      {stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
+      {/* Inside a subgraph the row is the path (basic design §1 路徑列; legacy functions_ui.js:49 renderNavigation): the stage, up one level,
+          then each subgraph entered; the current one is not a button. The hint says how many calls the current one has (§3.6 "×N").
+          進了子圖這一排是路徑（§1 路徑列；照舊產品）：stage、上一層、再來是進入的每個子圖；目前的不是按鈕。提示寫目前這份有幾個呼叫（§3.6「×N」）。 */}
+      {trail.length > 0 && session ? <nav className="network-path" aria-label={say(tr('path.label', 'Path'))}>
+        <button type="button" className="path-step" onClick={() => session.goToDepth(0)} title={say(tr('path.toStage', 'Back to the Pixel stage'))}>Pixel</button>
+        <button type="button" className="icon-button path-up" onClick={session.goUp} aria-label={say(tr('path.up', 'Up one level'))}
+          title={withShortcut(say(tr('path.up', 'Up one level')), 'up')}>↑</button>
+        {trail.map((id, i) => <Fragment key={i + id}>{i > 0 && <span className="path-sep" aria-hidden="true">›</span>}
+          {i === trail.length - 1 ? <span className="path-step current">{names.get(id) ?? id}</span>
+            : <button type="button" className="path-step" onClick={() => session.goToDepth(i + 1)}>{names.get(id) ?? id}</button>}</Fragment>)}
+        <small className="path-hint" title={say(tr('path.sharedHint', 'This definition is called by {count} node(s); a change here changes every call.', { count: uses }))}>
+          {say(tr('path.shared', 'shared ×{count}', { count: uses }))}</small>
+      </nav>
+      : stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
         options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
           disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
     </div>

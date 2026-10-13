@@ -341,11 +341,13 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
       latest.current.onCreate({ screen: { x: event.clientX, y: event.clientY }, place: true });
   }, []);
   const onNodeDragStart = useCallback(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }, []);
-  // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
-  // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
+  // A double-click on a subgraph call opens the subgraph (legacy graph_ui.js:2034; basic design §3.12); on any other node's plain area
+  // it frames the node (human 2026-10-09; new); on fields, buttons and ports it does what it did. 雙擊子圖呼叫＝打開子圖（照舊產品；
+  // §3.12）；雙擊其他節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
   const onNodeDoubleClick = useCallback<FlowHandler<'onNodeDoubleClick'>>((event, node) => {
-    if (!(event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row'))
-      frameNodes(latest.current.flow, [node.id]);
+    if ((event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row')) return;
+    if ((node as FlowNode).data.subgraph !== undefined) latest.current.session.enterSubgraph(node.id);
+    else frameNodes(latest.current.flow, [node.id]);
   }, []);
   const onEdgeClick = useCallback<FlowHandler<'onEdgeClick'>>((event, edge) => latest.current.session.clickEdge(edge.id, pressKind(event)), []);
   const onPaneClick = useCallback(() => latest.current.session.clearSelection(), []);
@@ -438,7 +440,7 @@ function usePrefs(): CanvasPrefs {
 // added to EditorState must be added here too (Refactor.63.3: the GLSL panel read a missing glslMap and the page went blank).
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
-  projection: { nodes: [], edges: [] }, declarations: [], glsl: '', compiled: null, glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
+  network: 'pixel', trail: [], projection: { nodes: [], edges: [] }, declarations: [], glsl: '', compiled: null, glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
 /** What the workspace itself shows or passes on (Refactor.106): never the projection — the canvas and the panels read their own.
  * 工作區自己顯示或往下傳的欄位（R.106）：不含投影——畫布與面板各自讀。 */
 const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'compiled', 'phase', 'upgrades'] as const;
@@ -494,14 +496,19 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
   // 可能是它來源的浮動新增視窗。
   useDropToAdd(useMemo(() => {
     const find = (id: string) => choicesRef.current.find(item => item.id === id);
+    // A subgraph card (SubgraphsPanel.tsx) is named by its definition, not by the add list (Refactor.110). 子圖卡片以定義指名，不在新增清單。
+    const definition = (id: string) => id.startsWith('subgraph:') ? session?.definitions().find(f => f.id === id.slice(9)) : undefined;
     return {
       describe: (id: string) => {
+        const f = definition(id);
+        if (f) return { label: f.name, color: 'subgraph' };
         const choice = find(id);
         return choice && session ? { label: choice.label, color: session.newNodeColor(choice.spec) ?? 'function' } : null;
       },
       drop: (id: string, at: { x: number; y: number }) => {
-        const choice = find(id);
-        if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
+        const f = definition(id), choice = find(id);
+        if (f) session?.placeSubgraph(f.id, flow.screenToFlowPosition(at));
+        else if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
         setCreating(null);
       },
     };
@@ -588,6 +595,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       // H 對準全部（照舊產品）。
       else if (!draft && network && matches('frame', event)) run(() => frameNodes(flow, session.selectedInOrder()));
       else if (!draft && network && matches('home', event)) run(() => frameNodes(flow));
+      // Up one level out of a subgraph (legacy graph_ui.js:2565; Refactor.110). 離開子圖、上一層（照舊產品；R.110）。
+      else if (network && matches('up', event)) run(session.goUp);
     };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };

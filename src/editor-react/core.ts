@@ -18,6 +18,7 @@ import type * as upgrades from '../core-ts/upgrades';
 import type * as nodeNames from '../core-ts/node_names';
 import type * as clipboard from '../core-ts/clipboard';
 import type * as groups from '../core-ts/groups';
+import type * as subgraphOps from '../core-ts/subgraph_operations';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -34,6 +35,8 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   componentStyle: typeof componentNames.componentStyle; componentStyles: typeof componentNames.componentStyles;
   componentLetters: typeof componentNames.componentLetters;
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
+  /** Subgraphs (Refactor.110): a new port's identity; how many calls each definition has. 子圖：新接口的身分；每份定義的呼叫數。 */
+  newPortId: typeof subgraphOps.newPortId; callCounts: typeof subgraphOps.callCounts;
 } & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>
   & Pick<typeof clipboard, 'copyNodes' | 'readClip' | 'pasteClip' | 'clipCorner'> & { groups: typeof groups };
 export type { GraphGroup } from '../core-ts/groups';
@@ -41,7 +44,8 @@ export type { Clip } from '../core-ts/clipboard';
 export type { TdValue } from '../core-ts/td_values';
 export type { ComponentStyle } from '../core-ts/component_names';
 export type { NameProblem } from '../core-ts/declarations';
-export type { Declaration } from '../core-ts/model';
+export type { Declaration, SubgraphData, InterfacePort } from '../core-ts/model';
+export type { InterfaceEdit } from '../core-ts/subgraphs';
 export type { GhostKind } from '../core-ts/ghosts';
 export type { Measure } from '../core-ts/capacity';
 export type { UpgradeChange } from '../core-ts/upgrades';
@@ -86,6 +90,8 @@ export const supportedDefinitions = [
   'texture_sample',
   // editor tools (Refactor.63.1) 編輯工具
   'force_compile_error',
+  // subgraphs (Refactor.110, basic design 2026-10-14: B level) 子圖（R.110，基本設計 B 級）
+  'subgraph_call', 'subgraph_input', 'subgraph_output',
 ].map(key => 'sgrape.builtin.' + key);
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
@@ -118,7 +124,7 @@ export function requireSupported(graph: graph.GraphDocument['document']) {
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), tr('open.reasonMore', '…and {count} more', { count: reasons.length - 8 })] : reasons;
     throw new UnsupportedGraphError(tr('open.unsupported',
-      'This entry supports the common TOP nodes (no Uniforms, subgraphs or Frames yet). Nothing was edited or applied; these will come back in later rounds.\nNot supported: {reasons}',
+      'This entry supports the common TOP nodes and subgraphs (no Frames yet). Nothing was edited or applied; these will come back in later rounds.\nNot supported: {reasons}',
       { reasons: shown }));
   }
 }
@@ -132,19 +138,27 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
   else for (const declaration of graph.declarations) if (core.declarationKinds.has(declaration.kind) && !supportedKinds.includes(declaration.kind))
     reasons.push(tr('open.reasonDeclaration', '{kind} declaration “{name}”',
       { kind: declaration.kind === 'uniform' ? 'Uniform' : String(declaration.kind), name: String(declaration.name) }));
-  if (graph.subgraphs?.length) reasons.push(tr('open.reasonSubgraphs', '{count} subgraph(s)', { count: graph.subgraphs.length }));
+  // A definition from a Library is refused as a whole until the Library round defines it (basic design amendment 2 B7): the core
+  // refuses it on every way in; this names it when a document is opened. 帶 Library ID 的定義在 Library 那一輪之前整份拒絕（附錄二 B7）：
+  // 核心在每條進入的路上都拒絕；開文件時在這裡點名。
+  for (const f of graph.subgraphs ?? []) if (f && typeof f === 'object' && 'libraryId' in f)
+    reasons.push(tr('open.reasonLibrarySubgraph', 'subgraph “{name}” from a Library (not supported in this version)', { name: String(f.name) }));
   for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(tr('open.reasonStage', '{stage} stage', { stage }));
   const pixel = graph.stages.pixel;
   if (!pixel) return [...reasons, tr('open.reasonNoPixel', 'no pixel stage')];
-  const frames = pixel.ui?.frames;
-  if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frame(s)', { count: frames.length }));
-  // A node type this build does not know at all is a ghost, not a reason to refuse (Q37 1-1). Known
-  // types outside this entry's slice still refuse: as ghosts they would silently leave TD's program.
-  // 完全不認得的節點是 Ghost，不拒絕；認得但本入口還沒接管的仍拒絕——當成 Ghost 會悄悄從 TD 的程式消失。
-  for (const node of pixel.nodes) if (core.registry.get(node.nodeType) && !supportedDefinitions.includes(node.nodeType)) {
-    const type = node.nodeType.replace(/^sgrape\.builtin\./, '');
-    reasons.push(node.name ? tr('open.reasonNamedNode', '{type} node “{name}” ({id})', { type, name: node.name, id: node.id })
-      : tr('open.reasonNode', '{type} node ({id})', { type, id: node.id }));
+  // Every network: the stage and each subgraph's (Refactor.110). 每張網路：stage 與每個子圖的。
+  const networks = [pixel, ...(graph.subgraphs ?? []).filter(f => f && typeof f === 'object' && f.graph).map(f => f.graph)];
+  for (const network of networks) {
+    const frames = network.ui?.frames;
+    if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frame(s)', { count: frames.length }));
+    // A node type this build does not know at all is a ghost, not a reason to refuse (Q37 1-1). Known
+    // types outside this entry's slice still refuse: as ghosts they would silently leave TD's program.
+    // 完全不認得的節點是 Ghost，不拒絕；認得但本入口還沒接管的仍拒絕——當成 Ghost 會悄悄從 TD 的程式消失。
+    for (const node of network.nodes ?? []) if (core.registry.get(node.nodeType) && !supportedDefinitions.includes(node.nodeType)) {
+      const type = node.nodeType.replace(/^sgrape\.builtin\./, '');
+      reasons.push(node.name ? tr('open.reasonNamedNode', '{type} node “{name}” ({id})', { type, name: node.name, id: node.id })
+        : tr('open.reasonNode', '{type} node ({id})', { type, id: node.id }));
+    }
   }
   // Size is not "unsupported": an over-limit graph opens with a warning and only growth is blocked.
   // 大小不算「不支援」：超過上限的圖照樣打開並警告，只擋變大。

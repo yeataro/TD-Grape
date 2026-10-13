@@ -14,11 +14,12 @@ import { addCopiedGroups, completeGroups, groupsOf } from './groups';
  * Grape OP 裡（人類 10-12：貼到別的 Grape OP 等同名宣告的規則）；source 記下從哪個 Grape OP 複製。 */
 export type Clip = Graph & { source: string };
 
-/** The copy of some nodes of the top-level pixel network, or null when none of them can be copied (the Color Output cannot:
- * there is one per stage, legacy canDeleteNode). 頂層 pixel 網路裡一些節點的複製；一個都不能複製時是 null（Color Output 不能：每個
- * Stage 只有一個，照舊產品）。 */
-export function copyNodes(graph: GraphDocument, ids: Iterable<string>, source: string): Clip | null {
-  const data = graph.document, network = data.stages.pixel, chosen = new Set(ids);
+/** The copy of some nodes of one network (`networkId`: a stage, or 'subgraph:'+id; the top-level pixel network by default), or
+ * null when none of them can be copied (a node with a fixed identity cannot: the Color Output, a subgraph boundary; structure.ts).
+ * The copy is always written as a pixel network, whichever network it came from. 一張網路（networkId：stage 或 subgraph:+id；預設頂層
+ * pixel）裡一些節點的複製；一個都不能複製時是 null（身分固定的節點不能：Color Output、子圖邊界節點）。不管從哪張網路複製，都寫成 pixel 網路。 */
+export function copyNodes(graph: GraphDocument, ids: Iterable<string>, source: string, networkId = 'pixel'): Clip | null {
+  const data = graph.document, network = graph.networks.get(networkId)?.data, chosen = new Set(ids);
   if (!network) return null;
   const nodes = network.nodes.filter(node => chosen.has(node.id) && removable(graph.registry.get(node.nodeType)));
   if (!nodes.length) return null;
@@ -54,9 +55,9 @@ const placeOf = (node: NodeData) => {
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
-export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string): string[] {
-  const network = candidate.networks.get('pixel');
-  if (!network) throw Error('No pixel network to paste into');
+export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string, networkId = 'pixel'): string[] {
+  const network = candidate.networks.get(networkId);
+  if (!network) throw Error('No network to paste into');
   for (const declaration of clip.declarations) {
     if (candidate.document.declarations.some(d => d.id === declaration.id)) continue;
     try { candidate.addDeclaration(copy(declaration)); } catch { /* its nodes stay ghosts 它的節點維持 Ghost */ }

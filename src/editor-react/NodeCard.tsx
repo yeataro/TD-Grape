@@ -101,6 +101,15 @@ export const sourceKinds: Record<string, Message> = {
 
 // Drawn from the module's spare declaration only; no node-specific branch here.
 // 只依模組宣告的 spare 繪製；接線後由 session 執行模組命令，renderer 不認節點。
+/** The spare port on the output side (a Subgraph Input node: dragging a wire from it to an input adds an input to the subgraph,
+ * basic design §3.5; Refactor.110). 輸出側的備用接孔（Subgraph Input 節點：從它拉線到某個輸入＝給子圖新增一個輸入，§3.5；R.110）。 */
+function SpareOutput({ id, spare }: { id: string; spare: NonNullable<NodePresentation['spare']> }) {
+  const text = useContext(TextContext), open = spare.count < spare.limit;
+  return <div className={`port-row output-row spare-row ${open ? '' : 'full'}`} style={{ '--port-color': typeColor(spare.type) } as CSSProperties}>
+    <span>{open ? '＋ ' + text(spare.label) : text(spare.limitLabel)}</span>
+    <Handle type="source" position={Position.Right} id={spareHandle} isConnectable={open} aria-label={`${id} ${text(spare.label)}`} />
+  </div>;
+}
 function SpareInput({ id, spare }: { id: string; spare: NonNullable<NodePresentation['spare']> }) {
   const text = useContext(TextContext), open = spare.count < spare.limit;
   return <div className={`port-row input-row spare-row ${open ? '' : 'full'}`} style={{ '--port-color': typeColor(spare.type) } as CSSProperties}>
@@ -205,7 +214,8 @@ export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>
   // its outputs first, so it reads from the top down (human 2026-10-09). Judged from the ports, never from the node kind.
   // 起點節點（用語表：沒有任何輸入，例如來源引用、TD 內建值、值節點；之後的 Spec 常量）輸出放最上面，由上往下讀（人類）。
   // 由接孔判斷，不認節點種類。
-  const start = !inputs.length && !view.spare;
+  // A spare on the output side does not make a start node a middle one. 輸出側的備用點不會讓起點節點變成中間的。
+  const start = !inputs.length && view.spare?.direction !== 'input';
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   const kind = data.declaration && sourceKinds[data.declaration.kind], sourceTag = kind ? say(kind) + ' · ' : '';
   const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
@@ -215,16 +225,20 @@ export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>
         接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
     <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
   </div>);
+  const outputBlock = <>{outputRows}{view.spare?.direction === 'output' && <SpareOutput id={id} spare={view.spare} />}</>;
   return <article ref={card} className="grape-node"
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     {/* Trial (Refactor.63.6.1): TD's error mark on a node that wrote a line TD reported. 試驗：TD 回報的錯誤行由它寫的節點，掛 TD 的錯誤標記。 */}
     {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
       aria-label={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}><Icon name="errorBadge" /></span>}
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
+      {/* A subgraph call: how many calls its definition has in the whole graph (basic design §3.6 "×N"; legacy had no mark, Q74.8).
+          子圖呼叫：它的定義在整張圖有幾個呼叫（§3.6「×N」；舊產品沒有，Q74.8）。 */}
+      {data.uses !== undefined && <small className="node-uses" title={say(tr('node.uses', 'Subgraph called by {count} node(s); editing it changes every call. Double-click to open.', { count: data.uses }))}>×{data.uses}</small>}
       {hasOutputChoice(data) ? <TypeChoice id={id} data={data} end="output" /> : <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
-      {start && outputRows}
+      {start && outputBlock}
       <TypeRow id={id} data={data} end="input" />
       {view.inlineControls && <Controls id={id} controls={view.inlineControls} bare />}
       {valued && <DeclarationValue declaration={valued} />}
@@ -252,7 +266,7 @@ export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls && <Controls id={id} controls={view.controls} />}
       {view.note && <div className="hint">{view.note.text}</div>}
-      {!start && outputRows}
+      {!start && outputBlock}
     </div>
   </article>;
 }, (before, after) =>

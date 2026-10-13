@@ -202,6 +202,28 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   return call;
 }
 
+/** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
+ * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */
+export function callCounts(graph:GraphDocument):ReadonlyMap<string,number> {
+  const counts = new Map<string,number>();
+  for (const data of [...Object.values(graph.document.stages),...(graph.document.subgraphs || []).map(f => f.graph)])
+    for (const n of data.nodes) {
+      const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);
+      if (ref) counts.set(ref,(counts.get(ref) ?? 0) + 1);
+    }
+  return counts;
+}
+
+/** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
+ * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
+export function removeSubgraph(graph:GraphDocument,id:string):void {
+  graph.assertEditable();
+  const definitions = graph.document.subgraphs || [];
+  if (!definitions.some(f => f.id === id)) throw Error('Subgraph definition no longer exists');
+  if (callCounts(graph).get(id)) throw Object.assign(Error('The Subgraph definition is still in use'),{code:'subgraph.inUse'});
+  graph.document.subgraphs = definitions.filter(f => f.id !== id);
+}
+
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
  * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
  * Library). A local definition is never collected: deleting a call must not lose the person's work; it stays listed in the

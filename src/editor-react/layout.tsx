@@ -24,7 +24,7 @@ export type { Side } from './layout_tree';
  * the layout only gives them a place. 版面看到的面板：名字、內容，以及它自己的選單（R.83）：項目由面板決定，版面只給位置。 */
 export type PanelView = { title: Message; content: ReactNode; menu?: () => readonly MenuItem[]; frame?: 'own' };
 
-const defaults: tree.PanelDefaults = (Object.entries(PANELS) as [string, { side: Side; first?: true }][]).map(([id, row]) => [id, row.side, !!row.first]);
+const defaults: tree.PanelDefaults = (Object.entries(PANELS) as [string, { side: Side; first?: true; below?: true }][]).map(([id, row]) => [id, row.side, !!row.first, !!row.below]);
 const homes: tree.Homes = Object.fromEntries((Object.entries(PANELS) as [string, { corner?: Corner }][]).filter(([, row]) => row.corner).map(([id, row]) => [id, row.corner!]));
 function stored(): LayoutData {
   try { return tree.keepHomes(tree.readLayout(JSON.parse(readPreference('layout') ?? 'null'), defaults), homes); }
