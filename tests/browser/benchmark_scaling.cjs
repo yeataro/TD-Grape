@@ -21,19 +21,23 @@ const plain = args.filter(a => !a.startsWith('--')), [built, reportFolder] = pla
 if (!built || !reportFolder || !label) throw Error('Usage: node tests/browser/benchmark_scaling.cjs BUILD REPORT LABEL [--counts]');
 const bootstrap = JSON.parse(fs.readFileSync(path.join(built, 'editor-bootstrap.json')));
 const buildInfo = JSON.parse(fs.readFileSync(path.join(built, 'build-info.json')));
-if (counts && !buildInfo.profiling) throw Error('--counts needs the profiling build (build_editor.cjs --jsx-shim)');
-if (!counts && buildInfo.profiling) throw Error('a timing run needs the product build, not the profiling one');
-const target = '2'.repeat(32), COPIES = 24, STEP = 48, VIEWPORT = { width: 1600, height: 1100 };
-const FIXTURE = path.join(__dirname, '../fixtures/scaling_base_graph.json'), SHIM = path.join(__dirname, '../../tools/dev/jsx-shim.js');
 const sha = data => crypto.createHash('sha256').update(data).digest('hex').slice(0, 12);
 const find = (folder, test) => fs.readdirSync(folder, { withFileTypes: true }).flatMap(e => e.isDirectory() ? find(path.join(folder, e.name), test) : test(e.name) ? [path.join(folder, e.name)] : []);
+const bundles = find(built, name => /^index-.*\.js$/.test(name));
+// A profiling build says so in build-info (Refactor.107.1); an older one is told by the counters in its bundle. 量測版建置在 build-info 裡
+// 標出（R.107.1）；更早的看 bundle 裡有沒有計數器。
+const profilingBuild = !!buildInfo.profiling || bundles.some(file => fs.readFileSync(file, 'utf8').includes('globalThis.__prof'));
+if (counts && !profilingBuild) throw Error('--counts needs the profiling build (build_editor.cjs --jsx-shim)');
+if (!counts && profilingBuild) throw Error('a timing run needs the product build, not the profiling one');
+const target = '2'.repeat(32), COPIES = 24, STEP = 48, VIEWPORT = { width: 1600, height: 1100 };
+const FIXTURE = path.join(__dirname, '../fixtures/scaling_base_graph.json'), SHIM = path.join(__dirname, '../../tools/dev/jsx-shim.js');
 // `runnerCommit` is this script's repository, `productCommit` the build's own record (build-info `source`, Refactor.107.1; Codex
 // R107-05: the one field used to be the runner's HEAD and could not name the product). runnerCommit 是腳本所在倉庫，productCommit 是
 // 建置自己記的（build-info 的 source，R.107.1；Codex R107-05：以前只有 runner 的 HEAD，指不出產品）。
 const identity = {
   runnerCommit: (() => { try { return execSync('git rev-parse --short HEAD', { cwd: path.resolve(__dirname, '../..') }).toString().trim(); } catch { return null; } })(),
   productCommit: buildInfo.source?.commit ?? null, productDirty: buildInfo.source?.dirty ?? null,
-  build: buildInfo.version, profiling: !!buildInfo.profiling, bundle: find(built, name => /^index-.*\.js$/.test(name)).map(file => sha(fs.readFileSync(file))).join(','),
+  build: buildInfo.version, profiling: profilingBuild, bundle: bundles.map(file => sha(fs.readFileSync(file))).join(','),
   script: sha(fs.readFileSync(__filename)), fixture: sha(fs.readFileSync(FIXTURE)), shim: counts ? sha(fs.readFileSync(SHIM)) : null,
   viewport: VIEWPORT.width + 'x' + VIEWPORT.height, browser: null };
 
