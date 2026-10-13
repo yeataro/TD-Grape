@@ -33,7 +33,10 @@ function AddNodeList({ choices, onAdd }: { choices: readonly AddChoice[]; onAdd(
   const [query, setQuery] = useState(''), [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [chosen, setChosen] = useState<string | null>(null), [split, setSplit] = useState(.7);
   const body = useRef<HTMLDivElement>(null), list = useRef<HTMLDivElement>(null), details = useRef<HTMLDivElement>(null);
-  const start = useRef(split), live = useRef(split);
+  // The split at the start of a drag, the live value during it, and the panel's height measured once at the start (Refactor.107.1,
+  // Codex R107-02: no layout read per move; EDITOR_UI_RULES, continuous interactions). 拖曳開始時的分隔值、拖曳中的現值、開始時量一次的
+  // 面板高度（R.107.1，Codex R107-02：移動中不讀版面；畫面規則「連續互動」）。
+  const start = useRef(split), live = useRef(split), height = useRef(1);
   const found = useMemo(() => searchChoices(choices, query), [choices, query]);
   const toggle = (key: string) => setOpen(old => { const next = new Set(old); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   // Dragged onto the canvas to add it (drag_to_add.tsx): a mouse from anywhere on the row, a finger from its + (human 2026-10-12).
@@ -66,8 +69,9 @@ function AddNodeList({ choices, onAdd }: { choices: readonly AddChoice[]; onAdd(
     </div>
     {/* The description below, resizable (legacy); a placeholder until node texts exist. 下方說明，可調高度；節點說明做好前先佔位。 */}
     {selected && <div className="add-node-details" ref={details} style={{ flexGrow: 1 - split }}>
-      <ResizeHandle axis="y" label={tr('layout.resizeGroups', 'Resize the panels above and below')} onStart={() => { start.current = split; live.current = split; }}
-        onMove={delta => follow(clampSplit(start.current + delta / (body.current?.clientHeight || 1)))} onEnd={() => setSplit(live.current)} />
+      <ResizeHandle axis="y" label={tr('layout.resizeGroups', 'Resize the panels above and below')}
+        onStart={() => { start.current = split; live.current = split; height.current = body.current?.clientHeight || 1; }}
+        onMove={delta => follow(clampSplit(start.current + delta / height.current))} onEnd={() => setSplit(live.current)} />
       <header><strong>{selected.label}</strong><button type="button" className="icon-button" aria-label={say(tr('create.close', 'Close'))}
         onClick={() => setChosen(null)}><Icon name="close" /></button></header>
       <small>{say(sourceLabel[selected.source])} · {selected.path.map(key => say(categoryLabel(key))).join(' › ')}</small>

@@ -8,11 +8,16 @@ import { tr, say } from './text';
 // 效能探針（R.106.1，人類 10-13）：一小塊疊層，顯示最近一次操作裡人感覺得到、看不到的事——按下到畫出多久、最慢的一格、長畫格幾個、腳本
 // 逼了多少排版、畫布改了幾個元素。計數器是給程式看的；這裡把數字放在人操作的地方，「叫醒了誰」出錯時不用讀程式就看得到
 // （docs/development/TESTING.md）。純 DOM，不在 React 裡、不在畫布裡，所以探針自己不製造 React 工作、也不被算進改動。
-// One reading per interaction, by kind (Refactor.107, Codex FR01): a press (down, its moves, up) is one reading from the press; a
-// key and a wheel gesture are their own; moving over things with no button down is a hover reading and never lends its latency to
-// the click that follows. The totals add every reading since the last clear; the last 50 are kept for dumping.
-// 一次操作一筆、分種類（R.107，Codex FR01）：按下（按下、移動、放開）從按下起算一筆；按鍵、滾輪各自一筆；沒按著的移動是滑過，它的延遲
-// 不會算到接著的點擊上。累計把清除以來的每一筆都加進去；最近 50 筆留著倒出。
+// One reading per interaction, by kind (Refactor.107, Codex FR01): a press (down, its moves, up) is one reading from the press and
+// stays open until the button is released, however long the hand pauses (Refactor.107.1, Codex R107-03: a pause over half a second
+// used to close it and lose the rest); a key and a wheel gesture are their own, closed half a second after their last input; moving
+// over things with no button down is a hover reading and never lends its latency to the click that follows. The totals add every
+// reading since the last clear; the last 50 are kept for dumping. With the profiling build's counters present, they are switched on
+// while the probe is shown (R.107.1, Codex R107-04: they showed 0 without ever counting).
+// 一次操作一筆、分種類（R.107，Codex FR01）：按下（按下、移動、放開）從按下起算一筆，按著不放多久都不結案，放開才算（R.107.1，Codex
+// R107-03：以前停超過半秒就結案，後半段丟掉）；按鍵、滾輪各自一筆，最後一個輸入後半秒結案；沒按著的移動是滑過，它的延遲不會算到接著的
+// 點擊上。累計把清除以來的每一筆都加進去；最近 50 筆留著倒出。量測版的計數器在探針顯示期間打開（R.107.1，Codex R107-04：以前沒開過
+// 計數卻顯示 0）。
 
 const LONG_FRAME = 50; // ms, as the browser's long-animation-frame threshold 同瀏覽器的長畫格門檻
 const SETTLE = 500;    // ms after the last input before the numbers are final 最後一次輸入後多久定稿
@@ -24,9 +29,12 @@ const KINDS: Record<Kind, () => string> = {
   press: () => say(tr('perf.kindPress', 'press')), hover: () => say(tr('perf.kindHover', 'hover')),
   key: () => say(tr('perf.kindKey', 'key')), wheel: () => say(tr('perf.kindWheel', 'wheel')) };
 
-/** Counts in the profiling build's shim, when present (never shipped). 量測版的計數（不隨產品出貨），有的話。 */
+/** The profiling build's counters (tools/dev/jsx-shim.js), when present (never shipped). 量測版的計數器（不隨產品出貨），有的話。 */
+type Prof = { on: boolean; data: Map<string, { n: number }> };
+const profiling = () => (globalThis as { __prof?: Prof }).__prof ?? null;
+/** Counts so far; null without the counters. 到目前的計數；沒有計數器就是 null。 */
 const reruns = (): number | null => {
-  const prof = (globalThis as { __prof?: { data: Map<string, { n: number }> } }).__prof;
+  const prof = profiling();
   return prof ? [...prof.data.values()].reduce((sum, entry) => sum + entry.n, 0) : null;
 };
 
@@ -52,8 +60,12 @@ export function showPerfOverlay(): () => void {
   };
   const clear = () => { kept.length = 0; total.count = 0; total.slowest = 0; total.long = 0; total.latency = 0; sum(); line.textContent = say(tr('perf.waiting', 'Waiting for an interaction…')); };
   box.addEventListener('click', clear);
+  // The counters count while the probe is shown; what they were is put back when it goes. 探針顯示期間計數器開著；關掉時放回原狀。
+  const prof = profiling(), countedBefore = prof?.on ?? false;
+  if (prof) prof.on = true;
 
-  let active: { reading: Reading; rerunsAt: number | null; timer: number } | null = null;
+  // `held`: a press whose button is still down; it closes on release, not by the timer. held：按鈕還按著的按下；放開才結案，不靠計時。
+  let active: { reading: Reading; rerunsAt: number | null; timer: number; held: boolean } | null = null;
   const canvas = () => document.querySelector('.react-flow');
   const show = () => {
     if (!active) return;
@@ -73,27 +85,28 @@ export function showPerfOverlay(): () => void {
   // 滑過不量。
   const begin = (kind: Kind, now: number) => {
     if (active) show();
-    active = { reading: { kind, latency: null, slowest: 0, long: 0, layout: 0, changes: 0, reruns: null }, rerunsAt: reruns(), timer: 0 };
+    active = { reading: { kind, latency: null, slowest: 0, long: 0, layout: 0, changes: 0, reruns: null }, rerunsAt: reruns(), timer: 0, held: kind === 'press' };
     // The frame after the next paint: what the person waited for. 下一次畫出之後的那一格：人等的就是這個。
     if (kind !== 'hover') { const started = active; requestAnimationFrame(() => { const channel = new MessageChannel(); channel.port1.onmessage = () => { if (active === started && started.reading.latency === null) started.reading.latency = performance.now() - now; }; channel.port2.postMessage(0); }); }
   };
-  const extend = () => { if (active) { clearTimeout(active.timer); active.timer = window.setTimeout(show, SETTLE); } };
+  // Half a second after the last input the reading is final — unless a button is still down. 最後一個輸入後半秒定稿——按鈕還按著時除外。
+  const settle = () => { if (!active) return; clearTimeout(active.timer); if (!active.held) active.timer = window.setTimeout(show, SETTLE); };
   const input = (event: Event) => {
     if (event.target instanceof Node && box.contains(event.target)) return;
     const now = performance.now();
     if (event.type === 'pointerdown') begin('press', now);
     else if (event.type === 'pointermove') {
       const pressed = (event as PointerEvent).buttons > 0;
-      if (pressed) { if (!active) return; if (active.reading.kind !== 'press') return; }     // a drag extends its press 拖曳延長它的按下
+      if (pressed) { if (!active || active.reading.kind !== 'press') return; }              // a drag belongs to its press 拖曳屬於它的按下
       else if (active) { if (active.reading.kind !== 'hover') return; }                     // moving after a press or a key leaves them alone 按下、按鍵之後的移動不碰它們
       else begin('hover', now);
     }
-    else if (event.type === 'pointerup') { if (!active || active.reading.kind !== 'press') return; }
+    else if (event.type === 'pointerup' || event.type === 'pointercancel') { if (!active || active.reading.kind !== 'press') return; active.held = false; }
     else if (event.type === 'keydown') begin('key', now);
     else if (event.type === 'wheel') { if (!active || active.reading.kind !== 'wheel') begin('wheel', now); }
-    extend();
+    settle();
   };
-  const types: (keyof WindowEventMap)[] = ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'wheel'];
+  const types: (keyof WindowEventMap)[] = ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'keydown', 'wheel'];
   for (const type of types) addEventListener(type, input, { capture: true, passive: true });
 
   // Frames while an interaction is open: the slowest, and how many were long. 操作期間的畫格：最慢的一格、長畫格幾個。
@@ -121,6 +134,7 @@ export function showPerfOverlay(): () => void {
     cancelAnimationFrame(frame); frames?.disconnect(); changes.disconnect();
     delete (globalThis as { __perfReadings?: Reading[] }).__perfReadings;
     if (active) clearTimeout(active.timer);
+    if (prof) prof.on = countedBefore;
     box.remove();
   };
 }

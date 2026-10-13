@@ -71,7 +71,16 @@ async function main() {
   }
   const assets = Object.fromEntries([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) =>
     [name, createHash('sha256').update(data).digest('hex')]));
-  const metadata = { schemaVersion: 1, version, assets, ...(shim ? { profiling: true } : {}) };
+  // Where the product code came from (Refactor.107.1, Codex R107-05): the commit and whether tracked product files differed from it,
+  // so a report can name the product it measured, not only the version. 產品程式從哪來（R.107.1，Codex R107-05）：commit，以及被追蹤的
+  // 產品檔有沒有和它不同，報告才能指名量的是哪一份產品，不只版號。
+  const source = (() => {
+    try {
+      const run = cmd => require('node:child_process').execSync(cmd, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+      return { commit: run('git rev-parse --short HEAD'), dirty: run('git status --porcelain -- src/core-ts src/editor-react src/generated src/version.json tools') !== '' };
+    } catch { return null; }
+  })();
+  const metadata = { schemaVersion: 1, version, assets, source, ...(shim ? { profiling: true } : {}) };
   files.set('build-info.json', Buffer.from(JSON.stringify(metadata, null, 2) + '\n'));
   fs.mkdirSync(out, { recursive: true });
   const metadataPath = path.join(out, 'build-info.json');

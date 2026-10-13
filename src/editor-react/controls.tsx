@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import { DropdownMenu, popupPlace, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
-import { say, tr, type Message } from './text';
+import { say, tr, useLanguage, type Message } from './text';
 import { readPreference, writePreference } from './preferences';
 import { followBar, fromBar } from './follow_bar';
 
@@ -28,6 +28,10 @@ export function IconButton({ icon, label, onClick, pressed, expanded, disabled, 
   /** Destroys something (delete): highlighted in the error red. 會刪掉東西：高亮用錯誤紅。 */
   danger?: boolean;
 }) {
+  // It words its own label, so it follows a language change itself, even when the parent keeps it as the same element (the floating
+  // toolbar's memoised content, Refactor.107.1; Codex R107-01: its buttons stayed English after switching). 自己翻自己的文字，所以語言
+  // 切換時自己跟上，父層把它留成同一個元素也一樣（浮動工具列的 memo 內容，R.107.1；Codex R107-01：切語言後按鈕留在英文）。
+  useLanguage();
   return <button type="button" className={'icon-button' + (mode ? ' mode-toggle' : '') + (danger ? ' danger' : '')} aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
     aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}><Icon name={icon} /></button>;
 }

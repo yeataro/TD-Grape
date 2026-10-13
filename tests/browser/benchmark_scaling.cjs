@@ -1,4 +1,5 @@
-/* Render-scaling benchmark (Refactor.106; 107 adds M10, M12, M13, the release boundary and the report's identity): the production
+/* Render-scaling benchmark (Refactor.106; 107 adds M10, M12, M13, the release boundary and the report's identity; 107.1 records the
+ * page's own pointerup time, the frames straddling it, the product's commit, and names the page-wide IconButton counts as such): the production
  * bundle in a real Chrome with a 248-node graph and a fake host, the same interactions every run, so a before and an after can be
  * compared on one table. Frontend numbers only: no TD, no GPU.
  * 畫面更新規模化的基準（R.106；R.107 加 M10、M12、M13、放開的切界與報告身分）：正式建置、真 Chrome、248 個節點的圖、假宿主，每次同樣的
@@ -26,8 +27,12 @@ const target = '2'.repeat(32), COPIES = 24, STEP = 48, VIEWPORT = { width: 1600,
 const FIXTURE = path.join(__dirname, '../fixtures/scaling_base_graph.json'), SHIM = path.join(__dirname, '../../tools/dev/jsx-shim.js');
 const sha = data => crypto.createHash('sha256').update(data).digest('hex').slice(0, 12);
 const find = (folder, test) => fs.readdirSync(folder, { withFileTypes: true }).flatMap(e => e.isDirectory() ? find(path.join(folder, e.name), test) : test(e.name) ? [path.join(folder, e.name)] : []);
+// `runnerCommit` is this script's repository, `productCommit` the build's own record (build-info `source`, Refactor.107.1; Codex
+// R107-05: the one field used to be the runner's HEAD and could not name the product). runnerCommit 是腳本所在倉庫，productCommit 是
+// 建置自己記的（build-info 的 source，R.107.1；Codex R107-05：以前只有 runner 的 HEAD，指不出產品）。
 const identity = {
-  commit: (() => { try { return execSync('git rev-parse --short HEAD', { cwd: path.resolve(__dirname, '../..') }).toString().trim(); } catch { return null; } })(),
+  runnerCommit: (() => { try { return execSync('git rev-parse --short HEAD', { cwd: path.resolve(__dirname, '../..') }).toString().trim(); } catch { return null; } })(),
+  productCommit: buildInfo.source?.commit ?? null, productDirty: buildInfo.source?.dirty ?? null,
   build: buildInfo.version, profiling: !!buildInfo.profiling, bundle: find(built, name => /^index-.*\.js$/.test(name)).map(file => sha(fs.readFileSync(file))).join(','),
   script: sha(fs.readFileSync(__filename)), fixture: sha(fs.readFileSync(FIXTURE)), shim: counts ? sha(fs.readFileSync(SHIM)) : null,
   viewport: VIEWPORT.width + 'x' + VIEWPORT.height, browser: null };
@@ -112,22 +117,26 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
     await page.goto(url);
     await page.locator('.react-flow__node').nth(expectNodes - 1).waitFor();
     await page.waitForTimeout(1500);
-    // In-page recorder: Event Timing, long animation frames (with their start, so the ones after a release can be told apart), rAF gaps,
-    // pointerdown-to-paint latency, and the profiling counters. 頁內記錄器：Event Timing、長畫格（帶開始時刻，放開之後的才分得出來）、rAF 間隔、
-    // 按下到畫出的時間、以及量測版的計數。
+    // In-page recorder: Event Timing, long animation frames (start and duration kept at full precision, with the page's own time of
+    // the last pointerup, so the frames after a release, and the ones straddling it, can be told apart and re-checked from the
+    // report; Refactor.107.1, Codex R107-06), rAF gaps, pointerdown-to-paint latency, and the profiling counters.
+    // 頁內記錄器：Event Timing、長畫格（開始與長度原精度保存，連同頁面自己記的最後一次 pointerup 時刻，放開之後的與跨過放開的才分得出來、
+    // 也能從報告重核；R.107.1，Codex R107-06）、rAF 間隔、按下到畫出的時間、以及量測版的計數。
     await page.evaluate(copyIds => {
-      const H = globalThis.__H = { on: false, copies: new Set(copyIds), marked: Infinity };
-      H.reset = () => { H.events = []; H.loaf = []; H.gaps = []; H.latency = []; H.counts = {}; H.marked = Infinity; if (globalThis.__prof) { globalThis.__prof.data.clear(); globalThis.__prof.on = true; } };
+      const H = globalThis.__H = { on: false, copies: new Set(copyIds), released: Infinity };
+      H.reset = () => { H.events = []; H.loaf = []; H.gaps = []; H.latency = []; H.counts = {}; H.released = Infinity; if (globalThis.__prof) { globalThis.__prof.data.clear(); globalThis.__prof.on = true; } };
       new PerformanceObserver(l => { if (H.on) for (const e of l.getEntries()) H.events.push([e.name, e.duration]); }).observe({ type: 'event', durationThreshold: 16 });
-      new PerformanceObserver(l => { if (H.on) for (const e of l.getEntries()) H.loaf.push([Math.round(e.duration), Math.round(e.scripts.reduce((s, x) => s + x.forcedStyleAndLayoutDuration, 0)), Math.round(e.startTime)]); }).observe({ type: 'long-animation-frame' });
+      new PerformanceObserver(l => { if (H.on) for (const e of l.getEntries()) H.loaf.push({ duration: e.duration, forced: e.scripts.reduce((s, x) => s + x.forcedStyleAndLayoutDuration, 0), start: e.startTime }); }).observe({ type: 'long-animation-frame' });
       let last = performance.now(); const loop = t => { if (H.on) H.gaps.push(t - last); last = t; requestAnimationFrame(loop); }; requestAnimationFrame(loop);
       // pointerdown (capture) to the frame after the next paint. 按下（捕捉階段）到下一次畫出之後的那一格。
       addEventListener('pointerdown', () => { if (!H.on) return; const t = performance.now(); requestAnimationFrame(() => { const ch = new MessageChannel(); ch.port1.onmessage = () => H.latency.push(performance.now() - t); ch.port2.postMessage(0); }); }, true);
+      // The release, on the page's clock (capture, so nothing on the page can stop it). 放開的時刻，頁面自己的時鐘（捕捉階段，頁面上的東西擋不住）。
+      addEventListener('pointerup', () => { if (H.on) H.released = performance.now(); }, true);
       H.start = () => { H.reset(); H.on = true; };
-      // The release boundary: long frames that began at or after it belong to the release. 放開的切界：在它之後開始的長畫格屬於放開。
-      H.mark = () => { H.marked = performance.now(); };
       H.stop = () => { H.on = false; if (globalThis.__prof) { globalThis.__prof.on = false; H.counts = Object.fromEntries([...globalThis.__prof.data].map(([k, v]) => [k, v.n])); }
-        const gaps = H.gaps.slice(1); return { events: H.events, loaf: H.loaf, release: H.loaf.filter(l => l[2] >= H.marked), latency: H.latency, gaps, long: gaps.filter(g => g > 50).length, counts: H.counts }; };
+        const gaps = H.gaps.slice(1), at = H.released;
+        return { events: H.events, loaf: H.loaf, released: at === Infinity ? null : at, release: H.loaf.filter(l => l.start >= at), straddling: H.loaf.filter(l => l.start < at && l.start + l.duration > at),
+          latency: H.latency, gaps, long: gaps.filter(g => g > 50).length, counts: H.counts }; };
       H.clean = () => [...document.querySelectorAll('.react-flow__node')].map(n => { const t = n.querySelector('.node-title'); if (!t) return null; const b = t.getBoundingClientRect(), x = b.x + 24, y = b.y + b.height / 2;
         const pane = document.querySelector('.react-flow').getBoundingClientRect();
         return document.elementFromPoint(x, y)?.closest('.react-flow__node') === n && x > pane.x + 40 && x < pane.right - 40 && y > pane.y + 60 && y < pane.bottom - 80 ? { id: n.dataset.id, x, y, copy: H.copies.has(n.dataset.id) } : null; }).filter(Boolean);
@@ -157,11 +166,10 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   // React Flow 每次重繪重掛監聽吃掉（D1）。
   const keyOn = (pg, k, ctrl = false) => pg.evaluate(([k, ctrl]) => { document.activeElement?.blur?.(); document.querySelector('.react-flow__pane').dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k.length === 1 ? 'Key' + k.toUpperCase() : k, ctrlKey: ctrl, bubbles: true, cancelable: true })); }, [k, ctrl]);
   const key = (k, ctrl) => keyOn(page, k, ctrl);
-  // The release is marked just before the button goes up, so the frames after it can be told from the gesture's. 放開前先做記號，放開之後的
-  // 畫格才分得出來。
   const dragOn = async (pg, from, dx, dy, steps, button = 'left', pause = 16) => { await pg.mouse.move(from.x, from.y); await pg.mouse.down({ button });
     for (let i = 1; i <= steps; i++) { await pg.mouse.move(from.x + dx * i / steps, from.y + dy * i / steps); await pg.waitForTimeout(pause); }
-    await pg.evaluate(() => globalThis.__H.mark()); await pg.mouse.up({ button }); };
+    await pg.mouse.up({ button }); };
+  const loafMax = list => max(list.map(l => l.duration));
   const drag = (from, dx, dy, steps, button, pause) => dragOn(page, from, dx, dy, steps, button, pause);
   const undoOn = async (pg) => { await keyOn(pg, 'z', true); await pg.waitForTimeout(500); };
   const undo = () => undoOn(page);
@@ -190,7 +198,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   r = await run('M3 drag 8', async () => { await drag(eight[0], 60, 40, 20); });
   summary.M3_moved = (await page.evaluate(id => document.querySelector(`.react-flow__node[data-id="${id}"]`).style.transform, eight[0].id)) !== posBefore;
   summary.M3_selected = selected; summary.M3_frame_ms_median = median(r.gaps); summary.M3_frame_ms_max = max(r.gaps);
-  if (counts) { summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0); summary.M3_toolbar_buttons = r.counts.IconButton ?? 0; }
+  if (counts) { summary.M3_wrappers_per_frame = +((r.counts.NodeWrapper ?? 0) / 20).toFixed(0); summary.M3_icon_buttons_page = r.counts.IconButton ?? 0; }
   await undo();
 
   // M4: right-drag box select from past the stacks' lower-right corner up over them (clipped to the canvas). 右鍵框選：從複本疊右下角外往左上框過去（不出畫布）。
@@ -201,7 +209,11 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   const corner = { x: Math.min(stacks.right + 30, pane.x + pane.width - 20), y: Math.min(stacks.bottom + 30, pane.y + pane.height - 60) };
   const to = { x: Math.max(stacks.left - 30, pane.x + 20), y: Math.max(stacks.top - 30, pane.y + 80) };
   r = await run('M4 box select', async () => { await drag(corner, to.x - corner.x, to.y - corner.y, 15, 'right', 30); });
-  summary.M4_frame_ms_max = max(r.gaps); summary.M4_gesture_loaf_ms = max(r.loaf.map(l => l[0])); summary.M4_after_release_loaf_ms = max(r.release.map(l => l[0]));
+  // `after_release`: long frames that began after the page saw the pointerup; `straddling`: began before it and ran past it — listed
+  // apart, not counted as release cost (Refactor.107.1, Codex R107-06). after_release：頁面看到 pointerup 之後才開始的長畫格；straddling：
+  // 之前開始、跨過它的——另列，不算成放開的成本（R.107.1，Codex R107-06）。
+  summary.M4_frame_ms_max = max(r.gaps); summary.M4_gesture_loaf_ms = loafMax(r.loaf); summary.M4_after_release_loaf_ms = loafMax(r.release);
+  summary.M4_straddling_loaf_ms = loafMax(r.straddling); summary.M4_released_at = r.released === null ? null : +r.released.toFixed(1);
   summary.M4_selected_after = await page.locator('.react-flow__node.selected').count();
   if (counts) summary.M4_cards_total = r.counts.NodeCard ?? 0;
   await click(empty); await page.waitForTimeout(300);
@@ -224,15 +236,15 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   summary.M6_field_under = await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? e.tagName + '.' + String(e.className).slice(0, 40) + ' in ' + (e.closest('.react-flow__node')?.dataset.id ?? '-') : null; }, [fieldAt.x, fieldAt.y]);
   const valueBefore = await valueOf();
   r = await run('M6 scrub', async () => { await drag(fieldAt, 40, 0, 10); });
-  summary.M6_value_changed = (await valueOf()) !== valueBefore; summary.M6_scrub_loaf_ms = max(r.loaf.map(l => l[0])); summary.M6_scrub_event_ms = max(r.events.map(e => e[1])); if (counts) summary.M6_scrub_cards = r.counts.NodeCard ?? 0;
+  summary.M6_value_changed = (await valueOf()) !== valueBefore; summary.M6_scrub_loaf_ms = loafMax(r.loaf); summary.M6_scrub_event_ms = max(r.events.map(e => e[1])); if (counts) summary.M6_scrub_cards = r.counts.NodeCard ?? 0;
   r = await run('M6 undo value', async () => { await undo(); });
-  summary.M6_value_restored = (await valueOf()) === valueBefore; summary.M6_undo_loaf_ms = max(r.loaf.map(l => l[0])); summary.M6_undo_event_ms = max(r.events.map(e => e[1])); if (counts) summary.M6_undo_cards = r.counts.NodeCard ?? 0;
+  summary.M6_value_restored = (await valueOf()) === valueBefore; summary.M6_undo_loaf_ms = loafMax(r.loaf); summary.M6_undo_event_ms = max(r.events.map(e => e[1])); if (counts) summary.M6_undo_cards = r.counts.NodeCard ?? 0;
 
   // M8: drag a wire from the Color node's output to empty canvas, close the popup. 從輸出拉線到空白處。
   const handle = await page.locator('.react-flow__node[data-id="color"] .react-flow__handle.source').first().boundingBox();
   const emptyNear = await page.evaluate(() => globalThis.__H.empty());
   r = await run('M8 wire drag', async () => { await drag({ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }, emptyNear.x - handle.x, emptyNear.y - handle.y, 12); await page.waitForTimeout(300); await page.keyboard.press('Escape'); });
-  summary.M8_long_frames = r.long; summary.M8_loaf_ms_max = max(r.loaf.map(l => l[0]));
+  summary.M8_long_frames = r.long; summary.M8_loaf_ms_max = loafMax(r.loaf);
   summary.M8_edges_after = await page.locator('.react-flow__edge').count();
 
   // M12: drag a wire from the Color node's vec4 output over the x input of Combine_2 (vec4: dropping there merges x, y, z, w into one
@@ -253,8 +265,8 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
     summary.M12_merging_rows = await page.evaluate(() => document.querySelectorAll('[data-merging]').length);
     for (let i = 0; i < 8; i++) { await page.mouse.move(over.x + (i % 2 ? 2 : -2), over.y + (i % 2 ? 1 : -1)); await page.waitForTimeout(40); }
     await page.mouse.move(empty12.x, empty12.y); await page.waitForTimeout(100);
-    await page.evaluate(() => globalThis.__H.mark()); await page.mouse.up(); await page.waitForTimeout(300); await page.keyboard.press('Escape'); });
-  summary.M12_long_frames = r.long; summary.M12_loaf_ms_max = max(r.loaf.map(l => l[0])); summary.M12_edges_after = await page.locator('.react-flow__edge').count();
+    await page.mouse.up(); await page.waitForTimeout(300); await page.keyboard.press('Escape'); });
+  summary.M12_long_frames = r.long; summary.M12_loaf_ms_max = loafMax(r.loaf); summary.M12_edges_after = await page.locator('.react-flow__edge').count();
   if (counts) summary.M12_cards = r.counts.NodeCard ?? 0;
 
   // Back to the whole graph for M7 and M9. 回到全圖。
@@ -266,9 +278,9 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   summary.M7_selected = await page.locator('.react-flow__node.selected').count();
   r = await run('M7 delete', async () => { await page.keyboard.press('Delete'); await page.waitForTimeout(600);
     if ((await page.locator('.react-flow__node').count()) === 248) { summary.M7_key_fallback = true; await key('Delete'); await page.waitForTimeout(600); } });
-  summary.M7_delete_loaf_ms = max(r.loaf.map(l => l[0])); summary.M7_nodes_after_delete = await page.locator('.react-flow__node').count();
+  summary.M7_delete_loaf_ms = loafMax(r.loaf); summary.M7_nodes_after_delete = await page.locator('.react-flow__node').count();
   r = await run('M7 undo delete', async () => { await undo(); });
-  summary.M7_undo_loaf_ms = max(r.loaf.map(l => l[0])); summary.M7_nodes_after_undo = await page.locator('.react-flow__node').count();
+  summary.M7_undo_loaf_ms = loafMax(r.loaf); summary.M7_nodes_after_undo = await page.locator('.react-flow__node').count();
 
   // M9: place a node with Tab, move the pointer. 放置節點。
   await click(emptyAgain); await page.waitForTimeout(200);
@@ -285,12 +297,12 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   r = await run('M11 box all', async () => { await drag(corner, to.x - corner.x, to.y - corner.y, 10, 'right', 30); });
   summary.M11_selected = await page.locator('.react-flow__node.selected').count();
   r = await run('M11 wheel zoom selected', async () => { for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, i % 2 ? 120 : -120); await page.waitForTimeout(60); } });
-  summary.M11_zoom_frame_ms_max = max(r.gaps); summary.M11_zoom_long_frames = r.long; summary.M11_zoom_layout_ms = +r.loaf.reduce((sum, l) => sum + l[1], 0).toFixed(0);
+  summary.M11_zoom_frame_ms_max = max(r.gaps); summary.M11_zoom_long_frames = r.long; summary.M11_zoom_layout_ms = +r.loaf.reduce((sum, l) => sum + l.forced, 0).toFixed(0);
   r = await run('M11 pan selected', async () => { await drag(emptyAgain, -60, -40, 20); });
   summary.M11_pan_frame_ms_max = max(r.gaps); summary.M11_pan_long_frames = r.long;
   // The bar and the frame while the view moves: the bar's buttons must not be drawn again per frame (Refactor.107, Z11). 視角移動時的工具列
   // 與多選框：工具列的按鈕不該每格重畫（R.107，Z11）。
-  if (counts) { summary.M11_pan_toolbar_reruns = r.counts.FloatingToolbar ?? 0; summary.M11_pan_toolbar_buttons = r.counts.IconButton ?? 0; summary.M11_pan_frame_reruns = r.counts.SelectionFrame ?? 0; }
+  if (counts) { summary.M11_pan_toolbar_reruns = r.counts.FloatingToolbar ?? 0; summary.M11_pan_icon_buttons_page = r.counts.IconButton ?? 0; summary.M11_pan_frame_reruns = r.counts.SelectionFrame ?? 0; }
   await click(emptyAgain); await page.waitForTimeout(200);
 
   // M10: switch the selection with the Graph JSON panel shown (its tab in the right pane; the pane is opened if collapsed). What an
@@ -316,7 +328,7 @@ const max = a => a.length ? +Math.max(...a).toFixed(1) : null;
   if (!list13.length) throw Error('M13: no clickable base node');
   await page2.mouse.click(list13[0].x, list13[0].y); await page2.waitForTimeout(300);
   r = await runOn(page2, 'M13 drag with GLSL shown', async () => { await dragOn(page2, list13[0], 60, 40, 20); });
-  summary.M13_frame_ms_max = max(r.gaps); summary.M13_long_frames = r.long; summary.M13_after_release_loaf_ms = max(r.release.map(l => l[0]));
+  summary.M13_frame_ms_max = max(r.gaps); summary.M13_long_frames = r.long; summary.M13_after_release_loaf_ms = loafMax(r.release);
   if (counts) { summary.M13_line_reruns = r.counts.Line ?? 0; summary.M13_panel_reruns = r.counts.GlslView ?? 0; }
   await undoOn(page2);
 

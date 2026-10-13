@@ -116,6 +116,28 @@ test('a commit works out neither the reference counts nor the line map; a panel 
   assert.equal(copied, 0, 'counted on the document in place');
 });
 
+// (1) The line map is built from the program only when a consumer asks, once per program: counted on the program object itself —
+// every read of `sourceMap.pixel` is seen — not inferred from a missing state field (Refactor.107.1, Codex R107-09).
+// （1）行對照只在消費者問時從程式建、每份程式一次：在程式物件上計數——每次讀 sourceMap.pixel 都看得到——不是從狀態沒有那個欄位推
+// （R.107.1，Codex R107-09）。
+test('a commit never reads the program lines; the line map is built on the first ask and reused', t => {
+  const reads = { pixel: 0 };
+  // Every compiled program the session gets is wrapped, so a read of its lines is counted wherever it happens. 給 session 的每份程式都
+  // 包起來，讀它的行在哪裡發生都算到。
+  const generator = { key: graph => GrapeTopCompiler.key(graph), compile: (...args) => { const compiled = GrapeTopCompiler.compile(...args);
+    const sourceMap = new Proxy(compiled.sourceMap, { get: (map, key) => { if (key === 'pixel') reads.pixel++; return map[key]; } });
+    return new Proxy(compiled, { get: (program, key) => key === 'sourceMap' ? sourceMap : program[key] }); } };
+  const session = open(t, graphOf(), generator), id = session.snapshot().projection.nodes[5].id;
+  const { glslMapOf } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  assert.equal(reads.pixel, 0, 'opening the graph does not read the lines');
+  move(session, id, 300, 300);
+  session.transact('note', net => { net.node(id).update({ comment: 'lines' }); }); // recompiles 會重新產碼
+  assert.equal(reads.pixel, 0, 'no commit reads the lines');
+  const compiled = session.snapshot().compiled, map = glslMapOf(compiled);
+  assert.equal(reads.pixel, 1, 'the first ask builds it'); assert.ok(map.length > 0);
+  assert.equal(glslMapOf(compiled), map); assert.equal(reads.pixel, 1, 'asked again: the same list, nothing read');
+});
+
 // A failed code generation keeps the last program that compiled (as the GLSL shown does), and the line map is derived from that one
 // object — the same list each time it is asked, so a panel opened later still has it. Codex 2026-10-13 R02.
 // 產碼失敗時留最後一次成功的程式（同顯示的 GLSL），行對照從那一個物件推——每次問都是同一份清單，之後才打開的面板也拿得到。

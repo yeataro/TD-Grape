@@ -65,8 +65,10 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
   // What the bar holds — which buttons, their names, what each does — follows the selection, the groups and the clipboard, not the
   // view (Refactor.107, Z11): worked out when one of those changes and kept as the same elements, so a pan, a zoom or a drag frame
   // only moves the bar (React sees the same face and leaves its buttons alone). A click reads the selected nodes then, from React
-  // Flow. 工具列裝什麼——有哪些按鈕、名字、各做什麼——跟著選取、群組與剪貼簿，不跟視角（R.107，Z11）：那些變了才算，而且留著同一批元素，
-  // 平移、縮放、拖曳的每一格只搬工具列（React 看到同一個內容就不碰按鈕）。按下時才從 React Flow 讀選取的節點。
+  // Flow. The names are Messages, worded by each IconButton, which follows the language itself (Refactor.107.1, Codex R107-01).
+  // 工具列裝什麼——有哪些按鈕、名字、各做什麼——跟著選取、群組與剪貼簿，不跟視角（R.107，Z11）：那些變了才算，而且留著同一批元素，
+  // 平移、縮放、拖曳的每一格只搬工具列（React 看到同一個內容就不碰按鈕）。按下時才從 React Flow 讀選取的節點。名字是 Message，由每個
+  // IconButton 自己翻，它自己跟著語言（R.107.1，Codex R107-01）。
   const content = useMemo(() => {
     // The selected nodes as React Flow holds them, found by id. 選取的節點，照 id 從 React Flow 拿。
     const selected = () => ids.flatMap(id => { const node = flow.getNode(id) as FlowNode | undefined; return node ? [node] : []; });
