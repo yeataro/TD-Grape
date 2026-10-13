@@ -33,6 +33,10 @@ const SCRUB = 'n60b239b5ace24854a9607d66e77c1537';
     const context = await browser.newContext({ viewport: VIEWPORT, ...(touch ? { hasTouch: true, isMobile: true } : {}) });
     const page = await context.newPage(), errors = [];
     page.on('pageerror', e => errors.push(e.message));
+    // INJECT: a script run in every page before the editor loads, to try a listener or a rule against these same cases without
+    // touching the product (Refactor.108.1 used it to show a global pointerdown listener changes nothing). INJECT：每個頁面載入編輯器前
+    // 先跑的程式，用來拿同一組案例試一個監聽或規則、不動產品（R.108.1 用它證明全域 pointerdown 監聽什麼都不改變）。
+    if (process.env.INJECT) await page.addInitScript(process.env.INJECT);
     await page.goto(host.url); await page.locator('.react-flow__node').nth(2).waitFor(); await page.waitForTimeout(800);
     const cdp = touch ? await context.newCDPSession(page) : null;
     const tap = async (x, y) => { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); };
