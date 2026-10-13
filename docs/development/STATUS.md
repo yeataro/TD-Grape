@@ -2,6 +2,20 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.107.1 — Codex 實作審查九項的修正 — 2026-10-13
+
+Codex 對 R.107 的實作審查（workspace `Review/2026-10-13-fable/Codex對Refactor107實作的審查.md`）九項全部接受（回覆：同資料夾 `Fable對R107審查的回覆.md`）；人類 10-13「開工 Refactor.107.1」。撤回 R.107 紀錄的三句：「可見行為零改變」（切語言後工具列留英文）、「探針已修好」（按住停半秒漏記後半段）、「驗收已完整覆蓋」。
+
+- 程式（a3d4e75）：`IconButton` 自己 `useLanguage()`，memo 的父層留同一元素也跟著換語言（R107-01，架構上的修法，不只補一個依賴）；Add Node 分隔線 `onStart` 量一次高度（R107-02）；探針的「按下」按著不放不結案、放開後 0.5 秒定稿（R107-03）；探針顯示期間把量測版計數器打開、關掉放回（R107-04）。
+- 腳本與建置（a3d4e75、7f7af93、之後一個）：`build_editor.cjs` 把來源 commit 與是否有未提交改動寫進 build-info `source`；benchmark 的 identity 分 `runnerCommit`／`productCommit`（R107-05）；頁面自己記 pointerup 時刻，長畫格原精度保存，`M4_after_release_loaf_ms` 之外另列 `M4_straddling_loaf_ms`（R107-06）；`*_toolbar_buttons` 改名 `*_icon_buttons_page`（R107-07）；量測版的判斷看 shim 建立計數器那一行。
+- 測試：`test_zero_cost.cjs` 第 7 條——把產碼結果包成 Proxy 計數 `sourceMap.pixel` 的讀取：開圖與 commit 0 次、第一次問 1 次、再問同一份（R107-09）。editor 169（＋1 略過）、core 171。
+- 量測（同一腳本 `9d131cac0f2e`；表在 workspace `work/refactor/reports/scaling-table-r1071.md`，取代 r107 表）：計數同 R.107（GLSL 行 213→0、全頁 IconButton 拖曳 385→25、平移 180→0；M12 496 不變）；時間單次、不下結論（R107-08）。M4 新欄位示範了切界的脆弱：放開那一格的開始與 pointerup 只差不到 1ms，before 落在「放開後」、after 落在「跨過」。
+- 實機（瀏覽器面板，TD DevMode 0.8.311）：選兩個節點切語言繁中→英文→繁中，按鈕立即跟著換、選取不變；按住 700ms 不記、放開後一筆；量測版開探針 `__prof.on` 為 true、顯示元件叫醒 53 次。
+- 紀錄校正：scope §1 群組規則改成實際理由（只看 `pixel.metadata`）；§5 改成已測／手測／靜態／未測四欄；「七條」更正；TESTING.md 探針與 benchmark 欄位說明。
+- 仍未測（分輪）：R04 幾何純函式、同 session 端點改型別前後的 wireFit、工具列顯示集合——做完前不稱完整驗收。
+- 過程中的失誤：為建 cddaaa4 的 before 版本開了暫時 worktree、用 junction 連 node_modules，`git worktree remove --force` 把 node_modules 刪掉；`npm ci` 裝回，repo 無影響。教訓：不要在 worktree 裡放指向共用資料夾的 junction。
+- TOE 交付在隨後的 commit。
+
 ## Refactor.107 — 零成本：推導住在消費者、沒變的保持同一物件 — 2026-10-13
 
 人類 10-13「開工」。依 workspace `Review/2026-10-13-fable/` 的計畫與 Codex 的審查回覆（R01–R10 全部接受；Z12 因 R06 刪除、Z9 改成先量）；範圍文件 workspace `work/refactor/zero-cost-scope-2026-10-13.md`。檢查點 `checkpoint/pre-zero-cost-0.8.309`（cddaaa4）。人類看得到的行為：零（FR04 未做，人類未明說）。

@@ -6,7 +6,8 @@
 
 **疊層（Refactor.106.1，人類 10-13）**：底列齒輪 →「效能探針疊層（開發用）」。打開後畫布左下角多一小塊，純 DOM、不經 React，不會自己製造 React 工作，也不算進畫布改動。程式在 `src/editor-react/perf_overlay.ts`。
 
-- **上面一行＝最近一筆**，開頭標種類（R.107，Codex FR01）：**按下**＝從按下到放開（含拖曳）算一筆；**按鍵**、**滾輪**各自一筆；**滑過**＝沒按著的移動，它的數字不會混進接著的點擊。每一筆在最後一個輸入後 0.5 秒定稿。
+- **上面一行＝最近一筆**，開頭標種類（R.107，Codex FR01）：**按下**＝從按下到放開（含拖曳）算一筆，按著不放多久都不結案、放開後 0.5 秒定稿（R.107.1，Codex R107-03：之前停超過 0.5 秒就結案，後半段丟掉）；**按鍵**、**滾輪**各自一筆，最後一個輸入後 0.5 秒定稿；**滑過**＝沒按著的移動，它的數字不會混進接著的點擊。
+  - 元件叫醒：只在量測版（`--jsx-shim` 建置）才有；探針顯示期間計數器自動打開、關掉時放回（R.107.1，Codex R107-04：之前沒開過計數卻顯示 0）。
   - 輸入到畫出：那一筆的第一個輸入到下一次畫面畫出之後的時間。人唯一感覺得到的就是這個；滑過不量（顯示「–」）。
   - 最慢一格：操作期間畫面兩格之間最長的間隔；長畫格：超過 50 ms 的格數。拖曳中這兩個比「按下到畫出」更重要。
   - 被迫排版：長畫格裡腳本逼瀏覽器先排版的時間（瀏覽器只在長畫格回報；0 不代表沒有排版，代表沒有長到被記下）。
@@ -15,9 +16,9 @@
 - **下面一行＝清除後的累計**：幾筆、最慢一格、長畫格總數、最久的輸入到畫出——清除以來每一筆都算（R.107：之前只算最近 50 筆）。**點一下疊層就清除**；要單看某個操作，先點一下再做。最近 50 筆另外放在 `globalThis.__perfReadings`（每筆帶種類），要倒出來時從開發者工具或瀏覽器面板讀；不寫剪貼簿。
 - 怎麼用：先用 Ctrl＋D 把圖複製到兩百個節點左右，再做換點、拖曳、框選、拉線、放置，看「畫布改動」與「最慢一格」是否隨節點數放大。它顯示的是症狀，哪個元件造成的要用下面的基準腳本配量測版。
 
-**基準腳本**：`node tests/browser/benchmark_scaling.cjs <建置資料夾> <報告資料夾> <標籤> [--counts]`（Playwright、真 Chrome、假宿主、`tests/fixtures/scaling_base_graph.json` 複製成 248 節點；情境 M1–M13：M10 Graph JSON 面板開著換點、M12 拉線停在會合併的接孔上、M13 GLSL 面板開著在長 GLSL 圖（基準圖＋200 個 Floor）拖一個節點並放開）。`--counts` 要配量測版建置：`node tools/build_editor.cjs --out <資料夾> --jsx-shim tools/dev/jsx-shim.js`（React 計數 shim，開發用；build-info 標 `profiling`，腳本拒絕用錯版本）。報告的 `summary.identity` 記產品版本、bundle 雜湊、腳本／fixture／shim 雜湊、瀏覽器版本：before 與 after 的腳本雜湊要相同才能比。M4 分兩欄：`M4_gesture_loaf_ms`（整段框選）與 `M4_after_release_loaf_ms`（放開之後才開始的長畫格）。報告與 before／after 表在 workspace `work/refactor/reports/`。
+**基準腳本**：`node tests/browser/benchmark_scaling.cjs <建置資料夾> <報告資料夾> <標籤> [--counts]`（Playwright、真 Chrome、假宿主、`tests/fixtures/scaling_base_graph.json` 複製成 248 節點；情境 M1–M13：M10 Graph JSON 面板開著換點、M12 拉線停在會合併的接孔上、M13 GLSL 面板開著在長 GLSL 圖（基準圖＋200 個 Floor）拖一個節點並放開）。`--counts` 要配量測版建置：`node tools/build_editor.cjs --out <資料夾> --jsx-shim tools/dev/jsx-shim.js`（React 計數 shim，開發用；build-info 標 `profiling`，腳本拒絕用錯版本）。報告的 `summary.identity` 記產品版本、`productCommit`（建置時寫進 build-info 的來源 commit 與是否有未提交改動；R.107.1）、`runnerCommit`（腳本所在倉庫）、bundle 雜湊、腳本／fixture／shim 雜湊、瀏覽器版本：before 與 after 的腳本雜湊要相同才能比。M4 分三欄：`M4_gesture_loaf_ms`（整段框選）、`M4_after_release_loaf_ms`（頁面自己記到 pointerup 之後才開始的長畫格）、`M4_straddling_loaf_ms`（跨過 pointerup 的，另列、不算放開的成本）；原始 `results` 保留原精度的 start／duration 與 `released` 時刻可重核。`*_icon_buttons_page` 是全頁 IconButton 的重跑數，不只浮動工具列（R.107.1，Codex R107-06／07）。報告與 before／after 表在 workspace `work/refactor/reports/`。
 
-**零成本不變量**（R.107）：`tests/unit/test_zero_cost.cjs`（在 `npm run test:editor` 裡）——移動一個節點的 commit 只換投影、版本與編輯旗標；只有面板要的推導在沒有面板時呼叫次數為 0（計數，不只比物件）；註記經 Undo／Redo、還原草稿仍跟著文件、不動程式 key。
+**零成本不變量**（R.107／107.1）：`tests/unit/test_zero_cost.cjs`（在 `npm run test:editor` 裡，7 條）——移動一個節點的 commit 只換投影、版本與編輯旗標；只有面板要的推導在沒有面板時呼叫次數為 0（計數：`session.references()` 的呼叫、程式 `sourceMap.pixel` 的讀取）；註記經 Undo／Redo、還原草稿仍跟著文件、不動程式 key。沒有自動測試、只有手測或程式審查的案例列在 workspace `work/refactor/zero-cost-scope-2026-10-13.md` §5。
 
 ## 新增型別或改節點模組後要重跑：拉線新增表的完整稽核（Refactor.77 起）
 
