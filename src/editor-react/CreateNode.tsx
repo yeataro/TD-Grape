@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import { searchChoices, sourceLabel, wireOrder, type AddChoice } from './add_entries';
 import { dragToAdd } from './drag_to_add';
 import type { Editor as EditorSession, WireEnd, WireFit } from './editor';
+import { useEditorSlice } from './editor_slice';
 import { Icon } from './icons';
 import { language, languageSubscribe, say, tr } from './text';
 
@@ -23,13 +24,16 @@ export function CreateNode({ request, choices, session, onPick, onClose }: {
   const box = useRef<HTMLDivElement>(null), [query, setQuery] = useState(''), [index, setIndex] = useState(0);
   const [place, setPlace] = useState({ left: request.screen.x, top: request.screen.y });
   const wire = request.wire;
-  // What fits the wire, asked once per opening (each answer is a rehearsal on a discarded candidate).
-  // 接得上的，每次打開只問一次（每個答案都是在丟棄的候選文件上預演）。
+  // What fits the wire, asked once per opening and again when the graph changes while it is open (each answer reads the wire's end
+  // in the document now, so an Undo that changes a port's type must not leave an old answer; Refactor.107, Codex R05). Each answer is
+  // a rehearsal on a discarded candidate. 接得上的，每次打開問一次，開著時圖變了再問（答案讀的是文件裡現在的線端，改到接孔型別的 Undo
+  // 不能留下舊答案；R.107，Codex R05）。每個答案都是在丟棄的候選文件上預演。
+  const version = useEditorSlice(session, state => state.version);
   const fitting = useMemo((): Match[] => {
     if (!wire) return choices.map(choice => ({ choice }));
     // Measured 2026-10-09: about 90 choices in 13 ms. 實測約 90 個選項 13 ms。
     return choices.flatMap(choice => { const port = session.wireFit(choice.id, choice.spec, wire.end); return port ? [{ choice, port }] : []; });
-  }, [choices, wire, session]);
+  }, [choices, wire, session, version]);
   const matches = useMemo(() => {
     const found = searchChoices(fitting.map(match => match.choice), query).map(choice => fitting.find(match => match.choice === choice)!);
     if (query.trim() || !wire) return found;

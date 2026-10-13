@@ -454,7 +454,17 @@ export class Editor {
     this.codegen = this.compile(changes);
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
-    this.state = { ...this.state, projection, version: this.state.version + 1, declarations: this.document.document.declarations,
+    // The declarations keep their list while the publication says they did not change (Refactor.107, Z5): the new document holds an
+    // equal copy, and what is memoised on the list (the add choices, the panels) keeps with it. 發布說宣告沒變時沿用同一份清單（R.107，
+    // Z5）：新文件裡是相等的複本，靠這份清單 memo 的東西（可新增的選項、面板）跟著留下。
+    const declarations = changes && !changes.global.includes('declarations') ? this.state.declarations : this.document.document.declarations;
+    // So do the groups while the network's own data (its ui, where the groups live) did not change (Refactor.107, Z6): a node moved or
+    // edited leaves every GroupBox with the group it had. A member deleted changes that data (the tidy at the end of the change), so
+    // the list is made again then. 網路自己的資料（它的 ui，群組住在那裡）沒變時群組也沿用（R.107，Z6）：移動或修改節點時每個 GroupBox
+    // 拿到的還是原來的群組。刪掉成員會改到那份資料（修改結束時的整理），那時才重做清單。
+    const pixel = changes?.networks.find(net => net.id === 'pixel');
+    if (this.grouped && changes && !pixel?.metadata) this.grouped = { document: this.document, groups: this.grouped.groups };
+    this.state = { ...this.state, projection, version: this.state.version + 1, declarations,
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl, compiled: this.codegen.compiled ?? this.state.compiled,
       glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,

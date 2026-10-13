@@ -43,8 +43,14 @@ export const sourceLabel: Record<ChoiceSource, Message> = {
   editor: tr('choice.editor', 'Editor'), glsl: tr('choice.glsl', 'GLSL'), td: tr('choice.td', 'TouchDesigner'), shader: tr('choice.shader', 'This Shader') };
 const strings = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
 
-/** The list for the graph being edited. 正在編輯的圖的清單。 */
-export function addChoices(declarations: readonly Declaration[], text: (key: string) => string): AddChoice[] {
+// The catalog half of the list (nodes, preset Uniforms, TD values) depends on nothing but the language: built once per `text` (one per
+// language) and kept, so a graph edit never rebuilds it (Refactor.107, Z15; the human's rule: a static list is made once, not per action).
+// 清單裡目錄的那一半（節點、預設 Uniform、TD 內建值）只依語言：每個 text（一種語言一個）建一次就留著，改圖不重建（R.107，Z15；人類的
+// 規則：靜態列表只做一次，不是每次動作都做）。
+const catalogs = new WeakMap<(key: string) => string, readonly AddChoice[]>();
+function catalogChoices(text: (key: string) => string): readonly AddChoice[] {
+  const kept = catalogs.get(text);
+  if (kept) return kept;
   const nodes = creatableEntries.map((entry): AddChoice => {
     const module = core.registry.get(entry.uuid)!, browser = module.catalog.browser;
     const top = String(browser.category ?? 'uncategorized'), path = strings(browser.categoryPath);
@@ -54,17 +60,24 @@ export function addChoices(declarations: readonly Declaration[], text: (key: str
       path: top === 'inputs' ? ['source'] : path.length ? path : [top],
       key: entry.key || module.catalog.definition.key, aliases: strings(browser.aliases), spec: { nodeType: entry.uuid, params: entry.params } };
   });
-  const kinds: Record<string, string> = { uniform: 'uniforms', constant: 'graphConstants', topInput: 'textureInputs' };
-  const declared = declarations.filter(item => item.kind in kinds && !item.entry).map((item): AddChoice => ({
-    id: 'declaration:' + item.id, label: item.name, source: 'shader', path: ['source', kinds[item.kind]!], key: 'declaration', aliases: [item.kind],
-    spec: { nodeType: 'sgrape.builtin.declaration', params: { declarationId: item.id } } }));
   const presets = core.uniformPresets.map((preset): AddChoice => ({
     id: 'preset:' + preset.entry, label: preset.name, source: 'td', path: ['source', 'commonSources'], key: 'declaration', aliases: [preset.entry],
     spec: { preset: preset.entry } }));
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top')).map((entry): AddChoice => ({
     id: 'tdValue:' + entry.id, label: entry.name, source: 'td', path: ['source', 'tdBuiltIn'], key: 'td_value', aliases: [entry.expression],
     spec: { nodeType: 'sgrape.builtin.td_value', params: { entry: entry.id } } }));
-  return [...declared, ...presets, ...builtins, ...nodes];
+  const catalog = Object.freeze([...presets, ...builtins, ...nodes]);
+  catalogs.set(text, catalog);
+  return catalog;
+}
+
+/** The list for the graph being edited: its declared sources, then the catalog. 正在編輯的圖的清單：它宣告的來源，再來是目錄。 */
+export function addChoices(declarations: readonly Declaration[], text: (key: string) => string): AddChoice[] {
+  const kinds: Record<string, string> = { uniform: 'uniforms', constant: 'graphConstants', topInput: 'textureInputs' };
+  const declared = declarations.filter(item => item.kind in kinds && !item.entry).map((item): AddChoice => ({
+    id: 'declaration:' + item.id, label: item.name, source: 'shader', path: ['source', kinds[item.kind]!], key: 'declaration', aliases: [item.kind],
+    spec: { nodeType: 'sgrape.builtin.declaration', params: { declarationId: item.id } } }));
+  return [...declared, ...catalogChoices(text)];
 }
 
 /** The top categories present, in the legacy order. 有東西的頂層分類，照舊產品順序。 */

@@ -65,6 +65,31 @@ test('a move-only commit replaces only the projection, the version and the editi
   assert.equal(session.groups(), groups, 'the groups are the same list');
 });
 
+// (2) What did change is made again: a declaration added replaces the list; a group made or a member deleted replaces the groups; a node
+// added keeps both. Codex 2026-10-13 R03: the other half of "unchanged keeps its object" is "changed must not".
+// （2）變了的重做：新增宣告換清單；建群組或刪成員換群組；新增節點兩者都不換。「沒變的保持」的另一半是「變了的不能保持」。
+test('a declaration added replaces the declarations; a group made or a member deleted replaces the groups; a node added keeps both', t => {
+  const session = open(t), ids = session.snapshot().projection.nodes.filter(n => !n.data.ghost).slice(0, 2).map(n => n.id);
+  session.transact('note', net => { net.node(ids[0]).update({ comment: 'settle' }); });
+  const declarations = session.snapshot().declarations, groups = session.groups(), version = session.snapshot().version;
+  session.addNode({ nodeType: 'sgrape.builtin.scalar', params: { type: 'float', value: 1 } }, { x: 10, y: 10 });
+  assert.equal(session.snapshot().version, version + 1, 'the node was added');
+  assert.equal(session.snapshot().declarations, declarations, 'a node added keeps the declarations');
+  assert.equal(session.groups(), groups, 'and the groups');
+  session.addConstant();
+  assert.notEqual(session.snapshot().declarations, declarations, 'a declaration added replaces the list');
+  assert.ok(session.snapshot().declarations.some(d => d.kind === 'constant'));
+  const group = session.createGroup(ids, 'Group 1');
+  assert.ok(group);
+  const made = session.groups();
+  assert.notEqual(made, groups, 'a group made replaces the groups'); assert.equal(made.length, groups.length + 1);
+  move(session, ids[0], 500, 500);
+  assert.equal(session.groups(), made, 'a member moved keeps them');
+  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === ids[0]), edges: [] });
+  assert.notEqual(session.groups(), made, 'a member deleted replaces them (the tidy)');
+  assert.deepEqual([...(session.groups().find(g => g.id === group)?.nodes ?? [])], [ids[1]]); // spread: the core's arrays are another realm's 核心的陣列來自另一個 realm
+});
+
 // (1) Ghosts are judged once per commit, for the projection; the warning reads that answer. 每次 commit 判一次 Ghost，給投影；警告讀同一份答案。
 test('a commit asks the core for ghosts once', t => {
   const session = open(t), id = session.snapshot().projection.nodes[5].id;
