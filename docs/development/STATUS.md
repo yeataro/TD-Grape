@@ -2,6 +2,19 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.107 — 零成本：推導住在消費者、沒變的保持同一物件 — 2026-10-13
+
+人類 10-13「開工」。依 workspace `Review/2026-10-13-fable/` 的計畫與 Codex 的審查回覆（R01–R10 全部接受；Z12 因 R06 刪除、Z9 改成先量）；範圍文件 workspace `work/refactor/zero-cost-scope-2026-10-13.md`。檢查點 `checkpoint/pre-zero-cost-0.8.309`（cddaaa4）。人類看得到的行為：零（FR04 未做，人類未明說）。
+
+- 第 0 段（b002d34、f8e2225）：基準腳本補 M10（Graph JSON 開著換點）、M12（拉線停在會合併的接孔）、M13（GLSL 面板開著在長 GLSL 圖拖曳放開）、M4 放開切界、報告身分（build、bundle、腳本／fixture／shim 雜湊、瀏覽器）；量測 shim 進 `tools/dev/jsx-shim.js`，`build_editor.cjs --jsx-shim`（build-info 標 profiling）；探針一筆一種類（按下／按鍵／滾輪／滑過），累計真的累計；`tests/unit/test_zero_cost.cjs`（計數＋物件識別）。
+- 第 1 段（f060989）：`glslMap`、`references` 離開 EditorState，`compiled`（最後成功的程式，失敗時留著）進來；行對照由 `glsl_lines.ts` 的 `glslMapOf`（WeakMap）在 GLSL 面板與錯誤行試驗推；引用數由來源面板問 `session.references()`（就地讀文件，不 clone）；發布的 `changes` 從五個入口接進 `commit`，註記有沒有變看 changes（不再 stringify 所有 comment）；Ghost 在投影上數（核心一次）。
+- 第 2 段（7f68d82）：`changes.global` 沒有 `declarations` 就沿用同一份宣告；網路 metadata 沒變就沿用群組；目錄半邊每種語言建一次；Create node 開著時圖變了重問接得上的（Codex R05）。
+- 第 3 段（b8b4413）：`SelectionAround`（SelectionFrame.tsx）每次 store 更新算一次範圍給多選框與工具列；工具列內容（按鈕、名字、動作）memo 在選取／群組／剪貼簿，每格只搬位置；Add Node 樹每份清單分一次，分隔線跟手直接改樣式、放手才記（`ResizeHandle` 加 `onEnd`）。
+- 第 4 段（c18a50b）：拉線預告只在停點或 version 變時重演。
+- 量測（同一支腳本 `8130940a739e`，各一次；表在 workspace `work/refactor/reports/scaling-table-r107.md`）：**計數**——M13 GLSL 行重跑 213→**0**、面板 1→0；M3 拖曳工具列按鈕 385→**25**；M11 平移（216 選取）按鈕 180→**0**；M12 卡片 496→496（FR02 未動，如 Codex 所說）；M2 換點 49 不變（剩網路功能列圖示）。**時間**都在單次抖動內（M1 24→21ms）；本輪的價值是「不用時為 0 由架構保證」，由計數與不變量證明。
+- 驗證：`test:editor` 168（＋1 略過）、`test:core` 171、`check:editor`；TD DevMode 重載 0.8.310 後實機（`Grape_TOP_perf`）：多選框與工具列跟著平移、建群組／復原、GLSL 連結選節點與追蹤、Tab 新增視窗、Add Node 分類展開與分隔線拖曳（清單不重建）、來源面板引用數；主控台無錯誤。
+- 記錄／未做：FR04；Z9（fixture 沒有多群組，先量）；Z12（刪除）；Z14；M12 的 Context 廣播（496 張卡片）記候選；R07——本輪歸因只說「多項自身做法改掉後有改善證據；剩餘耗時歸屬未分項」。TOE 交付在隨後的 commit。下一步：Codex 審這輪的程式與 before／after。
+
 ## Refactor.106.2 — 選取框搬到 React Flow 外框，卡片不再知道選取 — 2026-10-13
 
 人類 10-13（R.106 討論）：選取與 current 既然由旗標管理，和卡片重畫無關；放開框選的 216 張卡片重畫沒有必要；「基本上也可以先做，那就這邊做掉」。隨後指出：框畫成 outline 會壓在接孔上，不對——改用背景層的做法。人類另交代：先把小邊角的邏輯清乾淨再叫人，做完 Deliver。
