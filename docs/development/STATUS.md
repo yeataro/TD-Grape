@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.107.2 — 107.1 審查的三項與未測三類 — 2026-10-13
+
+Codex 對 107.1 交付的審查（S01 中、P01／P02 低；workspace `Review/2026-10-13-fable/Codex對Refactor107.1交付的審查.md`）三項全接受；人類「開」。
+
+- S01：探針按著按鈕時的 `keydown` 不另開一筆（拖數值的 Shift／Ctrl 屬於那次按下）；核對：瀏覽器面板 pointerdown → 150ms 後 Shift → 停 700ms → 移動、放開，只多一筆「按下」。
+- P01：build-info 的 `source.dirty` 範圍補 `src/remote_panel`，並把範圍寫進 `dirtyScope` 欄位；意義只限該範圍。
+- P02：107.1 交付說明與 `scaling-table-r1071.md` 的 M4 文字已更正（原始時刻、三格 >50ms、不歸因）。
+- R107-09 三類未測：① wireFit 前後——`test_zero_cost.cjs` 第 8 條（vec4 Uniform 改 float：Multiply 的答案 vec4→float，Undo 回 vec4）；② 幾何、③ 工具列顯示集合——照 Codex 建議用瀏覽器互動驗（假宿主、0.8.312 建置；腳本與輸出存 Review 資料夾 `Fable-verify-r1072.cjs`／`Fable-R107.2-browser-evidence.json`）：單選 6 個按鈕、複選多「建立群組／選取轉為子圖／排列節點」、建群組後多「移出群組」且選取仍 2、多選框從 622×530 變 670×606（群組框併入）、Undo 後群組消失；展開一個選取節點的分量列（位置不變）多選框高 530→566、收合回 530。
+- 測試：zero_cost 8 條、editor 170（＋1 略過）；型別檢查過。量測未重跑：本輪產品改動只在探針（benchmark 不顯示探針），r1071 的計數與時間表仍為準（bundle 不同，註明）。
+- 觀察（不是本輪改的，查過是設計如此）：單獨選一個群組外的節點時工具列沒有「移入群組」——核心 `groups.ts` `joinTarget` 要選取裡有節點已在某個群組且只有那一個群組裝最多（照舊產品 frames_ui.js:38-48）。
+- TOE 交付在隨後的 commit。
+
 ## Refactor.107.1 — Codex 實作審查九項的修正 — 2026-10-13
 
 Codex 對 R.107 的實作審查（workspace `Review/2026-10-13-fable/Codex對Refactor107實作的審查.md`）九項全部接受（回覆：同資料夾 `Fable對R107審查的回覆.md`）；人類 10-13「開工 Refactor.107.1」。撤回 R.107 紀錄的三句：「可見行為零改變」（切語言後工具列留英文）、「探針已修好」（按住停半秒漏記後半段）、「驗收已完整覆蓋」。
