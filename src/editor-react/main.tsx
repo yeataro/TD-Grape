@@ -20,8 +20,7 @@ import { useEditorFields, useEditorSlice } from './editor_slice';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
 import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
-import { SelectionFrame } from './SelectionFrame';
-import { FloatingToolbar } from './FloatingToolbar';
+import { SelectionAround } from './SelectionFrame';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
@@ -406,8 +405,7 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
       {/* The lower-left caption is not shown for now (Refactor.83.4; CanvasCaption.tsx keeps it). 左下角說明暫時不顯示（R.83.4；程式在 CanvasCaption.tsx）。 */}
       {/* Groups behind and between (Groups.tsx), then the selection's frame and toolbar. 群組在後面與中間，然後是選取的框與工具列。 */}
       <GroupLayer groups={groups} selected={selectedIds} session={session} actions={grouping} snap={snap} grid={GRID} onMenu={menu} texts={texts} onText={textGrows ? onText : undefined} />
-      <SelectionFrame ids={selectedList} session={session} groups={groups} texts={texts} />
-      <FloatingToolbar ids={selectedList} wires={selectedEdges} clip={clip} groups={groups} grouping={grouping} texts={texts} />
+      <SelectionAround ids={selectedList} wires={selectedEdges} session={session} groups={groups} texts={texts} clip={clip} grouping={grouping} />
     </ReactFlow>
   </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });

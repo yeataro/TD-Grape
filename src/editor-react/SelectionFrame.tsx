@@ -1,9 +1,11 @@
-import { useEffect, useRef, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, type PointerEvent } from 'react';
 import { useReactFlow, useStore, type NodePositionChange } from '@xyflow/react';
 import type { Editor as EditorSession } from './editor';
 import { say, tr } from './text';
 import { HANDLES, spreadPositions, type Box, type Handle } from './selection_spread';
-import { selectionBounds, type TextHeights } from './Groups';
+import { selectionBounds, type GroupActions, type TextHeights } from './Groups';
+import { FloatingToolbar, type Screen } from './FloatingToolbar';
+import type { CopyPaste } from './copy_paste';
 import type { GraphGroup } from './core';
 
 // Multi-selection frame (Refactor.50.3; human 2026-10-09: shown whenever two or more nodes are selected, never for one — legacy
@@ -18,16 +20,38 @@ import type { GraphGroup } from './core';
 type Spread = { handle: Handle; pointer: number; x: number; y: number; zoom: number; boxes: Box[]; moved: boolean };
 const THRESHOLD = 3;
 
-// ids: the selected nodes, the session's own list (Refactor.106: no scan of every node). ids：選取的節點，session 自己的名單（R.106：不掃描全部節點）。
-export function SelectionFrame({ ids, session, groups, texts }: { ids: readonly string[]; session: EditorSession; groups: readonly GraphGroup[]; texts: TextHeights }) {
-  const flow = useReactFlow(), spread = useRef<Spread | null>(null);
-  // The selection's bounds on screen, groups whose members are all selected included (Refactor.98), as a key so the frame draws
-  // again only when they change (as the floating toolbar). 選取在螢幕上的範圍（含成員全被選取的群組，R.98），做成字串，變了才重畫（同浮動工具列）。
+/** What surrounds the selection (Refactor.107, Z10): its bounds on screen, found once per React Flow store update for the frame and
+ * the floating toolbar together (each had its own selector, so the bounds — nodes, whole groups, their text — were found twice per
+ * frame), as a key, so nothing below re-renders while they are unchanged. The inputs are all kept: the selection, the groups, the
+ * groups' text heights, and React Flow's measured nodes and view (Codex 2026-10-13 R04). 圍著選取的東西（R.107，Z10）：它在螢幕上的範圍，
+ * 每次 React Flow store 更新算一次，多選框與浮動工具列共用（原本各有一個選擇器，節點、整個群組、群組內文的範圍每格算兩次），做成字串，
+ * 沒變時底下什麼都不重繪。輸入全部保留：選取、群組、群組內文高度、React Flow 量到的節點與視角（Codex R04）。 */
+export function SelectionAround({ ids, wires, session, groups, texts, clip, grouping }: {
+  ids: readonly string[]; wires: ReadonlySet<string>; session: EditorSession; groups: readonly GraphGroup[]; texts: TextHeights;
+  clip: CopyPaste; grouping: GroupActions;
+}) {
   const key = useStore(state => {
-    if (ids.length < 2) return '';
+    if (!ids.length) return '';
+    // Groups whose members are all selected included (Refactor.98). 含成員全被選取的群組（R.98）。
     const box = selectionBounds({ nodeLookup: state.nodeLookup }, ids, groups, texts), [x, y, zoom] = state.transform;
     return [box.x * zoom + x, box.y * zoom + y, (box.x + box.width) * zoom + x, (box.y + box.height) * zoom + y, state.width, state.height].map(Math.round).join(',');
   });
+  const screen = useMemo((): Screen | null => {
+    if (!key) return null;
+    const [left, top, right, bottom, width, height] = key.split(',').map(Number) as [number, number, number, number, number, number];
+    return { left, top, right, bottom, width, height };
+  }, [key]);
+  if (!screen) return null;
+  return <>
+    {ids.length >= 2 && <SelectionFrame ids={ids} session={session} screen={screen} />}
+    <FloatingToolbar ids={ids} wires={wires} clip={clip} groups={groups} grouping={grouping} screen={screen} />
+  </>;
+}
+
+// ids: the selected nodes, the session's own list (Refactor.106: no scan of every node); screen: their bounds on screen (SelectionAround).
+// ids：選取的節點，session 自己的名單（R.106：不掃描全部節點）；screen：它們在螢幕上的範圍（SelectionAround）。
+export function SelectionFrame({ ids, session, screen }: { ids: readonly string[]; session: EditorSession; screen: Screen }) {
+  const flow = useReactFlow(), spread = useRef<Spread | null>(null);
   const move = (positions: Map<string, { x: number; y: number }>, dragging: boolean) =>
     session.nodeChanges([...positions].map(([id, position]): NodePositionChange => ({ type: 'position', id, position, dragging })));
   // Put back and let go there: no Undo step, no node left marked as dragged (as a group's title drag). 放回並在那裡放開：不多一步復原，
@@ -41,8 +65,8 @@ export function SelectionFrame({ ids, session, groups, texts }: { ids: readonly 
     addEventListener('keydown', key, true); addEventListener('wheel', wheel, { capture: true, passive: true });
     return () => { removeEventListener('keydown', key, true); removeEventListener('wheel', wheel, true); };
   }, []);
-  if (!key) return null;
-  const [left, top, right, bottom, width, height] = key.split(',').map(Number) as [number, number, number, number, number, number];
+  if (ids.length < 2) return null;
+  const { left, top, right, bottom, width, height } = screen;
   if (right < 0 || left > width || bottom < 0 || top > height) return null;
   const begin = (event: PointerEvent<HTMLButtonElement>, handle: Handle) => {
     if (event.button !== 0) return;

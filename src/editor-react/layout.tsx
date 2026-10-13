@@ -101,8 +101,10 @@ export function useLayout(): Layout {
 
 /** A drag handle: drawn thin, grabbed by a wider area (human 2026-10-09). Reports the distance moved. `edge` puts it on the
  * leading or trailing edge of the part it belongs to. 把手：畫得細、可抓範圍寬（人類）。回報拖了多遠；edge＝放在所屬那一格的前緣或後緣。 */
-export function ResizeHandle({ axis, edge = 'lead', label, onStart, onMove }: {
-  axis: 'x' | 'y'; edge?: 'lead' | 'trail'; label: Message; onStart(): void; onMove(delta: number): void;
+/** `onEnd`: the hand let go (Refactor.107): for a part that follows the moves outside React and keeps the result then. onEnd：放手了
+ * （R.107）：給移動時不經 React、放手才記下結果的部分。 */
+export function ResizeHandle({ axis, edge = 'lead', label, onStart, onMove, onEnd }: {
+  axis: 'x' | 'y'; edge?: 'lead' | 'trail'; label: Message; onStart(): void; onMove(delta: number): void; onEnd?(): void;
 }) {
   const start = useRef<number | null>(null);
   const down = (event: ReactPointerEvent) => {
@@ -114,7 +116,7 @@ export function ResizeHandle({ axis, edge = 'lead', label, onStart, onMove }: {
     if (start.current === null) return;
     onMove((axis === 'x' ? event.clientX : event.clientY) - start.current);
   };
-  const up = () => { start.current = null; };
+  const up = () => { if (start.current !== null) { start.current = null; onEnd?.(); } };
   return <div className={'resize-handle resize-' + axis + ' ' + edge} role="separator" aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
     aria-label={say(label)} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />;
 }
