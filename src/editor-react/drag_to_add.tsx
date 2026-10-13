@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore, type CSSProperties, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motionOn } from './appearance';
+import { holdCursor } from './gesture_cursor';
 
 // Drag to add a node (GLOSSARY; Refactor.104, human 2026-10-12): whatever is dragged from a panel onto the canvas becomes a node —
 // a shared source's card, an Add Node row, the Create node popup's rows, later subgraphs. What is dragged is the item's add choice; how
@@ -48,11 +49,13 @@ export function dragToAdd(choice: string, options: { touch?: 'handle' | 'none' }
       if (event.button !== 0 || carried?.phase === 'carry' || element.closest(own)) return;
       if (event.pointerType === 'touch' && (options.touch === 'none' || !element.closest('[data-drag-handle]'))) return;
       const pointer = event.pointerId, start = { x: event.clientX, y: event.clientY };
-      let started = false;
+      let started = false, release: (() => void) | null = null;
       const end = (dropped: { x: number; y: number } | null) => {
         removeEventListener('pointermove', move, true); removeEventListener('pointerup', up, true); removeEventListener('pointercancel', cancel, true);
         removeEventListener('keydown', escape, true); removeEventListener('blur', cancel);
-        document.documentElement.classList.remove('dragging-to-add');
+        // The cursor layer goes first: below, elementFromPoint must find what is under the pointer, not the layer (Refactor.106).
+        // 先拿掉游標層：下面的 elementFromPoint 要找到指標下的東西，不是這一層（R.106）。
+        release?.(); release = null;
         if (!started) return;
         blockNextClick();
         const on = dropped && (document.elementFromPoint(dropped.x, dropped.y)?.closest('[data-drop-to-add]') ?? null);
@@ -69,7 +72,10 @@ export function dragToAdd(choice: string, options: { touch?: 'handle' | 'none' }
           if (Math.hypot(moved.clientX - start.x, moved.clientY - start.y) < THRESHOLD) return;
           const tile = target?.describe(choice);
           if (!tile) { end(null); return; }
-          started = true; document.documentElement.classList.add('dragging-to-add');
+          // The copy cursor over the whole page: one layer, not a page-wide rule (Refactor.106, gesture_cursor.ts); the listeners
+          // here are the window's, so the layer does not stop them. 整頁顯示複製游標：一層游標層、不用整頁規則（R.106）；這裡聽的是
+          // window，這一層擋不到。
+          started = true; release = holdCursor('copy');
           set({ ...tile, choice, x: moved.clientX, y: moved.clientY, phase: 'carry', at: performance.now() });
         } else set({ ...carried!, x: moved.clientX, y: moved.clientY });
         moved.preventDefault();

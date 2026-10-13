@@ -1,5 +1,6 @@
 import type { ReactFlowInstance, Viewport } from '@xyflow/react';
 import { readPreference } from './preferences';
+import { holdCursor } from './gesture_cursor';
 
 // How the view moves (Refactor.58.2; legacy app.js:545–580, floating-panels.md 14). One place for every framing move so
 // they all glide the same way: the Frame selected button, F and H, a double-click on a node, the zoom presets.
@@ -43,8 +44,30 @@ export const DAMPING_MS = 150;
 /** While the canvas is dragged to pan, the whole page shows the four-way arrow (Refactor.104.8, human 2026-10-12: it did not hold).
  * Page-wide, not on the canvas: a damped pan holds the pointer on the canvas's outer element, and an undamped one lets it pass
  * over panels. Both pans call this. 拖畫布平移時整頁都是十字方向箭頭（R.104.8，人類 10-12：沒有保持住）。放在整頁、不放在畫布上：
- * 阻尼的平移把指標鎖在畫布最外層，沒有阻尼時指標會經過面板。兩種平移都呼叫這個。 */
-export const panningCursor = (on: boolean) => document.documentElement.classList.toggle('panning-canvas', on);
+ * 阻尼的平移把指標鎖在畫布最外層，沒有阻尼時指標會經過面板。兩種平移都呼叫這個。
+ * Refactor.106: one cursor layer (gesture_cursor.ts) instead of a page-wide rule. Under the press the pane's own `dragging` class
+ * shows it (style.css); the layer comes only once the pointer has moved 3px from `press` (the damped pan's own threshold), because a
+ * layer over the page takes the release: a plain click on the background (clear the selection) and a double-click (Create node) must
+ * still land on the pane. `captor`: the element the pan captures the pointer on (the damped pan's canvas), which gets the cursor too.
+ * R.106：改用一層游標層（gesture_cursor.ts），不用整頁規則。按下時由畫布本身的 dragging class 顯示（style.css）；指標離 press 3px
+ * （阻尼平移自己的門檻）才放上這一層，因為蓋滿整頁的一層會接到放開：單純點背景（清掉選取）與雙擊（新增節點）仍要落在畫布上。
+ * captor：平移捕捉指標的元素（阻尼平移的畫布），它也拿到游標。 */
+let panning: (() => void) | null = null;
+export const panningCursor = (on: boolean, press?: { clientX: number; clientY: number }, captor?: Element) => {
+  panning?.(); panning = null;
+  if (!on) return;
+  let release: (() => void) | null = null, from: { x: number; y: number } | null = press ? { x: press.clientX, y: press.clientY } : null;
+  // Listened on the window's capture phase, so it runs before the damped pan captures the pointer on the same move.
+  // 在 window 的捕獲階段聽，所以在同一次移動裡，比阻尼平移捕捉指標更早執行。
+  const move = (event: PointerEvent) => {
+    from ??= { x: event.clientX, y: event.clientY };
+    if (Math.hypot(event.clientX - from.x, event.clientY - from.y) < 3) return;
+    removeEventListener('pointermove', move, true);
+    release = holdCursor('move', captor);
+  };
+  addEventListener('pointermove', move, true);
+  panning = () => { removeEventListener('pointermove', move, true); release?.(); };
+};
 // One tick's zoom, as React Flow's own (@xyflow/system wheelDelta). 一下滾輪的縮放量，同 React Flow 原生。
 const wheelStep = (event: WheelEvent) => -event.deltaY * (event.deltaMode === 1 ? .05 : event.deltaMode ? 1 : .002)
   * (event.ctrlKey && /Mac/i.test(navigator.platform) ? 10 : 1);
@@ -97,7 +120,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     if (event.pointerType !== 'mouse' || event.button > 1 || !on.closest('.react-flow__pane') || on.closest('.nopan')) return;
     event.stopPropagation();
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: base(), moved: false };
-    element.querySelector('.react-flow__pane')?.classList.add('dragging'); panningCursor(true);
+    element.querySelector('.react-flow__pane')?.classList.add('dragging'); panningCursor(true, event, element);
   };
   // React Flow's pan listens to mousedown: it never starts while ours does. React Flow 的平移聽 mousedown：我們接手時它不會開始。
   const press = (event: MouseEvent) => { if (drag) event.stopPropagation(); };

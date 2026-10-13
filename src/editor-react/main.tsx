@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
+import { StrictMode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, useStore, useReactFlow, useConnection, getBezierPath,
   type ConnectionLineComponentProps, type EdgeTypes, type NodeTypes } from '@xyflow/react';
@@ -182,6 +182,19 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
     const taken = damper.current = dampCanvas(flow, surface.current);
     return () => { taken.detach(); damper.current = null; };
   }, [damping, flow]);
+  // Among several selected, the current one is brighter (style.css): marked on the node layer straight in the DOM, without
+  // re-rendering React Flow (Refactor.106; a :has() over the node layer restyled every node on any selection change).
+  // 多選時目前的那個比較亮（style.css）：直接在節點層的 DOM 上標記，不讓 React Flow 重繪（R.106；節點層的 :has() 在選取每次改變時
+  // 重算所有節點）。
+  const multiple = selectedIds.size > 1;
+  useLayoutEffect(() => {
+    surface.current?.querySelector('.react-flow__nodes')?.toggleAttribute('data-multi-select', multiple);
+  }, [multiple]);
+  // While a wire is drawn (or picked up by its end) the canvas root carries data-connecting, for the finger cursor (style.css;
+  // Refactor.106, replacing a :has() on the connection line). React Flow reports a reconnect's start and end through these too.
+  // 拉線（或抓著線端拿起）期間畫布根元素帶 data-connecting，給手指游標用（style.css；R.106，取代看拉線 SVG 的 :has()）。重接線的
+  // 開始與結束 React Flow 也經過這兩個回報。
+  const onConnectStart = useCallback(() => { surface.current?.toggleAttribute('data-connecting', true); }, []);
   // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
   const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
@@ -231,13 +244,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
     <ReactFlow<FlowNode, FlowEdge> data-drop-to-add="" ref={surface} attributionPosition="bottom-left"
       // A node being placed is drawn with the graph's, but is not in it (place_node.tsx). 放置中的節點和圖的一起畫，但不在圖裡。
       nodes={placing ? [...projection.nodes, placing.node] : projection.nodes} edges={placing ? [...edges, ...placing.edges] : edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); if (event?.type === 'mousedown') panningCursor(true); }}
+      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); if (event?.type === 'mousedown') panningCursor(true, event as MouseEvent); }}
       // Only a gesture's end: the damped pan moves the view by code, and each such move ends with no event. 只在手勢結束時：阻尼的平移
       // 用程式移動畫面，每次這樣的移動結束時都沒有事件。
       onMoveEnd={event => { if (event) panningCursor(false); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
+      onConnectStart={onConnectStart}
       onConnectEnd={(event, state) => {
+        surface.current?.toggleAttribute('data-connecting', false);
         if (reconnecting.current) return;
         // A warning, not an error: nothing broke, the wire just does not fit (Refactor.75.8, human 2026-10-11: red was too much).
         // 警告而非錯誤：沒有東西壞掉，只是這條線接不上（R.75.8，人類：紅字太重）。

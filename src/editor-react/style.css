@@ -515,7 +515,6 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 @keyframes drag-tile-cancel { to { opacity: 0; } }
 :root[data-motion="off"] .drag-tile { animation: none; }
 @media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .drag-tile { animation: none; } }
-:root.dragging-to-add, :root.dragging-to-add * { cursor: copy !important; }
 /* A finger starts the drag on these, so they do not scroll the list (drag_to_add.tsx). 手指在這些地方開始拖曳，不捲動清單。 */
 [data-drag-handle] { touch-action: none; }
 /* A node being placed (Refactor.105, first look to adjust; human 2026-10-12: only the frame, the title, the line between title and
@@ -535,7 +534,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .operation-hint > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .react-flow__node.placing { pointer-events: none; }
 .react-flow__node.placing.measuring { opacity: 0; } /* opacity: React Flow writes visibility itself 用透明度：可見度 React Flow 自己會寫 */
-.react-flow:has(.react-flow__node.placing.measuring) .react-flow__edge.placing { opacity: 0; } /* its wire shows with it 線跟它一起出現 */
+/* Its wire shows with it: place_node.tsx gives the wire `measuring` too (Refactor.106; a :has() over the whole canvas did this before).
+   線跟它一起出現：place_node.tsx 也給線 measuring（R.106；之前用整個畫布的 :has()）。 */
+.react-flow__edge.placing.measuring { opacity: 0; }
 /* Placed, it fades out over the node just added, its wire with it (Refactor.105.5, human 2026-10-12: 0.1 s; R.105.6, decided: no
    fade-in, the fade-out stays); animation effects off: gone at once. 放下時在剛新增的節點上淡出，線也一起（R.105.5，人類 10-12：0.1 秒；
    R.105.6 決定：不要淡入，淡出保留）；動畫效果關掉時直接拿掉。 */
@@ -726,8 +727,10 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
    overlap shows no seam; the eyes stay solid. 線上的更透明（R.76.14，人類）：身體、裙擺、描邊合成一層一起淡，重疊處不會有接縫；眼睛維持實心。 */
 .ghost-figure.wire .ghost-shape { opacity: var(--tint-wire-ghost); }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
-   多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
-.react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }
+   多選時目前的那個比較亮；單選時就是一般的綠（人類）。
+   Refactor.106: the canvas marks the node layer with data-multi-select (main.tsx); a :has() over the node layer restyled every node
+   on any selection change. R.106：由畫布在節點層標上 data-multi-select（main.tsx）；節點層的 :has() 在選取每次改變時重算所有節點。 */
+.react-flow__nodes[data-multi-select] .grape-node.selected.primary { --node-select: var(--select-primary); }
 /* Outer glow trials (human 2026-10-09; legacy cool styles, without the moving glow), switched in Appearance; each in the
    thing's own colour, its strength --tint-glow-* and reach --glow-*.
    外光暈試驗（人類；舊產品 cool 風格，不含光暈動畫），在外觀面板切換；各用自己的顏色，濃度 --tint-glow-*、範圍 --glow-*。 */
@@ -1454,9 +1457,28 @@ button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 .create-entry[data-movable], .create-entry[data-movable]:active { cursor: default; }
 .react-flow__pane.draggable, .react-flow__pane.selection, .react-flow__nodesselection-rect { cursor: default; }
 .react-flow__edge { cursor: pointer; }
-:root.panning-canvas, :root.panning-canvas * { cursor: move !important; } /* whole page: see panningCursor (viewport.ts) 整頁，見 panningCursor */
-.react-flow:has(.react-flow__connectionline), .react-flow:has(.react-flow__connectionline) * { cursor: pointer !important; }
-:root.scrubbing-value, :root.scrubbing-value * { cursor: ew-resize !important; user-select: none; } /* the value ladder, held 按住拖的數值階梯 */
+/* A gesture's cursor (Refactor.106): one transparent layer above everything while panning, scrubbing a value (the ladder, held) or
+   dragging to add (gesture_cursor.ts); before, `:root.X *` rules restyled the whole page at each start and end. The gestures capture
+   the pointer or listen on the window, so the layer only has to be under the pointer (pointer-events on, or its cursor would not show).
+   手勢的游標（R.106）：平移、拖數值（按住的梯尺）、拖曳新增時，最上面一層透明層（gesture_cursor.ts）；之前的 `:root.X *` 規則每次開始與
+   結束都重算整頁。手勢自己捕捉指標或聽 window，這一層只要待在指標底下（要接指標，否則它的游標不會出現）。
+   The element holding the pointer captured, if any, is marked data-gesture-cursor and shows the same cursor: while it captures, the
+   browser draws its cursor (gesture_cursor.ts). !important there, as before: it must win over that element's own cursor.
+   捕捉著指標的元素（有的話）標上 data-gesture-cursor、顯示同一個游標：它捕捉期間瀏覽器畫的是它的游標（gesture_cursor.ts）。那裡照舊用
+   !important：要蓋過那個元素自己的游標。 */
+.gesture-cursor { position: fixed; inset: 0; z-index: 2147483647; pointer-events: auto; user-select: none; }
+.gesture-cursor[data-cursor="move"] { cursor: move; } [data-gesture-cursor="move"] { cursor: move !important; }
+.gesture-cursor[data-cursor="ew-resize"] { cursor: ew-resize; } [data-gesture-cursor="ew-resize"] { cursor: ew-resize !important; }
+.gesture-cursor[data-cursor="copy"] { cursor: copy; }
+/* Pressed on the background, before the pointer moves and the layer comes (viewport.ts panningCursor). 在背景上按下、指標還沒移動、
+   游標層還沒出現時（viewport.ts panningCursor）。 */
+.react-flow__pane.dragging { cursor: move; }
+/* Drawing a wire: the canvas root carries data-connecting from React Flow's connect start to its end (main.tsx; Refactor.106, replacing
+   a :has() that restyled the whole canvas on every element added or removed). `*` and !important as before, so the finger still holds
+   over nodes, fields and wires; the restyle now happens once at the start and once at the end.
+   拉線中：畫布根元素從 React Flow 開始拉線到結束都帶 data-connecting（main.tsx；R.106，取代每加減一個元素就重算整個畫布的 :has()）。
+   `*` 與 !important 照舊，手指游標在節點、欄位、線上仍保持；現在只在開始與結束各重算一次。 */
+.react-flow[data-connecting], .react-flow[data-connecting] * { cursor: pointer !important; }
 /* A value box is a slider to drag: the two-way arrow until it is typed in, and while dragging its value (human 2026-10-12).
    數值框是可以拖的滑桿：打字前與拖曳改值時都是左右箭頭（人類 10-12）。 */
 input.number:not(:focus), input.number.scrubbing { cursor: ew-resize; }

@@ -34,12 +34,14 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
   const start = useCallback((spec: NewNode, wire: NewWire | undefined, opened: { x: number; y: number }) => {
     const at = pointer.current ?? opened, preview = session?.placementPreview(spec, wire);
     if (!session || !preview) return false;
-    // Drawn hidden until React Flow has measured it, so it never shows at a guessed place. 量到大小之前先藏著，不在猜的位置出現。
+    // Drawn hidden until React Flow has measured it, so it never shows at a guessed place; its wire is hidden with it by the same
+    // class (Refactor.106: a :has() over the whole canvas did this before). 量到大小之前先藏著，不在猜的位置出現；它的線用同一個
+    // class 一起藏（R.106：之前用整個畫布的 :has()）。
     const shown: Placing = {
       node: { ...preview.node, position: flow.screenToFlowPosition(at), selected: false, draggable: false, selectable: false,
         connectable: false, focusable: false, deletable: false, className: 'placing measuring', zIndex: 1000 },
       edges: preview.edges.map(edge => ({ ...edge, selected: false, selectable: false, focusable: false, deletable: false,
-        className: [edge.className, 'placing'].filter(Boolean).join(' ') })),
+        className: [edge.className, 'placing measuring'].filter(Boolean).join(' ') })),
     };
     gesture.current = { spec, wire, shown, client: at, version: session.snapshot().version };
     setPlacing(shown);
@@ -115,7 +117,9 @@ export function usePlaceNode(session: EditorSession | null, flow: Pick<ReactFlow
         if (moved || 'measured' in measured) { g.shown = { ...g.shown, node: { ...node, ...measured, position: at } }; setPlacing(g.shown); return; }
         const placed = flow.getInternalNode(id)?.internals.positionAbsolute;
         if (!placed || placed.x !== at.x || placed.y !== at.y) return;
-        g.shown = { ...g.shown, node: { ...node, className: 'placing' } }; setPlacing(g.shown); return;
+        g.shown = { ...g.shown, node: { ...node, className: 'placing' },
+          edges: g.shown.edges.map(edge => ({ ...edge, className: edge.className!.split(' ').filter(name => name !== 'measuring').join(' ') })) };
+        setPlacing(g.shown); return;
       }
       if (!moved) return;
       g.shown = { ...g.shown, node: { ...node, position: at } };

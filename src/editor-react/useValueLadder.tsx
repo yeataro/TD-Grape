@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { holdCursor } from './gesture_cursor';
 import { ladderLayout, ladderPosition, ladderReadoutPosition, moveLadder, type LadderMotion } from './valueLadder';
 
 export type LadderPointer = { id: number; button: number; mask: number };
@@ -54,7 +55,13 @@ export function useValueLadder(options: {
     // Dragged with a held button, the whole page shows the two-way arrow, as legacy's body.scrubbing-value (Refactor.104.7, human
     // 2026-10-12: the text cursor over the value ladder was wrong). 按住拖著調時，整頁都是左右箭頭，同舊產品（R.104.7，人類 10-12：
     // 數值階梯上出現文字游標不對）。
-    const scrubbing = (on: boolean) => { if (state.pointer) document.documentElement.classList.toggle('scrubbing-value', on); };
+    // One cursor layer, not a page-wide rule (Refactor.106, gesture_cursor.ts); the anchor keeps the pointer captured, so the events
+    // still come here, and it gets the cursor too. 改用一層游標層、不用整頁規則（R.106）；指標仍由控制項捕捉，事件照樣送到這裡，它也拿到游標。
+    let release: (() => void) | null = null;
+    const scrubbing = (on: boolean) => {
+      if (on && state.pointer && !release) release = holdCursor('ew-resize', anchor);
+      if (!on) { release?.(); release = null; }
+    };
     scrubbing(true);
     let shown = state.value;
     const paint = () => {
