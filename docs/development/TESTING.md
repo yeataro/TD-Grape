@@ -18,6 +18,8 @@
 
 **基準腳本**：`node tests/browser/benchmark_scaling.cjs <建置資料夾> <報告資料夾> <標籤> [--counts]`（Playwright、真 Chrome、假宿主、`tests/fixtures/scaling_base_graph.json` 複製成 248 節點；情境 M1–M13：M10 Graph JSON 面板開著換點、M12 拉線停在會合併的接孔上、M13 GLSL 面板開著在長 GLSL 圖（基準圖＋200 個 Floor）拖一個節點並放開）。`--counts` 要配量測版建置：`node tools/build_editor.cjs --out <資料夾> --jsx-shim tools/dev/jsx-shim.js`（React 計數 shim，開發用；build-info 標 `profiling`，腳本拒絕用錯版本）。報告的 `summary.identity` 記產品版本、`productCommit`（建置時寫進 build-info 的來源 commit 與是否有未提交改動；R.107.1）、`runnerCommit`（腳本所在倉庫）、bundle 雜湊、腳本／fixture／shim 雜湊、瀏覽器版本：before 與 after 的腳本雜湊要相同才能比。M4 分三欄：`M4_gesture_loaf_ms`（整段框選）、`M4_after_release_loaf_ms`（頁面自己記到 pointerup 之後才開始的長畫格）、`M4_straddling_loaf_ms`（跨過 pointerup 的，另列、不算放開的成本）；原始 `results` 保留原精度的 start／duration 與 `released` 時刻可重核。`*_icon_buttons_page` 是全頁 IconButton 的重跑數，不只浮動工具列（R.107.1，Codex R107-06／07）。報告與 before／after 表在 workspace `work/refactor/reports/`。
 
+**觸控檢查**（R.108）：`node tests/browser/check_touch.cjs <建置資料夾>`（Playwright、Chrome 觸控模擬、CDP 觸控事件、假宿主 `tests/browser/fake_host.cjs`）——T04 點框選後單指框選到放開、T02 第二指放棄框選且選取不變、T01 參數面板手指拖數值，加三條滑鼠框選回歸；任一失敗結束碼 1。真機（iPad／Safari）仍要人試。
+
 **零成本不變量**（R.107／107.1）：`tests/unit/test_zero_cost.cjs`（在 `npm run test:editor` 裡，7 條）——移動一個節點的 commit 只換投影、版本與編輯旗標；只有面板要的推導在沒有面板時呼叫次數為 0（計數：`session.references()` 的呼叫、程式 `sourceMap.pixel` 的讀取）；註記經 Undo／Redo、還原草稿仍跟著文件、不動程式 key。沒有自動測試、只有手測或程式審查的案例列在 workspace `work/refactor/zero-cost-scope-2026-10-13.md` §5。
 
 ## 新增型別或改節點模組後要重跑：拉線新增表的完整稽核（Refactor.77 起）

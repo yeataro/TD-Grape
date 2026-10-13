@@ -86,6 +86,8 @@
   4. **驗收**：除了自動測試，用真的滑鼠在內建瀏覽器做一次，確認移動中沒有不該變的 DOM 被改、沒有每格量版面；手感最後由人類確認（助手感覺不到慢半拍）。
 - **行為開關都是暫時的**（[options.ts](../../src/editor-react/options.ts)，Q64）。調整期逐一決定：要嘛變成正式設定，要嘛攤平，不留永遠藏著的開關。
 
+**觸控（Refactor.108，Codex ISSUE TOUCH-2026-10-13）**：畫布外會拖的欄位要自己宣告 `touch-action`（數字欄 `pan-y`：橫向歸它、縱向仍捲面板）；畫布裡的東西已在 React Flow 的 `touch-action: none` 之下。自己接管指標捕獲的部件，`lostpointercapture` 只算自己（`event.target` 是自己、pointerId 相同）真的失去才結束——子元素交接時也會冒出同一個事件。第二根手指落下時，單指手勢放棄、兩指交給 React Flow，選取不動。**已知限制**：拿起既有接線的輸入端改接只有滑鼠——React Flow 的 `EdgeAnchor` 只綁 `onMouseDown`；觸控改用「從輸入拉到空白處拔線、再從輸出重拉」。要觸控同等能力得自建重接手勢（新能力、新例外），未決定。可重跑的檢查：`node tests/browser/check_touch.cjs <建置>`。
+
 ## 六之一、React Flow 例外（停用或覆蓋它的內建功能）
 
 規則：要停用或覆蓋 React Flow 的內建功能，先向人類報告，記在這裡並寫理由（design-interview Q29：要的是需求，不是框架的某個功能）。

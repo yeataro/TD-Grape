@@ -2,6 +2,23 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.108 — 觸控四項（Codex ISSUE TOUCH-2026-10-13） — 2026-10-13
+
+人類：「直接處理掉這四項再說吧，子圖還需要討論邊境。」我的評估寫在 workspace `Review/ISSUE-2026-10-13-touch-editing.md` 回覆欄：四項成立，T03 是框架限制。
+
+| 舊行為 | 處理 | 原因 | 出處 |
+|---|---|---|---|
+| 框選開關給觸控用：開著時單指拖＝框選 | 照舊（修回能用） | T04：host 接手捕獲時 pane 的 `lostpointercapture` 冒上來被當成結束 | legacy `graph_ui.js:2490, 2572`；Codex 重現 |
+| 雙指平移縮放 | 照舊（檔案註解即預期） | T02：第二指走進 `begin` 蓋掉框選 | 檔案註解；Codex 重現 |
+| 數字欄手指橫拖改值 | 照舊（面板裡修回能用） | T01：面板的欄位沒有 `touch-action` | Codex 重現；我以 CDP 重現並確認 `pan-y` 修好 |
+| 拿起線端改接 | 已知限制（只有滑鼠） | T03：React Flow `EdgeAnchor` 只綁 `onMouseDown` | `@xyflow/react index.mjs:2869` |
+
+- `RightDragSelect.tsx`：`onLostPointerCapture` 只在 `event.target === host` 且 pointerId 相同時結束（T04）；第二指落下就 `abandon()`（放棄框、選取不動），`move`／`pointerup`／`pointercancel` 只認開始它的指標（T02）。
+- `style.css`：`input.number { touch-action: pan-y }`（T01）。
+- T03：記進 `docs/ui/EDITOR_UI_RULES.md` 六、互動（觸控段）；要觸控重接得自建手勢＝新能力，另開一題。
+- 檢查：新 `tests/browser/check_touch.cjs`（CDP 觸控＋滑鼠回歸；假宿主抽成 `tests/browser/fake_host.cjs`，benchmark 改用同一份）。結果：0.8.313 建置 4 案全過；107.1 建置 T04／T02／T01 失敗、滑鼠過——對照成立。`test:editor` 全過。真機未驗（人類 iPad）。
+- TOE 交付在隨後的 commit。
+
 ## Refactor.107.2 — 107.1 審查的三項與未測三類 — 2026-10-13
 
 Codex 對 107.1 交付的審查（S01 中、P01／P02 低；workspace `Review/2026-10-13-fable/Codex對Refactor107.1交付的審查.md`）三項全接受；人類「開」。
