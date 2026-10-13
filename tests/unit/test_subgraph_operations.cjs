@@ -200,3 +200,28 @@ test('port identities are generated and never reused: removing a middle port and
  });
  assert.deepEqual(step.after.subgraphs[0].inputs.map(p=>p.label),['value','b','c']);
 });
+
+// A subgraph must not reach itself through its calls (Refactor.111; legacy clipboard.cycle): the gate refuses the edit that would make
+// the cycle; a graph opened with one stays editable. 子圖不能經由呼叫回到自己（R.111；照舊產品）：造成循環的修改被關卡拒絕；開圖時已有的照樣能編。
+test('placing a call that would make a subgraph call itself is refused as a whole; an existing cycle does not block other edits',()=>{
+ const g=sharedGraph(),doc=new GraphDocument(g,registry);
+ assert.equal(G.subgraphCycle(g,registry),null);
+ const before=doc.snapshot();
+ assert.throws(()=>doc.change(m=>m.networks.get('subgraph:gain').instantiateSubgraph('wrapper','loop')),e=>e.code==='subgraph.cycle'&&!!e.subgraphId);
+ assert.deepEqual(plain(doc.snapshot()),plain(before));
+ assert.throws(()=>doc.change(m=>m.networks.get('subgraph:gain').instantiateSubgraph('gain','self')),e=>e.code==='subgraph.cycle');
+ const cyclic=sharedGraph();cyclic.subgraphs[0].graph.nodes.push(node('loop','subgraph_call',{subgraphId:'wrapper'}));
+ assert.equal(G.subgraphCycle(cyclic,registry)!==null,true);
+ const repaired=new GraphDocument(cyclic,registry).change(m=>{m.networks.get('pixel').create('x','sgrape.builtin.float');});
+ assert.ok(repaired.after.stages.pixel.nodes.some(n=>n.id==='x'),'an unrelated edit still goes through');
+});
+
+// Selection to subgraph carries complete groups and leaves partial ones outside (amendment A8). 從選取建立帶完整群組，部分群組留在外面（A8）。
+test('a subgraph from a selection takes the groups whose members all move, and leaves a partial group with its remaining members',()=>{
+ const g=empty(),d=g.stages.pixel;
+ d.nodes=[node('a','float',{value:1}),node('b','float',{value:2}),node('c','float',{value:3}),node('out','pixel_out')];
+ d.ui={groups:[{id:'g1',name:'Whole',nodes:['a','b']},{id:'g2',name:'Part',nodes:['b','c']}]};
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'sub',callId:'call',name:'Sub',stage:'pixel'}));
+ assert.deepEqual(plain(G.groups.groupsOf(step.after.subgraphs[0].graph)).map(x=>[x.name,x.nodes]),[['Whole',['a','b']]]);
+ assert.deepEqual(plain(G.groups.groupsOf(step.after.stages.pixel)).map(x=>[x.name,x.nodes]),[['Part',['c']]]);
+});

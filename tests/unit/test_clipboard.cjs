@@ -69,3 +69,38 @@ test('a place that is not a number counts as 0',()=>{
   let ids;const result=doc.change(c=>{ids=G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId);});
   assert.ok(ids.every(id=>{const n=result.after.stages.pixel.nodes.find(n=>n.id===id);return Number.isFinite(n.ui.x)&&Number.isFinite(n.ui.y);}));
 });
+
+// Definitions travel with a copy (basic design 2026-10-14 §3.13, amendment A5; Refactor.111). 定義跟著複製走（§3.13、A5；R.111）。
+test('a copy carries the definitions its calls use, with their closure; pasted into the same graph the calls keep their definition, elsewhere a new one',()=>{
+  const doc=graph();
+  const made=new G.GraphDocument(doc.change(c=>{
+    c.createSubgraph({id:'inner',name:'Inner'});
+    const outer=c.createSubgraph({id:'outer',name:'Outer'});
+    c.networks.get('subgraph:outer').instantiateSubgraph('inner','nested',{x:0,y:0});
+    c.networks.get('pixel').instantiateSubgraph('outer','call',{x:10,y:10});
+    void outer;
+  }).after,registry);
+  const clip=plain(G.copyNodes(made,['call'],OP));
+  assert.deepEqual(clip.subgraphs.map(f=>f.id).sort(),['inner','outer'],'the closure comes along');
+  assert.deepEqual(plain(G.readClip(JSON.stringify(clip))).subgraphs.map(f=>f.id).sort(),['inner','outer']);
+  // Same graph, definitions still there: the pasted call points at the same definition. 同圖、定義還在：貼上的呼叫指同一份。
+  let counter2=0;const newSub=()=>'s'+(++counter2);
+  const same=made.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,true);});
+  assert.equal(same.after.subgraphs.length,2);
+  assert.deepEqual(plain(same.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call').map(n=>n.params.subgraphId)),['outer','outer']);
+  // Another graph: new identities, the nested relation kept. 別張圖：新身分，巢狀關係保留。
+  const other=made.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);});
+  assert.equal(other.after.subgraphs.length,4);
+  const pastedCall=other.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call').at(-1);
+  assert.notEqual(pastedCall.params.subgraphId,'outer');
+  const newOuter=other.after.subgraphs.find(f=>f.id===pastedCall.params.subgraphId),newInner=newOuter.graph.nodes.find(n=>n.nodeType==='sgrape.builtin.subgraph_call').params.subgraphId;
+  assert.notEqual(newInner,'inner');assert.ok(other.after.subgraphs.some(f=>f.id===newInner));
+  // Same graph, the definition deleted since: it comes back under a new identity (A5 rule 1). 同圖、定義已刪：以新身分恢復。
+  const gone=new G.GraphDocument(made.change(c=>{const net=c.networks.get('pixel');net.removeAll([net.node('call')],new Set(['outer','inner']));}).after,registry);
+  assert.equal(gone.document.subgraphs.length,0);
+  const back=gone.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,true);});
+  assert.equal(back.after.subgraphs.length,2);assert.ok(back.after.subgraphs.every(f=>!['outer','inner'].includes(f.id)));
+  // A definition from a Library is refused as a whole (amendment B7). 來自 Library 的定義整份拒絕（B7）。
+  const lib=plain(clip);lib.subgraphs[0].libraryId='x';
+  assert.throws(()=>made.change(c=>{G.pasteClip(c,lib,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);}),e=>e.code==='subgraph.library');
+});

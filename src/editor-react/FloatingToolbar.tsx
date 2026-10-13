@@ -9,6 +9,7 @@ import { appearance, appearanceSubscribe } from './appearance';
 import type { CopyPaste } from './copy_paste';
 import type { GroupActions } from './Groups';
 import type { GraphGroup } from './core';
+import { useSession } from './contexts';
 
 // The floating toolbar (浮動工具列, Refactor.92; human 2026-10-12; legacy selection_ui.js:106-176, 415-466): the actions on what is
 // selected, floating by the selection. Always on, for one node or several (human: the new product settles on "single and
@@ -42,7 +43,7 @@ export type Screen = { left: number; top: number; right: number; bottom: number;
 export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: {
   ids: readonly string[]; wires: ReadonlySet<string>; clip: CopyPaste; groups: readonly GraphGroup[]; grouping: GroupActions; screen: Screen;
 }) {
-  const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null);
+  const flow = useReactFlow(), bar = useRef<HTMLDivElement>(null), session = useSession();
   // Read again only when the look changes (density), not on every drag or pan frame (deep clean 2026-10-12). 只在外觀（密度）改變時
   // 重讀，不是拖曳或平移的每一格（10-12 深度清潔）。
   const look = useSyncExternalStore(appearanceSubscribe, appearance), gap = useMemo(() => frameOffset(), [look]);
@@ -90,7 +91,7 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
       ...(target ? [{ key: 'joinGroup', icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), run: grouping.join }] as Tool[] : []),
       ...(inGroup ? [{ key: 'leaveGroup', icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), run: grouping.leave }] as Tool[] : []),
       ...(many ? [
-        { key: 'subgraph', icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph') },
+        { key: 'subgraph', icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph'), run: () => session.selectionToSubgraph(ids), disabled: !session.subgraphCandidates(ids).length },
         { key: 'arrange', icon: 'arrange', label: tr('selection.arrange', 'Arrange nodes') },
       ] as Tool[] : []),
       { key: 'frame', icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), run: () => frameNodes(flow, ids) },
@@ -106,7 +107,7 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
       <div className="tool-group">{arrange.map(tool)}</div>
     </div>;
     return { many, target, inGroup, face };
-  }, [ids, wires, flow, clip, groups, grouping]);
+  }, [ids, wires, flow, clip, groups, grouping, session]);
   const { many, target, inGroup, face } = content;
   // Which buttons it has: when that changes (one node to several, a group to join), its size is read before the screen is drawn, so it
   // is never shown one frame at the old width's place (Refactor.104.1, human 2026-10-12: it changed after it appeared; the resize

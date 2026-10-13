@@ -589,6 +589,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
       else if (!draft && network && matches('duplicate', event)) run(clip.duplicate);
       // Groups (legacy graph_ui.js:2550-2556): create, join, remove from. 群組（照舊產品）：建立、加入、移出。
       else if (!draft && network && matches('group', event)) run(grouping.create);
+      // Selection to subgraph (legacy graph_ui.js:2550; Refactor.111). 從選取建立子圖（照舊產品；R.111）。
+      else if (!draft && network && matches('subgraph', event)) run(() => session.selectionToSubgraph());
       else if (!draft && network && matches('joinGroup', event)) run(grouping.join);
       else if (!draft && network && matches('leaveGroup', event)) run(grouping.leave);
       // F frames the selection (all when none), H frames all (legacy graph_ui.js:2545, selection_ui.js:92). F 對準選取（沒選就全部）、

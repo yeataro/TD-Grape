@@ -75,7 +75,13 @@ export function CanvasMenu({ request, session, layout, clip, grouping, onCreate,
     ...count > 1 ? [{ key: 'group', group: 4, icon: 'group', label: tr('selection.group', 'Create group'), keys: 'group', run: grouping.create, disabled: !grouping.canCreate(ids) }] as Row[] : [],
     ...target ? [{ key: 'joinGroup', group: 4, icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), keys: 'joinGroup', run: grouping.join }] as Row[] : [],
     ...grouping.inGroup(ids) ? [{ key: 'leaveGroup', group: 4, icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), keys: 'leaveGroup', run: grouping.leave }] as Row[] : [],
-    { key: 'subgraph', group: 4, icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph'), keys: 'subgraph' },
+    // Subgraphs (Refactor.111; legacy graph_ui.js:2971-2982): make one from the selection; a single call can get its own copy of its
+    // definition. 子圖（R.111；照舊產品）：從選取建立；單一個呼叫可以拿到自己的定義複本。
+    ...count ? [{ key: 'subgraph', group: 4, icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph'), keys: 'subgraph',
+      disabled: !session.subgraphCandidates(ids).length, run: () => session.selectionToSubgraph(ids) }] as Row[] : [],
+    ...count === 1 && nodes[0]!.data.subgraph !== undefined ? [
+      { key: 'open', group: 4, icon: 'subgraph', label: tr('selection.openSubgraph', 'Open subgraph'), run: () => session.enterSubgraph(nodes[0]!.id) },
+      { key: 'unique', group: 4, label: tr('selection.makeUnique', 'Make single user (own copy of the subgraph)'), run: () => session.makeUnique(nodes[0]!.id) }] as Row[] : [],
     { key: 'linkLines', group: 5, label: tr('canvasMenu.linkLines', 'Show Link lines'), keys: 'linkLines', checked: false },
     { key: 'home', group: 5, icon: 'home', label: tr('canvasMenu.home', 'Home'), keys: 'home', run: () => frameNodes(flow) },
     ...count ? [{ key: 'frame', group: 5, icon: 'fitSelection', label: tr('selection.fit', 'Frame selected'), keys: 'frame', run: () => frameNodes(flow, ids) }] as Row[] : [],

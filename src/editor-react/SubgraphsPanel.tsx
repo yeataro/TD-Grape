@@ -68,7 +68,7 @@ function SubgraphsList({ definitions, counts, current }: { definitions: readonly
       message={tr('subgraphs.removeConfirm', 'The subgraph {name} is not called anywhere. Deleting it removes its definition from this graph.', { name: confirming.name })}
       confirmLabel={tr('subgraphs.remove', 'Delete')} onCancel={() => setConfirming(null)}
       onConfirm={() => { session.removeSubgraph(confirming.id); setConfirming(null); }} />}
-    <p className="hint">{say(tr('subgraphs.hint', 'The subgraphs of this graph. Double-click a card or a call node to open one; drag a card onto the canvas to add a call. Make one from a selection (Selection to subgraph) in the next round.'))}</p>
+    <p className="hint">{say(tr('subgraphs.hint', 'The subgraphs of this graph. Double-click a card or a call node to open one; drag a card onto the canvas to add a call; make one from selected nodes with Selection to subgraph.'))}</p>
     {!definitions.length && <p className="hint">{say(tr('subgraphs.none', 'No subgraphs yet.'))}</p>}
     {definitions.map(definition => <SubgraphCard key={definition.id} definition={definition} uses={counts.get(definition.id) ?? 0}
       current={definition.id === current} onRemove={() => setConfirming(definition)} />)}

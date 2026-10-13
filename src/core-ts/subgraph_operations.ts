@@ -6,6 +6,9 @@ import type { NodeModule } from './node_module';
 import type { PortSpec } from './ports';
 import { ScopeReferences } from './scope_references';
 import {types as valueTypes,fill,opaque} from './values';
+import { completeGroups, groupsOf } from './groups';
+import type { Registry } from './node_module';
+import type { Graph } from './model';
 
 export interface SubgraphOptions {id:string;name:string}
 export interface SelectionSubgraphOptions extends SubgraphOptions {
@@ -188,8 +191,12 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   };
   boundary('input',inputId,{x:24,y:144});
   boundary('output',outputId,{x:Math.max(...nodes.map(n => Number(n.ui!.x)))+288,y:144});
+  // A group whose members all move goes with them, as it is (amendment A8: complete groups and their text come along; a partial
+  // group stays outside with what is left of it — the tidy at the end of the change drops the moved members). 成員全被選的群組原樣跟著
+  // 進去（A8：完整群組與內文一起進；部分群組留在外面、剩下的成員還在——修改結束時的整理會拿掉搬走的成員）。
+  const groups = completeGroups(groupsOf(data),selected);
   const f:SubgraphData = {id:options.id,name:options.name,inputs,outputs,
-    graph:{nodes,edges,...(options.ui ? {ui:copy(options.ui)} : {})}};
+    graph:{nodes,edges,...(options.ui || groups.length ? {ui:{...copy(options.ui || {}),...(groups.length ? {groups:copy(groups) as unknown as Value} : {})}} : {})}};
   validate(graph,f);
   const callModule = structural(graph,'call');
   const call = authored(callModule,options.callId,{x,y},callModule.reference!(f.id));
@@ -200,6 +207,23 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   ScopeReferences.walk(graph.document,(ref,old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
     ScopeReferences.token('fn_'+f.id,ref.source) : old);
   return call;
+}
+
+/** The first definition that, through its calls, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
+ * a paste or a call placed inside a definition could make one, legacy clipboard.cycle). 第一份經由呼叫回到自己的定義；沒有就是 null
+ * （循環展不開；貼上或在定義裡放呼叫可能造成，照舊產品 clipboard.cycle）。 */
+export function subgraphCycle(g:Graph,registry:Registry):string|null {
+  const definitions = new Map((g.subgraphs || []).map(f => [f.id,f])),active = new Set<string>(),done = new Set<string>();
+  const visit = (id:string):string|null => {
+    if (active.has(id)) return id;
+    if (done.has(id)) return null;
+    const f = definitions.get(id);if (!f) return null;
+    active.add(id);
+    for (const n of f.graph.nodes) {const child = registry.get(n.nodeType)?.referencedGraph?.(n);if (child) {const found = visit(child);if (found) return found;}}
+    active.delete(id);done.add(id);return null;
+  };
+  for (const id of definitions.keys()) {const found = visit(id);if (found) return found;}
+  return null;
 }
 
 /** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct

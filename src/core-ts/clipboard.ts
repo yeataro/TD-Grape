@@ -1,4 +1,4 @@
-import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value } from './model';
+import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value, type SubgraphData } from './model';
 import type { GraphDocument } from './graph';
 import { freeName, namesIn, takesName } from './node_names';
 import { removable } from './structure';
@@ -27,7 +27,15 @@ export function copyNodes(graph: GraphDocument, ids: Iterable<string>, source: s
   const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
   const used = new Set(nodes.flatMap(node => { const id = graph.registry.get(node.nodeType)?.referencedDeclaration?.(node); return id ? [id] : []; }));
   const groups = completeGroups(groupsOf(network), kept);
+  // A copy always carries the definitions its calls use, with their whole dependency closure (basic design §3.13, amendment B4: the
+  // paste may land where the Library is not, so the content must travel). 複製永遠帶著呼叫用到的定義，連同完整的依賴閉包（§3.13、B4：
+  // 貼上的地方可能沒有 Library，內容必須跟著走）。
+  const byId = new Map((data.subgraphs ?? []).map(f => [f.id, f])), needed = new Map<string, SubgraphData>();
+  const visit = (id: string) => { const f = byId.get(id); if (!f || needed.has(id)) return; needed.set(id, f);
+    for (const n of f.graph.nodes) { const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n); if (ref) visit(ref); } };
+  for (const node of nodes) { const ref = graph.registry.get(node.nodeType)?.referencedGraph?.(node); if (ref) visit(ref); }
   return copy({ format: GRAPH_FORMAT, version: GRAPH_VERSION, target: data.target, declarations: data.declarations.filter(d => used.has(d.id)),
+    ...(needed.size ? { subgraphs: [...needed.values()] } : {}),
     stages: { pixel: { nodes, edges, ...(groups.length ? { ui: { groups: groups as unknown as Value } } : {}) } }, source });
 }
 
@@ -38,6 +46,7 @@ export function readClip(text: string): Clip | null {
   const clip = value as Partial<Clip> | null;
   if (formatProblem(value) || typeof clip?.source !== 'string') return null;
   const pixel = clip.stages?.pixel;
+  if (clip.subgraphs !== undefined && !Array.isArray(clip.subgraphs)) return null;
   return pixel && Array.isArray(pixel.nodes) && Array.isArray(pixel.edges) ? clip as Clip : null;
 }
 
@@ -55,26 +64,44 @@ const placeOf = (node: NodeData) => {
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
-export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string, networkId = 'pixel'): string[] {
+/** `sameSource`: the copy came from this very graph (the editor compares the Grape OP); `newSubgraphId` names definitions brought in.
+ * Definitions (basic design §3.13, amendment A5 rules 1–2): from the same graph, a definition still in the document is used as it is now
+ * (the call keeps its identity, even if the copy holds an older snapshot); one that is gone, or any from another graph, comes in under a
+ * new identity, the batch keeping its shared relations; locals are never merged by content. A definition carrying a Library ID is refused
+ * by the core (amendment B7). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義（§3.13、A5 第
+ * 1–2 條）：同圖、文件裡還在的定義就用現在這份（呼叫保留身分，即使複製裡是舊快照）；已刪的、或來自別張圖的，以新身分進來，同批保留彼此的
+ * 共用關係；本地永不按內容合併。帶 Library ID 的定義由核心拒絕（B7）。 */
+export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string,
+  networkId = 'pixel', newSubgraphId: () => string = newId, sameSource = true): string[] {
   const network = candidate.networks.get(networkId);
   if (!network) throw Error('No network to paste into');
+  const existing = new Set((candidate.document.subgraphs ?? []).map(f => f.id)), ids = new Map<string, string>(), pending: SubgraphData[] = [];
+  for (const f of clip.subgraphs ?? []) {
+    if (sameSource && existing.has(f.id)) continue;
+    ids.set(f.id, newSubgraphId()); pending.push(f);
+  }
+  if (pending.length) candidate.appendSubgraphs(pending, ids);
   for (const declaration of clip.declarations) {
     if (candidate.document.declarations.some(d => d.id === declaration.id)) continue;
     try { candidate.addDeclaration(copy(declaration)); } catch { /* its nodes stay ghosts 它的節點維持 Ghost */ }
   }
   const nodes = clip.stages.pixel!.nodes, { x, y } = clipCorner(clip);
-  const ids = new Map(nodes.map(node => [node.id, newId()])), taken = namesIn(network.data);
+  const taken = namesIn(network.data);
+  const nodeIds = new Map(nodes.map(node => [node.id, newId()]));
   const pasted: NodeData[] = nodes.map(node => {
     const place = placeOf(node);
-    const fresh: NodeData = { ...copy(node), id: ids.get(node.id)!, ui: { ...copy(node.ui ?? {}), x: place.x - x + at.x, y: place.y - y + at.y } };
+    const fresh: NodeData = { ...copy(node), id: nodeIds.get(node.id)!, ui: { ...copy(node.ui ?? {}), x: place.x - x + at.x, y: place.y - y + at.y } };
     if (node.name !== undefined && takesName(candidate.registry, node.nodeType)) { fresh.name = freeName(node.name, taken); taken.add(fresh.name); }
+    // A call follows its definition's new identity. 呼叫跟著定義的新身分。
+    const module = candidate.registry.get(node.nodeType), ref = module?.referencedGraph?.(node), mapped = ref && ids.get(ref);
+    if (module?.reference && mapped) fresh.params = { ...fresh.params, ...copy(module.reference(mapped)) };
     return fresh;
   });
-  const edges: EdgeData[] = clip.stages.pixel!.edges.filter(edge => ids.has(edge.from[0]) && ids.has(edge.to[0]))
-    .map(edge => ({ ...copy(edge), id: '', from: [ids.get(edge.from[0])!, edge.from[1]], to: [ids.get(edge.to[0])!, edge.to[1]] }));
+  const edges: EdgeData[] = clip.stages.pixel!.edges.filter(edge => nodeIds.has(edge.from[0]) && nodeIds.has(edge.to[0]))
+    .map(edge => ({ ...copy(edge), id: '', from: [nodeIds.get(edge.from[0])!, edge.from[1]], to: [nodeIds.get(edge.to[0])!, edge.to[1]] }));
   network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
   const groups = groupsOf(clip.stages.pixel!);
-  if (groups.length) addCopiedGroups(network, groups, ids, newGroupId);
+  if (groups.length) addCopiedGroups(network, groups, nodeIds, newGroupId);
   return pasted.map(node => node.id);
 }
 

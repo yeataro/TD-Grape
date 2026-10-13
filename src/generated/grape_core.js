@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -272,7 +272,7 @@ const groups_1 = require("./groups");
  * The copy is always written as a pixel network, whichever network it came from. 一張網路（networkId：stage 或 subgraph:+id；預設頂層
  * pixel）裡一些節點的複製；一個都不能複製時是 null（身分固定的節點不能：Color Output、子圖邊界節點）。不管從哪張網路複製，都寫成 pixel 網路。 */
 function copyNodes(graph, ids, source, networkId = 'pixel') {
-    var _a;
+    var _a, _b, _c, _d;
     const data = graph.document, network = (_a = graph.networks.get(networkId)) === null || _a === void 0 ? void 0 : _a.data, chosen = new Set(ids);
     if (!network)
         return null;
@@ -283,7 +283,29 @@ function copyNodes(graph, ids, source, networkId = 'pixel') {
     const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
     const used = new Set(nodes.flatMap(node => { var _a, _b; const id = (_b = (_a = graph.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedDeclaration) === null || _b === void 0 ? void 0 : _b.call(_a, node); return id ? [id] : []; }));
     const groups = (0, groups_1.completeGroups)((0, groups_1.groupsOf)(network), kept);
+    // A copy always carries the definitions its calls use, with their whole dependency closure (basic design §3.13, amendment B4: the
+    // paste may land where the Library is not, so the content must travel). 複製永遠帶著呼叫用到的定義，連同完整的依賴閉包（§3.13、B4：
+    // 貼上的地方可能沒有 Library，內容必須跟著走）。
+    const byId = new Map(((_b = data.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f])), needed = new Map();
+    const visit = (id) => {
+        var _a, _b;
+        const f = byId.get(id);
+        if (!f || needed.has(id))
+            return;
+        needed.set(id, f);
+        for (const n of f.graph.nodes) {
+            const ref = (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (ref)
+                visit(ref);
+        }
+    };
+    for (const node of nodes) {
+        const ref = (_d = (_c = graph.registry.get(node.nodeType)) === null || _c === void 0 ? void 0 : _c.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(_c, node);
+        if (ref)
+            visit(ref);
+    }
     return (0, model_1.copy)({ format: model_1.GRAPH_FORMAT, version: model_1.GRAPH_VERSION, target: data.target, declarations: data.declarations.filter(d => used.has(d.id)),
+        ...(needed.size ? { subgraphs: [...needed.values()] } : {}),
         stages: { pixel: { nodes, edges, ...(groups.length ? { ui: { groups: groups } } : {}) } }, source });
 }
 /** Read what the clipboard holds: a copy, or null when it is not one of ours (any other text). 讀剪貼簿：是我們的複製就回傳，不是就 null。 */
@@ -300,6 +322,8 @@ function readClip(text) {
     if ((0, model_1.formatProblem)(value) || typeof (clip === null || clip === void 0 ? void 0 : clip.source) !== 'string')
         return null;
     const pixel = (_a = clip.stages) === null || _a === void 0 ? void 0 : _a.pixel;
+    if (clip.subgraphs !== undefined && !Array.isArray(clip.subgraphs))
+        return null;
     return pixel && Array.isArray(pixel.nodes) && Array.isArray(pixel.edges) ? clip : null;
 }
 /** A copied node's place; a value that is not a number counts as 0 (only hand-made text has one). 複製的節點位置；不是數字的值當 0
@@ -316,36 +340,58 @@ const placeOf = (node) => {
  * 把複製貼進可編輯候選文件（在 GraphDocument.change 裡）的頂層 pixel 網路，左上角的節點角落放在 at；回傳新節點的 ID（照複製的順序）。
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
-function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel') {
+/** `sameSource`: the copy came from this very graph (the editor compares the Grape OP); `newSubgraphId` names definitions brought in.
+ * Definitions (basic design §3.13, amendment A5 rules 1–2): from the same graph, a definition still in the document is used as it is now
+ * (the call keeps its identity, even if the copy holds an older snapshot); one that is gone, or any from another graph, comes in under a
+ * new identity, the batch keeping its shared relations; locals are never merged by content. A definition carrying a Library ID is refused
+ * by the core (amendment B7). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義（§3.13、A5 第
+ * 1–2 條）：同圖、文件裡還在的定義就用現在這份（呼叫保留身分，即使複製裡是舊快照）；已刪的、或來自別張圖的，以新身分進來，同批保留彼此的
+ * 共用關係；本地永不按內容合併。帶 Library ID 的定義由核心拒絕（B7）。 */
+function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', newSubgraphId = newId, sameSource = true) {
+    var _a, _b;
     const network = candidate.networks.get(networkId);
     if (!network)
         throw Error('No network to paste into');
+    const existing = new Set(((_a = candidate.document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => f.id)), ids = new Map(), pending = [];
+    for (const f of (_b = clip.subgraphs) !== null && _b !== void 0 ? _b : []) {
+        if (sameSource && existing.has(f.id))
+            continue;
+        ids.set(f.id, newSubgraphId());
+        pending.push(f);
+    }
+    if (pending.length)
+        candidate.appendSubgraphs(pending, ids);
     for (const declaration of clip.declarations) {
         if (candidate.document.declarations.some(d => d.id === declaration.id))
             continue;
         try {
             candidate.addDeclaration((0, model_1.copy)(declaration));
         }
-        catch ( /* its nodes stay ghosts 它的節點維持 Ghost */_a) { /* its nodes stay ghosts 它的節點維持 Ghost */ }
+        catch ( /* its nodes stay ghosts 它的節點維持 Ghost */_c) { /* its nodes stay ghosts 它的節點維持 Ghost */ }
     }
     const nodes = clip.stages.pixel.nodes, { x, y } = clipCorner(clip);
-    const ids = new Map(nodes.map(node => [node.id, newId()])), taken = (0, node_names_1.namesIn)(network.data);
+    const taken = (0, node_names_1.namesIn)(network.data);
+    const nodeIds = new Map(nodes.map(node => [node.id, newId()]));
     const pasted = nodes.map(node => {
-        var _a;
+        var _a, _b;
         const place = placeOf(node);
-        const fresh = { ...(0, model_1.copy)(node), id: ids.get(node.id), ui: { ...(0, model_1.copy)((_a = node.ui) !== null && _a !== void 0 ? _a : {}), x: place.x - x + at.x, y: place.y - y + at.y } };
+        const fresh = { ...(0, model_1.copy)(node), id: nodeIds.get(node.id), ui: { ...(0, model_1.copy)((_a = node.ui) !== null && _a !== void 0 ? _a : {}), x: place.x - x + at.x, y: place.y - y + at.y } };
         if (node.name !== undefined && (0, node_names_1.takesName)(candidate.registry, node.nodeType)) {
             fresh.name = (0, node_names_1.freeName)(node.name, taken);
             taken.add(fresh.name);
         }
+        // A call follows its definition's new identity. 呼叫跟著定義的新身分。
+        const module = candidate.registry.get(node.nodeType), ref = (_b = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node), mapped = ref && ids.get(ref);
+        if ((module === null || module === void 0 ? void 0 : module.reference) && mapped)
+            fresh.params = { ...fresh.params, ...(0, model_1.copy)(module.reference(mapped)) };
         return fresh;
     });
-    const edges = clip.stages.pixel.edges.filter(edge => ids.has(edge.from[0]) && ids.has(edge.to[0]))
-        .map(edge => ({ ...(0, model_1.copy)(edge), id: '', from: [ids.get(edge.from[0]), edge.from[1]], to: [ids.get(edge.to[0]), edge.to[1]] }));
+    const edges = clip.stages.pixel.edges.filter(edge => nodeIds.has(edge.from[0]) && nodeIds.has(edge.to[0]))
+        .map(edge => ({ ...(0, model_1.copy)(edge), id: '', from: [nodeIds.get(edge.from[0]), edge.from[1]], to: [nodeIds.get(edge.to[0]), edge.to[1]] }));
     network.insertFragment({ nodes: pasted, edges }, { unavailable: 'preserve' });
     const groups = (0, groups_1.groupsOf)(clip.stages.pixel);
     if (groups.length)
-        (0, groups_1.addCopiedGroups)(network, groups, ids, newGroupId);
+        (0, groups_1.addCopiedGroups)(network, groups, nodeIds, newGroupId);
     return pasted.map(node => node.id);
 }
 /** Where the copied nodes start: their top-left corner, for Duplicate's offset. 複製的節點從哪裡開始：左上角，給複製副本位移用。 */
@@ -1445,6 +1491,12 @@ class GraphDocument {
             // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
             (0, capacity_1.requireCapacity)(before, after, this.registry);
             (0, structure_1.requireStructure)(before, after, this.registry);
+            // A subgraph that reaches itself through its calls cannot be expanded: an edit that makes such a cycle is refused as a whole;
+            // a graph opened with one stays editable (the compiler reports it). 經由呼叫回到自己的子圖展不開：造成這種循環的修改整筆拒絕；
+            // 開圖時已有的照樣能編（編譯器會報）。
+            const cycle = (0, subgraph_operations_1.subgraphCycle)(after, this.registry);
+            if (cycle && !(0, subgraph_operations_1.subgraphCycle)(before, this.registry))
+                throw Object.assign(Error('Subgraph reference cycle: ' + cycle), { code: 'subgraph.cycle', subgraphId: cycle });
             return { before, after, changes: (0, changes_1.changesBetween)(before, after, this.registry) };
         }
         finally {
@@ -6256,6 +6308,7 @@ exports.insertSubgraph = insertSubgraph;
 exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
 exports.subgraphFromSelection = subgraphFromSelection;
+exports.subgraphCycle = subgraphCycle;
 exports.callCounts = callCounts;
 exports.removeSubgraph = removeSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
@@ -6264,6 +6317,7 @@ const model_1 = require("./model");
 const config_1 = require("./config");
 const scope_references_1 = require("./scope_references");
 const values_1 = require("./values");
+const groups_1 = require("./groups");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
 /** A new port identity: random and unique like node and edge IDs (Q44); the number after `in`/`out` is not an identity
  * (basic design §4 row 6). 新接口的身分：和節點、接線一樣隨機、不重複；序號不是身分。 */
@@ -6468,8 +6522,12 @@ function subgraphFromSelection(network, selection, options) {
     };
     boundary('input', inputId, { x: 24, y: 144 });
     boundary('output', outputId, { x: Math.max(...nodes.map(n => Number(n.ui.x))) + 288, y: 144 });
+    // A group whose members all move goes with them, as it is (amendment A8: complete groups and their text come along; a partial
+    // group stays outside with what is left of it — the tidy at the end of the change drops the moved members). 成員全被選的群組原樣跟著
+    // 進去（A8：完整群組與內文一起進；部分群組留在外面、剩下的成員還在——修改結束時的整理會拿掉搬走的成員）。
+    const groups = (0, groups_1.completeGroups)((0, groups_1.groupsOf)(data), selected);
     const f = { id: options.id, name: options.name, inputs, outputs,
-        graph: { nodes, edges, ...(options.ui ? { ui: (0, model_1.copy)(options.ui) } : {}) } };
+        graph: { nodes, edges, ...(options.ui || groups.length ? { ui: { ...(0, model_1.copy)(options.ui || {}), ...(groups.length ? { groups: (0, model_1.copy)(groups) } : {}) } } : {}) } };
     validate(graph, f);
     const callModule = structural(graph, 'call');
     const call = authored(callModule, options.callId, { x, y }, callModule.reference(f.id));
@@ -6482,6 +6540,40 @@ function subgraphFromSelection(network, selection, options) {
     scope_references_1.ScopeReferences.walk(graph.document, (ref, old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
         scope_references_1.ScopeReferences.token('fn_' + f.id, ref.source) : old);
     return call;
+}
+/** The first definition that, through its calls, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
+ * a paste or a call placed inside a definition could make one, legacy clipboard.cycle). 第一份經由呼叫回到自己的定義；沒有就是 null
+ * （循環展不開；貼上或在定義裡放呼叫可能造成，照舊產品 clipboard.cycle）。 */
+function subgraphCycle(g, registry) {
+    const definitions = new Map((g.subgraphs || []).map(f => [f.id, f])), active = new Set(), done = new Set();
+    const visit = (id) => {
+        var _a, _b;
+        if (active.has(id))
+            return id;
+        if (done.has(id))
+            return null;
+        const f = definitions.get(id);
+        if (!f)
+            return null;
+        active.add(id);
+        for (const n of f.graph.nodes) {
+            const child = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (child) {
+                const found = visit(child);
+                if (found)
+                    return found;
+            }
+        }
+        active.delete(id);
+        done.add(id);
+        return null;
+    };
+    for (const id of definitions.keys()) {
+        const found = visit(id);
+        if (found)
+            return found;
+    }
+    return null;
 }
 /** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
  * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */

@@ -10,7 +10,7 @@ import { requireStructure } from './structure';
 export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
-import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph } from './subgraph_operations';
+import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph, subgraphCycle } from './subgraph_operations';
 import { appendSubgraphs, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
 import type { Declaration } from './model';
@@ -403,6 +403,11 @@ export class GraphDocument {
       // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
       requireCapacity(before,after,this.registry);
       requireStructure(before,after,this.registry);
+      // A subgraph that reaches itself through its calls cannot be expanded: an edit that makes such a cycle is refused as a whole;
+      // a graph opened with one stays editable (the compiler reports it). 經由呼叫回到自己的子圖展不開：造成這種循環的修改整筆拒絕；
+      // 開圖時已有的照樣能編（編譯器會報）。
+      const cycle=subgraphCycle(after,this.registry);
+      if(cycle&&!subgraphCycle(before,this.registry))throw Object.assign(Error('Subgraph reference cycle: '+cycle),{code:'subgraph.cycle',subgraphId:cycle});
       return {before,after,changes:changesBetween(before,after,this.registry)};
     }finally{candidate.close();}
   }

@@ -37,6 +37,7 @@
   "sources.time": "Time",
   "subgraph.addInput": "Add input",
   "subgraph.addOutput": "Add output",
+  "subgraph.cycle": "A subgraph cannot call itself, directly or through another subgraph",
   "subgraph.inUse": "The subgraph is still used by a call node",
   "subgraph.library": "Subgraph definitions from a Library are not supported in this version",
   "subgraph.portLimit": "A subgraph supports up to 16 ports per side",

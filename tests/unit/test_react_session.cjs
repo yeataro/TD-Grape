@@ -1822,7 +1822,7 @@ test('subgraphs: entering shows the definition network, the path and ×N; up ret
   session.history(true); session.history(true); assert.equal(session.graph().subgraphs.length, 1);
 });
 
-test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; no call inside a subgraph yet', t => {
+test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; a subgraph cannot call itself', t => {
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); c.networks.get('pixel').instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); });
   session.enterSubgraph('call1');
@@ -1845,15 +1845,17 @@ test('subgraphs: the interface is edited from inside; a wire on a boundary spare
   const callNow = () => session.graph().stages.pixel.nodes.find(n => n.id === 'call1');
   session.history(false); assert.equal(session.currentSubgraph().inputs.length, 2, 'one Undo per step');
   session.history(true);
-  // A call cannot be placed inside a subgraph yet (amendment A3): refused with a warning, nothing changes. 子圖裡還不能放呼叫（A3）：拒絕並警告，什麼都不變。
+  // A call of the subgraph itself cannot be placed inside it (a cycle, Refactor.111): refused by the core's gate, said as a warning, nothing
+  // changes. 子圖裡不能放它自己的呼叫（循環，R.111）：核心關卡拒絕、以警告說出、什麼都不變。
   const version = session.snapshot().version;
   session.placeSubgraph('gain', { x: 0, y: 0 });
-  assert.equal(session.snapshot().version, version); assert.match(zh(session.snapshot().message), /還不能把子圖放進子圖/);
-  // Copy and paste work inside the subgraph; a copy holding a call is refused inside. 子圖裡能複製貼上；含呼叫的複製在裡面拒絕。
+  assert.equal(session.snapshot().version, version); assert.match(zh(session.snapshot().message), /呼叫到自己/);
+  // Copy and paste work inside the subgraph; a copy holding a call of the subgraph itself is refused inside (the same cycle). 子圖裡能
+  // 複製貼上；含它自己的呼叫的複製在裡面拒絕（同一種循環）。
   const clip = session.copyNodes(['m']);
   assert.ok(session.paste(clip, { x: 10, y: 10 })); assert.equal(session.graph().subgraphs[0].graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.multiply').length, 2);
   session.goUp(); const callClip = session.copyNodes(['call1']); session.enterSubgraph('call1');
-  assert.equal(session.paste(callClip, { x: 0, y: 0 }), false); assert.match(zh(session.snapshot().message), /還不能把子圖放進子圖/);
+  assert.equal(session.paste(callClip, { x: 0, y: 0 }), false); assert.match(zh(session.snapshot().message), /呼叫到自己/);
   // The call outside follows the interface (the core keeps it in step). 外面的呼叫跟著介面走（核心讓它跟上）。
   session.goUp();
   assert.deepEqual(clone(session.snapshot().projection.nodes.find(n => n.id === 'call1').data.inputs.map(p => p.type)), ['vec4', 'vec2', 'float']);
@@ -1862,4 +1864,66 @@ test('subgraphs: the interface is edited from inside; a wire on a boundary spare
   assert.equal(session.callCounts().get('gain'), 1);
   const before = clone(session.graph()); session.removeSubgraph('gain'); assert.deepEqual(clone(session.graph()), before);
   session.renameSubgraph('gain', ' Tint '); assert.equal(session.definitions()[0].name, 'Tint');
+});
+
+// C level (basic design §3.2–3.3, §3.10, §3.13, amendment A5; Refactor.111): selection to subgraph, Make Single User, copy and paste with
+// definitions, nesting. C 級（R.111）：從選取建立、設為唯一、複製貼上帶定義、巢狀。
+test('subgraphs: selection to subgraph moves the nodes, keeps a shared source outside as a named input, carries whole groups; the call is selected', t => {
+  const { session } = open(t);
+  session.transactGraph('setup', c => {
+    c.addDeclaration({ id: 'k1', kind: 'constant', name: 'kGain', type: 'float', value: 2 });
+    const net = c.networks.get('pixel'), policy = GrapeGraph.values.policy;
+    net.insert({ id: 'ref', nodeType: 'sgrape.builtin.declaration', params: { declarationId: 'k1' }, ui: { x: 0, y: 0 } });
+    net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), policy);
+    net.connect(net.node('ref').outputs[0], net.node('sum').port('input', 'b'), policy);
+    GrapeGraph.groups.createGroup(net, ['a', 'sum'], { id: 'g1', name: 'Pair' });
+  });
+  // The reference node is selected too, but stays outside (legacy SubgraphSourcePolicy). 引用節點也被選，但留在外面（照舊產品）。
+  assert.deepEqual(clone(session.subgraphCandidates(['a', 'sum', 'ref', 'pixel_out'])), ['a', 'sum']);
+  const id = session.selectionToSubgraph(['a', 'sum', 'ref']);
+  assert.ok(id);
+  const f = session.graph().subgraphs.find(x => x.id === id);
+  assert.equal(f.name, 'Subgraph_1');
+  assert.deepEqual(clone(f.graph.nodes.map(n => n.id).sort()), ['a', 'input', 'output', 'sum']);
+  assert.deepEqual(clone(f.inputs.map(p => [p.label, p.type])), [['kGain', 'float']], 'the input is named after the shared source');
+  assert.deepEqual(clone(GrapeGraph.groups.groupsOf(f.graph).map(g => [g.name, g.nodes])), [['Pair', ['a', 'sum']]]);
+  const pixel = session.graph().stages.pixel;
+  assert.ok(pixel.nodes.some(n => n.id === 'ref') && !pixel.nodes.some(n => n.id === 'a'));
+  const call = pixel.nodes.find(n => n.nodeType === 'sgrape.builtin.subgraph_call');
+  assert.equal(call.params.subgraphId, id); assert.equal(call.name, 'Subgraph_1');
+  assert.ok(pixel.edges.some(e => e.from[0] === 'ref' && e.to[0] === call.id), 'the source feeds the call');
+  assert.deepEqual([...session.selectionSnapshot()], [call.id]);
+  session.history(false); assert.equal(session.graph().subgraphs.length, 0); assert.ok(session.graph().stages.pixel.nodes.some(n => n.id === 'a'));
+  // Nothing eligible: said, nothing done. 沒有能進的：說一聲、不做。
+  assert.equal(session.selectionToSubgraph(['pixel_out']), null); assert.match(zh(session.snapshot().message), /先選取/);
+});
+
+test('subgraphs: Make Single User copies the definition for one call; paste from the same graph keeps the definition, a foreign one comes in new; nesting works', t => {
+  const { session } = open(t);
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
+    net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
+  session.makeUnique('call2');
+  const own = session.graph().stages.pixel.nodes.find(n => n.id === 'call2').params.subgraphId;
+  assert.notEqual(own, 'gain'); assert.equal(session.graph().subgraphs.find(f => f.id === own).name, 'Gain_1');
+  assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === 'call1').params.subgraphId, 'gain');
+  // Same graph: the pasted call keeps the definition (the count grows). 同圖：貼上的呼叫沿用定義（數量變多）。
+  const clip = session.copyNodes(['call1']);
+  assert.deepEqual(clone(clip.subgraphs.map(f => f.id)), ['gain']);
+  assert.ok(session.paste(clip, { x: 50, y: 50 }));
+  assert.equal(session.callCounts().get('gain'), 2); assert.equal(session.graph().subgraphs.length, 2);
+  // Another Grape OP is still refused by the editor (human 2026-10-12). 別的 Grape OP 的複製編輯器仍拒絕（人類 10-12）。
+  assert.equal(session.paste({ ...clip, source: 'f'.repeat(32) }, { x: 0, y: 0 }), false);
+  // A definition this graph does not have comes in under a new identity (A5 rule 1: the original is gone). 這張圖沒有的定義以新身分進來。
+  const foreign = JSON.parse(JSON.stringify(clip)); foreign.subgraphs[0].id = 'elsewhere'; foreign.stages.pixel.nodes[0].params.subgraphId = 'elsewhere';
+  assert.ok(session.paste(foreign, { x: 0, y: 0 }));
+  assert.equal(session.graph().subgraphs.length, 3); assert.ok(!session.graph().subgraphs.some(f => f.id === 'elsewhere'));
+  // Nesting: a call placed inside another subgraph; the counts follow. 巢狀：在另一個子圖裡放呼叫；數量跟著。
+  session.enterDefinition(own);
+  session.placeSubgraph('gain', { x: 0, y: 0 });
+  assert.equal(session.graph().subgraphs.find(f => f.id === own).graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.subgraph_call').length, 1);
+  assert.equal(session.callCounts().get('gain'), 3);
+  // Inside the nested call the path has two levels; the path bar's level buttons go back. 進到巢狀呼叫裡路徑兩層；路徑列的層級按鈕回去。
+  const nested = session.snapshot().projection.nodes.find(n => n.data.subgraph === 'gain');
+  session.enterSubgraph(nested.id); assert.deepEqual(clone(session.snapshot().trail), [own, 'gain']);
+  session.goToDepth(1); assert.deepEqual(clone(session.snapshot().trail), [own]);
 });

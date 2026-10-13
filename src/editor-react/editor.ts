@@ -43,6 +43,8 @@ const newId = () => 'n' + randomHex(32);
 const newGroupId = () => 'g' + randomHex(16);
 /** A new declaration's ID. 新宣告的 ID。 */
 const newDeclarationId = () => 'd' + randomHex(16);
+/** A new subgraph definition's ID (Refactor.111). 新子圖定義的 ID（R.111）。 */
+const newSubgraphId = () => 's' + randomHex(24);
 /** A stored graph read for editing, the one way every graph comes in (Refactor.65, 98): its nodes in their current forms, checked that
  * it can be opened, then its groups tidied (1-2) — checked first, so a graph in another format is refused with its own message
  * instead of failing while being tidied. Nothing changed gives the same object back, so a caller can tell (useRemote).
@@ -500,9 +502,9 @@ export class Editor {
   };
   /** Delete a definition nobody calls, from the subgraph panel (basic design §3.9). 從子圖面板刪掉沒人呼叫的定義（§3.9）。 */
   removeSubgraph = (id: string) => this.transactGraph(tr('subgraph.removed', 'Subgraph deleted'), document => document.removeSubgraph(id));
-  /** Place a call to a definition (the subgraph panel's Add to graph, or a card dragged onto the canvas). Inside a subgraph it is refused
-   * for now (basic design amendment A3: nested calls are made in the C round). 放一個呼叫節點（子圖面板的加到圖上、卡片拖到畫布）。在子圖裡
-   * 目前拒絕（附錄一 A3：巢狀呼叫在 C 那一輪）。 */
+  /** Place a call to a definition (the subgraph panel's Add to graph, or a card dragged onto the canvas); inside a subgraph too (nesting,
+   * amendment A3 C level) — one that would call itself is refused by the core's gate. 放一個呼叫節點（子圖面板的加到圖上、卡片拖到畫布）；
+   * 在子圖裡也可以（巢狀，A3 C 級）——會呼叫到自己的由核心關卡拒絕。 */
   placeSubgraph = (id: string, position: XYPosition) => {
     const module = core.registry.modules.find(m => m.structural && m.reference);
     if (!module) return;
@@ -514,12 +516,40 @@ export class Editor {
     this.boxSelect(new Set(nodes), nodes);
     return nodes;
   };
-  /** Whether adding this node here is refused: a call inside a subgraph, until the C round. 在這裡新增這個節點是否被拒：子圖裡的呼叫節點，C 那一輪之前。 */
-  private nestedCall(nodeType: string) {
-    if (!this.trail.length || !core.registry.get(nodeType)?.referencedGraph) return false;
-    this.warn(tr('subgraph.nestedNotYet', 'A subgraph cannot be placed inside a subgraph yet; add it at the top level.'));
-    return true;
-  }
+  /** The selected nodes that can go into a subgraph (basic design §3.2; legacy groupSelection, functions_ui.js:277): not a node with a
+   * fixed identity (Color Output, a boundary), not a reference to a shared source — those stay outside and become inputs (legacy
+   * SubgraphSourcePolicy). 能進子圖的選取節點（§3.2；照舊產品）：身分固定的不行（Color Output、邊界），引用共用來源的不行——它們留在外面、
+   * 變成輸入（照舊產品的來源政策）。 */
+  subgraphCandidates = (ids: readonly string[]) => ids.filter(id => {
+    const node = this.net().node(id), module = node.definition;
+    return !!node.data && !!module && core.removable(module) && !module.referencedDeclaration;
+  });
+  /** Selection to subgraph (basic design §3.2–3.3; legacy functions_ui.js:277 groupSelection): the chosen nodes, the wires between
+   * them and their complete groups move into a new definition; a wire crossing the edge becomes a port — an input labelled after the
+   * source it came from (a shared source's name, else the port), an output after the port — and the call takes the selection's place,
+   * selected. One step, one Undo. 從選取建立子圖（§3.2–3.3；照舊產品）：選到的節點、其間的線、完整的群組搬進新定義；跨過邊界的線變成接口
+   * ——輸入照它來自的來源取標籤（共用來源的名字，否則接孔名）、輸出照接孔——呼叫節點放在選取的位置、被選取。一步、一次 Undo。 */
+  selectionToSubgraph = (ids: readonly string[] = this.selectedInOrder()) => {
+    const chosen = this.subgraphCandidates(ids);
+    if (!chosen.length) { this.warn(tr('subgraph.nothingToGroup', 'Select nodes that can go into a subgraph first.')); return null; }
+    const id = newSubgraphId(), callId = newId(), declarations = this.document.document.declarations, version = this.state.version;
+    const name = core.freeName('Subgraph_1', new Set(this.definitions().map(f => f.name)), 80);
+    this.transact(tr('subgraph.made', 'Subgraph {name} made from the selection', { name }), net => {
+      const call = net.subgraphFromSelection(new Set(chosen), { id, callId, name,
+        inputName: (source, _port, fallback) => { const ref = core.registry.get(source.nodeType)?.referencedDeclaration?.(source); return (ref && declarations.find(d => d.id === ref)?.name) || fallback; } });
+      call.update({ ...nameFor(net, call.data!.nodeType) });
+    });
+    if (this.state.version === version) return null;
+    this.boxSelect(new Set([callId]), [callId]);
+    return id;
+  };
+  /** Make Single User (basic design §3.10; legacy Make Independent): this call gets a copy of its definition, named by the one rule; the
+   * other calls keep the shared one. 設為唯一（§3.10；照舊產品 Make Independent）：這個呼叫拿到定義的複本（照同一套命名）；其他呼叫仍共用原來的。 */
+  makeUnique = (callId: string) => this.transact(tr('subgraph.madeUnique', 'This call now has its own subgraph'), net => {
+    const node = net.node(callId);
+    if (!node.data || !node.definition?.referencedGraph) throw Error('Not a subgraph call');
+    net.independentSubgraph(node, newSubgraphId);
+  });
   /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
    * 這張圖有的 Stage，照編輯器顯示的順序（只列圖裡有的）。 */
   stageNames = () => ['vertex', 'pixel'].filter(name => name in this.document.document.stages);
@@ -555,6 +585,11 @@ export class Editor {
   notice = (error: unknown) => {
     const declaration = declarationMessage(error);
     if (declaration) { this.tell('warning', declaration); return; }
+    // The core's subgraph refusals, by code (Refactor.111). 核心對子圖的拒絕，依代號（R.111）。
+    const code = (error as { code?: string } | null)?.code;
+    if (code === 'subgraph.cycle') { this.warn(tr('subgraph.cycleRefused', 'Not done: the subgraph would call itself (directly or through another subgraph).')); return; }
+    if (code === 'subgraph.library') { this.warn(tr('subgraph.libraryRefused', 'Not done: a subgraph from a Library is not supported in this version.')); return; }
+    if (code === 'subgraph.inUse') { this.warn(tr('subgraph.inUseRefused', 'Not done: the subgraph is still called; delete its calls first.')); return; }
     const limit = capacityMessage(error) ?? structureMessage(error);
     this.tell(limit ? 'warning' : 'error', limit ?? errorText(error));
   };
@@ -689,10 +724,8 @@ export class Editor {
   add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
-  addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) => {
-    if ('nodeType' in spec && this.nestedCall(spec.nodeType)) return;
+  addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) =>
     this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => { this.insertWired(document, spec, position, wire); });
-  };
   /** What adding this node (wired when given) would draw, rehearsed on a discarded candidate with the same edit as addNode
    * (Refactor.105: place a node): the new node and the wires touching it, as the canvas draws them. null: adding it fails.
    * 新增這個節點（有給線就接上）會畫出什麼，用和 addNode 同一個修改在丟棄的候選上預演（R.105：放置節點）：新節點與碰到它的線，
@@ -899,12 +932,11 @@ export class Editor {
       this.warn(tr('edit.pasteOtherOp', 'Pasting nodes copied from another Grape OP is not available yet.'));
       return false;
     }
-    // Pasted into the network being edited; a copy holding subgraph calls is not pasted inside a subgraph yet (amendment A3, C round).
-    // 貼進正在編輯的網路；含子圖呼叫的複製目前不貼進子圖裡（附錄一 A3，C 那一輪）。
-    if (this.trail.length && clip.stages.pixel?.nodes.some(node => this.nestedCall(node.nodeType))) return false;
+    // Pasted into the network being edited, with the definitions the copy carries (basic design §3.13, amendment A5; core clipboard.ts).
+    // 貼進正在編輯的網路，連同複製帶著的定義（§3.13、A5；核心 clipboard.ts）。
     let ids: string[] = [];
     const version = this.state.version;
-    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId, newGroupId, this.networkId()); });
+    this.transactGraph(label, document => { ids = core.pasteClip(document, clip, at, newId, newGroupId, this.networkId(), newSubgraphId, clip.source === this.host.target); });
     if (this.state.version === version || !ids.length) return false;
     this.boxSelect(new Set(ids), [...ids].reverse());
     return true;
