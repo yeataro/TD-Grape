@@ -59,14 +59,16 @@ test('nested compilation keeps graph ownership, bindings and diagnostics scoped 
  g.subgraphs[0].graph.nodes[1].inputValues.b=NaN;
  assert.throws(()=>compiler.compile(g),error=>error.node==='mul'&&error.subgraphId==='gain'&&error.trail[0]==='gain');
 });
-test('subgraph validation rejects cycles, duplicate boundaries and invalid unused definitions before returning code',()=>{
+test('subgraph validation rejects cycles and duplicate boundaries before returning code; a wire to a missing port is a ghost wire',()=>{
  const compiler=c.GrapeTopCompiler;
  const cycle=sharedGraph();cycle.subgraphs[0].graph.nodes.push(node('recurse','subgraph_call',{subgraphId:'wrapper'}));
  assert.equal(compiler.supports(cycle),true);assert.throws(()=>compiler.compile(cycle),/reference cycle/);
  const duplicate=sharedGraph();duplicate.subgraphs[0].graph.nodes.push(node('in2','subgraph_input'));
  assert.throws(()=>compiler.compile(duplicate),/Exactly one/);
  const unused=sharedGraph();unused.subgraphs.push({...plain(unused.subgraphs[0]),id:'unused'});unused.subgraphs[2].graph.edges[0].to[1]='missing';
- assert.throws(()=>compiler.compile(unused),error=>error.subgraphId==='unused'&&error.node==='mul');
+ // A wire to a port that is gone is a ghost wire (Q37 1-3, TECH-2), and an unused definition does not block code (A8, TECH-3).
+ // 接到已不存在接孔的線是 Ghost 線；沒被引用的定義不擋產碼。
+ assert.doesNotThrow(()=>compiler.compile(unused));
  const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';assert.equal(compiler.supports(unsupported),false);
  // An opaque port is a built-in type the host passes, on either side (amendment A1). opaque 接口是宿主能傳的內建型別，兩邊都可。
  const opaque=sharedGraph();opaque.subgraphs[0].inputs[0]={id:'value',type:'sampler2D'};opaque.subgraphs[0].outputs[0]={id:'result',type:'sampler2D'};

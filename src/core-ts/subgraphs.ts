@@ -72,7 +72,6 @@ export class Subgraph {
     // Prepare every patch before mutation, including instance defaults.
     const patches:{node:Node;values:Record<string,Value>}[] = [];
     const removed = edit.kind === 'remove' ? edit.id : null;
-    const changed = edit.kind === 'update' && next[index]!.type !== list[index]!.type ? next[index]! : null;
     const networks = [
       ...Object.values(this.graph.document.stages),
       ...(this.graph.document.subgraphs || []).map(d => d.graph)
@@ -86,14 +85,8 @@ export class Subgraph {
     };
     for (const data of networks) for (const n of data.nodes) {
       if (affected(n,data) !== 'input' || !n.inputValues) continue;
-      const values = copy(n.inputValues);
-      if (removed) delete values[removed];
-      if (changed && Object.prototype.hasOwnProperty.call(values,changed.id)) {
-        // An instance value follows the new shape; an opaque port keeps none. 實例值跟著新形狀；opaque 接口沒有實例值。
-        if (opaque.includes(changed.type)) delete values[changed.id];
-        else values[changed.id] = reshape(values[changed.id]!,changed.type);
-      }
-      patches.push({node:n,values});
+      // An instance value follows the new interface (fitInstanceValues). 實例值跟著新接口。
+      patches.push({node:n,values:fitInstanceValues(n.inputValues,next)});
     }
     f[direction] = next;
     for (const patch of patches) patch.node.inputValues = patch.values;
@@ -104,4 +97,19 @@ export class Subgraph {
         !(nodes.get(e.to[0]) === 'input' && e.to[1] === removed));
     }
   }
+}
+
+/** A call's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
+ * dropped, an opaque port keeps none, a numeric value takes its port's shape, and one that cannot falls back to the port default.
+ * Values not given stay not given. One rule for an interface edit and for pasting a call copied before the interface changed.
+ * 呼叫的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
+ * 改接口與貼上舊呼叫用同一條規則。 */
+export function fitInstanceValues(values:Readonly<Record<string,Value>>,ports:readonly InterfacePort[]):Record<string,Value> {
+  const fitted:Record<string,Value> = {};
+  for (const [key,value] of Object.entries(values)) {
+    const p = ports.find(port => port.id === key);
+    if (!p || opaque.includes(p.type)) continue;
+    try { fitted[key] = reshape(value,p.type); } catch { /* the port default applies 用接口預設 */ }
+  }
+  return fitted;
 }

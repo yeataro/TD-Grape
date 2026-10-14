@@ -267,6 +267,8 @@ const model_1 = require("./model");
 const node_names_1 = require("./node_names");
 const structure_1 = require("./structure");
 const groups_1 = require("./groups");
+const subgraph_operations_1 = require("./subgraph_operations");
+const subgraphs_1 = require("./subgraphs");
 /** The copy of some nodes of one network (`networkId`: a stage, or 'subgraph:'+id; the top-level pixel network by default), or
  * null when none of them can be copied (a node with a fixed identity cannot: the Color Output, a subgraph boundary; structure.ts).
  * The copy is always written as a pixel network, whichever network it came from. 一張網路（networkId：stage 或 subgraph:+id；預設頂層
@@ -341,26 +343,49 @@ const placeOf = (node) => {
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
 /** `sameSource`: the copy came from this very graph (the editor compares the Grape OP); `newSubgraphId` names definitions brought in.
- * Definitions (basic design §3.13, amendment A5 rules 1–2): from the same graph, a definition still in the document is used as it is now
- * (the call keeps its identity, even if the copy holds an older snapshot); one that is gone, or any from another graph, comes in under a
- * new identity, the batch keeping its shared relations; locals are never merged by content. A definition carrying a Library ID is refused
- * by the core (amendment B7). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義（§3.13、A5 第
- * 1–2 條）：同圖、文件裡還在的定義就用現在這份（呼叫保留身分，即使複製裡是舊快照）；已刪的、或來自別張圖的，以新身分進來，同批保留彼此的
- * 共用關係；本地永不按內容合併。帶 Library ID 的定義由核心拒絕（B7）。 */
+ * Definitions (basic design §3.13, amendment A5 rules 1–2, amendment 2 B3): from the same graph, a pasted call whose definition is
+ * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted calls need
+ * that is gone comes back under a new identity together with everything it depends on in the copy (its dependencies are never
+ * resolved to the current ones); from another graph the whole copied closure comes in under new identities. One batch keeps its
+ * shared relations; locals are never merged by content. Every definition in the copy is validated first; one carrying a Library ID
+ * refuses the paste (amendment 2 B7-5). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義
+ * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的呼叫所指的定義還在就用現在這份，實例值對齊目前接口；呼叫需要、但已刪的定義以新身分
+ * 回來，連同它在複製裡的所有依賴（依賴不改指現有的）；別張圖時整個閉包以新身分進來。同批保留共用關係；本地永不按內容合併。複製裡每份定義
+ * 先驗證；帶 Library ID 的整筆拒絕（B7-5）。 */
 function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', newSubgraphId = newId, sameSource = true) {
     var _a, _b;
     const network = candidate.networks.get(networkId);
     if (!network)
         throw Error('No network to paste into');
-    const existing = new Set(((_a = candidate.document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => f.id)), ids = new Map(), pending = [];
-    for (const f of (_b = clip.subgraphs) !== null && _b !== void 0 ? _b : []) {
-        if (sameSource && existing.has(f.id))
-            continue;
-        ids.set(f.id, newSubgraphId());
-        pending.push(f);
-    }
-    if (pending.length)
-        candidate.appendSubgraphs(pending, ids);
+    const snapshot = new Map(((_a = clip.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f]));
+    // Every definition the copy carries is checked first, also those that will not be brought in (TECH-4, amendment 2 B7-5):
+    // one that fails refuses the whole paste. 複製帶著的每份定義先驗，包括不會帶進來的：任一份不過，整筆拒絕。
+    for (const f of snapshot.values())
+        (0, subgraph_operations_1.validateSubgraphData)((0, subgraph_operations_1.withoutStoredUse)((0, model_1.copy)(f)));
+    const current = new Map(((_b = candidate.document.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f]));
+    const referenceOf = (node) => { var _a, _b; return (_b = (_a = candidate.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, node); };
+    const calls = clip.stages.pixel.nodes.map(referenceOf).filter((ref) => ref !== undefined);
+    // What comes in (TECH-1, amendment 2 B3): from another graph, the whole closure; from this graph, the definitions the pasted calls
+    // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted call whose definition is still
+    // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的呼叫所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
+    // 定義還在的呼叫沿用它。
+    const imported = new Set();
+    const bring = (id) => {
+        const f = snapshot.get(id);
+        if (!f || imported.has(id))
+            return;
+        imported.add(id);
+        for (const node of f.graph.nodes) {
+            const ref = referenceOf(node);
+            if (ref)
+                bring(ref);
+        }
+    };
+    for (const id of sameSource ? calls.filter(ref => !current.has(ref)) : snapshot.keys())
+        bring(id);
+    const ids = new Map([...imported].map(id => [id, newSubgraphId()]));
+    if (ids.size)
+        candidate.appendSubgraphs([...imported].map(id => snapshot.get(id)), ids);
     for (const declaration of clip.declarations) {
         if (candidate.document.declarations.some(d => d.id === declaration.id))
             continue;
@@ -380,10 +405,14 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
             fresh.name = (0, node_names_1.freeName)(node.name, taken);
             taken.add(fresh.name);
         }
-        // A call follows its definition's new identity. 呼叫跟著定義的新身分。
-        const module = candidate.registry.get(node.nodeType), ref = (_b = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node), mapped = ref && ids.get(ref);
+        // A call keeps the definition still here, else follows its new identity. 呼叫沿用還在的定義，否則跟著新身分。
+        const module = candidate.registry.get(node.nodeType), ref = (_b = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node);
+        const kept = ref !== undefined && sameSource && current.has(ref), mapped = ref !== undefined && !kept ? ids.get(ref) : undefined;
         if ((module === null || module === void 0 ? void 0 : module.reference) && mapped)
             fresh.params = { ...fresh.params, ...(0, model_1.copy)(module.reference(mapped)) };
+        // A call copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
+        if (kept && fresh.inputValues)
+            fresh.inputValues = (0, subgraphs_1.fitInstanceValues)(fresh.inputValues, current.get(ref).inputs);
         return fresh;
     });
     const edges = clip.stages.pixel.edges.filter(edge => nodeIds.has(edge.from[0]) && nodeIds.has(edge.to[0]))
@@ -5998,7 +6027,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 origins.set(n.id, origin);
             };
             function expand(data, path, owner, boundary) {
-                var _a, _b, _c, _d, _e;
+                var _a, _b, _c;
                 const context = (0, node_module_1.contextFor)(g, owner), maps = new Map(), names = new Set();
                 let inputCount = 0, outputCount = 0;
                 for (const node of data.nodes) {
@@ -6083,9 +6112,14 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 if (owner && (inputCount !== 1 || outputCount !== 1))
                     throw Object.assign(Error('Exactly one Subgraph Input and Output are required'), { stage: 'pixel', trail: path, subgraphId: owner.id });
                 for (const edge of data.edges) {
-                    const from = (_d = maps.get(edge.from[0])) === null || _d === void 0 ? void 0 : _d.outputs[edge.from[1]], to = (_e = maps.get(edge.to[0])) === null || _e === void 0 ? void 0 : _e.inputs[edge.to[1]];
-                    if (!from || !to)
+                    const source = maps.get(edge.from[0]), target = maps.get(edge.to[0]);
+                    if (!source || !target)
                         throw Object.assign(Error('Connection endpoint no longer exists'), { node: edge.to[0], stage: 'pixel', trail: path, ...(owner ? { subgraphId: owner.id } : {}) });
+                    const from = source.outputs[edge.from[1]], to = target.inputs[edge.to[1]];
+                    // A wire to a port its node no longer has is a ghost wire (Q37 1-3, TECH-2): kept in the graph, not connected here.
+                    // 接到節點已經沒有的接孔的線是 Ghost 線：圖裡保留，這裡當作沒接。
+                    if (!from || !to)
+                        continue;
                     flat.edges.push({ id: 'x' + flat.edges.length, from, to });
                 }
             }
@@ -6750,6 +6784,7 @@ function subgraphStages(graph, id, registry, active = new Set()) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subgraph = void 0;
+exports.fitInstanceValues = fitInstanceValues;
 const model_1 = require("./model");
 const values_1 = require("./values");
 const subgraph_operations_1 = require("./subgraph_operations");
@@ -6839,7 +6874,6 @@ class Subgraph {
         // Prepare every patch before mutation, including instance defaults.
         const patches = [];
         const removed = edit.kind === 'remove' ? edit.id : null;
-        const changed = edit.kind === 'update' && next[index].type !== list[index].type ? next[index] : null;
         const networks = [
             ...Object.values(this.graph.document.stages),
             ...(this.graph.document.subgraphs || []).map(d => d.graph)
@@ -6857,17 +6891,8 @@ class Subgraph {
             for (const n of data.nodes) {
                 if (affected(n, data) !== 'input' || !n.inputValues)
                     continue;
-                const values = (0, model_1.copy)(n.inputValues);
-                if (removed)
-                    delete values[removed];
-                if (changed && Object.prototype.hasOwnProperty.call(values, changed.id)) {
-                    // An instance value follows the new shape; an opaque port keeps none. 實例值跟著新形狀；opaque 接口沒有實例值。
-                    if (values_1.opaque.includes(changed.type))
-                        delete values[changed.id];
-                    else
-                        values[changed.id] = (0, values_1.reshape)(values[changed.id], changed.type);
-                }
-                patches.push({ node: n, values });
+                // An instance value follows the new interface (fitInstanceValues). 實例值跟著新接口。
+                patches.push({ node: n, values: fitInstanceValues(n.inputValues, next) });
             }
         f[direction] = next;
         for (const patch of patches)
@@ -6881,6 +6906,24 @@ class Subgraph {
     }
 }
 exports.Subgraph = Subgraph;
+/** A call's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
+ * dropped, an opaque port keeps none, a numeric value takes its port's shape, and one that cannot falls back to the port default.
+ * Values not given stay not given. One rule for an interface edit and for pasting a call copied before the interface changed.
+ * 呼叫的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
+ * 改接口與貼上舊呼叫用同一條規則。 */
+function fitInstanceValues(values, ports) {
+    const fitted = {};
+    for (const [key, value] of Object.entries(values)) {
+        const p = ports.find(port => port.id === key);
+        if (!p || values_1.opaque.includes(p.type))
+            continue;
+        try {
+            fitted[key] = (0, values_1.reshape)(value, p.type);
+        }
+        catch ( /* the port default applies 用接口預設 */_a) { /* the port default applies 用接口預設 */ }
+    }
+    return fitted;
+}
 
 },
 "td_values":function(require,module,exports){

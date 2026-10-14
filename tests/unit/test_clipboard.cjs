@@ -104,3 +104,61 @@ test('a copy carries the definitions its calls use, with their closure; pasted i
   const lib=plain(clip);lib.subgraphs[0].libraryId='x';
   assert.throws(()=>made.change(c=>{G.pasteClip(c,lib,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);}),e=>e.code==='subgraph.library');
 });
+
+// Technical review R109–R112 (Refactor.113). 子圖技術審查的修正。
+const {sharedGraph,node:fixtureNode}=require('../fixtures/shared_subgraphs.cjs');
+const compiles=g=>{try{G.createCompiler(registry).compile(plain(g));return true;}catch(e){return e.message;}};
+const callsIn=network=>network.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call');
+let reviewCounter=0;const reviewSub=()=>'r'+(++reviewCounter);
+
+test('TECH-1: a restored definition brings its dependencies from the copy; pasted calls whose definition is here keep it',()=>{
+  const raw=sharedGraph(),wrapper2={...plain(raw.subgraphs[1]),id:'wrapper2',name:'Wrapper2'};
+  raw.subgraphs.push(wrapper2);raw.stages.pixel.nodes.push(fixtureNode('third','subgraph_call',{subgraphId:'wrapper2'}));
+  const original=new G.GraphDocument(raw,registry),clip=plain(G.copyNodes(original,['first','second','third'],OP));
+  const changed=new G.GraphDocument(original.change(c=>{
+    const net=c.networks.get('pixel');net.remove(net.node('second'));net.remove(net.node('third'));
+    c.removeSubgraph('wrapper');c.removeSubgraph('wrapper2');
+    c.networks.get('subgraph:gain').node('mul').update({inputValues:{b:99}});
+  }).after,registry);
+  const step=changed.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);});
+  const pasted=callsIn(step.after.stages.pixel).slice(-3),[first,second,third]=pasted.map(n=>n.params.subgraphId);
+  assert.equal(first,'gain','a pasted call whose definition is still here keeps it');
+  const inner=id=>callsIn(step.after.subgraphs.find(f=>f.id===id).graph)[0].params.subgraphId;
+  assert.notEqual(inner(second),'gain','a restored parent never points at the current child');
+  assert.equal(inner(second),inner(third),'parents restored together share one restored child');
+  const restoredGain=step.after.subgraphs.find(f=>f.id===inner(second));
+  assert.deepEqual(plain(restoredGain.graph.nodes.find(n=>n.id==='mul').inputValues),{b:3},'the child comes back as copied');
+  assert.deepEqual(plain(step.after.subgraphs.find(f=>f.id==='gain').graph.nodes.find(n=>n.id==='mul').inputValues),{b:99},'the current child is untouched');
+  assert.equal(compiles(step.after),true);
+});
+
+test('TECH-2: a call copied before its interface changed takes the current interface; a wire to a removed port is a ghost wire',()=>{
+  const setup=edit=>{
+    const raw=sharedGraph();raw.stages.pixel.nodes.find(n=>n.id==='first').inputValues={value:5};
+    const gain=raw.subgraphs.find(f=>f.id==='gain');gain.graph.edges=gain.graph.edges.filter(e=>e.from[0]!=='in');
+    const original=new G.GraphDocument(raw,registry),clip=plain(G.copyNodes(original,['source','first'],OP));
+    const changed=new G.GraphDocument(original.change(c=>c.subgraph('gain').editInterface('inputs',edit)).after,registry);
+    assert.equal(compiles(changed.document),true,'the graph compiles before the paste');
+    const step=changed.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);});
+    return {step,pasted:callsIn(step.after.stages.pixel).at(-1)};
+  };
+  const removed=setup({kind:'remove',id:'value'});
+  assert.deepEqual(plain(removed.pasted.inputValues),{});
+  const wire=removed.step.after.stages.pixel.edges.find(e=>e.to[0]===removed.pasted.id);
+  assert.ok(wire,'the wire to the removed port is kept in the graph');
+  const after=new G.GraphDocument(removed.step.after,registry);
+  assert.ok(G.ghostsOf(after.networks.get('pixel'),G.values.policy).edges.has(after.networks.get('pixel').edges.find(e=>e.data===after.networks.get('pixel').data.edges.find(d=>d.to[0]===removed.pasted.id)).id),'and shown as a ghost wire');
+  assert.equal(compiles(removed.step.after),true);
+  const vector=setup({kind:'update',id:'value',patch:{type:'vec3'}});
+  assert.deepEqual(plain(vector.pasted.inputValues),{value:[5,5,5]});assert.equal(compiles(vector.step.after),true);
+  const texture=setup({kind:'update',id:'value',patch:{type:'sampler2D'}});
+  assert.deepEqual(plain(texture.pasted.inputValues),{});assert.equal(compiles(texture.step.after),true);
+});
+
+test('TECH-4: every definition the copy carries is validated, also one that will not be brought in',()=>{
+  const original=new G.GraphDocument(sharedGraph(),registry),clip=plain(G.copyNodes(original,['second'],OP));
+  clip.subgraphs.find(f=>f.id==='gain').libraryId='handmade';
+  const parsed=G.readClip(JSON.stringify(clip)),before=JSON.stringify(original.document);
+  assert.throws(()=>original.change(c=>{G.pasteClip(c,parsed,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),e=>e.code==='subgraph.library');
+  assert.equal(JSON.stringify(original.document),before,'nothing is written');
+});

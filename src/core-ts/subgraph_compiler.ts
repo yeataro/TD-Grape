@@ -154,8 +154,12 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
         }
         if(owner&&(inputCount!==1||outputCount!==1))throw Object.assign(Error('Exactly one Subgraph Input and Output are required'),{stage:'pixel',trail:path,subgraphId:owner.id});
         for(const edge of data.edges){
-          const from=maps.get(edge.from[0])?.outputs[edge.from[1]],to=maps.get(edge.to[0])?.inputs[edge.to[1]];
-          if(!from||!to)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{subgraphId:owner.id}:{})});
+          const source=maps.get(edge.from[0]),target=maps.get(edge.to[0]);
+          if(!source||!target)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{subgraphId:owner.id}:{})});
+          const from=source.outputs[edge.from[1]],to=target.inputs[edge.to[1]];
+          // A wire to a port its node no longer has is a ghost wire (Q37 1-3, TECH-2): kept in the graph, not connected here.
+          // 接到節點已經沒有的接孔的線是 Ghost 線：圖裡保留，這裡當作沒接。
+          if(!from||!to)continue;
           flat.edges.push({id:'x'+flat.edges.length,from,to});
         }
       }
