@@ -496,13 +496,23 @@ export class Editor {
     const id = this.networkId();
     return next.networks.has(id) ? project(next, this.state.projection, this.bootstrap.typeContract, changes, id) : EMPTY_PROJECTION;
   }
-  /** The path cut back to what still exists (a definition deleted by an edit, Undo, a draft, TD's version); whether it was cut.
-   * 路徑切回仍存在的部分（定義被修改、Undo、草稿、TD 版本刪掉）；回傳有沒有切。 */
+  /** The path cut back to what still holds (an edit, Undo, a draft or TD's version changed the document); whether it was cut. Checked
+   * from the top down (TECH-5): each level's definition is still there, and the call it was entered through (none when entered from
+   * the panel) is still in the level above and still points at it. The path is cut at the first level that fails, and the view lands on
+   * everything. 路徑切回仍成立的部分（修改、Undo、草稿或 TD 的版本改了文件）；回傳有沒有切。由上往下驗：每一層的定義還在，進來的那個呼叫
+   * （從面板進來的沒有）還在上一層、而且仍指向它。在第一個不成立的那層切斷，視野落在全部。 */
   private cutTrail() {
-    let trail = this.trail;
-    while (trail.length && !this.document.networks.has('subgraph:' + trail[trail.length - 1])) trail = trail.slice(0, -1);
-    if (trail === this.trail) return false;
-    this.trail = trail; this.callTrail = this.callTrail.slice(0, trail.length); return true;
+    const holds = (depth: number) => {
+      const id = this.trail[depth]!, call = this.callTrail[depth] ?? null;
+      if (!this.document.networks.has('subgraph:' + id)) return false;
+      if (call === null) return true;
+      const node = this.document.networks.get(depth ? 'subgraph:' + this.trail[depth - 1] : 'pixel')?.nodeData(call);
+      return !!node && this.document.registry.get(node.nodeType)?.referencedGraph?.(node) === id;
+    };
+    let depth = 0;
+    while (depth < this.trail.length && holds(depth)) depth++;
+    if (depth === this.trail.length) return false;
+    this.trail = this.trail.slice(0, depth); this.callTrail = this.callTrail.slice(0, depth); this.landing = { frame: 'all' }; return true;
   }
   /** Edit the interface of the subgraph being edited (its boundary nodes' panel, basic design §3.5): one step, one Undo; the core
    * keeps every call and boundary in step. 修改正在編輯的子圖的介面（邊界節點的面板，§3.5）：一步、一次 Undo；核心讓每個呼叫與邊界跟上。 */

@@ -1927,3 +1927,28 @@ test('subgraphs: Make Single User copies the definition for one call; paste from
   session.enterSubgraph(nested.id); assert.deepEqual(clone(session.snapshot().trail), [own, 'gain']);
   session.goToDepth(1); assert.deepEqual(clone(session.snapshot().trail), [own]);
 });
+
+// TECH-5 (technical review R109–R112): the path is checked from the top down after the document changes; the first level that no
+// longer holds cuts it, and the view lands on everything. 文件改變後路徑由上往下驗；第一個不成立的層切斷，視野落在全部。
+test('subgraphs: Undo that removes an ancestor or the call a level was entered through cuts the path there; Redo leaves it', t => {
+  const { session } = open(t);
+  session.transactGraph('child', c => { c.createSubgraph({ id: 'B', name: 'B' }); });
+  session.transactGraph('parent', c => { c.createSubgraph({ id: 'A', name: 'A' });
+    c.networks.get('subgraph:A').instantiateSubgraph('B', 'innerB', { x: 0, y: 0 }); c.networks.get('pixel').instantiateSubgraph('A', 'callA', { x: 0, y: 0 }); });
+  session.enterSubgraph('callA'); session.enterSubgraph('innerB');
+  assert.deepEqual(clone(session.snapshot().trail), ['A', 'B']);
+  session.history(false);
+  assert.ok(session.graph().subgraphs.some(f => f.id === 'B'), 'the leaf is still there');
+  assert.deepEqual(clone(session.snapshot().trail), [], 'the ancestor is gone: the path is cut at the top');
+  assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.takeLanding()), { frame: 'all' });
+  session.history(true); assert.deepEqual(clone(session.snapshot().trail), [], 'Redo does not bring the path back');
+  // The first level entered through a call that Undo removes, while its definition stays. 從呼叫進的第一層：Undo 拿掉那個呼叫、定義還在。
+  session.transactGraph('second call', c => { c.networks.get('pixel').instantiateSubgraph('A', 'callA2', { x: 0, y: 100 }); });
+  session.enterSubgraph('callA2'); assert.deepEqual(clone(session.snapshot().trail), ['A']);
+  session.history(false);
+  assert.ok(session.graph().subgraphs.some(f => f.id === 'A'));
+  assert.deepEqual(clone(session.snapshot().trail), [], 'the call it was entered through is gone');
+  // Entered from the panel: only the definition is checked. 從面板進來：只驗定義。
+  session.enterDefinition('A'); session.history(true); session.history(false);
+  assert.deepEqual(clone(session.snapshot().trail), ['A']);
+});
