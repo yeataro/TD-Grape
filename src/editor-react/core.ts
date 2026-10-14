@@ -37,7 +37,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
   /** Subgraphs (Refactor.110): a new port's identity; how many calls each definition has. 子圖：新接口的身分；每份定義的呼叫數。 */
   newPortId: typeof subgraphOps.newPortId; callCounts: typeof subgraphOps.callCounts; useCounts: typeof subgraphOps.useCounts;
-} & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT'>
+} & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT' | 'validSubgraphTitle' | 'newCallName'>
   & Pick<typeof clipboard, 'copyNodes' | 'readClip' | 'pasteClip' | 'clipCorner'> & { groups: typeof groups };
 export type { GraphGroup } from '../core-ts/groups';
 export type { Clip } from '../core-ts/clipboard';

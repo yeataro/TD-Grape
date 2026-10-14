@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newCallName: node_names_1.newCallName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -2043,6 +2043,10 @@ exports.takesName = exports.namesIn = exports.shownName = exports.storedName = e
 exports.validNodeName = validNodeName;
 exports.freeName = freeName;
 exports.newNodeName = newNodeName;
+exports.validSubgraphTitle = validSubgraphTitle;
+exports.callNameBase = callNameBase;
+exports.newCallName = newCallName;
+exports.defaultCallNumber = defaultCallNumber;
 exports.nameMissing = nameMissing;
 /** Node names (Refactor.76, human 2026-10-11; design-interview Q47 supplement 6). A node's name is also its GLSL name
  * (`sg_n_<name>`), so it is an identifier: letters, digits and underscores, a letter first. People see underscores as spaces
@@ -2092,6 +2096,34 @@ function newNodeName(label, taken) {
     const base = label.replace(/[^A-Za-z0-9 _]/g, '').trim().replace(/[ _]+/g, '_').replace(/_+$/, '').slice(0, exports.NAME_LIMIT - 3);
     return freeName(validNodeName(base + '_1') ? base + '_1' : 'Node_1', taken);
 }
+/** A subgraph's title (visual notes 27, human 2026-10-14): the node-name rule, shown with its spaces — letters, digits, spaces and
+ * underscores, a letter first, and as a stored name (spaces as underscores) a valid node name. 子圖的 Title（外觀意見 27，人類）：
+ * 照節點名稱規則，顯示時保留空白——英數、空白、底線，字母開頭，存成名稱（空白換底線）後是合法的節點名。 */
+function validSubgraphTitle(title) {
+    return title.length > 0 && title === (0, exports.typedName)(title).trim() && !/ {2}/.test(title) && validNodeName((0, exports.storedName)(title));
+}
+/** The base of a subgraph call's default name: its definition's title as a stored name, or Subgraph when the title cannot make one
+ * (an old graph). 子圖呼叫預設名的底：定義的 Title 存成名稱；做不出來（舊圖）就用 Subgraph。 */
+function callNameBase(title) {
+    const base = (0, exports.storedName)(title);
+    return base && validNodeName(base + '_1') ? base : 'Subgraph';
+}
+/** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字
+ * 不往上加，Subgraph_1 的呼叫是 Subgraph_1_1、Subgraph_1_2，不會看起來像另一份定義（人類）。 */
+function newCallName(title, taken, from = 1) {
+    const base = callNameBase(title);
+    for (let n = from;; n++) {
+        const suffix = '_' + n, name = base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+        if (!taken.has(name) && validNodeName(name))
+            return name;
+    }
+}
+/** The number of a call still named by default for this title (base_N), else null. 仍是這個 Title 預設名的呼叫編號；不是就 null。 */
+function defaultCallNumber(name, title) {
+    const base = callNameBase(title), match = name.startsWith(base + '_') ? /^(\d+)$/.exec(name.slice(base.length + 1)) : null;
+    return match ? Number(match[1]) : null;
+}
 /** The names already used in one network. 一張網路裡已用的名稱。 */
 const namesIn = (network) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));
 exports.namesIn = namesIn;
@@ -2102,7 +2134,7 @@ exports.takesName = takesName;
 /** Name every node that should have a name and has none, in place (opening a graph made before names were given,
  * Refactor.76). 把該有名字卻沒有的節點補上名字（在傳入的圖上改；給名字之前做的圖，R.76）。 */
 function nameMissing(graph, registry) {
-    var _a;
+    var _a, _b, _c, _d, _e;
     const named = [];
     const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => [s.id, s.graph])];
     for (const [network, data] of networks) {
@@ -2110,7 +2142,9 @@ function nameMissing(graph, registry) {
         for (const node of data.nodes) {
             if (node.name !== undefined || !(0, exports.takesName)(registry, node.nodeType))
                 continue;
-            const name = newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
+            // A subgraph call is named after its definition's title (visual notes 27). 子圖呼叫照定義的 Title 命名。
+            const ref = (_c = (_b = registry.get(node.nodeType)).referencedGraph) === null || _c === void 0 ? void 0 : _c.call(_b, node), title = ref === undefined ? undefined : (_e = (_d = graph.subgraphs) === null || _d === void 0 ? void 0 : _d.find(f => f.id === ref)) === null || _e === void 0 ? void 0 : _e.name;
+            const name = title !== undefined ? newCallName(title, taken) : newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
             node.name = name;
             taken.add(name);
             named.push({ network, node: node.id, name, note: (0, text_1.tr)('upgrade.named', 'Given the name {name}', { name: (0, exports.shownName)(name) }) });
@@ -6995,6 +7029,7 @@ const model_1 = require("./model");
 const values_1 = require("./values");
 const subgraph_operations_1 = require("./subgraph_operations");
 const config_1 = require("./config");
+const node_names_1 = require("./node_names");
 /** One graph-owned definition and all its instances. Every definition in a graph is editable until the Library round adds
  * read-only copies (Refactor.109). 圖裡的定義與它的所有引用；Library 那一輪之前每份定義都可改。 */
 class Subgraph {
@@ -7020,14 +7055,34 @@ class Subgraph {
         else
             f.color = color;
     }
-    rename(name) {
+    /** A new title, by the node-name rule (visual notes 27, human 2026-10-14). Calls still named by default for the old title follow it,
+     * keeping their number when it is free (Gain_2 → Blur_2); calls named by hand stay. Old graphs may hold a title outside the rule;
+     * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的呼叫跟著改，編號沒人用就保留
+     * （Gain_2 → Blur_2）；手動取名的不動。舊圖的 Title 可能不合規則，只在改的時候檢查。 */
+    rename(title) {
+        var _a, _b;
         this.graph.assertEditable();
         const f = this.data;
         if (!f)
             throw Error('Subgraph definition no longer exists');
-        if (!name.trim() || name.length > 80 || /[\x00-\x1f\x7f]/.test(name))
-            throw Error('Invalid Subgraph name');
-        f.name = name.trim();
+        if (!(0, node_names_1.validSubgraphTitle)(title))
+            throw Object.assign(Error('A subgraph title uses letters, digits, spaces and underscores, and starts with a letter'), { code: 'subgraph.title' });
+        const old = f.name;
+        f.name = title;
+        const networks = [...Object.values(this.graph.document.stages), ...(this.graph.document.subgraphs || []).map(d => d.graph)];
+        for (const data of networks) {
+            const taken = (0, node_names_1.namesIn)(data);
+            for (const n of data.nodes) {
+                if (n.name === undefined || ((_b = (_a = this.graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n)) !== this.id)
+                    continue;
+                const number = (0, node_names_1.defaultCallNumber)(n.name, old);
+                if (number === null)
+                    continue;
+                taken.delete(n.name);
+                n.name = (0, node_names_1.newCallName)(title, taken, number);
+                taken.add(n.name);
+            }
+        }
     }
     editInterface(direction, edit) {
         this.graph.assertEditable();

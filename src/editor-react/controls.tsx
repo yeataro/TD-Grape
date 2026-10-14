@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type CompositionEvent, type CSSProperties, type ReactNode } from 'react';
+import { core } from './core';
 import { createPortal } from 'react-dom';
 import { DropdownMenu, popupPlace, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
@@ -248,4 +249,16 @@ export function ScrollFade({ className, children }: { className?: string; childr
     <div ref={box} className="scroll-fade-area"><div ref={content} className="scroll-fade-content">{children}</div></div>
     {SIDES.map(side => <span key={side} className={'scroll-fade-edge ' + side + (sides[side] ? ' shown' : '')} aria-hidden="true" />)}
   </div>;
+}
+
+/** Typing into a name field (Refactor.76; a subgraph's title too, visual notes 27): only letters, digits, spaces and underscores get
+ * in; an input method's composition is left alone until it ends. 名稱欄的輸入（R.76；子圖 Title 也是，外觀意見 27）：只有英數、空白、
+ * 底線打得進去；輸入法組字中先不管，組完再濾。 */
+export function useTypedName(set: (text: string) => void) {
+  const composing = useRef(false);
+  return {
+    onCompositionStart: () => { composing.current = true; },
+    onCompositionEnd: (event: CompositionEvent<HTMLInputElement>) => { composing.current = false; set(core.typedName(event.currentTarget.value)); },
+    onChange: (event: ChangeEvent<HTMLInputElement>) => set(composing.current ? event.target.value : core.typedName(event.target.value)),
+  };
 }

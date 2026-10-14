@@ -46,6 +46,33 @@ export function newNodeName(label: string, taken: ReadonlySet<string>): string {
   const base = label.replace(/[^A-Za-z0-9 _]/g, '').trim().replace(/[ _]+/g, '_').replace(/_+$/, '').slice(0, NAME_LIMIT - 3);
   return freeName(validNodeName(base + '_1') ? base + '_1' : 'Node_1', taken);
 }
+/** A subgraph's title (visual notes 27, human 2026-10-14): the node-name rule, shown with its spaces — letters, digits, spaces and
+ * underscores, a letter first, and as a stored name (spaces as underscores) a valid node name. 子圖的 Title（外觀意見 27，人類）：
+ * 照節點名稱規則，顯示時保留空白——英數、空白、底線，字母開頭，存成名稱（空白換底線）後是合法的節點名。 */
+export function validSubgraphTitle(title: string): boolean {
+  return title.length > 0 && title === typedName(title).trim() && !/ {2}/.test(title) && validNodeName(storedName(title));
+}
+/** The base of a subgraph call's default name: its definition's title as a stored name, or Subgraph when the title cannot make one
+ * (an old graph). 子圖呼叫預設名的底：定義的 Title 存成名稱；做不出來（舊圖）就用 Subgraph。 */
+export function callNameBase(title: string): string {
+  const base = storedName(title);
+  return base && validNodeName(base + '_1') ? base : 'Subgraph';
+}
+/** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字
+ * 不往上加，Subgraph_1 的呼叫是 Subgraph_1_1、Subgraph_1_2，不會看起來像另一份定義（人類）。 */
+export function newCallName(title: string, taken: ReadonlySet<string>, from = 1): string {
+  const base = callNameBase(title);
+  for (let n = from; ; n++) {
+    const suffix = '_' + n, name = base.slice(0, NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+    if (!taken.has(name) && validNodeName(name)) return name;
+  }
+}
+/** The number of a call still named by default for this title (base_N), else null. 仍是這個 Title 預設名的呼叫編號；不是就 null。 */
+export function defaultCallNumber(name: string, title: string): number | null {
+  const base = callNameBase(title), match = name.startsWith(base + '_') ? /^(\d+)$/.exec(name.slice(base.length + 1)) : null;
+  return match ? Number(match[1]) : null;
+}
 /** The names already used in one network. 一張網路裡已用的名稱。 */
 export const namesIn = (network: NetworkData) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));
 /** Whether a node of this type takes a name (not one standing for a shared source; unknown types are left as stored).
@@ -62,7 +89,9 @@ export function nameMissing(graph: Graph, registry: Registry): NamedNode[] {
     const taken = namesIn(data);
     for (const node of data.nodes) {
       if (node.name !== undefined || !takesName(registry, node.nodeType)) continue;
-      const name = newNodeName(String(registry.get(node.nodeType)!.catalog.definition.label), taken);
+      // A subgraph call is named after its definition's title (visual notes 27). 子圖呼叫照定義的 Title 命名。
+      const ref = registry.get(node.nodeType)!.referencedGraph?.(node), title = ref === undefined ? undefined : graph.subgraphs?.find(f => f.id === ref)?.name;
+      const name = title !== undefined ? newCallName(title, taken) : newNodeName(String(registry.get(node.nodeType)!.catalog.definition.label), taken);
       node.name = name; taken.add(name);
       named.push({ network, node: node.id, name, note: tr('upgrade.named', 'Given the name {name}', { name: shownName(name) }) });
     }

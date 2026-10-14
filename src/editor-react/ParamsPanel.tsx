@@ -7,7 +7,7 @@ import { useEditorSlice } from './editor_slice';
 import { tr, say } from './text';
 import { ValueColumns, ValueFields } from './ValueFields';
 import { useSession, TextContext, FloatingContext } from './contexts';
-import { Select } from './controls';
+import { Select, useTypedName } from './controls';
 import { frameNodes } from './viewport';
 import { Controls, DeclarationValue, PortLabel, TypeRow, single, sourceKinds } from './NodeCard';
 
@@ -22,15 +22,12 @@ import { Controls, DeclarationValue, PortLabel, TypeRow, single, sourceKinds } f
 /** The name, as people see it: underscores as spaces; spaces typed become underscores (Refactor.76). Enter or leaving the
  * field renames; Esc puts it back. 名稱，給人看的樣子：底線顯示成空白，輸入的空白存成底線（R.76）。Enter 或離開欄位就改名；Esc 還原。 */
 function NodeName({ id, name }: { id: string; name: string }) {
-  const session = useSession(), shown = core.shownName(name), [value, setValue] = useState(shown), composing = useRef(false);
+  const session = useSession(), shown = core.shownName(name), [value, setValue] = useState(shown), typing = useTypedName(setValue);
   useEffect(() => setValue(shown), [shown]);
   const commit = () => { if (value !== shown) session.rename(id, value); setValue(shown); };
   return <input className="params-name" value={value} maxLength={core.NAME_LIMIT} spellCheck={false} autoComplete="off"
     aria-label={say(tr('params.name', 'Name'))}
-    onCompositionStart={() => { composing.current = true; }}
-    onCompositionEnd={event => { composing.current = false; setValue(core.typedName(event.currentTarget.value)); }}
-    onChange={event => setValue(composing.current ? event.target.value : core.typedName(event.target.value))}
-    onBlur={commit}
+    {...typing} onBlur={commit}
     onKeyDown={event => {
       if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }
       else if (event.key === 'Escape') { event.preventDefault(); setValue(shown); requestAnimationFrame(() => (event.target as HTMLInputElement).blur()); }
@@ -168,13 +165,13 @@ function InterfaceSettings({ direction, ports }: { direction: Direction; ports: 
  * its uses. Description, Category and Credits come with the Library round. 定義的欄位（外觀意見 6，本輪有的部分）：Title、識別碼（本地：
  * 灰字「圖內 id」）、使用數。Description、Category、Credits 在 Library 那一輪。 */
 function SubgraphFields({ definition, uses }: { definition: SubgraphData; uses: { direct: number; expanded: number } }) {
-  const session = useSession(), [value, setValue] = useState(definition.name);
+  const session = useSession(), [value, setValue] = useState(definition.name), typing = useTypedName(setValue);
   useEffect(() => setValue(definition.name), [definition.name]);
   const commit = () => { if (value.trim() && value !== definition.name) session.renameSubgraph(definition.id, value); else setValue(definition.name); };
   return <div className="params-grid params-settings subgraph-fields">
     <label className="control-field"><span>{say(tr('params.subgraphTitle', 'Title'))}</span>
-      <input value={value} maxLength={80} spellCheck={false} aria-label={say(tr('params.subgraphTitle', 'Title'))}
-        onChange={event => setValue(event.target.value)} onBlur={commit}
+      <input value={value} maxLength={core.NAME_LIMIT} spellCheck={false} aria-label={say(tr('params.subgraphTitle', 'Title'))}
+        {...typing} onBlur={commit}
         onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.name); } }} /></label>
     <div className="control-field"><span>{say(tr('params.subgraphIdentifier', 'Identifier'))}</span>
       <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code></div>

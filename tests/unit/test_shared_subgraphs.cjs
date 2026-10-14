@@ -180,3 +180,37 @@ test('a ghost node at the stage no longer refuses a graph that has subgraphs',()
  flat.subgraphs=[plain(sharedGraph().subgraphs[0])];
  assert.equal(compiler.supports(flat),true,'adding a first, unused definition keeps it compiling');
 });
+
+// Call names (visual notes 27, human 2026-10-14): a call is named after its definition's title plus its own number, the title's own
+// trailing number never counted up; calls still named by default follow a renamed title, hand-named ones stay; the title takes the
+// node-name rule. 呼叫名稱：照定義的 Title 加自己的編號、不把 Title 結尾的數字往上加；仍是預設名的呼叫跟著改名，手動取名的不動；Title 照節點名稱規則。
+test('a call is named after its title and follows a rename unless named by hand; a title takes the node-name rule',()=>{
+ const {newCallName,validSubgraphTitle,upgradeGraph,nodeUpgrades}=c.GrapeGraph;
+ const none=new Set();
+ assert.equal(newCallName('Gain',none),'Gain_1');assert.equal(newCallName('Gain',new Set(['Gain_1'])),'Gain_2');
+ assert.equal(newCallName('Subgraph_1',new Set(['Subgraph_1_1'])),'Subgraph_1_2','the title\'s own number is not counted up');
+ assert.equal(newCallName('Soft Glow',none),'Soft_Glow_1');
+ assert.equal(newCallName('增益',none),'Subgraph_1','a title that cannot make a name falls back');
+ for(const ok of ['Gain','Soft Glow','Subgraph_1','Gain2'])assert.equal(validSubgraphTitle(ok),true,ok);
+ for(const bad of ['2Gain','TD Blur','Soft  Glow',' Gain','增益','a__b',''])assert.equal(validSubgraphTitle(bad),false,bad);
+ // Rename: the default-named calls follow, the hand-named one stays, a taken number moves on. 改名：預設名跟著、手動名不動、編號被占就往後。
+ const g=sharedGraph();
+ const first=g.stages.pixel.nodes.find(n=>n.id==='first');first.name='Gain_1';
+ g.stages.pixel.nodes.push(node('again','subgraph_call',{subgraphId:'gain'}),node('mine','subgraph_call',{subgraphId:'gain'}),node('blocker','float',{value:1}));
+ g.stages.pixel.nodes.find(n=>n.id==='again').name='Gain_2';g.stages.pixel.nodes.find(n=>n.id==='mine').name='Mine';
+ g.stages.pixel.nodes.find(n=>n.id==='blocker').name='Blur_2';
+ g.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name='Gain_1';
+ const step=doc(g).change(m=>m.subgraph('gain').rename('Blur'));
+ const name=id=>step.after.stages.pixel.nodes.find(n=>n.id===id).name;
+ assert.equal(name('first'),'Blur_1');assert.equal(name('again'),'Blur_3','Blur_2 is taken by another node');assert.equal(name('mine'),'Mine');
+ assert.equal(step.after.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name,'Blur_1','calls inside other definitions follow too');
+ assert.equal(step.after.subgraphs[0].name,'Blur');
+ assert.throws(()=>doc(g).change(m=>m.subgraph('gain').rename('2Blur')),e=>e.code==='subgraph.title');
+ // An old graph's title outside the rule opens as it is; its calls were named with the fallback and follow a valid rename.
+ // 舊圖的 Title 不合規則照開；它的呼叫用退路命名，改成合法 Title 時跟著改。
+ const old=sharedGraph();old.subgraphs[0].name='增益';delete old.stages.pixel.nodes.find(n=>n.id==='first').name;
+ const read=upgradeGraph(old,nodeUpgrades,registry).graph;
+ assert.equal(read.stages.pixel.nodes.find(n=>n.id==='first').name,'Subgraph_1','opening names it by the fallback');
+ const fixed=doc(read).change(m=>m.subgraph('gain').rename('Gain'));
+ assert.equal(fixed.after.stages.pixel.nodes.find(n=>n.id==='first').name,'Gain_1');
+});

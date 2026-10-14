@@ -1,10 +1,10 @@
 import { GhostMark } from './GhostMark';
 import { memo, useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { typeColor, type SubgraphData, type InterfacePort } from './core';
+import { core, typeColor, type SubgraphData, type InterfacePort } from './core';
 import { tr, say, useLanguage } from './text';
 import { useSession } from './contexts';
-import { Badge, ConfirmDialog, MenuButton } from './controls';
+import { Badge, ConfirmDialog, MenuButton, useTypedName } from './controls';
 import { Icon } from './icons';
 import { dragToAdd } from './drag_to_add';
 import { groupColor } from './SourceCard';
@@ -22,11 +22,11 @@ import { groupColor } from './SourceCard';
 export const subgraphChoice = (id: string) => 'subgraph:' + id;
 
 function NameField({ definition }: { definition: SubgraphData }) {
-  const session = useSession(), [draft, setDraft] = useState(definition.name);
+  const session = useSession(), [draft, setDraft] = useState(definition.name), typing = useTypedName(setDraft);
   useEffect(() => setDraft(definition.name), [definition.name]);
   const commit = () => { if (draft.trim() && draft !== definition.name) session.renameSubgraph(definition.id, draft); else setDraft(definition.name); };
-  return <input className="source-name" aria-label={say(tr('subgraphs.name', 'Name'))} value={draft} maxLength={80}
-    onChange={event => setDraft(event.target.value)} onBlur={commit}
+  return <input className="source-name" aria-label={say(tr('subgraphs.name', 'Name'))} value={draft} maxLength={core.NAME_LIMIT}
+    {...typing} onBlur={commit}
     onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(definition.name); event.currentTarget.blur(); } }} />;
 }
 

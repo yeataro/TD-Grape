@@ -500,6 +500,7 @@
   "structure.outputTooMany": "only one Color Output is allowed (now {count})",
   "structure.refused": "This change was not applied: {problems}",
   "subgraph.cycle": "This subgraph is already open on the path.",
+  "subgraph.titleRefused": "Not done: a subgraph title uses letters, digits, spaces and underscores, and starts with a letter.",
   "subgraph.cycleRefused": "Not done: the subgraph would call itself (directly or through another subgraph).",
   "subgraph.gone": "This subgraph no longer exists.",
   "subgraph.interfaceChanged": "Subgraph interface updated",

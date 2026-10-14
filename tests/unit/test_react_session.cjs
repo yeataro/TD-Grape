@@ -1891,7 +1891,7 @@ test('subgraphs: selection to subgraph moves the nodes, keeps a shared source ou
   const pixel = session.graph().stages.pixel;
   assert.ok(pixel.nodes.some(n => n.id === 'ref') && !pixel.nodes.some(n => n.id === 'a'));
   const call = pixel.nodes.find(n => n.nodeType === 'sgrape.builtin.subgraph_call');
-  assert.equal(call.params.subgraphId, id); assert.equal(call.name, 'Subgraph_1');
+  assert.equal(call.params.subgraphId, id); assert.equal(call.name, 'Subgraph_1_1'); // the call is named after its title, plus its own number (visual notes 27) 呼叫照 Title 命名、再加自己的編號
   assert.ok(pixel.edges.some(e => e.from[0] === 'ref' && e.to[0] === call.id), 'the source feeds the call');
   assert.deepEqual([...session.selectionSnapshot()], [call.id]);
   session.history(false); assert.equal(session.graph().subgraphs.length, 0); assert.ok(session.graph().stages.pixel.nodes.some(n => n.id === 'a'));
@@ -2034,4 +2034,22 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
   // Opening the failing graph shows the notice at once (Codex 3rd check). 直接開這張失敗的圖，提示立刻出現。
   const reopened = open(t, undefined, 60000, undefined, undefined, session.graph()).session;
   assert.deepEqual(clone(reopened.snapshot().codegenFailure?.at), { trail: ['A'] });
+});
+
+// Call names in the editor (visual notes 27): placing a call names it after the title; renaming the title renames default-named calls;
+// a title outside the rule is refused with a message and nothing changes. 編輯器裡的呼叫名稱：放下時照 Title、改 Title 時預設名跟著改；
+// 不合規則的 Title 被拒、說明、什麼都不變。
+test('subgraphs: a placed call is named after its title, follows a rename, and a bad title is refused', t => {
+  const { session } = open(t);
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
+  session.placeSubgraph('gain', { x: 0, y: 0 }); session.placeSubgraph('gain', { x: 0, y: 100 });
+  const calls = () => clone(session.graph().stages.pixel.nodes.filter(n => n.params.subgraphId === 'gain').map(n => n.name).sort());
+  assert.deepEqual(calls(), ['Gain_1', 'Gain_2']);
+  session.renameSubgraph('gain', 'Soft  Glow ');
+  assert.equal(session.graph().subgraphs[0].name, 'Soft Glow', 'trimmed, one space between words');
+  assert.deepEqual(calls(), ['Soft_Glow_1', 'Soft_Glow_2']);
+  session.renameSubgraph('gain', '2 Glow');
+  assert.equal(session.graph().subgraphs[0].name, 'Soft Glow');
+  assert.match(zh(session.snapshot().message), /Title/);
+  session.history(false); assert.deepEqual(calls(), ['Gain_1', 'Gain_2'], 'one Undo puts title and calls back');
 });

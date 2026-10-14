@@ -3,6 +3,7 @@ import { type, literal, reshape, fill, opaque } from './values';
 import { validPort } from './subgraph_operations';
 import type { GraphDocument } from './graph';
 import { CORE_CONFIG } from './config';
+import { validSubgraphTitle, defaultCallNumber, newCallName, namesIn } from './node_names';
 
 type Direction = 'inputs'|'outputs';
 export type InterfaceEdit =
@@ -28,11 +29,25 @@ export class Subgraph {
     if(color!==null&&!/^#[0-9a-f]{6}$/.test(color))throw Error('Invalid Subgraph color');
     if(color===null)delete f.color;else f.color=color;
   }
-  rename(name:string):void {
+  /** A new title, by the node-name rule (visual notes 27, human 2026-10-14). Calls still named by default for the old title follow it,
+   * keeping their number when it is free (Gain_2 → Blur_2); calls named by hand stay. Old graphs may hold a title outside the rule;
+   * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的呼叫跟著改，編號沒人用就保留
+   * （Gain_2 → Blur_2）；手動取名的不動。舊圖的 Title 可能不合規則，只在改的時候檢查。 */
+  rename(title:string):void {
     this.graph.assertEditable();const f=this.data;
     if(!f)throw Error('Subgraph definition no longer exists');
-    if(!name.trim() || name.length>80 || /[\x00-\x1f\x7f]/.test(name))throw Error('Invalid Subgraph name');
-    f.name=name.trim();
+    if(!validSubgraphTitle(title))throw Object.assign(Error('A subgraph title uses letters, digits, spaces and underscores, and starts with a letter'),{code:'subgraph.title'});
+    const old=f.name;f.name=title;
+    const networks=[...Object.values(this.graph.document.stages),...(this.graph.document.subgraphs||[]).map(d=>d.graph)];
+    for(const data of networks){
+      const taken=namesIn(data);
+      for(const n of data.nodes){
+        if(n.name===undefined||this.graph.registry.get(n.nodeType)?.referencedGraph?.(n)!==this.id)continue;
+        const number=defaultCallNumber(n.name,old);
+        if(number===null)continue;
+        taken.delete(n.name);n.name=newCallName(title,taken,number);taken.add(n.name);
+      }
+    }
   }
 
   editInterface(direction:Direction,edit:InterfaceEdit):void {

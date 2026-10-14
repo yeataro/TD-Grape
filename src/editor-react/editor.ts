@@ -77,13 +77,17 @@ function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition,
   if ('preset' in spec) {
     const declaration = presetDeclaration(document, spec.preset);
     net.insert({ id, nodeType: 'sgrape.builtin.declaration', params: { declarationId: declaration.id }, ui: { ...position } });
-  } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position }, ...nameFor(net, spec.nodeType) });
+  } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position }, ...nameFor(net, spec.nodeType, spec.params) });
   return id;
 }
 /** A new node's name, by the one naming rule (Refactor.76): Split_1, Split_2…; none for a node standing for a shared source.
  * 新節點的名稱，照同一套命名規則（R.76）：Split_1、Split_2…；代表共用來源的節點沒有。 */
-function nameFor(net: Network, nodeType: string): { name?: string } {
+function nameFor(net: Network, nodeType: string, params: object = {}): { name?: string } {
   if (!core.takesName(core.registry, nodeType)) return {};
+  // A subgraph call is named after its definition's title: Gain_1, Gain_2 (visual notes 27, human 2026-10-14). 子圖呼叫照定義的 Title 命名。
+  const ref = core.registry.get(nodeType)!.referencedGraph?.({ id: '', nodeType, params } as never);
+  const title = ref === undefined ? undefined : net.graph.document.subgraphs?.find(f => f.id === ref)?.name;
+  if (title !== undefined) return { name: core.newCallName(title, core.namesIn(net.data)) };
   return { name: core.newNodeName(String(core.registry.get(nodeType)!.catalog.definition.label), core.namesIn(net.data)) };
 }
 class Rehearsed extends Error {}
@@ -539,7 +543,8 @@ export class Editor {
     this.editInterface(direction, { kind: 'add', port: { id, label: base + n, type: 'float', default: 0 } });
   };
   renameSubgraph = (id: string, name: string) => {
-    const text = name.trim();
+    // As typed, trimmed, one space between words; the core checks the rest (visual notes 27). 照打的、去頭尾、字間一個空白；其餘核心檢查。
+    const text = core.typedName(name).trim().replace(/ {2,}/g, ' ');
     if (!text || text === this.document.document.subgraphs?.find(f => f.id === id)?.name) return;
     this.transactGraph(tr('subgraph.renamed', 'Subgraph renamed'), document => document.subgraph(id).rename(text));
   };
@@ -580,7 +585,7 @@ export class Editor {
     this.transact(tr('subgraph.made', 'Subgraph {name} made from the selection', { name }), net => {
       const call = net.subgraphFromSelection(new Set(chosen), { id, callId, name,
         inputName: (source, _port, fallback) => { const ref = core.registry.get(source.nodeType)?.referencedDeclaration?.(source); return (ref && declarations.find(d => d.id === ref)?.name) || fallback; } });
-      call.update({ ...nameFor(net, call.data!.nodeType) });
+      call.update({ ...nameFor(net, call.data!.nodeType, call.data!.params) });
     });
     if (this.state.version === version) return null;
     this.boxSelect(new Set([callId]), [callId]);
@@ -632,6 +637,7 @@ export class Editor {
     const code = (error as { code?: string } | null)?.code;
     if (code === 'subgraph.cycle') { this.warn(tr('subgraph.cycleRefused', 'Not done: the subgraph would call itself (directly or through another subgraph).')); return; }
     if (code === 'subgraph.library') { this.warn(tr('subgraph.libraryRefused', 'Not done: a subgraph from a Library is not supported in this version.')); return; }
+    if (code === 'subgraph.title') { this.warn(tr('subgraph.titleRefused', 'Not done: a subgraph title uses letters, digits, spaces and underscores, and starts with a letter.')); return; }
     if (code === 'subgraph.inUse') { this.warn(tr('subgraph.inUseRefused', 'Not done: the subgraph is still called; delete its calls first.')); return; }
     const limit = capacityMessage(error) ?? structureMessage(error);
     this.tell(limit ? 'warning' : 'error', limit ?? errorText(error));

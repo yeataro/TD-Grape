@@ -500,6 +500,7 @@
   "structure.outputTooMany": "Color Output 只能有一個（目前 {count} 個）",
   "structure.refused": "這次修改沒有套用：{problems}",
   "subgraph.cycle": "這個子圖已經在路徑上打開了。",
+  "subgraph.titleRefused": "沒有完成：子圖的 Title 只能用英文字母、數字、空白和底線，並以字母開頭。",
   "subgraph.cycleRefused": "沒有做：這個子圖會呼叫到自己（直接或經由別的子圖）。",
   "subgraph.gone": "這個子圖已經不存在。",
   "subgraph.interfaceChanged": "子圖介面已更新",
