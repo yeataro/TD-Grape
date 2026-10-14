@@ -337,6 +337,8 @@
   "params.subgraphIdentifier": "識別碼",
   "params.subgraphLocalId": "本地子圖的圖內 id",
   "params.subgraphLocalIdTag": "圖內 id",
+  "params.locateDefinition": "定位定義",
+  "params.locateDefinitionHint": "在子圖面板顯示這份子圖",
   "params.subgraphTitle": "Title",
   "params.subgraphUsesLabel": "使用",
   "params.subgraphUsesText": "{direct} 個呼叫；展開後實際用到 {expanded} 次；這裡的修改會改到全部",

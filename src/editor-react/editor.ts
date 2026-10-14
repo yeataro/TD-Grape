@@ -1292,6 +1292,15 @@ export class Editor {
   glslFocusSubscribe = (listener: () => void) => { this.glslListeners.add(listener); return () => { this.glslListeners.delete(listener); }; };
   glslFocusSnapshot = () => this.glslFocus;
   focusGlslLine = (line: number) => { this.glslFocus = { line, n: this.glslFocus.n + 1 }; this.glslListeners.forEach(listener => listener()); };
+  // A definition to locate (visual notes 20; wording 「定位定義」, human 2026-10-14): asked from the Parameter panel, followed by the
+  // workspace (brings the Subgraphs panel forward) and the panel (scrolls to the card, a short cue). It neither enters the subgraph nor
+  // touches the canvas selection; selecting the card waits for visual notes 25. 要定位的定義（外觀意見 20；用詞「定位定義」）：參數面板
+  // 要求，工作區把子圖面板叫到前面、面板捲到卡片並提示一下。不進入子圖、不動畫布選取；選取卡片等第 25 條。
+  private definitionFocus = { id: '', n: 0 };
+  private readonly definitionListeners = new Set<() => void>();
+  definitionFocusSubscribe = (listener: () => void) => { this.definitionListeners.add(listener); return () => { this.definitionListeners.delete(listener); }; };
+  definitionFocusSnapshot = () => this.definitionFocus;
+  locateDefinition = (id: string) => { this.definitionFocus = { id, n: this.definitionFocus.n + 1 }; this.definitionListeners.forEach(listener => listener()); };
   /** Select one node, as clicking it would (a GLSL line leads to its node, Refactor.63). 選取一個節點（GLSL 的行找回它的節點）。 */
   selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
   /** Select a node wherever it is (TECH-6): `key` is its place (glsl_lines placeKey). In the network on screen it is selected and

@@ -2053,3 +2053,18 @@ test('subgraphs: a placed call is named after its title, follows a rename, and a
   assert.match(zh(session.snapshot().message), /Title/);
   session.history(false); assert.deepEqual(calls(), ['Gain_1', 'Gain_2'], 'one Undo puts title and calls back');
 });
+
+// Locate a definition (visual notes 20): a request the workspace and the Subgraphs panel follow; it changes no selection and does not
+// enter. 定位定義：工作區與子圖面板跟著的要求；不改選取、不進入。
+test('subgraphs: locating a definition is a request that changes neither the selection nor the network', t => {
+  const { session } = open(t);
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
+  session.placeSubgraph('gain', { x: 0, y: 0 });
+  const call = session.graph().stages.pixel.nodes.find(n => n.params.subgraphId === 'gain').id;
+  session.selectNode(call);
+  let heard = 0; const stop = session.definitionFocusSubscribe(() => heard++);
+  session.locateDefinition('gain'); session.locateDefinition('gain');
+  stop();
+  assert.equal(heard, 2, 'asking twice counts twice'); assert.deepEqual(clone(session.definitionFocusSnapshot()), { id: 'gain', n: 2 });
+  assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.selectedInOrder()), [call]);
+});

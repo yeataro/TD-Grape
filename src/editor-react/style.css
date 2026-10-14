@@ -930,6 +930,13 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .source-head { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); }
 .source-head > .builtin-row { flex: 1; min-width: 0; }
 .source-head > .badge { margin: 0; flex: none; }
+/* A card located from the Parameter panel (visual notes 20): outlined for a moment, a short pulse when animation effects are on.
+   參數面板定位到的卡片：短暫描邊，動畫效果開著時輕輕脈動一下。 */
+.subgraph-card.located { position: relative; }
+.subgraph-card.located::after { content: ""; position: absolute; inset: -2px; border: 2px solid var(--group-color); border-radius: inherit; pointer-events: none; }
+:root:not([data-motion="off"]) .subgraph-card.located::after { animation: card-located .6s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { :root[data-motion="system"] .subgraph-card.located::after { animation: none; } }
+@keyframes card-located { 50% { opacity: .3; } }
 /* A definition this host cannot use (A8): the Ghost mark at icon size. 這個 host 用不了的定義：圖示大小的 Ghost 標記。 */
 .source-head > .subgraph-unusable { flex: none; width: var(--icon-size); height: var(--icon-size); }
 .source-head :is(.source-name, .select-button) { height: var(--io-field); }

@@ -1,5 +1,6 @@
 import { GhostMark } from './GhostMark';
-import { memo, useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
+import { memo, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent } from 'react';
+import { scrollToMiddle } from './scroll_glide';
 import { useReactFlow } from '@xyflow/react';
 import { core, typeColor, type SubgraphData, type InterfacePort } from './core';
 import { tr, say, useLanguage } from './text';
@@ -49,7 +50,16 @@ function SubgraphCard({ definition, uses, current, unusable, onRemove }: { defin
   };
   // A double-click on the card opens the subgraph, as on its call (legacy: double-click enters). 雙擊卡片打開子圖，同雙擊呼叫節點。
   const openIt = (event: MouseEvent) => { if (!(event.target as Element).closest('input, button')) session.enterDefinition(definition.id); };
-  return <div className={'source-card subgraph-card' + (current ? ' current' : '')} style={definition.color ? { '--group-color': definition.color } as CSSProperties : groupColor('subgraph')}
+  // Located from the Parameter panel (visual notes 20): scrolled to and given a short cue. 參數面板定位到這張：捲過來並提示一下。
+  const focus = useSyncExternalStore(session.definitionFocusSubscribe, session.definitionFocusSnapshot), card = useRef<HTMLDivElement>(null);
+  const [located, setLocated] = useState(false);
+  useEffect(() => {
+    if (focus.id !== definition.id || !focus.n || !card.current) return;
+    scrollToMiddle(card.current); setLocated(true);
+    const timer = window.setTimeout(() => setLocated(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [focus]);
+  return <div ref={card} className={'source-card subgraph-card' + (current ? ' current' : '') + (located ? ' located' : '')} style={definition.color ? { '--group-color': definition.color } as CSSProperties : groupColor('subgraph')}
     {...dragToAdd(subgraphChoice(definition.id))} onDoubleClick={openIt}>
     {/* The triangle opens the preview, as every card here (visual notes 15; node folding, when it exists, may take its place). 三角形打開預覽，
         同這裡每張卡（外觀意見 15；節點摺疊做好後或許換成它）。 */}

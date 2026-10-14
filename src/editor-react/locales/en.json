@@ -337,6 +337,8 @@
   "params.subgraphIdentifier": "Identifier",
   "params.subgraphLocalId": "In-graph id of a local subgraph",
   "params.subgraphLocalIdTag": "in-graph id",
+  "params.locateDefinition": "Locate definition",
+  "params.locateDefinitionHint": "Show this subgraph in the Subgraphs panel",
   "params.subgraphTitle": "Title",
   "params.subgraphUsesLabel": "Uses",
   "params.subgraphUsesText": "{direct} call(s), {expanded} in effect after expansion; a change here changes all of them",

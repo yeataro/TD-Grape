@@ -769,6 +769,8 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
   const prefs = usePrefs(), layout = useLayout();
+  // Locating a definition brings the Subgraphs panel forward (visual notes 20). 定位定義時把子圖面板叫到前面。
+  useEffect(() => session?.definitionFocusSubscribe(() => layout.show('subgraphs')), [session, layout.show]);
   // The probe lives outside React (perf_overlay.ts); it is only mounted and unmounted here. 探針在 React 之外；這裡只負責掛上與拿掉。
   useEffect(() => prefs.perfOverlay ? showPerfOverlay() : undefined, [prefs.perfOverlay]);
   // Which TD answers (Refactor.52): asked once at start, then updated by every reply that says so.

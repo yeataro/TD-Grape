@@ -174,7 +174,10 @@ function SubgraphFields({ definition, uses }: { definition: SubgraphData; uses: 
         {...typing} onBlur={commit}
         onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.name); } }} /></label>
     <div className="control-field"><span>{say(tr('params.subgraphIdentifier', 'Identifier'))}</span>
-      <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code></div>
+      <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code>
+      {/* Locate the definition in the Subgraphs panel (visual notes 20). 在子圖面板定位這份定義（外觀意見 20）。 */}
+      <button type="button" className="params-link" onClick={() => session.locateDefinition(definition.id)}
+        title={say(tr('params.locateDefinitionHint', 'Show this subgraph in the Subgraphs panel'))}>{say(tr('params.locateDefinition', 'Locate definition'))}</button></div>
     <div className="control-field"><span>{say(tr('params.subgraphUsesLabel', 'Uses'))}</span>
       <span className="subgraph-uses">{say(tr('params.subgraphUsesText', '{direct} call(s), {expanded} in effect after expansion; a change here changes all of them', uses))}</span></div>
   </div>;
