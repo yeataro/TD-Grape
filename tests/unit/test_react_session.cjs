@@ -44,8 +44,9 @@ const doc = state => JSON.parse(state.document);
 const withDoc = (state, edit) => { const graph = doc(state); edit(graph); state.document = JSON.stringify(graph); return state; };
 // What TD receives: the editor's graph with the editor that saved it (Refactor.66). TD 收到的：編輯器的圖，加上是哪一版存的。
 const saved = graph => ({ ...clone(graph), savedBy: '9.9.9 Test' });
-function open(t, request, retry = 60000, generator, live) {
-  let remote = { document: JSON.stringify(fixture()), revision: 4, targetId: target };
+// `initial`: the graph TD holds when the page opens (default: the fixture). initial：開頁時 TD 拿著的圖（預設是 fixture）。
+function open(t, request, retry = 60000, generator, live, initial) {
+  let remote = { document: JSON.stringify(initial ?? fixture()), revision: 4, targetId: target };
   const calls = [];
   const loaded = () => ({ state: clone(remote), format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
     frontendCompiler: { protocol: GrapeTopCompiler.protocol, catalogHash: bootstrap.catalogHash, required: true } });
@@ -2023,6 +2024,14 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
   assert.deepEqual(clone(session.codegen.errorAt), { trail: ['A'] });
   assert.equal(session.snapshot().codegenFailure.place, 'Alpha');
   assert.match(zh(session.snapshot().message), /Alpha/);
-  assert.equal(session.locateCodegenFailure(), false);
+  assert.equal(session.locateCodegenFailure(), null);
   assert.equal(session.snapshot().network, 'subgraph:A'); assert.deepEqual(clone(session.takeLanding()), { frame: 'all' });
+  // Already there: Go there frames everything again (Codex 3rd check). 已經在那裡：前往再對準全部。
+  assert.deepEqual(clone(session.locateCodegenFailure()), { frame: 'all' });
+  // A rename shows in the notice (Codex 3rd check). 改名會反映在提示上。
+  session.transactGraph('rename', c => c.subgraph('A').rename('Gamma'));
+  assert.equal(session.snapshot().codegenFailure.place, 'Gamma');
+  // Opening the failing graph shows the notice at once (Codex 3rd check). 直接開這張失敗的圖，提示立刻出現。
+  const reopened = open(t, undefined, 60000, undefined, undefined, session.graph()).session;
+  assert.deepEqual(clone(reopened.snapshot().codegenFailure?.at), { trail: ['A'] });
 });

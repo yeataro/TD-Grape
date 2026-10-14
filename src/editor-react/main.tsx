@@ -737,7 +737,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
           {session && state.upgrades.length > 0 && !draft && state.phase !== 'conflict' && <UpgradeNotice session={session}
             onGo={id => { session.selectNode(id); frameNodes(flow, [id]); }} />}
           {session && state.codegenFailure && !draft && state.phase !== 'conflict' && <CodegenNotice failure={state.codegenFailure}
-            onGo={() => { const at = state.codegenFailure?.at; if (session.locateCodegenFailure() && at?.node) frameNodes(flow, [at.node]); }} />}
+            onGo={() => { const here = session.locateCodegenFailure(); if (here) frameNodes(flow, here.frame === 'node' ? [here.id] : undefined); }} />}
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice stuck={state.stuck} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>

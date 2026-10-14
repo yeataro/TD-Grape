@@ -5972,8 +5972,13 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
         // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
         // 它的問題在子圖面板顯示。
+        // The stage table is built only when a call reaches something (Codex 3rd check: a graph with no calls reads no definitions).
+        // 有呼叫走得到東西才建 Stage 表（沒有呼叫的圖不讀任何定義）。
+        const used = reachable(g, pixel);
+        if (!used.size)
+            return true;
         const stagesOf = (0, subgraph_stages_1.subgraphStageTable)(g, registry);
-        return [...reachable(g, pixel)].every(id => { const f = g.subgraphs.find(item => item.id === id); return !f || usableDefinition(g, f, stagesOf); });
+        return [...used].every(id => { const f = g.subgraphs.find(item => item.id === id); return !f || usableDefinition(g, f, stagesOf); });
     }
     function usableNetwork(g, data, owner) {
         var _a;

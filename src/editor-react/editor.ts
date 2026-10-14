@@ -291,7 +291,9 @@ export class Editor {
     this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
       version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
       compiled: this.codegen.compiled ?? null, glslVariables: variablePlaces(this.codegen.compiled),
-      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [], codegenFailure: null,
+      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
+      // A graph opened failing shows the notice at once, not after the next edit (Codex 3rd check). 開圖就失敗時立刻顯示提示。
+      codegenFailure: this.failureOf(this.codegen),
       syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
@@ -1303,23 +1305,26 @@ export class Editor {
     const owner = node === undefined ? undefined : this.document.networks.get(trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel')?.nodeData(node);
     return [...names, ...(node === undefined ? [] : [owner?.name ?? node])].join(' › ');
   }
-  /** The failure the notice shows; the same object while the reason and place stay, so what reads it does not redraw. 提示顯示的
-   * 失敗；原因與位置沒變就是同一個物件，讀它的東西不重畫。 */
+  /** The failure the notice shows; the same object while the reason, the place and its names stay (a renamed definition shows
+   * its new name), so what reads it does not redraw. 提示顯示的失敗；原因、位置與名稱都沒變就是同一個物件（定義改名就顯示新名），讀它的
+   * 東西不重畫。 */
   private failureOf(codegen: Delivery): EditorState['codegenFailure'] {
     if (codegen.error === undefined) return null;
-    const last = this.state?.codegenFailure, at = codegen.errorAt;
-    if (last && last.reason === codegen.error && JSON.stringify(last.at) === JSON.stringify(at)) return last;
-    return { reason: codegen.error, ...(at ? { at, place: this.placeName(at) } : {}) };
+    const last = this.state?.codegenFailure, at = codegen.errorAt, place = at ? this.placeName(at) : undefined;
+    if (last && last.reason === codegen.error && JSON.stringify(last.at) === JSON.stringify(at) && last.place === place) return last;
+    return { reason: codegen.error, ...(at ? { at, place } : {}) };
   }
   /** Go to where code generation failed (R113-3; legacy locateCompileIssue): the node, or the definition when only that is known
-   * (entered as from the panel, landing on everything). True when it is a node in the network on screen (the caller frames it).
+   * (entered as from the panel, landing on everything). When the place is the network on screen, nothing moves here and what to
+   * frame comes back for the caller: the node, or everything (Codex 3rd check: Go there re-frames there too).
    * 前往產碼失敗的地方（照舊產品）：節點；只知道定義時就進那份定義（像從面板進入、落在全部）。是畫面上這張網路的節點時回傳 true（呼叫的人對準）。 */
-  locateCodegenFailure = (): boolean => {
+  locateCodegenFailure = (): { frame: 'node'; id: string } | { frame: 'all' } | null => {
     const at = this.state.codegenFailure?.at;
-    if (!at) return false;
-    if (at.node !== undefined) return this.locateNode(placeKey(at.node, at.trail));
+    if (!at) return null;
+    if (at.node !== undefined) return this.locateNode(placeKey(at.node, at.trail)) ? { frame: 'node', id: at.node } : null;
+    if ('subgraph:' + at.trail[at.trail.length - 1] === this.networkId()) return { frame: 'all' };
     if (at.trail.length) this.navigate(at.trail, at.trail.map(() => null), { frame: 'all' });
-    return false;
+    return null;
   };
   /** Select one wire, as a click on it (Refactor.103: from the Graph JSON View). 選取一條接線，同點它（R.103：從 Graph JSON View）。 */
   selectWire = (id: string) => this.applySelection({ nodes: NONE, edges: new Set([id]), primary: null });
