@@ -9,7 +9,7 @@ import { ScrollFade } from './controls';
 import { scrollToMiddle } from './scroll_glide';
 import type { EditorState } from './editor';
 import { traceSwitch, useFollowTrace } from './live_trace';
-import { glslMapOf, glslRows, placeKey, placeOf, type GlslName, type GlslRow } from './glsl_lines';
+import { glslMapOf, glslRows, ownerKey, ownerOf, placeOf, type GlslName, type GlslRow } from './glsl_lines';
 
 // Live trace (Refactor.83, human 2026-10-11; new, legacy's GLSL tab did not follow the selection, app.js:1663): the primary
 // node's names are marked and its lines lit as when hovered. On by default; a personal preference, switched from the panel's
@@ -41,9 +41,10 @@ function GlslView({ glsl, compiled, glslVariables, glslDeclarations, stuck, trai
   // here runs on every move (EDITOR_UI_RULES, continuous interactions). 只在主要選取換人時重畫（框選放開時才定、拖節點不改），
   // 連續互動時不會每一下都跑（畫面規則「連續互動」）。
   const primary = useSyncExternalStore(session.primarySubscribe, session.primarySnapshot);
-  // Lines and links name a node by its place (path and ID, TECH-6); the primary node is in the network on screen. 行與連結以位置
-  // （路徑＋ID）指名節點；主要選取在畫面上這張網路。
-  const traced = useSyncExternalStore(trace.subscribe, trace.snapshot) && primary !== null ? placeKey(primary, trail) : null;
+  // Lines and links carry a node's place (path and ID, TECH-6) for going there; tracing compares the authored node — its definition
+  // and ID (R113-4) — so a definition entered from the panel still traces. 行與連結帶節點的位置（路徑＋ID）供導覽；追蹤比的是作者節點
+  // ——所在定義＋ID——從面板進入的定義照樣追蹤得到。
+  const traced = useSyncExternalStore(trace.subscribe, trace.snapshot) && primary !== null ? ownerKey(primary, trail) : null;
   // Glides or jumps by the gear's animation effects (Refactor.102.2). 照齒輪的動畫效果滑過去或直接跳（R.102.2）。
   const scrollTo = (line: number) => { const row = box.current?.querySelector<HTMLElement>(`[data-line="${line}"]`); if (row) scrollToMiddle(row); };
   useEffect(() => { if (focus.line) scrollTo(focus.line); }, [focus]);
@@ -56,7 +57,7 @@ function GlslView({ glsl, compiled, glslVariables, glslDeclarations, stuck, trai
   latest.current = { session, flow, chooseHere };
   const go = useMemo((): GlslGo => ({
     // A node in another network is reached by entering it (TECH-6); the landing frames it. 別張網路的節點，進入那張網路找到；落點負責對準。
-    node: key => { const { session, flow, chooseHere } = latest.current; chooseHere(key); if (session.locateNode(key)) frameNodes(flow, [placeOf(key).node]); },
+    node: key => { const { session, flow, chooseHere } = latest.current; chooseHere(ownerOf(key)); if (session.locateNode(key)) frameNodes(flow, [placeOf(key).node]); },
     // A node's variable is a link to that node, found in the core's table, never guessed from the text (human 2026-10-10);
     // so is the Shader's output (Refactor.63.4). A Uniform's or constant's name selects every node using it, like Shared
     // Sources' "Select references" (63.4). 節點的變數是連到那個節點的超連結，照核心的表找，不從文字猜（人類）；Shader 的輸出也是。
@@ -98,11 +99,11 @@ const Line = memo(function Line({ line, row, error, focused, traced, go }: { lin
   focused: boolean; traced: string | null; language: string; go: GlslGo }) {
   const node = row.node;
   const link = (name: GlslName, key: number) => 'node' in name
-    ? <button key={key} type="button" className={'glsl-link' + (name.node === traced ? ' traced' : '')} onClick={() => go.node(name.node)}
+    ? <button key={key} type="button" className={'glsl-link' + (ownerOf(name.node) === traced ? ' traced' : '')} onClick={() => go.node(name.node)}
       title={say(tr('glsl.goToVariable', 'Select the node {node}', { node: placeOf(name.node).node }))}>{name.text}</button>
     : <button key={key} type="button" className="glsl-link" onClick={() => go.references(name.declaration)}
       title={say(tr('glsl.selectReferences', 'Select every node using {name}', { name: name.text }))}>{name.text}</button>;
-  return <div data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focused ? ' focused' : '') + (node !== undefined && node === traced ? ' traced' : '')}
+  return <div data-line={line} className={'glsl-line' + (error !== undefined ? ' error' : '') + (focused ? ' focused' : '') + (node !== undefined && ownerOf(node) === traced ? ' traced' : '')}
     title={error}>
     {node ? <button type="button" className="glsl-gutter" onClick={() => go.node(node)}
       title={say(tr('glsl.goToNode', 'Select the node that wrote this line ({node})', { node: placeOf(node).node }))}>{line}</button>

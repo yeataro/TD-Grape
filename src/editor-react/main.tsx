@@ -107,6 +107,15 @@ function UpgradeNotice({ session, onGo }: { session: EditorSession; onGo(id: str
     <div className="notice-actions"><button onClick={session.dismissUpgrades}>{say(tr('upgrade.dismiss', 'OK'))}</button></div>
   </div>;
 }
+// Code generation failed (R113-3; legacy diagnostic bar, app.js locateCompileIssue): why, where, and a way there. Floating, never in
+// the way of editing; gone once code generation works again. 產碼失敗（照舊產品的診斷列）：原因、位置、前往。浮動、不擋編輯；產碼恢復就消失。
+function CodegenNotice({ failure, onGo }: { failure: NonNullable<EditorState['codegenFailure']>; onGo(): void }) {
+  return <div className="floating-notice error" role="group" aria-label={say(tr('codegen.label', 'Code generation failed'))}>
+    <span>{say(tr('codegen.notice', 'Code generation failed; TD keeps running the last good Shader.'))}</span>
+    <span className="notice-detail">{failure.place ? failure.place + ': ' : ''}{failure.reason}</span>
+    {failure.at && <div className="notice-actions"><button onClick={onGo}>{say(tr('codegen.goTo', 'Go there'))}</button></div>}
+  </div>;
+}
 function download(value: unknown, name = 'grape-draft.json') {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
@@ -226,6 +235,9 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // 只在子圖裡才監聽；只讀不攔，React Flow 自己的滾輪（與阻尼的）都不動：沒到底時每次滾輪只讀一次倍率。到底後每多一格畫布微縮當提示
   // （動畫效果開著時）；600 ms 內第三格就上一層。拉線中不算。
   const inside = network !== 'pixel';
+  // How a gesture that starts without a press (placing a node picked by keyboard) starts the count again (R113-5). 不經按下就開始的
+  // 手勢（用鍵盤選好節點後放置）怎麼讓計數重來。
+  const restartZoomOut = useRef(() => {});
   useEffect(() => {
     const element = surface.current;
     if (!inside || !element) return;
@@ -245,10 +257,12 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
       if (motionOn()) { element.classList.add('zoom-out-cue'); clearTimeout(cue); cue = window.setTimeout(() => element.classList.remove('zoom-out-cue'), 220); }
     };
     const press = () => { if (ticks) clear(); };
+    restartZoomOut.current = press;
     element.addEventListener('wheel', wheel, { passive: true, capture: true });
     element.addEventListener('pointerdown', press, { passive: true, capture: true });
-    return () => { element.removeEventListener('wheel', wheel, { capture: true }); element.removeEventListener('pointerdown', press, { capture: true }); clearTimeout(cue); clear(); };
+    return () => { element.removeEventListener('wheel', wheel, { capture: true }); element.removeEventListener('pointerdown', press, { capture: true }); clearTimeout(cue); clear(); restartZoomOut.current = () => {}; };
   }, [inside, flow]);
+  useEffect(() => { if (placing) restartZoomOut.current(); }, [placing]);
   useEffect(() => {
     if (!damping || !surface.current) return;
     const taken = damper.current = dampCanvas(flow, surface.current);
@@ -479,12 +493,12 @@ function usePrefs(): CanvasPrefs {
 // added to EditorState must be added here too (Refactor.63.3: the GLSL panel read a missing glslMap and the page went blank).
 // 沒有圖時：同一個外框，沒有內容、按鈕停用。完整寫出型別、不強制轉型：EditorState 加欄位時這裡也得補（63.3：GLSL 面板讀到沒有的 glslMap，整頁空白）。
 const idle: EditorState = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
-  network: 'pixel', trail: [], projection: { nodes: [], edges: [] }, declarations: [], glsl: '', compiled: null, glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], syncRecords: [] };
+  network: 'pixel', trail: [], projection: { nodes: [], edges: [] }, declarations: [], glsl: '', compiled: null, glslVariables: {}, glslDeclarations: {}, targetPath: '', upgrades: [], codegenFailure: null, syncRecords: [] };
 /** What the workspace itself shows or passes on (Refactor.106): never the projection — the canvas and the panels read their own.
  * 工作區自己顯示或往下傳的欄位（R.106）：不含投影——畫布與面板各自讀。 */
 // trail: the error marks on the canvas are for the network on screen (TECH-6); it changes only with the version. trail：畫布上的錯誤標記
 // 只標畫面上這張網路；它只和版本一起變。
-const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'compiled', 'phase', 'upgrades', 'trail'] as const;
+const WORKSPACE_FIELDS = ['declarations', 'version', 'dirty', 'stuck', 'glsl', 'compiled', 'phase', 'upgrades', 'trail', 'codegenFailure'] as const;
 
 // The editing frame below the title bar: the layout's panes around the network (location bar, its toolbar, the canvas;
 // the canvas pane of the layout, Refactor.68) and the foot bar; the same layout whether a graph is open, loading or missing (human
@@ -722,6 +736,8 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
               回到 TD 仍在跑的那一版。浮動，不擋編輯。 */}
           {session && state.upgrades.length > 0 && !draft && state.phase !== 'conflict' && <UpgradeNotice session={session}
             onGo={id => { session.selectNode(id); frameNodes(flow, [id]); }} />}
+          {session && state.codegenFailure && !draft && state.phase !== 'conflict' && <CodegenNotice failure={state.codegenFailure}
+            onGo={() => { const at = state.codegenFailure?.at; if (session.locateCodegenFailure() && at?.node) frameNodes(flow, [at.node]); }} />}
           {session && state.stuck && !draft && state.phase !== 'conflict' && <StuckNotice stuck={state.stuck} session={session}
             onShowGlsl={line => { layout.show('glsl'); if (line) session.focusGlslLine(line); }} />}
           </div></div>

@@ -1992,3 +1992,37 @@ test('subgraphs: a GLSL line or variable leads into the subgraph that wrote it; 
   assert.deepEqual(clone(session.codegen.errorAt), { node: 'viaB', trail: ['B'] });
   assert.match(zh(session.snapshot().message), /Beta › /);
 });
+
+// R113-3, R113-4 (Codex re-review): a failure that names only a definition keeps its place and leads there; GLSL tracing compares the
+// authored node (definition + ID), so a nested definition entered from the panel still traces. 只指到定義的失敗保留位置、可前往；
+// GLSL 追蹤比作者節點（定義＋ID），從面板進入的巢狀定義照樣追蹤得到。
+test('subgraphs: a definition-level failure keeps its place and Go there enters it; tracing finds a nested node entered from the panel', t => {
+  const { session } = open(t);
+  const { glslMapOf, glslRows, ownerKey, variablePlaces } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  session.transactGraph('make', c => {
+    const b = c.createSubgraph({ id: 'B', name: 'Beta' }), inner = c.networks.get('subgraph:B');
+    inner.create('deep', 'sgrape.builtin.float', { value: 0.5 });
+    inner.connect(inner.node('deep').outputs[0], inner.node('output').port('input', b.data.outputs[0].id), GrapeGraph.values.policy);
+    c.createSubgraph({ id: 'A', name: 'Alpha' });
+    const a = c.networks.get('subgraph:A'); a.instantiateSubgraph('B', 'toB', { x: 0, y: 0 });
+    a.connect(a.node('toB').outputs[0], a.node('output').port('input', c.subgraph('A').data.outputs[0].id), GrapeGraph.values.policy);
+    const stage = c.networks.get('pixel'); stage.instantiateSubgraph('A', 'callA');
+    stage.connect(stage.node('callA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
+  });
+  // Tracing: the line was written along root → A → B; entered from the panel the path is [B]; the same authored node. 追蹤。
+  const compiled = session.snapshot().compiled, map = glslMapOf(compiled);
+  assert.ok(map.some(row => row.node === 'deep' && row.trail?.join() === 'A,B'));
+  const { touching } = glslRows(compiled.pixel.split(String.fromCharCode(10)).map(text => [{ text }]), map, variablePlaces(compiled), compiled.sourceMap.declarations);
+  session.enterDefinition('B');
+  assert.ok((touching.get(ownerKey('deep', session.snapshot().trail)) ?? []).length > 0, 'the traced node finds its lines');
+  session.goToDepth(0, true);
+  // A failure inside A that names no node: the place is kept, the message names it, Go there enters A. 沒有節點的失敗。
+  const broken = clone(session.graph());
+  broken.subgraphs.find(f => f.id === 'A').graph.nodes = broken.subgraphs.find(f => f.id === 'A').graph.nodes.filter(n => n.nodeType !== 'sgrape.builtin.subgraph_input');
+  session.restoreDraft(broken);
+  assert.deepEqual(clone(session.codegen.errorAt), { trail: ['A'] });
+  assert.equal(session.snapshot().codegenFailure.place, 'Alpha');
+  assert.match(zh(session.snapshot().message), /Alpha/);
+  assert.equal(session.locateCodegenFailure(), false);
+  assert.equal(session.snapshot().network, 'subgraph:A'); assert.deepEqual(clone(session.takeLanding()), { frame: 'all' });
+});

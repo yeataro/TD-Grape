@@ -22,6 +22,11 @@ export function glslMapOf(compiled: Compiled | null): readonly GlslLine[] {
  * 節點就是 ID 本身。ID 不含「/」，所以讀得回來。GLSL 的連結、行與錯誤標記都用它，不同網路裡同 ID 的節點才分得開。 */
 export const placeKey = (node: string, trail: readonly string[] = []) => trail.length ? [...trail, node].join('/') : node;
 export const placeOf = (key: string): { node: string; trail: string[] } => { const parts = key.split('/'); return { node: parts.pop()!, trail: parts }; };
+/** Which authored node a place is: the definition it is in, then its ID (R113-4). The full path is for going there; two paths
+ * into one definition reach the same node, so tracing compares this. 位置指的是哪個作者節點：所在的定義、再加 ID。完整路徑是導覽用的；
+ * 兩條路徑進到同一份定義是同一個節點，所以追蹤比這個。 */
+export const ownerKey = (node: string, trail: readonly string[] = []) => trail.length ? trail[trail.length - 1] + '/' + node : node;
+export const ownerOf = (key: string) => { const { node, trail } = placeOf(key); return ownerKey(node, trail); };
 
 /** Each variable's node as a place key, once per compiled program (the panel memoises on it). 每個變數的節點位置鍵，每份程式一份。 */
 const variableMaps = new WeakMap<Compiled, Readonly<Record<string, string>>>();
@@ -74,7 +79,7 @@ export function glslRows(lines: readonly (readonly Piece[])[], map: readonly Gls
       if (!name) continue;
       if (at > from) parts.push(piece.text.slice(from, at));
       parts.push(name); from = at + word.length;
-      if ('node' in name) touch(name.node, index);
+      if ('node' in name) touch(ownerOf(name.node), index);
     }
     if (!parts.length) return piece;
     if (from < piece.text.length) parts.push(piece.text.slice(from));
@@ -82,7 +87,7 @@ export function glslRows(lines: readonly (readonly Piece[])[], map: readonly Gls
   };
   const rows = lines.map((pieces, index): GlslRow => {
     const node = nodeOf.get(index + 1);
-    if (node !== undefined) touch(node, index);
+    if (node !== undefined) touch(ownerOf(node), index);
     return { node, pieces: pieces.map(piece => piece.kind ? piece : linked(piece, index)) };
   });
   return { rows, touching };

@@ -3,10 +3,10 @@ import { core, compiler, requireSupported, parseDocument, type UpgradeChange, ty
   type Declaration, type NameProblem, type ObjectValue, type ComponentStyle, type Clip, type GraphGroup, type SubgraphData, type InterfaceEdit } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge, colorGroupOf } from './projection';
 import { HostError, type HostClient, type StateResponse, type UniformStates } from './host';
-import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
+import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type ErrorPlace, type Link, type SyncStatus } from './host_sync';
 import type { GraphChanges } from './core';
 import { tr, errorText, type Message } from './text';
-import { placeOf, variablePlaces } from './glsl_lines';
+import { placeKey, placeOf, variablePlaces } from './glsl_lines';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
 import { recordSync, type SyncRecord } from './sync_record';
@@ -210,6 +210,9 @@ export type EditorState = SyncStatus & { projection: Projection; version: number
   message: Message | string; level: Level; glsl: string; compiled: Compiled | null;
   glslVariables: Readonly<Record<string, string>>; glslDeclarations: Readonly<Record<string, string>>; targetPath: string;
   upgrades: readonly UpgradeChange[];
+  /** Code generation failed (R113-3; legacy diagnostic bar): why, and where when the core says — a node, or only its definition.
+   * 產碼失敗（照舊產品的診斷列）：原因，以及核心有給時的位置——節點，或只有所在的定義。 */
+  codegenFailure: { reason: string; at?: ErrorPlace; place?: string } | null;
   /** A save this page asked for has no answer yet (Refactor.75.13): the button waits, so pressing again does not ask
    * again. 這一頁要求的存檔還沒有回覆：按鈕等著，再按不會再要求一次。 */
   saving?: boolean;
@@ -288,7 +291,7 @@ export class Editor {
     this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
       version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
       compiled: this.codegen.compiled ?? null, glslVariables: variablePlaces(this.codegen.compiled),
-      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
+      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [], codegenFailure: null,
       syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
@@ -639,9 +642,12 @@ export class Editor {
     if (this.codegen && key === this.codegen.key && !notesChanged(changes)) return { ...this.codegen, graph };
     try { return { graph, key, compiled: this.generator.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
     catch (error) {
-      // The core's location is kept with the message (TECH-6). 核心給的位置跟著訊息留下。
-      const at = error as { node?: unknown; trail?: unknown };
-      return { graph, key, error: String(error), ...(typeof at.node === 'string' && at.node ? { errorAt: { node: at.node, trail: Array.isArray(at.trail) ? at.trail.map(String) : [] } } : {}) };
+      // The core's location is kept with the message (TECH-6), also when it names only a definition (R113-3). 核心給的位置跟著訊息留下，
+      // 只指到定義時也留。
+      const at = error as { node?: unknown; trail?: unknown; subgraphId?: unknown };
+      const node = typeof at.node === 'string' && at.node ? at.node : undefined;
+      const trail = Array.isArray(at.trail) ? at.trail.map(String) : typeof at.subgraphId === 'string' ? [at.subgraphId] : [];
+      return { graph, key, error: String(error), ...(node || trail.length ? { errorAt: { ...(node ? { node } : {}), trail } } : {}) };
     }
   }
 
@@ -676,6 +682,7 @@ export class Editor {
     this.sendChangedUniforms();
     this.codegen = this.compile(changes);
     const at = this.codegen.errorAt?.trail.length ? this.codegen.errorAt : undefined;
+    const codegenFailure = this.failureOf(this.codegen);
     const failed = this.codegen.error === undefined ? undefined : at
       ? tr('edit.codegenFailedIn', 'Code generation failed in {place}: {reason}', { place: this.placeName(at), reason: this.codegen.error })
       : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
@@ -690,7 +697,7 @@ export class Editor {
     // 拿到的還是原來的群組。刪掉成員會改到那份資料（修改結束時的整理），那時才重做清單。
     const here = changes?.networks.find(net => net.id === this.networkId());
     if (this.grouped && this.grouped.network === this.networkId() && changes && !here?.metadata) this.grouped = { ...this.grouped, document: this.document };
-    this.state = { ...this.state, projection, version: this.state.version + 1, declarations, network: this.networkId(), trail: this.trail,
+    this.state = { ...this.state, projection, version: this.state.version + 1, declarations, network: this.networkId(), trail: this.trail, codegenFailure,
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl, compiled: this.codegen.compiled ?? this.state.compiled,
       glslVariables: this.codegen.compiled ? variablePlaces(this.codegen.compiled) : this.state.glslVariables,
@@ -1289,12 +1296,31 @@ export class Editor {
     this.navigate(trail, trail.map(() => null), { frame: 'node', id: node });
     return false;
   };
-  /** A place for people: the definitions' names along the path, then the node's name. 給人看的位置：路徑上的定義名稱，再接節點名稱。 */
-  private placeName({ node, trail }: { node: string; trail: readonly string[] }) {
+  /** A place for people: the definitions' names along the path, then the node's name when there is one. 給人看的位置：路徑上的定義
+   * 名稱，有節點時再接節點名稱。 */
+  private placeName({ node, trail }: ErrorPlace) {
     const names = trail.map(id => this.document.document.subgraphs?.find(f => f.id === id)?.name ?? id);
-    const owner = this.document.networks.get(trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel')?.nodeData(node);
-    return [...names, owner?.name ?? node].join(' › ');
+    const owner = node === undefined ? undefined : this.document.networks.get(trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel')?.nodeData(node);
+    return [...names, ...(node === undefined ? [] : [owner?.name ?? node])].join(' › ');
   }
+  /** The failure the notice shows; the same object while the reason and place stay, so what reads it does not redraw. 提示顯示的
+   * 失敗；原因與位置沒變就是同一個物件，讀它的東西不重畫。 */
+  private failureOf(codegen: Delivery): EditorState['codegenFailure'] {
+    if (codegen.error === undefined) return null;
+    const last = this.state?.codegenFailure, at = codegen.errorAt;
+    if (last && last.reason === codegen.error && JSON.stringify(last.at) === JSON.stringify(at)) return last;
+    return { reason: codegen.error, ...(at ? { at, place: this.placeName(at) } : {}) };
+  }
+  /** Go to where code generation failed (R113-3; legacy locateCompileIssue): the node, or the definition when only that is known
+   * (entered as from the panel, landing on everything). True when it is a node in the network on screen (the caller frames it).
+   * 前往產碼失敗的地方（照舊產品）：節點；只知道定義時就進那份定義（像從面板進入、落在全部）。是畫面上這張網路的節點時回傳 true（呼叫的人對準）。 */
+  locateCodegenFailure = (): boolean => {
+    const at = this.state.codegenFailure?.at;
+    if (!at) return false;
+    if (at.node !== undefined) return this.locateNode(placeKey(at.node, at.trail));
+    if (at.trail.length) this.navigate(at.trail, at.trail.map(() => null), { frame: 'all' });
+    return false;
+  };
   /** Select one wire, as a click on it (Refactor.103: from the Graph JSON View). 選取一條接線，同點它（R.103：從 Graph JSON View）。 */
   selectWire = (id: string) => this.applySelection({ nodes: NONE, edges: new Set([id]), primary: null });
   /** Back to the graph of the program TD still runs (Last Known Good, design-interview Q38 2-5; Refactor.63): loaded the
