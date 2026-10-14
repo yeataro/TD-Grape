@@ -187,9 +187,12 @@ function SubgraphSettings({ definition, uses }: { definition: SubgraphData; uses
     <div className="node-title params-title" data-movable={floating ? '' : undefined} onContextMenu={floating?.openMenu} onPointerDown={floating ? event => {
       if (!(event.target as HTMLElement).closest('button, input, select, textarea')) floating.drag(event); } : undefined}>
       {floating?.fold}
+      {/* Read as a node's card (visual notes 26′): the kind in bold, then the title as plain text, as a node standing for a shared source
+          shows its source; the title is changed in the field below, not here. 照節點卡的讀法（外觀意見 26′）：粗體是種類，後面的 Title 是
+          一般文字（同代表共用來源的節點顯示來源）；Title 在下面的欄位改，不在這裡。 */}
       <Icon name="subgraphLocal" />
-      <strong>{definition.name}</strong>
-      <small>{say(tr('params.subgraph', 'Subgraph'))}</small>
+      <strong>{say(tr('params.subgraph', 'Subgraph'))}</strong>
+      <span className="params-source">{definition.name}</span>
       {floating?.controls}
     </div>
     {!floating?.collapsed && <SubgraphFields definition={definition} uses={uses} />}
