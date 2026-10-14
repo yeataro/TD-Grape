@@ -231,16 +231,23 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
     if (!inside || !element) return;
     let ticks = 0, last = 0, cue: number | undefined;
     const clear = () => { ticks = 0; element.classList.remove('zoom-out-cue'); };
+    // Not while a gesture is under way (TECH-7; visual notes 9): a button held (a node drag, a box selection), a wire drawn, a node
+    // being placed. A gesture also starts the count again: two ticks, a drag, then one tick is one tick. 有手勢進行中不算：按著按鍵
+    // （拖節點、框選）、拉線、放置節點中。手勢也讓計數重來：兩格、拖一下、再一格，算一格。
+    const busy = (event: WheelEvent) => event.buttons !== 0 || element.hasAttribute('data-connecting') || !!latest.current.placing;
     const wheel = (event: WheelEvent) => {
-      if (event.deltaY <= 0 || element.hasAttribute('data-connecting')) return;
+      if (busy(event)) { if (ticks) clear(); return; }
+      if (event.deltaY <= 0) return;
       if (flow.getZoom() > MIN_ZOOM + 1e-6) { if (ticks) clear(); return; }
       const now = performance.now();
       ticks = now - last < 600 ? ticks + 1 : 1; last = now;
       if (ticks >= 3) { clear(); latest.current.session.goUp(); return; }
       if (motionOn()) { element.classList.add('zoom-out-cue'); clearTimeout(cue); cue = window.setTimeout(() => element.classList.remove('zoom-out-cue'), 220); }
     };
+    const press = () => { if (ticks) clear(); };
     element.addEventListener('wheel', wheel, { passive: true, capture: true });
-    return () => { element.removeEventListener('wheel', wheel, { capture: true }); clearTimeout(cue); clear(); };
+    element.addEventListener('pointerdown', press, { passive: true, capture: true });
+    return () => { element.removeEventListener('wheel', wheel, { capture: true }); element.removeEventListener('pointerdown', press, { capture: true }); clearTimeout(cue); clear(); };
   }, [inside, flow]);
   useEffect(() => {
     if (!damping || !surface.current) return;
@@ -323,8 +330,8 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // re-renders what reads them whenever one changes. What changes per render is read through `latest` when the handler runs.
   // 交給 React Flow 的處理函式在每次重繪間保持同一個（R.106）：React Flow 把它們抄進自己的 store，換一個就重繪讀它的部分。每次重繪會變的值，
   // 在函式執行時從 latest 讀。
-  const latest = useRef({ session, projection, options, onCreate, flow });
-  latest.current = { session, projection, options, onCreate, flow };
+  const latest = useRef({ session, projection, options, onCreate, flow, placing });
+  latest.current = { session, projection, options, onCreate, flow, placing };
   const onMoveStart = useCallback<FlowHandler<'onMoveStart'>>(event => {
     if (event) damper.current?.interrupt();
     if (event?.type === 'mousedown') panningCursor(true, event as MouseEvent);
