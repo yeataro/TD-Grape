@@ -12,8 +12,28 @@ const lineMaps = new WeakMap<Compiled, readonly GlslLine[]>();
 export function glslMapOf(compiled: Compiled | null): readonly GlslLine[] {
   if (!compiled) return NO_LINES;
   let map = lineMaps.get(compiled);
-  if (!map) lineMaps.set(compiled, map = compiled.sourceMap.pixel.map(row => ({ line: row.line, node: row.node })));
+  if (!map) lineMaps.set(compiled, map = compiled.sourceMap.pixel.map(row => ({ line: row.line, node: row.node, ...(row.trail.length ? { trail: [...row.trail] } : {}) })));
   return map;
+}
+
+/** Where a node is (technical review TECH-6): its ID and the subgraph path to its network, as one key, `trail/…/node`; a node at
+ * the stage is its ID alone. IDs never hold '/', so the key reads back exactly. The GLSL's links, lines and error marks use it, so
+ * two nodes with the same ID in different networks stay apart. 節點在哪裡：它的 ID 與到它所在網路的子圖路徑，合成一把鍵；stage 上的
+ * 節點就是 ID 本身。ID 不含「/」，所以讀得回來。GLSL 的連結、行與錯誤標記都用它，不同網路裡同 ID 的節點才分得開。 */
+export const placeKey = (node: string, trail: readonly string[] = []) => trail.length ? [...trail, node].join('/') : node;
+export const placeOf = (key: string): { node: string; trail: string[] } => { const parts = key.split('/'); return { node: parts.pop()!, trail: parts }; };
+
+/** Each variable's node as a place key, once per compiled program (the panel memoises on it). 每個變數的節點位置鍵，每份程式一份。 */
+const variableMaps = new WeakMap<Compiled, Readonly<Record<string, string>>>();
+const NO_VARIABLES: Readonly<Record<string, string>> = {};
+export function variablePlaces(compiled: Compiled | null | undefined): Readonly<Record<string, string>> {
+  if (!compiled) return NO_VARIABLES;
+  let places = variableMaps.get(compiled);
+  if (!places) {
+    const trails = 'variableTrails' in compiled.sourceMap ? compiled.sourceMap.variableTrails ?? {} : {};
+    variableMaps.set(compiled, places = Object.fromEntries(Object.entries(compiled.sourceMap.variables).map(([name, node]) => [name, placeKey(node, trails[name])])));
+  }
+  return places;
 }
 
 // The GLSL panel's lines, worked out once per GLSL (Refactor.106 H): each line's coloured pieces with the names in its plain text
@@ -38,7 +58,7 @@ const WORD = /\w+/g;
  * 由哪個節點產生（行號從 1）。 */
 export function glslRows(lines: readonly (readonly Piece[])[], map: readonly GlslLine[], variables: Readonly<Record<string, string>>,
   declarations: Readonly<Record<string, string>>): { rows: GlslRow[]; touching: Map<string, number[]> } {
-  const nodeOf = new Map(map.map(row => [row.line, row.node]));
+  const nodeOf = new Map(map.map(row => [row.line, placeKey(row.node, row.trail)]));
   const touching = new Map<string, number[]>();
   const touch = (node: string, index: number) => {
     const list = touching.get(node);

@@ -8,7 +8,8 @@ import type { Level } from './reports';
 // 與宿主（TD）交換作品：讀取、送出、離線重試、衝突、保存。不改作品、不產碼；送什麼由 Editor 交給它。
 export type Compiled = ReturnType<typeof compiler.compile>;
 // `key` is the code-generation fingerprint (compiler.key): equal keys mean the same program.
-export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?: string };
+// errorAt: where the core says code generation failed, the node and its subgraph path (TECH-6). errorAt：核心說產碼在哪裡失敗。
+export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?: string; errorAt?: { node: string; trail: readonly string[] } };
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
 // retryAt / retryMs: when the next automatic check runs and how long the wait is (Refactor.59.3: the countdown pie);
 // checking: a check is on its way. retryAt／retryMs：下一次自動檢查的時間與等待長度（倒數圓餅）；checking：檢查中。

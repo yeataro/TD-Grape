@@ -18,9 +18,12 @@ export function glslErrors(log: string): GlslError[] {
  * lines the source map names exactly (legacy native_compile_diagnostics: never a guessed node). None gives null.
  * TD 回報的錯誤行是哪些節點寫的（試驗）：只在 glsl 就是失敗的那份時，只認 sourceMap 確定的行（舊產品：不猜節點）。沒有就是 null。 */
 export function errorNodes(failure: { log: string; pixel: string } | undefined, glsl: string,
-  lines: readonly { line: number; node: string }[]): ReadonlySet<string> | null {
+  lines: readonly { line: number; node: string; trail?: readonly string[] }[], trail: readonly string[] = []): ReadonlySet<string> | null {
   if (!failure || failure.pixel !== glsl) return null;
-  const nodeOf = new Map(lines.map(row => [row.line, row.node]));
+  // Only the lines written in the network on screen (the last level of a path is the network): the same ID in another network is
+  // another node (TECH-6). 只算畫面上這張網路寫的行（路徑最後一層就是網路）：別張網路裡同 ID 的是另一個節點。
+  const here = (row: { trail?: readonly string[] }) => (row.trail ?? []).at(-1) === trail.at(-1);
+  const nodeOf = new Map(lines.filter(here).map(row => [row.line, row.node]));
   const nodes = new Set(glslErrors(failure.log).flatMap(error => nodeOf.get(error.line) ?? []));
   return nodes.size ? nodes : null;
 }

@@ -12,7 +12,9 @@ import { validNodeName } from './node_names';
 interface Location {node:string;stage:string;trail:string[];subgraphId?:string}
 interface Compiled {
   vertex:string;pixel:string;bindings:unknown[];
-  sourceMap:{pixel:{node:string;stage:string;trail:string[];line:number}[];variables:Record<string,string>;declarations:Record<string,string>};
+  sourceMap:{pixel:{node:string;stage:string;trail:string[];line:number}[];variables:Record<string,string>;declarations:Record<string,string>;
+    /** The subgraph path of a variable's node, for the variables inside a subgraph (TECH-6). 子圖裡的變數，其節點所在的子圖路徑。 */
+    variableTrails?:Record<string,string[]>};
   diagnostics:{node:string;stage:string;message:string}[];
   stages:unknown;
 }
@@ -203,6 +205,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
           sourceMap:{pixel:result.sourceMap.pixel.map(row=>({...row,...origins.get(row.node)})),
             // A variable inside an expanded subgraph leads to the node the person sees. 展開的子圖裡的變數找回人看得到的節點。
             variables:Object.fromEntries(Object.entries(result.sourceMap.variables).map(([name,id])=>[name,origins.get(id)?.node??id])),
+            variableTrails:Object.fromEntries(Object.entries(result.sourceMap.variables).flatMap(([name,id])=>{const trail=origins.get(id)?.trail;return trail?.length?[[name,[...trail]]]:[];})),
             declarations:result.sourceMap.declarations},
           diagnostics:result.diagnostics.map(row=>({...row,...origins.get(row.node)}))};
       } catch(error){

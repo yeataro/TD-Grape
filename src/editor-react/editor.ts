@@ -6,6 +6,7 @@ import { HostError, type HostClient, type StateResponse, type UniformStates } fr
 import { HostSync, checkLoaded, savedMessage, type Compiled, type Delivery, type Link, type SyncStatus } from './host_sync';
 import type { GraphChanges } from './core';
 import { tr, errorText, type Message } from './text';
+import { placeOf, variablePlaces } from './glsl_lines';
 import { ReportLog, type Level } from './reports';
 import { LiveValues, type LiveMessage } from './live_values';
 import { recordSync, type SyncRecord } from './sync_record';
@@ -200,7 +201,8 @@ const notesChanged = (changes?: GraphChanges) => !changes
 // dismissed. upgrades：讀圖時被節點升級換掉的節點（替換報告用）；關掉就清空。
 // glslDeclarations: which declaration each name written at the top of the GLSL is (Refactor.63.4), so its name selects every
 // node using it. glslDeclarations：GLSL 檔頭寫出的名字是哪個宣告，點名字就選取所有引用它的節點。
-export type GlslLine = { line: number; node: string };
+// trail: the subgraph path of the node's network, when it is inside a subgraph (TECH-6). trail：節點在子圖裡時，所在網路的子圖路徑。
+export type GlslLine = { line: number; node: string; trail?: readonly string[] };
 // network / trail (Refactor.110, basic design §1 路徑列): the network being edited — the stage, or 'subgraph:'+id — and the path of
 // definition ids entered from the stage down to it; the projection is of that network. network／trail（R.110）：正在編輯的網路——stage
 // 或 subgraph:+id——與從 stage 一路進入的定義 id；投影是那張網路的。
@@ -285,7 +287,7 @@ export class Editor {
         syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
       version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
-      compiled: this.codegen.compiled ?? null, glslVariables: this.codegen.compiled?.sourceMap.variables ?? {},
+      compiled: this.codegen.compiled ?? null, glslVariables: variablePlaces(this.codegen.compiled),
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
       syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
@@ -636,7 +638,11 @@ export class Editor {
     const graph = this.document.snapshot(), key = this.generator.key(graph);
     if (this.codegen && key === this.codegen.key && !notesChanged(changes)) return { ...this.codegen, graph };
     try { return { graph, key, compiled: this.generator.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
-    catch (error) { return { graph, key, error: String(error) }; }
+    catch (error) {
+      // The core's location is kept with the message (TECH-6). 核心給的位置跟著訊息留下。
+      const at = error as { node?: unknown; trail?: unknown };
+      return { graph, key, error: String(error), ...(typeof at.node === 'string' && at.node ? { errorAt: { node: at.node, trail: Array.isArray(at.trail) ? at.trail.map(String) : [] } } : {}) };
+    }
   }
 
   // Build the entire candidate before committing history or notifying React.
@@ -669,7 +675,10 @@ export class Editor {
     const projection = this.reconcile(this.cutTrail() ? project(this.document, EMPTY_PROJECTION, this.bootstrap.typeContract, undefined, this.networkId()) : drawn);
     this.sendChangedUniforms();
     this.codegen = this.compile(changes);
-    const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
+    const at = this.codegen.errorAt?.trail.length ? this.codegen.errorAt : undefined;
+    const failed = this.codegen.error === undefined ? undefined : at
+      ? tr('edit.codegenFailedIn', 'Code generation failed in {place}: {reason}', { place: this.placeName(at), reason: this.codegen.error })
+      : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
     // The declarations keep their list while the publication says they did not change (Refactor.107, Z5): the new document holds an
     // equal copy, and what is memoised on the list (the add choices, the panels) keeps with it. 發布說宣告沒變時沿用同一份清單（R.107，
@@ -684,7 +693,7 @@ export class Editor {
     this.state = { ...this.state, projection, version: this.state.version + 1, declarations, network: this.networkId(), trail: this.trail,
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl, compiled: this.codegen.compiled ?? this.state.compiled,
-      glslVariables: this.codegen.compiled?.sourceMap.variables ?? this.state.glslVariables,
+      glslVariables: this.codegen.compiled ? variablePlaces(this.codegen.compiled) : this.state.glslVariables,
       glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? this.state.glslDeclarations,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
     if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal, projection);
@@ -1270,6 +1279,22 @@ export class Editor {
   focusGlslLine = (line: number) => { this.glslFocus = { line, n: this.glslFocus.n + 1 }; this.glslListeners.forEach(listener => listener()); };
   /** Select one node, as clicking it would (a GLSL line leads to its node, Refactor.63). 選取一個節點（GLSL 的行找回它的節點）。 */
   selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
+  /** Select a node wherever it is (TECH-6): `key` is its place (glsl_lines placeKey). In the network on screen it is selected and
+   * true comes back (the caller frames it); in another network the view goes there, entered as from the panel (a path holds
+   * definitions only, not which call, so none is guessed), and lands on it selected. 不管節點在哪都選到它：在畫面上這張網路就選取、
+   * 回傳 true（呼叫的人負責對準）；在別張網路就導覽過去——像從面板進入（路徑只記定義、不記哪個呼叫，所以不猜）——落在它上面並選取。 */
+  locateNode = (key: string): boolean => {
+    const { node, trail } = placeOf(key);
+    if ((trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel') === this.networkId()) { this.selectNode(node); return true; }
+    this.navigate(trail, trail.map(() => null), { frame: 'node', id: node });
+    return false;
+  };
+  /** A place for people: the definitions' names along the path, then the node's name. 給人看的位置：路徑上的定義名稱，再接節點名稱。 */
+  private placeName({ node, trail }: { node: string; trail: readonly string[] }) {
+    const names = trail.map(id => this.document.document.subgraphs?.find(f => f.id === id)?.name ?? id);
+    const owner = this.document.networks.get(trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel')?.nodeData(node);
+    return [...names, owner?.name ?? node].join(' › ');
+  }
   /** Select one wire, as a click on it (Refactor.103: from the Graph JSON View). 選取一條接線，同點它（R.103：從 Graph JSON View）。 */
   selectWire = (id: string) => this.applySelection({ nodes: NONE, edges: new Set([id]), primary: null });
   /** Back to the graph of the program TD still runs (Last Known Good, design-interview Q38 2-5; Refactor.63): loaded the

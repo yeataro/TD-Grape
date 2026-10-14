@@ -1952,3 +1952,43 @@ test('subgraphs: Undo that removes an ancestor or the call a level was entered t
   session.enterDefinition('A'); session.history(true); session.history(false);
   assert.deepEqual(clone(session.snapshot().trail), ['A']);
 });
+
+// TECH-6 (technical review R109–R112): a node is found by its place — the subgraph path and its ID — so a GLSL line or variable inside a
+// subgraph leads into it, and two nodes with one ID in different networks stay apart; code generation failing inside a subgraph keeps
+// where. 節點以位置（子圖路徑＋ID）找：子圖裡的 GLSL 行或變數帶進子圖，不同網路同 ID 的節點分得開；子圖裡產碼失敗時保留位置。
+test('subgraphs: a GLSL line or variable leads into the subgraph that wrote it; the same ID at the stage stays apart; failures keep where', t => {
+  const { session } = open(t);
+  const { glslMapOf, placeKey, variablePlaces } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
+  session.transactGraph('make', c => {
+    const f = c.createSubgraph({ id: 'A', name: 'Alpha' }), inner = c.networks.get('subgraph:A'), stage = c.networks.get('pixel');
+    inner.create('twin', 'sgrape.builtin.float', { value: 0.5 });
+    inner.connect(inner.node('twin').outputs[0], inner.node('output').port('input', f.data.outputs[0].id), GrapeGraph.values.policy);
+    stage.create('twin', 'sgrape.builtin.float', { value: 0.25 });
+    c.createSubgraph({ id: 'B', name: 'Beta' }); c.networks.get('subgraph:B').instantiateSubgraph('A', 'viaB', { x: 0, y: 0 });
+    stage.instantiateSubgraph('A', 'callA'); stage.instantiateSubgraph('B', 'callB', { x: 0, y: 200 });
+    stage.connect(stage.node('callA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
+  });
+  const compiled = session.snapshot().compiled;
+  const inside = glslMapOf(compiled).find(row => row.node === 'twin' && row.trail?.join() === 'A');
+  assert.ok(inside, 'a line written inside A keeps its path');
+  assert.equal(variablePlaces(compiled)[Object.keys(compiled.sourceMap.variables).find(name => compiled.sourceMap.variables[name] === 'twin' && compiled.sourceMap.variableTrails?.[name])], 'A/twin');
+  // From the stage into A: the view goes there, entered as from the panel, and lands on the node selected. 從 stage 進 A。
+  assert.equal(session.locateNode(placeKey('twin', ['A'])), false);
+  assert.equal(session.snapshot().network, 'subgraph:A'); assert.deepEqual(clone(session.selectedInOrder()), ['twin']);
+  assert.deepEqual(clone(session.takeLanding()), { frame: 'node', id: 'twin' });
+  // The stage's twin is another node: back to the stage. stage 的 twin 是另一個節點：回到 stage。
+  assert.equal(session.locateNode('twin'), false);
+  assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.selectedInOrder()), ['twin']);
+  // In the network on screen it is only selected; the caller frames it. 就在畫面上這張網路：只選取，由呼叫的人對準。
+  assert.equal(session.locateNode('twin'), true);
+  // Nested: the path through B leads to A's network. 巢狀：經過 B 的路徑到 A 的網路。
+  session.locateNode(placeKey('twin', ['B', 'A']));
+  assert.equal(session.snapshot().network, 'subgraph:A'); assert.deepEqual(clone(session.snapshot().trail), ['B', 'A']);
+  // Code generation failing inside a subgraph keeps the node and path, and says where. 子圖裡產碼失敗：保留節點與路徑，並說在哪裡。
+  session.goToDepth(0, true);
+  const broken = clone(session.graph());
+  broken.subgraphs.find(f => f.id === 'B').graph.nodes.find(n => n.id === 'viaB').inputValues = { nothing: 1 };
+  session.restoreDraft(broken);
+  assert.deepEqual(clone(session.codegen.errorAt), { node: 'viaB', trail: ['B'] });
+  assert.match(zh(session.snapshot().message), /Beta › /);
+});

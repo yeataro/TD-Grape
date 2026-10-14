@@ -26,7 +26,7 @@ import { tr, say, type Message } from './text';
 export type PanelInput = { session: EditorSession | null; choices: readonly AddChoice[]; add(choice: AddChoice): void };
 // Each panel's own slice of the state (Refactor.106; editor_slice.ts). 每個面板自己的狀態切片（R.106；editor_slice.ts）。
 const SOURCE_FIELDS = ['declarations', 'version'] as const;
-const GLSL_FIELDS = ['glsl', 'compiled', 'glslVariables', 'glslDeclarations', 'stuck'] as const;
+const GLSL_FIELDS = ['glsl', 'compiled', 'glslVariables', 'glslDeclarations', 'stuck', 'trail'] as const;
 const SUBGRAPH_FIELDS = ['version', 'trail'] as const;
 function Sources({ session }: { session: EditorSession }) {
   const { declarations, version } = useEditorFields(session, SOURCE_FIELDS)!;

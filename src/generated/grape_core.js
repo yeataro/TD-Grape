@@ -6181,6 +6181,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                     sourceMap: { pixel: result.sourceMap.pixel.map(row => ({ ...row, ...origins.get(row.node) })),
                         // A variable inside an expanded subgraph leads to the node the person sees. 展開的子圖裡的變數找回人看得到的節點。
                         variables: Object.fromEntries(Object.entries(result.sourceMap.variables).map(([name, id]) => { var _a, _b; return [name, (_b = (_a = origins.get(id)) === null || _a === void 0 ? void 0 : _a.node) !== null && _b !== void 0 ? _b : id]; })),
+                        variableTrails: Object.fromEntries(Object.entries(result.sourceMap.variables).flatMap(([name, id]) => { var _a; const trail = (_a = origins.get(id)) === null || _a === void 0 ? void 0 : _a.trail; return (trail === null || trail === void 0 ? void 0 : trail.length) ? [[name, [...trail]]] : []; })),
                         declarations: result.sourceMap.declarations },
                     diagnostics: result.diagnostics.map(row => ({ ...row, ...origins.get(row.node) })) };
             }

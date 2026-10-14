@@ -130,6 +130,7 @@
   "draft.storageFailed": "The browser cannot keep a draft; use Download draft to keep unsent changes.",
   "draft.useTd": "Use TD's graph",
   "edit.codegenFailed": "Code generation failed: {reason}",
+  "edit.codegenFailedIn": "Code generation failed in {place}: {reason}",
   "edit.componentNames": "Component names changed",
   "edit.deleted": "Selected items deleted",
   "edit.duplicated": "Duplicated",
