@@ -80,10 +80,13 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   networkId = 'pixel', newSubgraphId: () => string = newId, sameSource = true): string[] {
   const network = candidate.networks.get(networkId);
   if (!network) throw Error('No network to paste into');
-  const snapshot = new Map((clip.subgraphs ?? []).map(f => [f.id, f]));
-  // Every definition the copy carries is checked first, also those that will not be brought in (TECH-4, amendment 2 B7-5):
-  // one that fails refuses the whole paste. 複製帶著的每份定義先驗，包括不會帶進來的：任一份不過，整筆拒絕。
-  for (const f of snapshot.values()) validateSubgraphData(withoutStoredUse(copy(f)));
+  // Every definition the copy carries is checked first, as written, also those that will not be brought in (TECH-4, amendment 2
+  // B7-5); two with one ID are refused too, so none can hide behind another (R113-2). One that fails refuses the whole paste.
+  // 複製帶著的每份定義照原樣先驗，包括不會帶進來的；同 ID 的兩份也拒絕，免得一份藏在另一份後面。任一份不過，整筆拒絕。
+  const carried = clip.subgraphs ?? [];
+  for (const f of carried) validateSubgraphData(withoutStoredUse(copy(f)));
+  if (new Set(carried.map(f => f.id)).size !== carried.length) throw Error('Duplicate Subgraph identity');
+  const snapshot = new Map(carried.map(f => [f.id, f]));
   const current = new Map((candidate.document.subgraphs ?? []).map(f => [f.id, f]));
   const referenceOf = (node: NodeData) => candidate.registry.get(node.nodeType)?.referencedGraph?.(node);
   const calls = clip.stages.pixel!.nodes.map(referenceOf).filter((ref): ref is string => ref !== undefined);

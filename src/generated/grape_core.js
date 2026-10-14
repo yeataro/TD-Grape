@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -357,11 +357,15 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
     const network = candidate.networks.get(networkId);
     if (!network)
         throw Error('No network to paste into');
-    const snapshot = new Map(((_a = clip.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f]));
-    // Every definition the copy carries is checked first, also those that will not be brought in (TECH-4, amendment 2 B7-5):
-    // one that fails refuses the whole paste. 複製帶著的每份定義先驗，包括不會帶進來的：任一份不過，整筆拒絕。
-    for (const f of snapshot.values())
+    // Every definition the copy carries is checked first, as written, also those that will not be brought in (TECH-4, amendment 2
+    // B7-5); two with one ID are refused too, so none can hide behind another (R113-2). One that fails refuses the whole paste.
+    // 複製帶著的每份定義照原樣先驗，包括不會帶進來的；同 ID 的兩份也拒絕，免得一份藏在另一份後面。任一份不過，整筆拒絕。
+    const carried = (_a = clip.subgraphs) !== null && _a !== void 0 ? _a : [];
+    for (const f of carried)
         (0, subgraph_operations_1.validateSubgraphData)((0, subgraph_operations_1.withoutStoredUse)((0, model_1.copy)(f)));
+    if (new Set(carried.map(f => f.id)).size !== carried.length)
+        throw Error('Duplicate Subgraph identity');
+    const snapshot = new Map(carried.map(f => [f.id, f]));
     const current = new Map(((_b = candidate.document.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f]));
     const referenceOf = (node) => { var _a, _b; return (_b = (_a = candidate.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, node); };
     const calls = clip.stages.pixel.nodes.map(referenceOf).filter((ref) => ref !== undefined);
@@ -6005,12 +6009,13 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
             walk(data.nodes);
         return found;
     }
-    /** The definitions that cannot be used in this host (amendment A8): for the Subgraphs panel, never a reason to refuse the graph.
-     * 在目前 host 用不了的定義：給子圖面板標示，不是拒絕整張圖的理由。 */
+    /** The definitions that cannot be used in this host (amendment A8): what code generation would refuse, and those on a cycle of
+     * calls (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
+     * 產碼會拒絕的，以及在呼叫循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
     function unusableSubgraphs(g) {
         var _a;
-        const stagesOf = (0, subgraph_stages_1.subgraphStageTable)(g, registry);
-        return new Set(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).filter(f => !usableDefinition(g, f, stagesOf)).map(f => f.id));
+        const { stagesOf, cyclic } = (0, subgraph_stages_1.subgraphGroups)(g, registry);
+        return new Set(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).filter(f => cyclic.has(f.id) || !usableDefinition(g, f, id => [...stagesOf(id)])).map(f => f.id));
     }
     function compile(g, identifiers) {
         if (!supports(g))
@@ -6831,6 +6836,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SUBGRAPH_STAGES = void 0;
 exports.subgraphStages = subgraphStages;
 exports.subgraphStageTable = subgraphStageTable;
+exports.subgraphGroups = subgraphGroups;
 /** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
  * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
  * clipboard) writes the result and is recomputed on load. Nodes this build does not know add no limit: they are ghosts
@@ -6843,45 +6849,84 @@ exports.SUBGRAPH_STAGES = ['vertex', 'pixel'];
 function subgraphStages(graph, id, registry) {
     return subgraphStageTable(graph, registry)(id);
 }
-/** The same answer for many definitions at once (technical review TECH-3): each definition is worked out once and remembered, so a
- * definition shared along many call paths is not walked again per path. A result cut short by a cycle is not remembered as complete.
- * 一次回答多份定義：每份只算一次並記住，被許多呼叫路徑共用的定義不會沿每條路徑重走；被循環截斷的結果不當成完成的記住。 */
+/** The same answer for many definitions at once (technical review TECH-3, R113-1): the definitions are grouped into the sets that
+ * reach each other (strongly connected components; a definition calling itself is one), and each set is worked out once, after the
+ * sets it calls. A definition's answer is every node it reaches, so the members of one cycle share an answer, and a graph opened
+ * with a cycle costs the same as one without. 一次回答多份定義：定義先分成「彼此走得到」的組（強連通分量；自己呼叫自己也算一組），
+ * 每組在它呼叫的組之後算一次。定義的答案是它走得到的每個節點，所以同一個循環的成員答案相同；開著循環的圖和沒有循環的一樣花費。 */
 function subgraphStageTable(graph, registry) {
-    var _a;
-    const done = new Map(), active = new Set();
+    const { stagesOf } = subgraphGroups(graph, registry);
+    return id => [...stagesOf(id)];
+}
+/** The strongly connected components of the definitions' calls (Tarjan), with each one's stages, and which definitions lie on a
+ * cycle (they cannot be expanded; amendment A8 shows them in the Subgraphs panel). 定義呼叫關係的強連通分量（Tarjan）與各自的 Stage，
+ * 以及哪些定義在循環上（展不開；A8 在子圖面板顯示）。 */
+function subgraphGroups(graph, registry) {
+    var _a, _b, _c, _d;
     const byId = new Map(((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(item => [item.id, item]));
-    const visit = (id) => {
-        var _a;
-        const known = done.get(id);
-        if (known)
-            return { stages: known, complete: true };
-        const subgraph = byId.get(id);
-        if (!subgraph)
-            return { stages: [...exports.SUBGRAPH_STAGES], complete: true };
-        if (active.has(id))
-            return { stages: [...exports.SUBGRAPH_STAGES], complete: false };
-        active.add(id);
-        let stages = [...exports.SUBGRAPH_STAGES], complete = true;
-        for (const node of subgraph.graph.nodes) {
+    const own = new Map(), calls = new Map();
+    for (const [id, subgraph] of byId) {
+        let stages = [...exports.SUBGRAPH_STAGES];
+        const children = [];
+        for (const node of (_c = (_b = subgraph.graph) === null || _b === void 0 ? void 0 : _b.nodes) !== null && _c !== void 0 ? _c : []) {
             const module = registry.get(node.nodeType);
             if (!module)
                 continue;
-            const own = module.catalog.definition.stages;
-            if (own)
-                stages = stages.filter(stage => own.includes(stage));
-            const child = (_a = module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, node);
-            if (child !== undefined) {
-                const inner = visit(child);
-                stages = stages.filter(stage => inner.stages.includes(stage));
-                complete && (complete = inner.complete);
-            }
+            const limit = module.catalog.definition.stages;
+            if (limit)
+                stages = stages.filter(stage => limit.includes(stage));
+            const child = (_d = module.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(module, node);
+            if (child !== undefined && byId.has(child))
+                children.push(child);
         }
-        active.delete(id);
-        if (complete)
-            done.set(id, stages);
-        return { stages, complete };
+        own.set(id, stages);
+        calls.set(id, children);
+    }
+    const index = new Map(), low = new Map(), stack = [], onStack = new Set();
+    const groupOf = new Map(), groupStages = [], cyclic = new Set();
+    let counter = 0;
+    const connect = (id) => {
+        index.set(id, counter);
+        low.set(id, counter);
+        counter++;
+        stack.push(id);
+        onStack.add(id);
+        for (const child of calls.get(id)) {
+            if (!index.has(child)) {
+                connect(child);
+                low.set(id, Math.min(low.get(id), low.get(child)));
+            }
+            else if (onStack.has(child))
+                low.set(id, Math.min(low.get(id), index.get(child)));
+        }
+        if (low.get(id) !== index.get(id))
+            return;
+        const members = [];
+        let member;
+        do {
+            member = stack.pop();
+            onStack.delete(member);
+            members.push(member);
+        } while (member !== id);
+        // Components finish children first, so every set this one calls already has its answer. 子分量先完成，這組呼叫的組都已有答案。
+        const group = groupStages.length, inside = new Set(members);
+        let stages = [...exports.SUBGRAPH_STAGES];
+        for (const m of members) {
+            stages = stages.filter(stage => own.get(m).includes(stage));
+            for (const child of calls.get(m))
+                if (!inside.has(child))
+                    stages = stages.filter(stage => groupStages[groupOf.get(child)].includes(stage));
+            groupOf.set(m, group);
+        }
+        groupStages.push(stages);
+        if (members.length > 1 || calls.get(id).includes(id))
+            for (const m of members)
+                cyclic.add(m);
     };
-    return id => [...visit(id).stages];
+    for (const id of byId.keys())
+        if (!index.has(id))
+            connect(id);
+    return { stagesOf: id => byId.has(id) ? groupStages[groupOf.get(id)] : exports.SUBGRAPH_STAGES, cyclic };
 }
 
 },

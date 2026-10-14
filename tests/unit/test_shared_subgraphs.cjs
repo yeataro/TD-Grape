@@ -122,3 +122,25 @@ test('the stage table remembers each definition once and never keeps a result cu
  assert.deepEqual(plain(table('B')),plain(subgraphStages(g,'B',registry)));
  assert.deepEqual(plain(table('B')),['pixel']);
 });
+// R113-1 (Codex re-review): a graph opened with a cycle is diagnosed in one pass, and the definitions on the cycle are reported.
+// 開著循環的圖一次就診斷完，循環上的定義會被回報。
+test('the panel diagnosis stays linear with an old cycle and reports the definitions on it',()=>{
+ const compiler=c.GrapeTopCompiler,{subgraphGroups}=c.GrapeGraph;
+ const g=sharedGraph();g.stages.pixel={nodes:[node('output','pixel_out')],edges:[]};g.subgraphs=[];
+ const def=i=>({id:'d'+i,name:'D'+i,inputs:[],outputs:[],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}});
+ for(let i=0;i<=20;i++){const f=def(i);
+  if(i===0)f.graph.nodes.push(node('self','subgraph_call',{subgraphId:'d0'}));
+  else f.graph.nodes.push(node('a','subgraph_call',{subgraphId:'d'+(i-1)}),node('b','subgraph_call',{subgraphId:'d'+(i-1)}));
+  g.subgraphs.push(f);}
+ let visits=0;const counting={...registry,get:type=>{if(type==='sgrape.builtin.subgraph_input')visits++;return registry.get(type);}};
+ subgraphGroups(g,counting);
+ assert.ok(visits<=g.subgraphs.length,'each definition is read once, not once per call path');
+ const started=Date.now(),unusable=compiler.unusableSubgraphs(g);
+ assert.ok(Date.now()-started<200,'one pass, well under the old 900 ms');
+ assert.deepEqual([...unusable],['d0'],'only the self-calling definition is on a cycle');
+ // An unused self-call no longer passes unseen. 沒用到的自環不再沒人發現。
+ const loop=sharedGraph();loop.subgraphs[0].graph.nodes.push(node('again','subgraph_call',{subgraphId:'gain'}));
+ loop.stages.pixel.nodes=loop.stages.pixel.nodes.filter(n=>n.params.subgraphId!=='gain'&&n.params.subgraphId!=='wrapper');
+ loop.stages.pixel.edges=loop.stages.pixel.edges.filter(e=>!['first','second'].includes(e.from[0])&&!['first','second'].includes(e.to[0]));
+ assert.ok([...compiler.unusableSubgraphs(loop)].includes('gain'));
+});

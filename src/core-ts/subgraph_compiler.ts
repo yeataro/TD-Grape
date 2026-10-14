@@ -4,7 +4,7 @@ import { copy, formatProblem, type Graph, type Node, type NetworkData, type Subg
 import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { validInterface, requireSubgraph } from './subgraph_interface';
-import { subgraphStageTable } from './subgraph_stages';
+import { subgraphStageTable, subgraphGroups } from './subgraph_stages';
 import { types, type, opaque } from './values';
 import { declarationKinds } from './declarations';
 import { validNodeName } from './node_names';
@@ -77,11 +77,12 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     if(Array.isArray(data.nodes))walk(data.nodes);
     return found;
   }
-  /** The definitions that cannot be used in this host (amendment A8): for the Subgraphs panel, never a reason to refuse the graph.
-   * 在目前 host 用不了的定義：給子圖面板標示，不是拒絕整張圖的理由。 */
+  /** The definitions that cannot be used in this host (amendment A8): what code generation would refuse, and those on a cycle of
+   * calls (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
+   * 產碼會拒絕的，以及在呼叫循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
   function unusableSubgraphs(g:Graph):Set<string> {
-    const stagesOf=subgraphStageTable(g,registry);
-    return new Set((g.subgraphs??[]).filter(f=>!usableDefinition(g,f,stagesOf)).map(f=>f.id));
+    const {stagesOf,cyclic}=subgraphGroups(g,registry);
+    return new Set((g.subgraphs??[]).filter(f=>cyclic.has(f.id)||!usableDefinition(g,f,id=>[...stagesOf(id)])).map(f=>f.id));
   }
 
   function compile(g:Graph,identifiers?:{reservedNames:readonly string[]}):Compiled {
