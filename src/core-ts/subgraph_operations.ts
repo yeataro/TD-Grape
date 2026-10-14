@@ -226,6 +226,37 @@ export function subgraphCycle(g:Graph,registry:Registry):string|null {
   return null;
 }
 
+/** Which definitions each definition calls: the (parent, child) edges of the document's definitions. 每份定義呼叫哪些定義：父→子的邊。 */
+function callEdges(g:Graph,registry:Registry):Map<string,Set<string>> {
+  const edges = new Map<string,Set<string>>();
+  for (const f of g.subgraphs || []) {
+    const children = new Set<string>();
+    for (const n of f.graph.nodes) {const child = registry.get(n.nodeType)?.referencedGraph?.(n);if (child !== undefined) children.add(child);}
+    edges.set(f.id,children);
+  }
+  return edges;
+}
+/** A cycle this edit makes (technical review TECH-8): the parent of the first new (parent, child) edge whose child reaches back to
+ * it, a self-call included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
+ * removes an old cycle while adding edges passes when those edges close none. 這次修改造成的循環：第一條新的父→子邊，子能走回父（含自己
+ * 呼叫自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
+export function newSubgraphCycle(before:Graph,after:Graph,registry:Registry):string|null {
+  const old = callEdges(before,registry),now = callEdges(after,registry);
+  const reaches = (from:string,to:string):boolean => {
+    const seen = new Set<string>(),stack = [from];
+    while (stack.length) {
+      const id = stack.pop()!;
+      if (id === to) return true;
+      if (seen.has(id)) continue;
+      seen.add(id);stack.push(...(now.get(id) ?? []));
+    }
+    return false;
+  };
+  for (const [parent,children] of now) for (const child of children)
+    if (!old.get(parent)?.has(child) && reaches(child,parent)) return parent;
+  return null;
+}
+
 /** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
  * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */
 export function callCounts(graph:GraphDocument):ReadonlyMap<string,number> {

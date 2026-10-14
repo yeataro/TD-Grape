@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -1520,11 +1520,11 @@ class GraphDocument {
             // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
             (0, capacity_1.requireCapacity)(before, after, this.registry);
             (0, structure_1.requireStructure)(before, after, this.registry);
-            // A subgraph that reaches itself through its calls cannot be expanded: an edit that makes such a cycle is refused as a whole;
-            // a graph opened with one stays editable (the compiler reports it). 經由呼叫回到自己的子圖展不開：造成這種循環的修改整筆拒絕；
-            // 開圖時已有的照樣能編（編譯器會報）。
-            const cycle = (0, subgraph_operations_1.subgraphCycle)(after, this.registry);
-            if (cycle && !(0, subgraph_operations_1.subgraphCycle)(before, this.registry))
+            // A subgraph that reaches itself through its calls cannot be expanded: an edit that adds a call edge closing a cycle is refused
+            // as a whole, even when the graph already has another one (TECH-8); a graph opened with one stays editable and repairable (the
+            // compiler reports it). 經由呼叫回到自己的子圖展不開：新增的呼叫邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
+            const cycle = (0, subgraph_operations_1.newSubgraphCycle)(before, after, this.registry);
+            if (cycle)
                 throw Object.assign(Error('Subgraph reference cycle: ' + cycle), { code: 'subgraph.cycle', subgraphId: cycle });
             return { before, after, changes: (0, changes_1.changesBetween)(before, after, this.registry) };
         }
@@ -6343,6 +6343,7 @@ exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
 exports.subgraphFromSelection = subgraphFromSelection;
 exports.subgraphCycle = subgraphCycle;
+exports.newSubgraphCycle = newSubgraphCycle;
 exports.callCounts = callCounts;
 exports.useCounts = useCounts;
 exports.removeSubgraph = removeSubgraph;
@@ -6608,6 +6609,48 @@ function subgraphCycle(g, registry) {
         if (found)
             return found;
     }
+    return null;
+}
+/** Which definitions each definition calls: the (parent, child) edges of the document's definitions. 每份定義呼叫哪些定義：父→子的邊。 */
+function callEdges(g, registry) {
+    var _a, _b;
+    const edges = new Map();
+    for (const f of g.subgraphs || []) {
+        const children = new Set();
+        for (const n of f.graph.nodes) {
+            const child = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (child !== undefined)
+                children.add(child);
+        }
+        edges.set(f.id, children);
+    }
+    return edges;
+}
+/** A cycle this edit makes (technical review TECH-8): the parent of the first new (parent, child) edge whose child reaches back to
+ * it, a self-call included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
+ * removes an old cycle while adding edges passes when those edges close none. 這次修改造成的循環：第一條新的父→子邊，子能走回父（含自己
+ * 呼叫自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
+function newSubgraphCycle(before, after, registry) {
+    var _a;
+    const old = callEdges(before, registry), now = callEdges(after, registry);
+    const reaches = (from, to) => {
+        var _a;
+        const seen = new Set(), stack = [from];
+        while (stack.length) {
+            const id = stack.pop();
+            if (id === to)
+                return true;
+            if (seen.has(id))
+                continue;
+            seen.add(id);
+            stack.push(...((_a = now.get(id)) !== null && _a !== void 0 ? _a : []));
+        }
+        return false;
+    };
+    for (const [parent, children] of now)
+        for (const child of children)
+            if (!((_a = old.get(parent)) === null || _a === void 0 ? void 0 : _a.has(child)) && reaches(child, parent))
+                return parent;
     return null;
 }
 /** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct

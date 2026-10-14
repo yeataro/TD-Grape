@@ -216,6 +216,24 @@ test('placing a call that would make a subgraph call itself is refused as a whol
  assert.ok(repaired.after.stages.pixel.nodes.some(n=>n.id==='x'),'an unrelated edit still goes through');
 });
 
+// TECH-8 (technical review R109–R112): the gate compares the (parent, child) call edges, not a whole-document yes/no.
+// 關卡比的是父→子呼叫邊，不是整份文件有沒有循環。
+test('an existing cycle does not let a new one in; repairing it, also while adding edges that close none, goes through',()=>{
+ const fixture=cyclic=>{const raw=sharedGraph(),fresh=plain(raw.subgraphs[0]);fresh.id='fresh';fresh.name='Fresh';raw.subgraphs.push(fresh);
+  if(cyclic)raw.subgraphs[0].graph.nodes.push(node('oldCycle','subgraph_call',{subgraphId:'gain'}));return raw;};
+ const selfCall=m=>m.networks.get('subgraph:fresh').instantiateSubgraph('fresh','newCycle');
+ assert.throws(()=>new GraphDocument(fixture(false),registry).change(selfCall),e=>e.code==='subgraph.cycle');
+ const doc=new GraphDocument(fixture(true),registry),before=plain(doc.snapshot());
+ assert.throws(()=>doc.change(selfCall),e=>e.code==='subgraph.cycle'&&e.subgraphId==='fresh','a new cycle is refused next to an old one');
+ assert.deepEqual(plain(doc.snapshot()),before,'nothing is written');
+ // A second call along an old cycle's edge adds no new edge: editing the existing cycle stays possible. 沿舊循環的邊再放一個呼叫：沒有新邊，照樣能編。
+ const again=doc.change(m=>m.networks.get('subgraph:gain').instantiateSubgraph('gain','oldCycle2'));
+ assert.ok(again.after.subgraphs[0].graph.nodes.some(n=>n.id==='oldCycle2'));
+ // One edit removes the old cycle and adds an edge that closes none. 一筆修改拆掉舊循環、加一條不成環的邊。
+ const repaired=doc.change(m=>{const net=m.networks.get('subgraph:gain');net.remove(net.node('oldCycle'));m.networks.get('subgraph:fresh').instantiateSubgraph('gain','toGain');});
+ assert.equal(G.subgraphCycle(repaired.after,registry),null);
+});
+
 // Selection to subgraph carries complete groups and leaves partial ones outside (amendment A8). 從選取建立帶完整群組，部分群組留在外面（A8）。
 test('a subgraph from a selection takes the groups whose members all move, and leaves a partial group with its remaining members',()=>{
  const g=empty(),d=g.stages.pixel;
