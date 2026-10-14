@@ -518,6 +518,7 @@
   "subgraphs.remove": "刪除",
   "subgraphs.removeConfirm": "子圖 {name} 沒有任何呼叫。刪掉會把它的定義從這張圖移除。",
   "subgraphs.removeInUse": "仍被 {count} 個節點呼叫；請先刪掉呼叫",
+  "subgraphs.unusable": "在目前的 host 用不了。沒被呼叫時，不影響 Shader。",
   "subgraphs.removeTitle": "要刪除 {name} 嗎？",
   "subgraphs.selectCalls": "選取呼叫（{count}）",
   "subgraphs.title": "子圖",

@@ -930,6 +930,8 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .source-head { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); }
 .source-head > .builtin-row { flex: 1; min-width: 0; }
 .source-head > .badge { margin: 0; flex: none; }
+/* A definition this host cannot use (A8): the Ghost mark at icon size. 這個 host 用不了的定義：圖示大小的 Ghost 標記。 */
+.source-head > .subgraph-unusable { flex: none; width: var(--icon-size); height: var(--icon-size); }
 .source-head :is(.source-name, .select-button) { height: var(--io-field); }
 /* When narrow the name matters most (human): it keeps a minimum and the type shrinks first. A name that cannot be changed
    (a texture input's position name) is plain code, no box. 變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。不能改的名字

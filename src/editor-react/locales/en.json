@@ -518,6 +518,7 @@
   "subgraphs.remove": "Delete",
   "subgraphs.removeConfirm": "The subgraph {name} is not called anywhere. Deleting it removes its definition from this graph.",
   "subgraphs.removeInUse": "Still called by {count} node(s); delete the calls first",
+  "subgraphs.unusable": "Cannot be used in this host. While nothing calls it, it does not affect the shader.",
   "subgraphs.removeTitle": "Delete {name}?",
   "subgraphs.selectCalls": "Select calls ({count})",
   "subgraphs.title": "Subgraphs",

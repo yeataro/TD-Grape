@@ -444,6 +444,9 @@ export class Editor {
   /** Direct and expanded uses of each definition (core useCounts; visual notes: the path bar writes both, compact places the expanded).
    * 每份定義的直接與展開使用數（核心 useCounts；路徑列兩個都寫，緊湊處寫展開數）。 */
   useCounts = () => core.useCounts(this.document);
+  /** The definitions this host cannot use (amendment A8, TECH-3): marked in the Subgraphs panel; an unused one never blocks code.
+   * 這個 host 用不了的定義：在子圖面板標示；沒用到的不擋產碼。 */
+  unusableSubgraphs = (): ReadonlySet<string> => compiler.unusableSubgraphs(this.document.document);
   /** The colour of these definitions (basic design §3.14; visual notes 3): one of the group palette, or null for the default.
    * 這些定義的顏色（§3.14；外觀意見 3）：群組色盤的一個，或 null＝預設。 */
   setSubgraphColor = (ids: readonly string[], color: string | null) =>

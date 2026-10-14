@@ -197,6 +197,8 @@ export function createCompiler(registry:Registry,config:CoreConfig=CORE_CONFIG){
     supports:(g:Graph)=>g.subgraphs?.length?subgraphs.supports(g):flat.supports(g),
     // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).
     // 沒給就用核心自己的識別字規則（R.76：現在每個節點都有名字，名字一律照它檢查）。
-    compile:(g:Graph,identifiers:IdentifierRules=identifierRules)=>g.subgraphs?.length?subgraphs.compile(g,identifiers):flat.compile(g,identifiers)
+    compile:(g:Graph,identifiers:IdentifierRules=identifierRules)=>g.subgraphs?.length?subgraphs.compile(g,identifiers):flat.compile(g,identifiers),
+    // Definitions this host cannot use (A8), for the Subgraphs panel. 這個 host 用不了的定義，給子圖面板。
+    unusableSubgraphs:(g:Graph):ReadonlySet<string>=>g.subgraphs?.length?subgraphs.unusableSubgraphs(g):new Set<string>()
   });
 }

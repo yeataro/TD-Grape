@@ -42,7 +42,8 @@ function Subgraphs({ session }: { session: EditorSession }) {
   // 定義與呼叫數是這個面板自己的推導，圖每一版算一次（同共用來源面板的引用數）。
   const definitions = useMemo(() => session.definitions(), [session, version]);
   const counts = useMemo(() => session.useCounts(), [session, version]);
-  return <SubgraphsPanel definitions={definitions} counts={counts} current={trail[trail.length - 1] ?? null} />;
+  const unusable = useMemo(() => session.unusableSubgraphs(), [session, version]);
+  return <SubgraphsPanel definitions={definitions} counts={counts} unusable={unusable} current={trail[trail.length - 1] ?? null} />;
 }
 function Glsl({ session }: { session: EditorSession }) {
   return <GlslPanel {...useEditorFields(session, GLSL_FIELDS)!} />;

@@ -4,7 +4,7 @@ import { copy, formatProblem, type Graph, type Node, type NetworkData, type Subg
 import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { validInterface, requireSubgraph } from './subgraph_interface';
-import { subgraphStages } from './subgraph_stages';
+import { subgraphStageTable } from './subgraph_stages';
 import { types, type, opaque } from './values';
 import { declarationKinds } from './declarations';
 import { validNodeName } from './node_names';
@@ -47,18 +47,39 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
     // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
     if (!g.declarations.every(d=>!declarationKinds.has(d.kind)||declarationKinds.get(d.kind)!.types.includes(d.type))) return false;
-    const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.subgraphs.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
-    return scopes.every(([data,owner])=>{
-      if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
-      // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
-      // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
-      if (owner && (!validInterface(owner) || !subgraphStages(g,owner.id,registry).includes('pixel'))) return false;
-      const context = contextFor(g,owner);
-      return data.nodes.every(n=>{
-        const module=moduleOf(n);
-        return !!module && !n.params.requireConstant && module.supports(n,context);
-      });
+    const pixel=g.stages.pixel!;
+    if (!usableNetwork(g,pixel,undefined)) return false;
+    // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
+    // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
+    // 它的問題在子圖面板顯示。
+    const stagesOf=subgraphStageTable(g,registry);
+    return [...reachable(g,pixel)].every(id=>{const f=g.subgraphs!.find(item=>item.id===id);return !f||usableDefinition(g,f,stagesOf);});
+  }
+  function usableNetwork(g:Graph,data:NetworkData|undefined,owner:SubgraphData|undefined):boolean {
+    if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
+    const context = contextFor(g,owner);
+    return data.nodes.every(n=>{
+      const module=moduleOf(n);
+      return !!module && !n.params.requireConstant && module.supports(n,context);
     });
+  }
+  // Where a subgraph can run comes from its content (Q46); the target is each node's own check. 子圖能用的 Stage 由內容推算；target 由每個節點自己檢查。
+  function usableDefinition(g:Graph,f:SubgraphData,stagesOf:(id:string)=>string[]):boolean {
+    return validInterface(f) && stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f);
+  }
+  /** The definitions the network's calls reach, nested calls followed. 網路的呼叫走得到的定義，巢狀一路跟進。 */
+  function reachable(g:Graph,data:NetworkData):Set<string> {
+    const byId=new Map((g.subgraphs??[]).map(f=>[f.id,f])),found=new Set<string>();
+    const walk=(nodes:readonly Node[])=>{for(const n of nodes){const ref=moduleOf(n)?.referencedGraph?.(n);
+      if(ref!==undefined&&!found.has(ref)){found.add(ref);const f=byId.get(ref);if(f&&Array.isArray(f.graph?.nodes))walk(f.graph.nodes);}}};
+    if(Array.isArray(data.nodes))walk(data.nodes);
+    return found;
+  }
+  /** The definitions that cannot be used in this host (amendment A8): for the Subgraphs panel, never a reason to refuse the graph.
+   * 在目前 host 用不了的定義：給子圖面板標示，不是拒絕整張圖的理由。 */
+  function unusableSubgraphs(g:Graph):Set<string> {
+    const stagesOf=subgraphStageTable(g,registry);
+    return new Set((g.subgraphs??[]).filter(f=>!usableDefinition(g,f,stagesOf)).map(f=>f.id));
   }
 
   function compile(g:Graph,identifiers?:{reservedNames:readonly string[]}):Compiled {
@@ -79,7 +100,8 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       for (const n of f.graph.nodes) {const child=moduleOf(n)?.referencedGraph?.(n);if(child)visit(child);}
       active.delete(id);done.add(id);
     }
-    for (const id of definitions.keys()) visit(id);
+    const used=reachable(g,g.stages.pixel!);
+    for (const id of used) visit(id);
 
     function expanded(probe?:SubgraphData) {
       const flat:NetworkData={nodes:[],edges:[]},origins=new Map<string,Location>();
@@ -188,9 +210,10 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
         if(origin)Object.assign(e,origin);throw e;
       }
     }
-    // Retain validation of unused saved definitions; they are editable content.
-    for(const fn of definitions.values())expanded(fn);
+    // Each reachable definition is also expanded on its own, so a problem inside is reported at the definition (an unused one is
+    // the Subgraphs panel's to show, A8). 每份走得到的定義也單獨展開一次，裡面的問題在定義上回報（沒用到的由子圖面板顯示）。
+    for(const id of used){const fn=definitions.get(id);if(fn)expanded(fn);}
     return expanded();
   }
-  return {supports,compile};
+  return {supports,compile,unusableSubgraphs};
 }

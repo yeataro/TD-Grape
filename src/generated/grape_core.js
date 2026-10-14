@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -555,6 +555,7 @@ function unusableNodes(network) {
     const nodes = new Map();
     // Subgraph networks have no stage of their own; their nodes follow the calling stage.
     const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
+    let stagesOf; // one table for every call here (TECH-3) 這裡所有呼叫共用一張表
     for (const node of network.nodes) {
         const data = node.data, module = node.definition;
         const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
@@ -564,7 +565,7 @@ function unusableNodes(network) {
             nodes.set(node.id, 'misplaced');
         // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
         // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
-        else if (stage && module.referencedGraph && !(0, subgraph_stages_1.subgraphStages)(network.graph.document, module.referencedGraph(data), network.graph.registry).includes(stage))
+        else if (stage && module.referencedGraph && !(stagesOf !== null && stagesOf !== void 0 ? stagesOf : (stagesOf = (0, subgraph_stages_1.subgraphStageTable)(network.graph.document, network.graph.registry)))(module.referencedGraph(data)).includes(stage))
             nodes.set(node.id, 'misplaced');
         // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
         else if (referred !== undefined && !stage)
@@ -5961,21 +5962,55 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
         if (!g.declarations.every(d => !declarations_1.declarationKinds.has(d.kind) || declarations_1.declarationKinds.get(d.kind).types.includes(d.type)))
             return false;
-        const scopes = [[g.stages.pixel, undefined], ...g.subgraphs.map(f => [f.graph, f])];
-        return scopes.every(([data, owner]) => {
-            var _a;
-            if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > config.nodesPerNetwork || data.edges.length > config.edgesPerNetwork || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
-                return false;
-            // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
-            // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
-            if (owner && (!(0, subgraph_interface_1.validInterface)(owner) || !(0, subgraph_stages_1.subgraphStages)(g, owner.id, registry).includes('pixel')))
-                return false;
-            const context = (0, node_module_1.contextFor)(g, owner);
-            return data.nodes.every(n => {
-                const module = moduleOf(n);
-                return !!module && !n.params.requireConstant && module.supports(n, context);
-            });
+        const pixel = g.stages.pixel;
+        if (!usableNetwork(g, pixel, undefined))
+            return false;
+        // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
+        // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
+        // 它的問題在子圖面板顯示。
+        const stagesOf = (0, subgraph_stages_1.subgraphStageTable)(g, registry);
+        return [...reachable(g, pixel)].every(id => { const f = g.subgraphs.find(item => item.id === id); return !f || usableDefinition(g, f, stagesOf); });
+    }
+    function usableNetwork(g, data, owner) {
+        var _a;
+        if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > config.nodesPerNetwork || data.edges.length > config.edgesPerNetwork || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
+            return false;
+        const context = (0, node_module_1.contextFor)(g, owner);
+        return data.nodes.every(n => {
+            const module = moduleOf(n);
+            return !!module && !n.params.requireConstant && module.supports(n, context);
         });
+    }
+    // Where a subgraph can run comes from its content (Q46); the target is each node's own check. 子圖能用的 Stage 由內容推算；target 由每個節點自己檢查。
+    function usableDefinition(g, f, stagesOf) {
+        return (0, subgraph_interface_1.validInterface)(f) && stagesOf(f.id).includes('pixel') && usableNetwork(g, f.graph, f);
+    }
+    /** The definitions the network's calls reach, nested calls followed. 網路的呼叫走得到的定義，巢狀一路跟進。 */
+    function reachable(g, data) {
+        var _a;
+        const byId = new Map(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])), found = new Set();
+        const walk = (nodes) => {
+            var _a, _b, _c;
+            for (const n of nodes) {
+                const ref = (_b = (_a = moduleOf(n)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+                if (ref !== undefined && !found.has(ref)) {
+                    found.add(ref);
+                    const f = byId.get(ref);
+                    if (f && Array.isArray((_c = f.graph) === null || _c === void 0 ? void 0 : _c.nodes))
+                        walk(f.graph.nodes);
+                }
+            }
+        };
+        if (Array.isArray(data.nodes))
+            walk(data.nodes);
+        return found;
+    }
+    /** The definitions that cannot be used in this host (amendment A8): for the Subgraphs panel, never a reason to refuse the graph.
+     * 在目前 host 用不了的定義：給子圖面板標示，不是拒絕整張圖的理由。 */
+    function unusableSubgraphs(g) {
+        var _a;
+        const stagesOf = (0, subgraph_stages_1.subgraphStageTable)(g, registry);
+        return new Set(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).filter(f => !usableDefinition(g, f, stagesOf)).map(f => f.id));
     }
     function compile(g, identifiers) {
         if (!supports(g))
@@ -6010,7 +6045,8 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
             active.delete(id);
             done.add(id);
         }
-        for (const id of definitions.keys())
+        const used = reachable(g, g.stages.pixel);
+        for (const id of used)
             visit(id);
         function expanded(probe) {
             const flat = { nodes: [], edges: [] }, origins = new Map();
@@ -6156,12 +6192,16 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 throw e;
             }
         }
-        // Retain validation of unused saved definitions; they are editable content.
-        for (const fn of definitions.values())
-            expanded(fn);
+        // Each reachable definition is also expanded on its own, so a problem inside is reported at the definition (an unused one is
+        // the Subgraphs panel's to show, A8). 每份走得到的定義也單獨展開一次，裡面的問題在定義上回報（沒用到的由子圖面板顯示）。
+        for (const id of used) {
+            const fn = definitions.get(id);
+            if (fn)
+                expanded(fn);
+        }
         return expanded();
     }
-    return { supports, compile };
+    return { supports, compile, unusableSubgraphs };
 }
 
 },
@@ -6789,6 +6829,7 @@ function collectSubgraphs(graph, roots, active, collectible) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SUBGRAPH_STAGES = void 0;
 exports.subgraphStages = subgraphStages;
+exports.subgraphStageTable = subgraphStageTable;
 /** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
  * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
  * clipboard) writes the result and is recomputed on load. Nodes this build does not know add no limit: they are ghosts
@@ -6798,28 +6839,48 @@ exports.subgraphStages = subgraphStages;
  * 匯出、剪貼簿）時才寫出結果、載入時重算。不認得的節點不加限制（它是 Ghost、本來就不產碼）。循環不重複走。
  * target 不需要這條：裡面每個節點本來就照圖的 target 檢查。 */
 exports.SUBGRAPH_STAGES = ['vertex', 'pixel'];
-function subgraphStages(graph, id, registry, active = new Set()) {
-    var _a, _b;
-    let stages = [...exports.SUBGRAPH_STAGES];
-    const subgraph = (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(item => item.id === id);
-    if (!subgraph || active.has(id))
-        return stages;
-    active.add(id);
-    for (const node of subgraph.graph.nodes) {
-        const module = registry.get(node.nodeType);
-        if (!module)
-            continue;
-        const own = module.catalog.definition.stages;
-        if (own)
-            stages = stages.filter(stage => own.includes(stage));
-        const child = (_b = module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node);
-        if (child !== undefined) {
-            const inner = subgraphStages(graph, child, registry, active);
-            stages = stages.filter(stage => inner.includes(stage));
+function subgraphStages(graph, id, registry) {
+    return subgraphStageTable(graph, registry)(id);
+}
+/** The same answer for many definitions at once (technical review TECH-3): each definition is worked out once and remembered, so a
+ * definition shared along many call paths is not walked again per path. A result cut short by a cycle is not remembered as complete.
+ * 一次回答多份定義：每份只算一次並記住，被許多呼叫路徑共用的定義不會沿每條路徑重走；被循環截斷的結果不當成完成的記住。 */
+function subgraphStageTable(graph, registry) {
+    var _a;
+    const done = new Map(), active = new Set();
+    const byId = new Map(((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(item => [item.id, item]));
+    const visit = (id) => {
+        var _a;
+        const known = done.get(id);
+        if (known)
+            return { stages: known, complete: true };
+        const subgraph = byId.get(id);
+        if (!subgraph)
+            return { stages: [...exports.SUBGRAPH_STAGES], complete: true };
+        if (active.has(id))
+            return { stages: [...exports.SUBGRAPH_STAGES], complete: false };
+        active.add(id);
+        let stages = [...exports.SUBGRAPH_STAGES], complete = true;
+        for (const node of subgraph.graph.nodes) {
+            const module = registry.get(node.nodeType);
+            if (!module)
+                continue;
+            const own = module.catalog.definition.stages;
+            if (own)
+                stages = stages.filter(stage => own.includes(stage));
+            const child = (_a = module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, node);
+            if (child !== undefined) {
+                const inner = visit(child);
+                stages = stages.filter(stage => inner.stages.includes(stage));
+                complete && (complete = inner.complete);
+            }
         }
-    }
-    active.delete(id);
-    return stages;
+        active.delete(id);
+        if (complete)
+            done.set(id, stages);
+        return { stages, complete };
+    };
+    return id => [...visit(id).stages];
 }
 
 },
@@ -7334,7 +7395,9 @@ function createCompiler(registry, config = config_1.CORE_CONFIG) {
         supports: (g) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
         // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).
         // 沒給就用核心自己的識別字規則（R.76：現在每個節點都有名字，名字一律照它檢查）。
-        compile: (g, identifiers = identifier_rules_1.identifierRules) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
+        compile: (g, identifiers = identifier_rules_1.identifierRules) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); },
+        // Definitions this host cannot use (A8), for the Subgraphs panel. 這個 host 用不了的定義，給子圖面板。
+        unusableSubgraphs: (g) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.unusableSubgraphs(g) : new Set(); }
     });
 }
 

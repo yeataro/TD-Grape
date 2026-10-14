@@ -87,3 +87,38 @@ test('boundary annotations survive expansion and malformed boundary defaults ide
  g.subgraphs[0].graph.nodes[2].inputValues={result:'invalid'};
  assert.throws(()=>c.GrapeTopCompiler.compile(g),error=>error.node==='out'&&error.subgraphId==='gain');
 });
+
+// TECH-3 (technical review R109–R112; amendment A8): only the definitions the stage reaches are checked; an unused one never blocks
+// code and is reported for the Subgraphs panel instead. 只檢查 Stage 走得到的定義；沒用到的不擋產碼，改給子圖面板。
+test('an unused definition never blocks code: deep unused chains compile, an unusable one is only reported',()=>{
+ const compiler=c.GrapeTopCompiler;
+ // A chain of unused definitions, each calling the next twice: expanding it would pass the 2048-node limit. 沒用到的鏈，每層呼叫下一層兩次。
+ const deep=sharedGraph();
+ for(let i=0;i<14;i++){
+  const f={id:'chain'+i,name:'Chain '+i,inputs:[port('value')],outputs:[port('result')],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}};
+  if(i<13){f.graph.nodes.push(node('a','subgraph_call',{subgraphId:'chain'+(i+1)}),node('b','subgraph_call',{subgraphId:'chain'+(i+1)}));
+   f.graph.edges.push({id:'e1',from:['in','value'],to:['a','value']},{id:'e2',from:['a','result'],to:['b','value']},{id:'e3',from:['b','result'],to:['out','result']});}
+  else f.graph.edges.push({id:'e1',from:['in','value'],to:['out','result']});
+  deep.subgraphs.push(f);
+ }
+ assert.equal(compiler.supports(deep),true);assert.doesNotThrow(()=>compiler.compile(deep));
+ // An unused definition this host cannot use (a node it does not know). 這個 host 用不了的未用定義（不認得的節點）。
+ const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',name:'Odd'});
+ odd.subgraphs[2].graph.nodes.push({id:'mystery',nodeType:'unknown.node',params:{},ui:{x:0,y:0}});
+ assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
+ assert.deepEqual([...compiler.unusableSubgraphs(odd)],['odd']);
+ // Once it is used, it blocks as before. 被用到就照舊擋。
+ odd.stages.pixel.nodes.push(node('useOdd','subgraph_call',{subgraphId:'odd'}));
+ assert.equal(compiler.supports(odd),false);
+});
+test('the stage table remembers each definition once and never keeps a result cut short by a cycle',()=>{
+ const {subgraphStages,subgraphStageTable}=c.GrapeGraph;
+ // A calls B, B calls A, and A holds a pixel-only node: from B, the answer is pixel only. A→B→A，A 有只能在 pixel 的節點。
+ const g=sharedGraph();
+ g.subgraphs=[{id:'A',name:'A',inputs:[],outputs:[],graph:{nodes:[node('b','subgraph_call',{subgraphId:'B'}),node('t','texture_sample')],edges:[]}},
+  {id:'B',name:'B',inputs:[],outputs:[],graph:{nodes:[node('a','subgraph_call',{subgraphId:'A'})],edges:[]}}];
+ const table=subgraphStageTable(g,registry);
+ assert.deepEqual(plain(table('A')),['pixel']);
+ assert.deepEqual(plain(table('B')),plain(subgraphStages(g,'B',registry)));
+ assert.deepEqual(plain(table('B')),['pixel']);
+});

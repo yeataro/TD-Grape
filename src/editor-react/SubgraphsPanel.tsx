@@ -1,3 +1,4 @@
+import { GhostMark } from './GhostMark';
 import { memo, useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { typeColor, type SubgraphData, type InterfacePort } from './core';
@@ -40,7 +41,7 @@ function DefinitionPreview({ definition }: { definition: SubgraphData }) {
   </article>;
 }
 
-function SubgraphCard({ definition, uses, current, onRemove }: { definition: SubgraphData; uses: number; current: boolean; onRemove(): void }) {
+function SubgraphCard({ definition, uses, current, unusable, onRemove }: { definition: SubgraphData; uses: number; current: boolean; unusable: boolean; onRemove(): void }) {
   const session = useSession(), flow = useReactFlow(), [open, setOpen] = useState(false);
   const centre = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
@@ -60,6 +61,10 @@ function SubgraphCard({ definition, uses, current, onRemove }: { definition: Sub
       <button type="button" className="subgraph-icon icon-button narrow" aria-label={say(tr('subgraphs.open', 'Open'))} title={say(tr('subgraphs.open', 'Open'))}
         disabled={current} onClick={() => session.enterDefinition(definition.id)}><Icon name="subgraphLocal" /></button>
       <NameField definition={definition} />
+      {/* A definition this host cannot use carries the Ghost mark (amendment A8): while nothing calls it, it does
+          not affect the shader. 這個 host 用不了的定義帶 Ghost 標記（A8）：沒被呼叫時不影響 Shader。 */}
+      {unusable && <span className="subgraph-unusable" role="img" title={say(tr('subgraphs.unusable', 'Cannot be used in this host. While nothing calls it, it does not affect the shader.'))}
+        aria-label={say(tr('subgraphs.unusable', 'Cannot be used in this host. While nothing calls it, it does not affect the shader.'))}><GhostMark id={definition.id} on="node" /></span>}
       {/* The count over the whole graph; a click selects the calls here, in the network being edited (§3.6 "×N").
           整張圖的呼叫數；點了選取這裡——正在編輯的網路——的呼叫（§3.6「×N」）。 */}
       <Badge count={uses} group={uses ? 'subgraph' : undefined}
@@ -80,7 +85,7 @@ function SubgraphCard({ definition, uses, current, onRemove }: { definition: Sub
 // Memoised: a node drag re-renders the workspace every move; this panel follows only its own props (EDITOR_UI_RULES, continuous
 // interactions). memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props。
 export const SubgraphsPanel = memo(SubgraphsList);
-function SubgraphsList({ definitions, counts, current }: { definitions: readonly SubgraphData[]; counts: ReadonlyMap<string, { direct: number; expanded: number }>; current: string | null }) {
+function SubgraphsList({ definitions, counts, unusable, current }: { definitions: readonly SubgraphData[]; counts: ReadonlyMap<string, { direct: number; expanded: number }>; unusable: ReadonlySet<string>; current: string | null }) {
   useLanguage();
   const session = useSession(), [confirming, setConfirming] = useState<SubgraphData | null>(null);
   return <section className="sources subgraphs">
@@ -91,6 +96,6 @@ function SubgraphsList({ definitions, counts, current }: { definitions: readonly
     <p className="hint">{say(tr('subgraphs.hint', 'The subgraphs of this graph. Double-click a card or a call node to open one; drag a card onto the canvas to add a call; make one from selected nodes with Selection to subgraph.'))}</p>
     {!definitions.length && <p className="hint">{say(tr('subgraphs.none', 'No subgraphs yet.'))}</p>}
     {definitions.map(definition => <SubgraphCard key={definition.id} definition={definition} uses={counts.get(definition.id)?.expanded ?? 0}
-      current={definition.id === current} onRemove={() => setConfirming(definition)} />)}
+      current={definition.id === current} unusable={unusable.has(definition.id)} onRemove={() => setConfirming(definition)} />)}
   </section>;
 }
