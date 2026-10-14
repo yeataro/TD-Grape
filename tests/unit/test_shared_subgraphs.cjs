@@ -74,6 +74,17 @@ test('subgraph validation rejects cycles and duplicate boundaries before returni
  const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';
  assert.equal(compiler.supports(unsupported),true);assert.doesNotThrow(()=>compiler.compile(unsupported));
  assert.ok([...compiler.unusableSubgraphs(unsupported)].includes('gain'));
+ // R115-1 (Codex): the whole interface counts, not its types alone — a bad default, a bad or repeated port ID. 整個接口都算：
+ // 預設值不合、接口 ID 不合法或重複。
+ for(const spoil of [f=>{f.inputs[0].default='bad';},f=>{f.inputs[0].id='1bad';},f=>{f.inputs.push({...f.inputs[0]});}]){
+  const used=sharedGraph();spoil(used.subgraphs[0]);
+  assert.equal(compiler.supports(used),true);assert.doesNotThrow(()=>compiler.compile(used));
+  assert.ok([...compiler.unusableSubgraphs(used)].includes('gain'),'called: the panel reports it');
+  const unused=sharedGraph();spoil(unused.subgraphs[0]);unused.subgraphs=[unused.subgraphs[0]];
+  unused.stages.pixel.nodes=unused.stages.pixel.nodes.filter(n=>n.id==='output');unused.stages.pixel.edges=[];
+  assert.doesNotThrow(()=>compiler.compile(unused));
+  assert.deepEqual([...compiler.unusableSubgraphs(unused)],['gain'],'unused: the panel reports it too');
+ }
  // An opaque port is a built-in type the host passes, on either side (amendment A1). opaque 接口是宿主能傳的內建型別，兩邊都可。
  const opaque=sharedGraph();opaque.subgraphs[0].inputs[0]={id:'value',type:'sampler2D'};opaque.subgraphs[0].outputs[0]={id:'result',type:'sampler2D'};
  assert.equal(compiler.supports(opaque),true);

@@ -89,7 +89,12 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
   }
   // Where a subgraph can run comes from its content (Q46); the target is each node's own check. 子圖能用的 Stage 由內容推算；target 由每個節點自己檢查。
   function usableDefinition(g:Graph,f:SubgraphData,stagesOf:(id:string)=>string[]):boolean {
-    return validInterface(f) && stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f,stagesOf);
+    // The whole interface is checked (types, defaults, IDs, duplicates, count), not the types alone (Codex R115-1): what code
+    // generation would refuse is what the Subgraphs panel reports. 驗整個接口（型別、預設值、ID、重複、數量），不只型別：產碼會拒絕的，
+    // 就是子圖面板要回報的。
+    if (!validInterface(f)) return false;
+    try { requireSubgraph(contextFor(g),f.id); } catch { return false; }
+    return stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f,stagesOf);
   }
   /** The definitions the network's calls reach, nested calls followed; a ghost call reaches nothing. 網路的呼叫走得到的定義，巢狀
    * 一路跟進；Ghost 呼叫走不到任何東西。 */
