@@ -1537,7 +1537,8 @@ input.number:not(:focus), input.number.scrubbing { cursor: ew-resize; }
 .node-title .node-subgraph-icon { all: unset; display: inline-flex; cursor: pointer; color: inherit; border-radius: 4px; }
 .node-title .node-subgraph-icon .icon { width: 16px; height: 16px; }
 .node-title .node-subgraph-icon:hover { color: var(--text-strong); }
-.node-title .node-uses { margin-left: -5px; color: inherit; font-size: var(--font-xs); line-height: var(--line-sm); }
+/* Trial (visual notes 27′, human 10-14: try the small pill): the panel's count badge, as a pill. 試驗：沿用面板的數量標籤，做成膠囊。 */
+.node-title .node-uses.badge { margin-left: 0; padding: 0 6px; border-radius: 999px; cursor: pointer; }
 /* The spare port on the output side (Subgraph Input): its handle on the right, the text before it. 輸出側的備用接孔（Subgraph Input）：接孔在右、文字在前。 */
 .spare-row.output-row { justify-content: flex-end; }
 /* A subgraph card (SubgraphsPanel.tsx): the Shared Sources card with the subgraph icon in the triangle's place; the one being edited is

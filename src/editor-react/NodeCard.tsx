@@ -1,5 +1,6 @@
 import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { frameNodes } from './viewport';
 import { core, typeColor, type NodeControl, type NodePresentation } from './core';
 import type { FlowNode } from './projection';
 import { spareHandle } from './editor';
@@ -146,7 +147,7 @@ export function PortLabel({ text, components }: { text: string; components?: rea
 }
 
 export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>) {
-  const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
+  const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext), flow = useReactFlow();
   // The card knows nothing of selection (Q33; Refactor.106.2, human 2026-10-13): selected, the primary among several and inside a box
   // being dragged (Refactor.50.1/50.2) are all classes on React Flow's wrapper, drawn by style.css, so a selection change re-renders
   // no card; the memo below ignores every prop but the node's data. 卡片完全不知道選取（Q33；R.106.2，人類 10-13）：被選、多選時的主要、
@@ -232,15 +233,21 @@ export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>
     {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
       aria-label={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}><Icon name="errorBadge" /></span>}
     <div className="node-title node-drag-surface">
-      {/* A subgraph call (visual notes 2026-10-14, items 1, 2, 12): its kind's icon, a button that opens it; then the expanded use count
-          (×N: how many times the definition is in effect once every caller is expanded); then the title. 子圖呼叫（外觀意見 1、2、12）：
-          種類圖示、按了打開；再來展開後的使用數（×N）；再來標題。 */}
+      {/* A subgraph call (visual notes 2026-10-14, items 1, 2, 12, 27′): its kind's icon, a button that opens it; then the title; on the
+          right, where other nodes show their type, the expanded use count (×N: how many times the definition is in effect once every
+          caller is expanded) — its outputs show their own types. 子圖呼叫（外觀意見 1、2、12、27′）：種類圖示、按了打開；再來標題；
+          右側（其他節點放型別的位置）是展開後的使用數（×N）——輸出各自標型別。 */}
       {data.subgraph !== undefined && <button type="button" className="node-subgraph-icon nodrag" aria-label={say(tr('node.openSubgraph', 'Open subgraph'))}
         title={say(tr('node.openSubgraph', 'Open subgraph'))} onClick={() => session.enterSubgraph(id)} onDoubleClick={event => event.stopPropagation()}>
         <Icon name="subgraphLocal" /></button>}
-      {data.uses !== undefined && <small className="node-uses" title={say(tr('node.uses', 'This subgraph is in effect {count} time(s) once every call is expanded; editing it changes all of them.', { count: data.uses }))}>×{data.uses}</small>}
       <strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
-      {hasOutputChoice(data) ? <TypeChoice id={id} data={data} end="output" /> : <small>{sourceTag}{outputs[0]?.type}</small>}
+      {data.subgraph !== undefined
+        // A press selects the calls of this definition here and frames them (human 10-14), as the Subgraphs panel's count selects them.
+        // 按下＝選取這裡這份定義的呼叫並對準（人類 10-14），同子圖面板上的數量。
+        ? data.uses !== undefined && <button type="button" className="node-uses badge nodrag" onDoubleClick={event => event.stopPropagation()}
+          onClick={() => { const calls = session.selectCalls(data.subgraph!); if (calls.length) frameNodes(flow, calls); }}
+          title={say(tr('node.usesSelect', 'In effect {count} time(s) once every call is expanded; editing it changes all of them. Click to select and frame the calls here.', { count: data.uses }))}>×{data.uses}</button>
+        : hasOutputChoice(data) ? <TypeChoice id={id} data={data} end="output" /> : <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {start && outputBlock}
