@@ -227,14 +227,19 @@ export const NodeCard = memo(function NodeCard({ id, data }: NodeProps<FlowNode>
   </div>);
   const outputBlock = <>{outputRows}{view.spare?.direction === 'output' && <SpareOutput id={id} spare={view.spare} />}</>;
   return <article ref={card} className="grape-node"
-    style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
+    style={{ '--group-color': data.color ?? `var(--group-${data.colorGroup})` } as CSSProperties}>
     {/* Trial (Refactor.63.6.1): TD's error mark on a node that wrote a line TD reported. 試驗：TD 回報的錯誤行由它寫的節點，掛 TD 的錯誤標記。 */}
     {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
       aria-label={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}><Icon name="errorBadge" /></span>}
-    <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
-      {/* A subgraph call: how many calls its definition has in the whole graph (basic design §3.6 "×N"; legacy had no mark, Q74.8).
-          子圖呼叫：它的定義在整張圖有幾個呼叫（§3.6「×N」；舊產品沒有，Q74.8）。 */}
-      {data.uses !== undefined && <small className="node-uses" title={say(tr('node.uses', 'Subgraph called by {count} node(s); editing it changes every call. Double-click to open.', { count: data.uses }))}>×{data.uses}</small>}
+    <div className="node-title node-drag-surface">
+      {/* A subgraph call (visual notes 2026-10-14, items 1, 2, 12): its kind's icon, a button that opens it; then the expanded use count
+          (×N: how many times the definition is in effect once every caller is expanded); then the title. 子圖呼叫（外觀意見 1、2、12）：
+          種類圖示、按了打開；再來展開後的使用數（×N）；再來標題。 */}
+      {data.subgraph !== undefined && <button type="button" className="node-subgraph-icon nodrag" aria-label={say(tr('node.openSubgraph', 'Open subgraph'))}
+        title={say(tr('node.openSubgraph', 'Open subgraph'))} onClick={() => session.enterSubgraph(id)} onDoubleClick={event => event.stopPropagation()}>
+        <Icon name="subgraphLocal" /></button>}
+      {data.uses !== undefined && <small className="node-uses" title={say(tr('node.uses', 'This subgraph is in effect {count} time(s) once every call is expanded; editing it changes all of them.', { count: data.uses }))}>×{data.uses}</small>}
+      <strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
       {hasOutputChoice(data) ? <TypeChoice id={id} data={data} end="output" /> : <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>

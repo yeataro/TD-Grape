@@ -1,6 +1,6 @@
-import { memo, useEffect, useState, type MouseEvent } from 'react';
+import { memo, useEffect, useState, type CSSProperties, type MouseEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import type { SubgraphData } from './core';
+import { typeColor, type SubgraphData, type InterfacePort } from './core';
 import { tr, say, useLanguage } from './text';
 import { useSession } from './contexts';
 import { Badge, ConfirmDialog, MenuButton } from './controls';
@@ -29,17 +29,36 @@ function NameField({ definition }: { definition: SubgraphData }) {
     onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(definition.name); event.currentTarget.blur(); } }} />;
 }
 
+/** The definition drawn as its call node would be (visual notes 14): title, inputs, outputs; a read-only preview, no handles.
+ * 定義畫成它的呼叫節點的樣子（外觀意見 14）：標題、輸入、輸出；唯讀預覽，沒有接孔。 */
+function DefinitionPreview({ definition }: { definition: SubgraphData }) {
+  const row = (port: InterfacePort, side: 'input' | 'output') => <div key={port.id} className={`port-row ${side}-row`} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+    <span className="preview-dot" aria-hidden="true" />{port.label ?? ''} <small>{port.type}</small></div>;
+  return <article className="grape-node subgraph-preview" style={{ '--group-color': definition.color ?? 'var(--group-subgraph)' } as CSSProperties}>
+    <div className="node-title"><Icon name="subgraphLocal" /><strong>{definition.name}</strong><small>{definition.outputs[0]?.type ?? ''}</small></div>
+    <div className="node-body">{definition.inputs.map(port => row(port, 'input'))}{definition.outputs.map(port => row(port, 'output'))}</div>
+  </article>;
+}
+
 function SubgraphCard({ definition, uses, current, onRemove }: { definition: SubgraphData; uses: number; current: boolean; onRemove(): void }) {
-  const session = useSession(), flow = useReactFlow();
+  const session = useSession(), flow = useReactFlow(), [open, setOpen] = useState(false);
   const centre = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
   };
   // A double-click on the card opens the subgraph, as on its call (legacy: double-click enters). 雙擊卡片打開子圖，同雙擊呼叫節點。
-  const open = (event: MouseEvent) => { if (!(event.target as Element).closest('input, button')) session.enterDefinition(definition.id); };
-  return <div className={'source-card subgraph-card' + (current ? ' current' : '')} style={groupColor('subgraph')} {...dragToAdd(subgraphChoice(definition.id))} onDoubleClick={open}>
-    <span className="expand-toggle subgraph-icon" aria-hidden="true"><Icon name="subgraph" /></span>
+  const openIt = (event: MouseEvent) => { if (!(event.target as Element).closest('input, button')) session.enterDefinition(definition.id); };
+  return <div className={'source-card subgraph-card' + (current ? ' current' : '')} style={definition.color ? { '--group-color': definition.color } as CSSProperties : groupColor('subgraph')}
+    {...dragToAdd(subgraphChoice(definition.id))} onDoubleClick={openIt}>
+    {/* The triangle opens the preview, as every card here (visual notes 15; node folding, when it exists, may take its place). 三角形打開預覽，
+        同這裡每張卡（外觀意見 15；節點摺疊做好後或許換成它）。 */}
+    <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
+      aria-label={say(tr('subgraphs.preview', 'Show the subgraph as a node'))} title={say(tr('subgraphs.preview', 'Show the subgraph as a node'))}><Icon name="chevronDown" /></button>
     <div className="source-head" data-drag-handle="">
+      {/* The icon opens the subgraph (visual notes 13: the icon on a call opens it too; the two are one link). 圖示打開子圖（外觀意見 13：
+          呼叫節點上的圖示也是打開；兩邊是同一個 link）。 */}
+      <button type="button" className="subgraph-icon icon-button narrow" aria-label={say(tr('subgraphs.open', 'Open'))} title={say(tr('subgraphs.open', 'Open'))}
+        disabled={current} onClick={() => session.enterDefinition(definition.id)}><Icon name="subgraphLocal" /></button>
       <NameField definition={definition} />
       {/* The count over the whole graph; a click selects the calls here, in the network being edited (§3.6 "×N").
           整張圖的呼叫數；點了選取這裡——正在編輯的網路——的呼叫（§3.6「×N」）。 */}
@@ -54,13 +73,14 @@ function SubgraphCard({ definition, uses, current, onRemove }: { definition: Sub
           title: uses > 0 ? say(tr('subgraphs.removeInUse', 'Still called by {count} node(s); delete the calls first', { count: uses })) : undefined, select: onRemove },
       ]} />
     </div>
+    {open && <div className="source-body"><DefinitionPreview definition={definition} /></div>}
   </div>;
 }
 
 // Memoised: a node drag re-renders the workspace every move; this panel follows only its own props (EDITOR_UI_RULES, continuous
 // interactions). memo：拖節點時工作區每動一下都重繪，這個面板只跟著自己的 props。
 export const SubgraphsPanel = memo(SubgraphsList);
-function SubgraphsList({ definitions, counts, current }: { definitions: readonly SubgraphData[]; counts: ReadonlyMap<string, number>; current: string | null }) {
+function SubgraphsList({ definitions, counts, current }: { definitions: readonly SubgraphData[]; counts: ReadonlyMap<string, { direct: number; expanded: number }>; current: string | null }) {
   useLanguage();
   const session = useSession(), [confirming, setConfirming] = useState<SubgraphData | null>(null);
   return <section className="sources subgraphs">
@@ -70,7 +90,7 @@ function SubgraphsList({ definitions, counts, current }: { definitions: readonly
       onConfirm={() => { session.removeSubgraph(confirming.id); setConfirming(null); }} />}
     <p className="hint">{say(tr('subgraphs.hint', 'The subgraphs of this graph. Double-click a card or a call node to open one; drag a card onto the canvas to add a call; make one from selected nodes with Selection to subgraph.'))}</p>
     {!definitions.length && <p className="hint">{say(tr('subgraphs.none', 'No subgraphs yet.'))}</p>}
-    {definitions.map(definition => <SubgraphCard key={definition.id} definition={definition} uses={counts.get(definition.id) ?? 0}
+    {definitions.map(definition => <SubgraphCard key={definition.id} definition={definition} uses={counts.get(definition.id)?.expanded ?? 0}
       current={definition.id === current} onRemove={() => setConfirming(definition)} />)}
   </section>;
 }

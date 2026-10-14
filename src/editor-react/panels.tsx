@@ -41,7 +41,7 @@ function Subgraphs({ session }: { session: EditorSession }) {
   // The definitions and their call counts are this panel's own derivation, per version of the graph (as the Sources panel's references).
   // 定義與呼叫數是這個面板自己的推導，圖每一版算一次（同共用來源面板的引用數）。
   const definitions = useMemo(() => session.definitions(), [session, version]);
-  const counts = useMemo(() => session.callCounts(), [session, version]);
+  const counts = useMemo(() => session.useCounts(), [session, version]);
   return <SubgraphsPanel definitions={definitions} counts={counts} current={trail[trail.length - 1] ?? null} />;
 }
 function Glsl({ session }: { session: EditorSession }) {

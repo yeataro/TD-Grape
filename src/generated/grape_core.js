@@ -92,7 +92,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -6310,6 +6310,7 @@ exports.instantiateSubgraph = instantiateSubgraph;
 exports.subgraphFromSelection = subgraphFromSelection;
 exports.subgraphCycle = subgraphCycle;
 exports.callCounts = callCounts;
+exports.useCounts = useCounts;
 exports.removeSubgraph = removeSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
 const node_names_1 = require("./node_names");
@@ -6588,6 +6589,57 @@ function callCounts(graph) {
         }
     return counts;
 }
+/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many call nodes point at it anywhere; `expanded` = how many
+ * times it is in effect once every caller is expanded (a call inside P counts P's own expanded uses). One scan of every network;
+ * the gate keeps the call graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個呼叫節點指著它；expanded＝
+ * 展開所有呼叫者後實際用到幾次（P 裡的呼叫算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
+function useCounts(graph) {
+    var _a, _b, _c, _d, _e, _f;
+    const stage = new Map(), inside = new Map();
+    const bump = (m, id) => { var _a; return m.set(id, ((_a = m.get(id)) !== null && _a !== void 0 ? _a : 0) + 1); };
+    for (const data of Object.values(graph.document.stages))
+        for (const n of data.nodes) {
+            const ref = (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (ref)
+                bump(stage, ref);
+        }
+    for (const f of graph.document.subgraphs || []) {
+        const calls = new Map();
+        for (const n of f.graph.nodes) {
+            const ref = (_d = (_c = graph.registry.get(n.nodeType)) === null || _c === void 0 ? void 0 : _c.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(_c, n);
+            if (ref)
+                bump(calls, ref);
+        }
+        if (calls.size)
+            inside.set(f.id, calls);
+    }
+    const parents = new Map();
+    for (const [parent, calls] of inside)
+        for (const [child, count] of calls)
+            ((_e = parents.get(child)) !== null && _e !== void 0 ? _e : parents.set(child, []).get(child)).push({ parent, count });
+    const expanded = new Map(), active = new Set();
+    const total = (id) => {
+        var _a, _b;
+        const known = expanded.get(id);
+        if (known !== undefined)
+            return known;
+        if (active.has(id))
+            return 0;
+        active.add(id);
+        let n = (_a = stage.get(id)) !== null && _a !== void 0 ? _a : 0;
+        for (const { parent, count } of (_b = parents.get(id)) !== null && _b !== void 0 ? _b : [])
+            n += count * total(parent);
+        active.delete(id);
+        expanded.set(id, n);
+        return n;
+    };
+    const result = new Map();
+    for (const f of graph.document.subgraphs || []) {
+        const direct = ((_f = stage.get(f.id)) !== null && _f !== void 0 ? _f : 0) + [...inside.values()].reduce((sum, calls) => { var _a; return sum + ((_a = calls.get(f.id)) !== null && _a !== void 0 ? _a : 0); }, 0);
+        result.set(f.id, { direct, expanded: total(f.id) });
+    }
+    return result;
+}
 /** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
  * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
 function removeSubgraph(graph, id) {
@@ -6712,6 +6764,20 @@ class Subgraph {
     get data() {
         var _a;
         return (_a = this.graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === this.id);
+    }
+    /** The definition's colour (basic design §3.14): a hex colour as a group's, every call shows it; null takes it away (the default
+     * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個呼叫都顯示；null 拿掉（畫面用預設顏色組）。 */
+    recolor(color) {
+        this.graph.assertEditable();
+        const f = this.data;
+        if (!f)
+            throw Error('Subgraph definition no longer exists');
+        if (color !== null && !/^#[0-9a-f]{6}$/.test(color))
+            throw Error('Invalid Subgraph color');
+        if (color === null)
+            delete f.color;
+        else
+            f.color = color;
     }
     rename(name) {
         this.graph.assertEditable();

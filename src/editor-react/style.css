@@ -245,6 +245,10 @@ a { color: var(--accent); }
 .icon { display: block; width: var(--icon-size); height: var(--icon-size); flex: none; fill: none; stroke: currentColor;
   stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .icon .icon-fill { fill: currentColor; stroke: none; opacity: 0; }
+/* A part drawn solid in the icon's own colour, always (the Library subgraph icon's dots). 一律實心、同圖示顏色的部分（資源庫子圖圖示的點）。 */
+.icon .icon-solid { fill: currentColor; stroke: none; }
+/* A bolder stroke, to balance a solid icon beside it (the local subgraph's link). 粗一點的線，和旁邊實心的圖示平衡（本地子圖的鏈結）。 */
+.icon .icon-bold { stroke-width: 2.6; }
 .icon .icon-dot { fill: currentColor; stroke: none; }
 .icon-button { display: grid; place-items: center; width: var(--icon-button); height: var(--icon-button); padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
 /* An icon button highlights without a border, on hover or with its menu open (human 2026-10-09); a pressed toggle keeps
@@ -1307,7 +1311,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .draft-blocker { position: absolute; inset: 0; z-index: 20; background: var(--surface-dim); }
 /* Module-declared spare input: dashed handle, muted label; greyed at the limit. */
 .spare-row > span { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); }
-.spare-row .react-flow__handle::after { border-style: dashed; background: transparent; }
+/* The spare port: a plain, slightly translucent grey dot (human 2026-10-14: the dashed ring was cut off and looked broken). 備用接孔：
+   一個微透明的灰色實心點（人類 10-14：虛線環被切掉、看起來壞了）。 */
+.spare-row .react-flow__handle::after { border-color: transparent; background: color-mix(in srgb, var(--text-muted) 55%, transparent); }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
 /* The network's own layer: the lock's dimming stays inside it, so the notices floating above stay clear and usable.
@@ -1515,7 +1521,8 @@ input.number:not(:focus), input.number.scrubbing { cursor: ew-resize; }
 
 /* The path into subgraphs (basic design §1 路徑列; Refactor.110): in the stage row's place, the stage, up, each level entered, and the
    current definition's call count. 進入子圖的路徑（§1 路徑列；R.110）：在 Stage 那一排的位置——stage、上一層、進入的每一層、目前定義的呼叫數。 */
-.network-path { display: flex; align-items: center; gap: 4px; height: var(--icon-button); padding: 0 6px; border-radius: 8px; background: var(--surface-raised); box-shadow: var(--layer-cast); }
+.network-path { display: flex; align-items: center; gap: 4px; height: var(--icon-button); padding: 0 2px 0 8px; pointer-events: auto; }
+.network-path .path-tag { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--surface-raised); color: var(--text-secondary); font-size: var(--font-xs); line-height: var(--line-sm); white-space: nowrap; }
 .network-path .path-step { height: calc(var(--icon-button) - 8px); padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; font-size: var(--font-sm); }
 .network-path button.path-step:hover { background: color-mix(in srgb, var(--surface-raised), var(--palette-contrast) var(--lift-hover)); }
 .network-path .path-step.current { color: var(--text-strong); font-weight: 600; }
@@ -1523,12 +1530,31 @@ input.number:not(:focus), input.number.scrubbing { cursor: ew-resize; }
 .network-path .path-sep { color: var(--text-muted); }
 .network-path .path-hint { margin-left: 6px; color: var(--text-secondary); font-size: var(--font-xs); white-space: nowrap; }
 /* A subgraph call's "×N" in its title (basic design §3.6). 子圖呼叫標題上的「×N」（§3.6）。 */
-.node-title .node-uses { padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--group-color) 35%, transparent); color: var(--text); font-size: var(--font-xs); line-height: var(--line-sm); }
+/* The icon's colour is the title's; the count sits 3 px from the icon, 8 px (the row's gap) before the title (visual notes 2).
+   圖示顏色同標題文字；數字離圖示 3 px、離標題 8 px（列的間距）（外觀意見 2）。 */
+.node-title .node-subgraph-icon { all: unset; display: inline-flex; cursor: pointer; color: inherit; border-radius: 4px; }
+.node-title .node-subgraph-icon .icon { width: 16px; height: 16px; }
+.node-title .node-subgraph-icon:hover { color: var(--text-strong); }
+.node-title .node-uses { margin-left: -5px; color: inherit; font-size: var(--font-xs); line-height: var(--line-sm); }
 /* The spare port on the output side (Subgraph Input): its handle on the right, the text before it. 輸出側的備用接孔（Subgraph Input）：接孔在右、文字在前。 */
 .spare-row.output-row { justify-content: flex-end; }
 /* A subgraph card (SubgraphsPanel.tsx): the Shared Sources card with the subgraph icon in the triangle's place; the one being edited is
    outlined. 子圖卡片：共用來源的卡片，三角形的位置放子圖圖示；正在編輯的那張有外框。 */
-.subgraph-card .subgraph-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+.subgraph-card .subgraph-icon { flex: none; color: var(--text); }
+.subgraph-card .subgraph-icon:disabled { opacity: .6; }
+/* The preview of a definition as a node card (visual notes 14), inside the card's body. 定義畫成節點卡的預覽（外觀意見 14），在卡片內容裡。 */
+.subgraph-preview { max-width: 240px; margin: 2px 0 4px; pointer-events: none; }
+.subgraph-preview .node-title { padding: 8px 12px; gap: 6px; } .subgraph-preview .node-title .icon { width: 16px; height: 16px; }
+.subgraph-preview .port-row { padding: 2px 12px; gap: 6px; font-size: var(--font-sm); }
+.subgraph-preview .preview-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--port-color); flex: none; }
+.subgraph-preview .output-row { justify-content: flex-end; }
+/* The colour swatch on the floating toolbar for subgraph calls (visual notes 3). 浮動工具列上子圖呼叫的色塊（外觀意見 3）。 */
+.floating-toolbar .subgraph-color { margin: 0 6px; align-self: center; }
+/* The cue when zooming out past the limit inside a subgraph (visual notes 9). 子圖裡縮到底再往外滾的提示（外觀意見 9）。 */
+.react-flow.zoom-out-cue { transform: scale(.985); }
+.react-flow { transition: transform .18s ease; } :root[data-motion="off"] .react-flow { transition: none; }
+.subgraph-fields .subgraph-identifier { font-size: var(--font-xs); color: var(--text-muted); word-break: break-all; }
+.subgraph-fields .subgraph-uses { font-size: var(--font-sm); color: var(--text-secondary); }
 .subgraph-card.current { outline: 1px solid var(--accent); outline-offset: -1px; }
 .subgraphs > .hint { margin: 0 0 8px; }
 /* The interface list of a boundary node's Settings tab (basic design §3.5): handle | label | type | remove, one row per port; the row

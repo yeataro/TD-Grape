@@ -47,7 +47,7 @@ import {formatProblem} from './model';
 import {ghostsOf} from './ghosts';
 import {connectedWires} from './connectivity';
 import {subgraphStages} from './subgraph_stages';
-import {newPortId,callCounts,subgraphCycle} from './subgraph_operations';
+import {newPortId,callCounts,useCounts,subgraphCycle} from './subgraph_operations';
 import {declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures} from './declarations';
 import {tdValues} from './td_values';
 import {uniformPresets} from './uniform_presets';
@@ -61,7 +61,7 @@ import * as groups from './groups';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,newPortId,callCounts,subgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,newPortId,callCounts,useCounts,subgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);

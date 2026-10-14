@@ -45,6 +45,7 @@ import type { FlowNode, FlowEdge } from './projection';
 import { forgetPreferences, readPreference, writePreference } from './preferences';
 import { glslMapOf } from './glsl_lines';
 import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide, panningCursor } from './viewport';
+import { motionOn } from './appearance';
 import { matches, reactFlowKeys, withShortcut } from './shortcuts';
 import { useCopyPaste, type CopyPaste } from './copy_paste';
 import { GroupLayer, useGroupActions, type GroupActions, type TextHeights } from './Groups';
@@ -180,6 +181,14 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   // 只有畫布讀投影（R.106；editor_slice.ts）：拖曳的一格只讓它重繪。
   const projection = useEditorSlice(session, state => state.projection);
   const version = useEditorSlice(session, state => state.version);
+  // The network being edited (Refactor.112): after it changes the view lands where the session says (visual notes 8: Home after
+  // entering, the call left behind after going up). 正在編輯的網路（R.112）：換了之後視野落在 session 說的地方（外觀意見 8：進入後 Home、
+  // 上一層後是剛離開的呼叫）。
+  const network = useEditorSlice(session, state => state.network);
+  useEffect(() => {
+    const landing = session.takeLanding();
+    if (landing) frameNodes(flow, landing.frame === 'node' ? [landing.id] : undefined);
+  }, [session, flow, network]);
   // Place a node (Refactor.105): after a pick the node follows the pointer until a press adds it. Its state lives here (Refactor.106):
   // a frame of it re-renders the canvas alone, no longer the whole workspace. 放置節點（R.105）：選好之後節點跟著指標，按下才新增。它的狀態
   // 放在這裡（R.106）：每一格只讓畫布重繪，不再是整個工作區。
@@ -210,6 +219,29 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   }, [flow, onCreate, onMenu]);
   // Canvas damping takes the mouse's wheel and background drag over only while on (viewport.ts). 畫布阻尼只在開著時接管滑鼠。
   const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampCanvas> | null>(null);
+  // Zooming out past the limit leaves the subgraph (visual notes 9; as TD's network editor). Only inside a subgraph is anything
+  // listened to; the listener reads and never blocks, so React Flow's own wheel handling (and the damper's) is untouched: outside the
+  // limit it costs one zoom read per wheel event. At the limit, each further tick shrinks the canvas a little as a cue (animation
+  // effects on); the third tick within 600 ms goes up. Never during a wire drag. 縮到底再往外滾就離開子圖（外觀意見 9；照 TD 網路編輯器）。
+  // 只在子圖裡才監聽；只讀不攔，React Flow 自己的滾輪（與阻尼的）都不動：沒到底時每次滾輪只讀一次倍率。到底後每多一格畫布微縮當提示
+  // （動畫效果開著時）；600 ms 內第三格就上一層。拉線中不算。
+  const inside = network !== 'pixel';
+  useEffect(() => {
+    const element = surface.current;
+    if (!inside || !element) return;
+    let ticks = 0, last = 0, cue: number | undefined;
+    const clear = () => { ticks = 0; element.classList.remove('zoom-out-cue'); };
+    const wheel = (event: WheelEvent) => {
+      if (event.deltaY <= 0 || element.hasAttribute('data-connecting')) return;
+      if (flow.getZoom() > MIN_ZOOM + 1e-6) { if (ticks) clear(); return; }
+      const now = performance.now();
+      ticks = now - last < 600 ? ticks + 1 : 1; last = now;
+      if (ticks >= 3) { clear(); latest.current.session.goUp(); return; }
+      if (motionOn()) { element.classList.add('zoom-out-cue'); clearTimeout(cue); cue = window.setTimeout(() => element.classList.remove('zoom-out-cue'), 220); }
+    };
+    element.addEventListener('wheel', wheel, { passive: true, capture: true });
+    return () => { element.removeEventListener('wheel', wheel, { capture: true }); clearTimeout(cue); clear(); };
+  }, [inside, flow]);
   useEffect(() => {
     if (!damping || !surface.current) return;
     const taken = damper.current = dampCanvas(flow, surface.current);

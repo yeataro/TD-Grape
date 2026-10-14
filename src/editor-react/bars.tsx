@@ -201,7 +201,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   // The path's names and the current subgraph's call count, once per version of the graph (Refactor.110). 路徑上的名字與目前子圖的
   // 呼叫數，圖每一版讀一次（R.110）。
   const names = useMemo(() => new Map((session?.definitions() ?? []).map(f => [f.id, f.name])), [session, state?.version]);
-  const uses = useMemo(() => trail.length && session ? session.callCounts().get(trail[trail.length - 1]!) ?? 0 : 0, [session, state?.version, trail]);
+  const uses = useMemo(() => trail.length && session ? session.useCounts().get(trail[trail.length - 1]!) ?? { direct: 0, expanded: 0 } : null, [session, state?.version, trail]);
   // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
   // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框
   // （R.83.7，人類：GLSL 不是編輯工具）。
@@ -236,19 +236,26 @@ export function NetworkBar({ session, prefs, onGlsl }: {
       {/* Inside a subgraph the row is the path (basic design §1 路徑列; legacy functions_ui.js:49 renderNavigation): the stage, up one level,
           then each subgraph entered; the current one is not a button. The hint says how many calls the current one has (§3.6 "×N").
           進了子圖這一排是路徑（§1 路徑列；照舊產品）：stage、上一層、再來是進入的每個子圖；目前的不是按鈕。提示寫目前這份有幾個呼叫（§3.6「×N」）。 */}
-      {trail.length > 0 && session ? <nav className="network-path" aria-label={say(tr('path.label', 'Path'))}>
-        <button type="button" className="path-step" onClick={() => session.goToDepth(0)} title={say(tr('path.toStage', 'Back to the Pixel stage'))}>Pixel</button>
+      {/* The Stage buttons stay as they are at every level (visual notes 5, 10); inside a subgraph the Pixel button goes back to the top and
+          homes the view. 每一層 Stage 按鈕都在、樣子不變（外觀意見 5、10）；在子圖裡按 Pixel＝回最外層並 Home。 */}
+      {stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => { if (trail.length) session?.goToDepth(0, true); }}
+        options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
+          disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
+      {/* The path into subgraphs, as text floating on the canvas (legacy functions_ui.js:49; visual notes 10): up, each level entered
+          (the current one is not a button), then a tag with the uses — direct, and in effect after expansion. Left in English on purpose.
+          進入子圖的路徑，浮在畫布上的字（照舊產品；外觀意見 10）：上一層、進入的每一層（目前的不是按鈕）、再來是使用數的 tag——直接呼叫數
+          與展開後的數。刻意不翻譯。 */}
+      {trail.length > 0 && session && uses && <nav className="network-path" aria-label={say(tr('path.label', 'Path'))}>
         <button type="button" className="icon-button path-up" onClick={session.goUp} aria-label={say(tr('path.up', 'Up one level'))}
           title={withShortcut(say(tr('path.up', 'Up one level')), 'up')}>↑</button>
         {trail.map((id, i) => <Fragment key={i + id}>{i > 0 && <span className="path-sep" aria-hidden="true">›</span>}
           {i === trail.length - 1 ? <span className="path-step current">{names.get(id) ?? id}</span>
             : <button type="button" className="path-step" onClick={() => session.goToDepth(i + 1)}>{names.get(id) ?? id}</button>}</Fragment>)}
-        <small className="path-hint" title={say(tr('path.sharedHint', 'This definition is called by {count} node(s); a change here changes every call.', { count: uses }))}>
-          {say(tr('path.shared', 'shared ×{count}', { count: uses }))}</small>
-      </nav>
-      : stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
-        options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
-          disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
+        <span className="path-tag" title={say(tr('path.sharedHint', 'This definition has {direct} call(s) and is in effect {expanded} time(s) once every call is expanded; a change here changes all of them.', uses))}>
+          {say(tr('path.shared', 'shared ×{direct}', { direct: uses.direct }))}
+          {uses.expanded !== uses.direct && <> · {say(tr('path.via', 'via {parent} ×{expanded}', { parent: trail.length > 1 ? names.get(trail[trail.length - 2]!) ?? '' : 'Pixel', expanded: uses.expanded }))}</>}
+        </span>
+      </nav>}
     </div>
     {/* The boxes on the right, together in one row (Refactor.86.2: not pushed there by an auto margin, which the bar would count
         as width it needs and never unfold). 右邊的框放在同一列（R.86.2：不用自動邊距推過去，否則列會把它算成需要的寬、收了就不再展開）。 */}

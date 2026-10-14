@@ -18,11 +18,13 @@ export type FlowNode = RFNode<{
   /** A call node: the definition it points at, and how many calls that definition has in the whole document (the "×N" mark, basic
    * design §3.6; Refactor.110). 呼叫節點：它指向的定義，以及這份定義在整份文件裡有幾個呼叫（「×N」標記，§3.6；R.110）。 */
   subgraph?: string; uses?: number;
+  /** The definition's own colour, when set (basic design §3.14). 定義自己的顏色，有設時。 */
+  color?: string;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
 /** `uses`: each definition's call count, kept with the projection and reused while no node was added or removed anywhere and no
  * definition changed (Refactor.110). uses：每份定義的呼叫數，跟著投影放，哪裡都沒有節點增減、定義也沒變時沿用。 */
-export type Projection = { nodes: FlowNode[]; edges: FlowEdge[]; uses?: ReadonlyMap<string, number> };
+export type Projection = { nodes: FlowNode[]; edges: FlowEdge[]; uses?: ReadonlyMap<string, { direct: number; expanded: number }> };
 const retainArray = <T,>(next: T[], old: T[]) =>
   next.length === old.length && next.every((item, i) => item === old[i]) ? old : next;
 
@@ -58,7 +60,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
   // changed; else the previous ones (Refactor.110). 整份文件的呼叫數：只在有子圖時算，且只在哪裡增減了節點或定義變了時；否則沿用。
   const uses = !document.document.subgraphs?.length ? undefined
     : previous.uses && changes && !changes.definitions.length && !changes.networks.some(item => item.added.length || item.removed.length) ? previous.uses
-    : core.callCounts(document);
+    : core.useCounts(document);
   // A move (ui x, y) redraws nothing but the position; any other change, in ui too (component names, Refactor.85), redraws the node.
   // 移動（ui 的 x、y）只改位置；其他改變，包括 ui 裡的（分量名稱，R.85），重畫節點。
   const dirty = new Set(delta?.nodes.filter(item => item.fields.some(key => key !== 'ui') || item.ui.some(key => key !== 'x' && key !== 'y')).map(item => item.id));
@@ -110,8 +112,9 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // 線可能在這個節點沒被編輯時接通或斷開（上游改了型別）：那時也重畫。
     } else if (!data || all || dirty.has(node.id) || data.ghost || !sameList(data.connected, connected.get(node.id)) || !sameList(data.wired, outgoing.get(node.id))
       // A call's count can change without the call being edited (a call added or removed elsewhere). 呼叫數可能在這個呼叫沒被編輯時變。
-      || (data.subgraph !== undefined && data.uses !== (uses?.get(data.subgraph) ?? 0))) {
+      || (data.subgraph !== undefined && data.uses !== (uses?.get(data.subgraph)?.expanded ?? 0))) {
       const module = node.definition!, subgraph = module.referencedGraph?.(authored);
+      const definition = subgraph === undefined ? undefined : document.document.subgraphs?.find(f => f.id === subgraph);
       const described = contract.definitions[authored.nodeType];
       const types: string[] = described?.selector === 'parameter'
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
@@ -122,7 +125,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [],
         declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined,
-        conversions: converted, ...(subgraph === undefined ? {} : { subgraph, uses: uses?.get(subgraph) ?? 0 }) };
+        conversions: converted, ...(subgraph === undefined ? {} : { subgraph, uses: uses?.get(subgraph)?.expanded ?? 0, ...(definition?.color ? { color: definition.color } : {}) }) };
       data = data && same(data, next) ? data : next;
     // Not recomputed, the node still follows a type change upstream through its wires (conversions are taken from the wires every
     // time); its old data already carries conversions, so this matches unless they really changed.

@@ -20,6 +20,14 @@ export class Subgraph {
     return this.graph.document.subgraphs?.find(f => f.id === this.id);
   }
 
+  /** The definition's colour (basic design §3.14): a hex colour as a group's, every call shows it; null takes it away (the default
+   * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個呼叫都顯示；null 拿掉（畫面用預設顏色組）。 */
+  recolor(color:string|null):void {
+    this.graph.assertEditable();const f=this.data;
+    if(!f)throw Error('Subgraph definition no longer exists');
+    if(color!==null&&!/^#[0-9a-f]{6}$/.test(color))throw Error('Invalid Subgraph color');
+    if(color===null)delete f.color;else f.color=color;
+  }
   rename(name:string):void {
     this.graph.assertEditable();const f=this.data;
     if(!f)throw Error('Subgraph definition no longer exists');

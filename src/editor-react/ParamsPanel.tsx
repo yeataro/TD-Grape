@@ -55,12 +55,15 @@ function NodeNote({ id, note }: { id: string; note: string }) {
 /** The panel's tabs (Refactor.85; legacy inspector.js:1602): Parameters, Settings, Notes. The shown one is shared by every node
  * and kept while the selection changes, not between sessions (legacy inspector.js:305). 面板的分頁（R.85；照舊產品）：參數、設定、
  * 註記。顯示哪一個由所有節點共用，換選取時不變，不跨次保存（照舊產品）。 */
-type Tab = 'parameters' | 'settings' | 'notes';
+type Tab = 'parameters' | 'settings' | 'subgraph' | 'notes';
 let shownTab: Tab = 'parameters';
 const TABS: readonly [Tab, ReturnType<typeof tr>][] = [['parameters', tr('params.tabParameters', 'Parameters')],
   ['settings', tr('params.tabSettings', 'Settings')], ['notes', tr('params.notes', 'Notes')]];
-function Tabs({ tab, choose }: { tab: Tab; choose(tab: Tab): void }) {
-  return <div className="params-tabs" role="tablist">{TABS.map(([key, label]) => <button key={key} type="button" role="tab"
+// A subgraph call has a fourth tab for its definition (visual notes 7): the same card as inside the subgraph with nothing selected.
+// 子圖呼叫多一個「子圖」分頁（外觀意見 7）：和子圖裡無選取時同一張卡。
+const CALL_TABS: readonly [Tab, ReturnType<typeof tr>][] = [TABS[0]!, TABS[1]!, ['subgraph', tr('params.tabSubgraph', 'Subgraph')], TABS[2]!];
+function Tabs({ tab, tabs, choose }: { tab: Tab; tabs: readonly [Tab, ReturnType<typeof tr>][]; choose(tab: Tab): void }) {
+  return <div className="params-tabs" role="tablist">{tabs.map(([key, label]) => <button key={key} type="button" role="tab"
     aria-selected={tab === key} onClick={() => choose(key)}>{say(label)}</button>)}</div>;
 }
 
@@ -161,21 +164,39 @@ function InterfaceSettings({ direction, ports }: { direction: Direction; ports: 
 
 /** Nothing selected inside a subgraph: the subgraph itself (basic design §3.12: its name; read-only and make-local come with the Library
  * round), and how many calls it has. 子圖裡沒選東西：子圖本身（§3.12：名稱；唯讀與轉為本地在 Library 那一輪），以及它有幾個呼叫。 */
-function SubgraphSettings({ definition, uses }: { definition: SubgraphData; uses: number }) {
-  const session = useSession(), floating = useContext(FloatingContext), [value, setValue] = useState(definition.name);
+/** The definition's fields (visual notes 6, the part this round has): Title, the identifier (grey, "in-graph id" for a local one), and
+ * its uses. Description, Category and Credits come with the Library round. 定義的欄位（外觀意見 6，本輪有的部分）：Title、識別碼（本地：
+ * 灰字「圖內 id」）、使用數。Description、Category、Credits 在 Library 那一輪。 */
+function SubgraphFields({ definition, uses }: { definition: SubgraphData; uses: { direct: number; expanded: number } }) {
+  const session = useSession(), [value, setValue] = useState(definition.name);
   useEffect(() => setValue(definition.name), [definition.name]);
   const commit = () => { if (value.trim() && value !== definition.name) session.renameSubgraph(definition.id, value); else setValue(definition.name); };
-  return <article className={`grape-node params-card subgraph-settings${floating ? ' floating' : ''}`} style={{ '--group-color': 'var(--group-subgraph)' } as CSSProperties}>
+  return <div className="params-grid params-settings subgraph-fields">
+    <label className="control-field"><span>{say(tr('params.subgraphTitle', 'Title'))}</span>
+      <input value={value} maxLength={80} spellCheck={false} aria-label={say(tr('params.subgraphTitle', 'Title'))}
+        onChange={event => setValue(event.target.value)} onBlur={commit}
+        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.name); } }} /></label>
+    <div className="control-field"><span>{say(tr('params.subgraphIdentifier', 'Identifier'))}</span>
+      <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code></div>
+    <div className="control-field"><span>{say(tr('params.subgraphUsesLabel', 'Uses'))}</span>
+      <span className="subgraph-uses">{say(tr('params.subgraphUsesText', '{direct} call(s), {expanded} in effect after expansion; a change here changes all of them', uses))}</span></div>
+  </div>;
+}
+/** Nothing selected inside a subgraph: the subgraph itself as a card (basic design §3.12; visual notes 7). 子圖裡沒選東西：子圖本身的卡
+ * （§3.12；外觀意見 7）。 */
+function SubgraphSettings({ definition, uses }: { definition: SubgraphData; uses: { direct: number; expanded: number } }) {
+  const floating = useContext(FloatingContext);
+  return <article className={`grape-node params-card subgraph-settings${floating ? ' floating' : ''}`} style={{ '--group-color': definition.color ?? 'var(--group-subgraph)' } as CSSProperties}>
     <div className="node-title params-title" data-movable={floating ? '' : undefined} onContextMenu={floating?.openMenu} onPointerDown={floating ? event => {
       if (!(event.target as HTMLElement).closest('button, input, select, textarea')) floating.drag(event); } : undefined}>
       {floating?.fold}
-      <strong>{say(tr('params.subgraph', 'Subgraph'))}</strong>
-      <input className="params-name" value={value} maxLength={80} spellCheck={false} aria-label={say(tr('subgraphs.name', 'Name'))}
-        onChange={event => setValue(event.target.value)} onBlur={commit}
-        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.name); } }} />
+      <Icon name="subgraphLocal" />
+      <strong>{definition.name}</strong>
+      <small>{say(tr('params.subgraph', 'Subgraph'))}</small>
       {floating?.controls}
     </div>
-    {!floating?.collapsed && <p className="hint params-pad">{say(tr('params.subgraphUses', 'Called by {count} node(s); a change here changes every call. Select a node to edit it; select the Input or Output node to edit the ports.', { count: uses }))}</p>}
+    {!floating?.collapsed && <SubgraphFields definition={definition} uses={uses} />}
+    {!floating?.collapsed && <p className="hint params-pad">{say(tr('params.subgraphHint', 'Select a node to edit it; select the Input or Output node to edit the ports.'))}</p>}
   </article>;
 }
 
@@ -208,6 +229,9 @@ function NodeParameters({ node, lookup }: { node: FlowNode; lookup: Lookup }) {
   const kind = data.declaration && sourceKinds[data.declaration.kind];
   // A boundary node edits the interface of the subgraph being edited (its owner is always the current definition). 邊界節點編輯正在編輯的子圖的介面。
   const side = boundarySide(authored.nodeType), definition = side ? session.currentSubgraph() : null;
+  // A call's definition, for its Subgraph tab (visual notes 7); the tab list follows. 呼叫的定義，給它的「子圖」分頁；分頁清單跟著。
+  const called = data.subgraph === undefined ? null : session.definitions().find(f => f.id === data.subgraph) ?? null;
+  const tabs = called ? CALL_TABS : TABS, shown = tab === 'subgraph' && !called ? 'parameters' : tab;
   return <article className={`grape-node params-card${data.ghost ? ' ghost' : ''}${floating ? ' floating' : ''}${wiring ? ' wiring' : ''}`}
     style={{ '--group-color': `var(--group-${data.ghost ? 'ghost' : data.colorGroup})` } as CSSProperties}>
     {/* Floating, the node card is the panel (Refactor.85, human 2026-10-11: no frame, no panel title): its head holds the triangle,
@@ -224,14 +248,15 @@ function NodeParameters({ node, lookup }: { node: FlowNode; lookup: Lookup }) {
         : <span className="params-source">{view.literalLabel ? view.label : text(view.label ?? data.label)} <small>{data.outputs[0]?.type}</small></span>}
       {floating?.controls}
     </div>
-    {!floating?.collapsed && <Tabs tab={tab} choose={choose} />}
-    {!floating?.collapsed && tab === 'settings' && (side && definition ? <InterfaceSettings direction={side} ports={definition[side]} /> : <NodeSettings id={id} />)}
-    {!floating?.collapsed && tab === 'parameters' && side && definition && <InterfaceDefaults direction={side} ports={definition[side]} />}
-    {!floating?.collapsed && tab === 'notes' && <NodeNote id={id} note={typeof authored.comment === 'string' ? authored.comment : ''} />}
+    {!floating?.collapsed && <Tabs tab={shown} tabs={tabs} choose={choose} />}
+    {!floating?.collapsed && shown === 'settings' && (side && definition ? <InterfaceSettings direction={side} ports={definition[side]} /> : <NodeSettings id={id} />)}
+    {!floating?.collapsed && shown === 'parameters' && side && definition && <InterfaceDefaults direction={side} ports={definition[side]} />}
+    {!floating?.collapsed && shown === 'subgraph' && called && <SubgraphFields definition={called} uses={session.useCounts().get(called.id) ?? { direct: 0, expanded: 0 }} />}
+    {!floating?.collapsed && shown === 'notes' && <NodeNote id={id} note={typeof authored.comment === 'string' ? authored.comment : ''} />}
     {/* One grid for the whole body, as TD's parameter dialog (Refactor.76.2): expand | names flush right | types | fields;
         every row lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：展開｜名稱靠右｜型別｜欄位；
         每一列都和其他列對齊。 */}
-    {!floating?.collapsed && tab === 'parameters' && !data.ghost && !side && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
+    {!floating?.collapsed && shown === 'parameters' && !data.ghost && !side && <div className="node-body params-grid"><ValueColumns.Provider value={true}>
       {/* The output menu, then the input menu, each named (Q73 rule two). 輸出選單、再來輸入選單，各有名稱（Q73 規則二）。 */}
       <TypeRow id={id} data={data} end="output" />
       <TypeRow id={id} data={data} end="input" />
@@ -281,7 +306,7 @@ export const ParamsPanel = memo(function ParamsPanel() {
   const floating = useContext(FloatingContext), trail = useEditorSlice(session, state => state.trail);
   // Nothing selected inside a subgraph: the subgraph itself (Refactor.110). 子圖裡沒選東西：子圖本身（R.110）。
   const current = !node && trail.length ? session.currentSubgraph() : null;
-  if (current) return <SubgraphSettings key={current.id} definition={current} uses={session.callCounts().get(current.id) ?? 0} />;
+  if (current) return <SubgraphSettings key={current.id} definition={current} uses={session.useCounts().get(current.id) ?? { direct: 0, expanded: 0 }} />;
   // Nothing selected: one line (legacy inspector.js:1592); floating, under a plain head so it can still be moved and closed.
   // 沒選：一行提示（照舊產品）；浮動時放在一個素的頭下面，仍能搬、能關。
   if (!node) return floating ? <article className="grape-node params-card floating params-empty">

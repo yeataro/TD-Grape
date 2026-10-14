@@ -425,6 +425,13 @@ export class Editor {
   // stage down; empty at the top level. Session state, as the selection: never in the graph, Undo or TD. 進入子圖的路徑（R.110）：從 stage
   // 往下的定義 id；最外層是空的。同選取一樣是 session 的狀態：不進圖、Undo 或 TD。
   private trail: readonly string[] = [];
+  // The call node entered at each level (null when entered from the panel), so going up lands on it (visual notes 8). 每一層是從哪個
+  // 呼叫節點進來的（從面板進來是 null），上一層時落在它上面（外觀意見 8）。
+  private callTrail: readonly (string | null)[] = [];
+  /** Where the view should land after the network changed (visual notes 8): everything (Home) after entering, the call left behind
+   * after going up. Taken once by the canvas. 網路換了之後視野要落在哪（外觀意見 8）：進入後是全部（Home），上一層後是剛離開的呼叫。畫布取一次。 */
+  private landing: { frame: 'all' } | { frame: 'node'; id: string } | null = null;
+  takeLanding = () => { const landing = this.landing; this.landing = null; return landing; };
   private networkId = () => this.trail.length ? 'subgraph:' + this.trail[this.trail.length - 1] : 'pixel';
   private net = () => this.document.networks.get(this.networkId())!;
   /** The definition being edited, or null at the top level. 正在編輯的定義；最外層是 null。 */
@@ -434,30 +441,46 @@ export class Editor {
   /** How many calls each definition has, over every network: the subgraph panel's own derivation, asked per version (as references()).
    * 每份定義有幾個呼叫，算遍每張網路：子圖面板自己的推導，每一版問一次（同 references()）。 */
   callCounts = () => core.callCounts(this.document);
+  /** Direct and expanded uses of each definition (core useCounts; visual notes: the path bar writes both, compact places the expanded).
+   * 每份定義的直接與展開使用數（核心 useCounts；路徑列兩個都寫，緊湊處寫展開數）。 */
+  useCounts = () => core.useCounts(this.document);
+  /** The colour of these definitions (basic design §3.14; visual notes 3): one of the group palette, or null for the default.
+   * 這些定義的顏色（§3.14；外觀意見 3）：群組色盤的一個，或 null＝預設。 */
+  setSubgraphColor = (ids: readonly string[], color: string | null) =>
+    this.transactGraph(tr('subgraph.recolored', 'Subgraph colour updated'), document => { for (const id of ids) document.subgraph(id).recolor(color); });
   /** Enter the subgraph a call node points at (a double-click on it; legacy functions_ui.js:44 enterFunction): the path grows by
    * one, the selection is cleared (legacy navigateGraph). 進入呼叫節點指向的子圖（雙擊它；照舊產品）：路徑多一層、選取清掉。 */
   enterSubgraph = (callId: string) => {
     const node = this.net().node(callId), id = node.data && node.definition?.referencedGraph?.(node.data);
-    if (id) this.navigate([...this.trail, id]);
+    if (id) this.navigate([...this.trail, id], [...this.callTrail, callId], { frame: 'all' });
   };
   /** Enter a definition from the subgraph panel: the path is the stage, then it. 從子圖面板進入定義：路徑是 stage、再來是它。 */
-  enterDefinition = (id: string) => this.navigate([id]);
-  /** Up one level (legacy Alt+ArrowUp, graph_ui.js:2565). 上一層。 */
-  goUp = () => { if (this.trail.length) this.navigate(this.trail.slice(0, -1)); };
-  /** To a level of the path: 0 is the stage. 到路徑的某一層：0 是 stage。 */
-  goToDepth = (depth: number) => this.navigate(this.trail.slice(0, depth));
-  private navigate(trail: readonly string[]) {
+  enterDefinition = (id: string) => this.navigate([id], [null], { frame: 'all' });
+  /** Up one level (legacy Alt+ArrowUp, graph_ui.js:2565): lands on the call left behind, selected (visual notes 8). 上一層：落在剛離開的
+   * 呼叫上並選取它（外觀意見 8）。 */
+  goUp = () => { if (this.trail.length) this.goToDepth(this.trail.length - 1); };
+  /** To a level of the path: 0 is the stage; `home` lands on everything instead of the call (the Stage button, visual notes). 到路徑的
+   * 某一層：0 是 stage；home＝落在全部而不是那個呼叫（Stage 按鈕）。 */
+  goToDepth = (depth: number, home = false) => {
+    const call = this.callTrail[depth] ?? null;
+    this.navigate(this.trail.slice(0, depth), this.callTrail.slice(0, depth), !home && call ? { frame: 'node', id: call } : { frame: 'all' });
+  };
+  private navigate(trail: readonly string[], calls: readonly (string | null)[], landing: { frame: 'all' } | { frame: 'node'; id: string }) {
     const id = trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel';
     // A subgraph already on the path cannot be entered again (legacy function.cycle). 已在路徑上的子圖不能再進（照舊產品）。
     if (new Set(trail).size !== trail.length) { this.warn(tr('subgraph.cycle', 'This subgraph is already open on the path.')); return; }
     if (!this.document.networks.has(id)) { this.warn(tr('subgraph.gone', 'This subgraph no longer exists.')); return; }
     if (id === this.networkId()) return;
-    this.trail = [...trail];
-    this.writeSelection(NO_SELECTION, null, null);
+    this.trail = [...trail]; this.callTrail = [...calls];
     const projection = project(this.document, EMPTY_PROJECTION, this.bootstrap.typeContract, undefined, id);
+    // The call left behind is selected when it is still there; else the view lands on everything. 剛離開的呼叫還在就選取它；否則落在全部。
+    const call = landing.frame === 'node' && projection.nodes.some(node => node.id === landing.id) ? landing.id : null;
+    this.landing = call ? { frame: 'node', id: call } : { frame: 'all' };
     // Another network drawn: the version moves, so what reads the projection once per version reads it again (the Parameter
-    // panel's lookup, the groups). 畫另一張網路：版本前進，每一版讀一次投影的部分（參數面板的查表、群組）會重讀。
+    // panel's lookup, the groups). The selection is written after the new projection is in place, so its look lands on the new
+    // nodes. 畫另一張網路：版本前進，每一版讀一次投影的部分（參數面板的查表、群組）會重讀。選取在新投影就位之後才寫，樣子才會落在新節點上。
     this.state = { ...this.state, projection, version: this.state.version + 1, network: id, trail: this.trail };
+    this.writeSelection(call ? { nodes: new Set([call]), edges: NONE, primary: call } : NO_SELECTION, null, null);
     this.grouped = null;
     // Ghosts here were reported when the graph opened or the edit was made; entering says nothing. 這裡的 Ghost 在開圖或修改時已報過；進入不說。
     this.ghostTotal = projection.nodes.filter(node => node.data.ghost).length + projection.edges.filter(edge => edge.type === 'ghost').length;
@@ -476,7 +499,7 @@ export class Editor {
     let trail = this.trail;
     while (trail.length && !this.document.networks.has('subgraph:' + trail[trail.length - 1])) trail = trail.slice(0, -1);
     if (trail === this.trail) return false;
-    this.trail = trail; return true;
+    this.trail = trail; this.callTrail = this.callTrail.slice(0, trail.length); return true;
   }
   /** Edit the interface of the subgraph being edited (its boundary nodes' panel, basic design §3.5): one step, one Undo; the core
    * keeps every call and boundary in step. 修改正在編輯的子圖的介面（邊界節點的面板，§3.5）：一步、一次 Undo；核心讓每個呼叫與邊界跟上。 */

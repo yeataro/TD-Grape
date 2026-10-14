@@ -238,6 +238,38 @@ export function callCounts(graph:GraphDocument):ReadonlyMap<string,number> {
   return counts;
 }
 
+/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many call nodes point at it anywhere; `expanded` = how many
+ * times it is in effect once every caller is expanded (a call inside P counts P's own expanded uses). One scan of every network;
+ * the gate keeps the call graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個呼叫節點指著它；expanded＝
+ * 展開所有呼叫者後實際用到幾次（P 裡的呼叫算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
+export function useCounts(graph:GraphDocument):ReadonlyMap<string,{direct:number;expanded:number}> {
+  const stage = new Map<string,number>(),inside = new Map<string,Map<string,number>>();
+  const bump = (m:Map<string,number>,id:string) => m.set(id,(m.get(id) ?? 0) + 1);
+  for (const data of Object.values(graph.document.stages)) for (const n of data.nodes) {const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);if (ref) bump(stage,ref);}
+  for (const f of graph.document.subgraphs || []) {
+    const calls = new Map<string,number>();
+    for (const n of f.graph.nodes) {const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);if (ref) bump(calls,ref);}
+    if (calls.size) inside.set(f.id,calls);
+  }
+  const parents = new Map<string,{parent:string;count:number}[]>();
+  for (const [parent,calls] of inside) for (const [child,count] of calls) (parents.get(child) ?? parents.set(child,[]).get(child)!).push({parent,count});
+  const expanded = new Map<string,number>(),active = new Set<string>();
+  const total = (id:string):number => {
+    const known = expanded.get(id);if (known !== undefined) return known;
+    if (active.has(id)) return 0;
+    active.add(id);
+    let n = stage.get(id) ?? 0;
+    for (const {parent,count} of parents.get(id) ?? []) n += count * total(parent);
+    active.delete(id);expanded.set(id,n);return n;
+  };
+  const result = new Map<string,{direct:number;expanded:number}>();
+  for (const f of graph.document.subgraphs || []) {
+    const direct = (stage.get(f.id) ?? 0) + [...inside.values()].reduce((sum,calls) => sum + (calls.get(f.id) ?? 0),0);
+    result.set(f.id,{direct,expanded:total(f.id)});
+  }
+  return result;
+}
+
 /** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
  * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
 export function removeSubgraph(graph:GraphDocument,id:string):void {
