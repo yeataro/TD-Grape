@@ -69,7 +69,11 @@ test('subgraph validation rejects cycles and duplicate boundaries before returni
  // A wire to a port that is gone is a ghost wire (Q37 1-3, TECH-2), and an unused definition does not block code (A8, TECH-3).
  // 接到已不存在接孔的線是 Ghost 線；沒被引用的定義不擋產碼。
  assert.doesNotThrow(()=>compiler.compile(unused));
- const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';assert.equal(compiler.supports(unsupported),false);
+ // A definition with an interface this build cannot use: its calls are ghosts, the graph still compiles, the panel reports it (Q37 1-1, A8).
+ // 接口這一版用不了的定義：呼叫是 Ghost、整張圖照產、面板回報。
+ const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';
+ assert.equal(compiler.supports(unsupported),true);assert.doesNotThrow(()=>compiler.compile(unsupported));
+ assert.ok([...compiler.unusableSubgraphs(unsupported)].includes('gain'));
  // An opaque port is a built-in type the host passes, on either side (amendment A1). opaque 接口是宿主能傳的內建型別，兩邊都可。
  const opaque=sharedGraph();opaque.subgraphs[0].inputs[0]={id:'value',type:'sampler2D'};opaque.subgraphs[0].outputs[0]={id:'result',type:'sampler2D'};
  assert.equal(compiler.supports(opaque),true);
@@ -102,14 +106,18 @@ test('an unused definition never blocks code: deep unused chains compile, an unu
   deep.subgraphs.push(f);
  }
  assert.equal(compiler.supports(deep),true);assert.doesNotThrow(()=>compiler.compile(deep));
- // An unused definition this host cannot use (a node it does not know). 這個 host 用不了的未用定義（不認得的節點）。
- const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',name:'Odd'});
- odd.subgraphs[2].graph.nodes.push({id:'mystery',nodeType:'unknown.node',params:{},ui:{x:0,y:0}});
+ // An unused definition this host cannot use (an interface type it does not know). 這個 host 用不了的未用定義（不認得的接口型別）。
+ const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',name:'Odd'});odd.subgraphs[2].inputs[0].type='mat4';
  assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
  assert.deepEqual([...compiler.unusableSubgraphs(odd)],['odd']);
- // Once it is used, it blocks as before. 被用到就照舊擋。
+ // Called, its call is a ghost: left out, the graph still compiles (Q37 1-1). 被呼叫時，呼叫是 Ghost：跳過、整張圖照產。
  odd.stages.pixel.nodes.push(node('useOdd','subgraph_call',{subgraphId:'odd'}));
- assert.equal(compiler.supports(odd),false);
+ assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
+ // A ghost node inside a used definition is left out like one at the stage. 被用到的定義裡的 Ghost，和 stage 上的一樣跳過。
+ const inside=sharedGraph();inside.subgraphs[0].graph.nodes.push({id:'mystery',nodeType:'unknown.node',params:{},ui:{x:0,y:0}});
+ inside.subgraphs[0].graph.edges.push({id:'ghostWire',from:['mystery','out'],to:['mul','b']});
+ assert.equal(compiler.supports(inside),true);assert.doesNotThrow(()=>compiler.compile(inside));
+ assert.deepEqual([...compiler.unusableSubgraphs(inside)],[]);
 });
 test('the stage table remembers each definition once and never keeps a result cut short by a cycle',()=>{
  const {subgraphStages,subgraphStageTable}=c.GrapeGraph;
@@ -143,4 +151,21 @@ test('the panel diagnosis stays linear with an old cycle and reports the definit
  loop.stages.pixel.nodes=loop.stages.pixel.nodes.filter(n=>n.params.subgraphId!=='gain'&&n.params.subgraphId!=='wrapper');
  loop.stages.pixel.edges=loop.stages.pixel.edges.filter(e=>!['first','second'].includes(e.from[0])&&!['first','second'].includes(e.to[0]));
  assert.ok([...compiler.unusableSubgraphs(loop)].includes('gain'));
+});
+
+// The ghost-plus-subgraph finding (R.113 check, human 10-14: handle it): a stage with a ghost node and any subgraph still compiles,
+// as the flat compiler does; the ghost and its wires are left out. stage 有 Ghost 又有子圖時照樣產碼，同平面編譯器；Ghost 與它的線跳過。
+test('a ghost node at the stage no longer refuses a graph that has subgraphs',()=>{
+ const compiler=c.GrapeTopCompiler,g=sharedGraph();
+ g.stages.pixel.nodes.push({id:'future',nodeType:'vendor.future.node',params:{},ui:{x:0,y:0}});
+ g.stages.pixel.edges.push({id:'e:future',from:['future','out'],to:['sum','b']});
+ assert.equal(compiler.supports(g),true);
+ const glsl=compiler.compile(g,{reservedNames:[]}).pixel;
+ assert.ok(!glsl.includes('future'),'the ghost writes nothing');
+ const flat=sharedGraph();flat.subgraphs=[];flat.stages.pixel.nodes=flat.stages.pixel.nodes.filter(n=>n.nodeType!=='sgrape.builtin.subgraph_call');
+ flat.stages.pixel.edges=flat.stages.pixel.edges.filter(e=>!['first','second'].includes(e.from[0])&&!['first','second'].includes(e.to[0]));
+ flat.stages.pixel.nodes.push({id:'future',nodeType:'vendor.future.node',params:{},ui:{x:0,y:0}});
+ assert.equal(compiler.supports(flat),true,'and the flat graph still compiles, as before');
+ flat.subgraphs=[plain(sharedGraph().subgraphs[0])];
+ assert.equal(compiler.supports(flat),true,'adding a first, unused definition keeps it compiling');
 });

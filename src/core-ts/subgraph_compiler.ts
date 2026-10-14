@@ -49,36 +49,55 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
     // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
     if (!g.declarations.every(d=>!declarationKinds.has(d.kind)||declarationKinds.get(d.kind)!.types.includes(d.type))) return false;
-    const pixel=g.stages.pixel!;
-    if (!usableNetwork(g,pixel,undefined)) return false;
+    const pixel=g.stages.pixel!,stagesOf=stageLookup(g);
+    if (!usableNetwork(g,pixel,undefined,stagesOf)) return false;
     // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
     // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
     // 它的問題在子圖面板顯示。
     // The stage table is built only when a call reaches something (Codex 3rd check: a graph with no calls reads no definitions).
     // 有呼叫走得到東西才建 Stage 表（沒有呼叫的圖不讀任何定義）。
-    const used=reachable(g,pixel);
-    if(!used.size)return true;
-    const stagesOf=subgraphStageTable(g,registry);
+    const used=reachable(g,pixel,stagesOf);
     return [...used].every(id=>{const f=g.subgraphs!.find(item=>item.id===id);return !f||usableDefinition(g,f,stagesOf);});
   }
-  function usableNetwork(g:Graph,data:NetworkData|undefined,owner:SubgraphData|undefined):boolean {
+  /** The stage table, built on first use only (Codex 3rd check: a graph whose calls reach nothing reads no definitions). Stage 表，
+   * 第一次用到才建（呼叫走不到任何定義的圖不讀定義）。 */
+  function stageLookup(g:Graph):(id:string)=>string[] {
+    let table:((id:string)=>string[])|undefined;
+    return id=>(table??=subgraphStageTable(g,registry))(id);
+  }
+  /** A ghost (design-interview Q37 1-1; the flat compiler's rule, top_compiler.ts supports, and the editor's, connectivity.ts): a node
+   * this build does not know, one that does not belong to the pixel stage, a call whose content cannot run there, one its module does
+   * not support, or one whose ports cannot be worked out. It is kept and left out of code generation, never a reason to refuse the
+   * graph; its wires count as not connected. Ghost：這一版不認得的節點、不屬於 pixel 的、內容不能在那裡跑的呼叫、模組不支援的、算不出接孔的。
+   * 保留、不產碼，絕不是拒絕整張圖的理由；接到它的線當作沒接。 */
+  function ghost(g:Graph,n:Node,owner:SubgraphData|undefined,stagesOf:(id:string)=>string[]):boolean {
+    const module=moduleOf(n);
+    if (!module) return true;
+    const own=module.catalog.definition.stages;
+    if (own && !own.includes('pixel')) return true;
+    const ref=module.referencedGraph?.(n);
+    if (ref!==undefined && !stagesOf(ref).includes('pixel')) return true;
+    const context=contextFor(g,owner);
+    if (!module.supports(n,context)) return true;
+    try { resolvePorts(module,n,context); } catch { return true; }
+    return false;
+  }
+  function usableNetwork(g:Graph,data:NetworkData|undefined,owner:SubgraphData|undefined,stagesOf:(id:string)=>string[]):boolean {
     if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
-    const context = contextFor(g,owner);
-    return data.nodes.every(n=>{
-      const module=moduleOf(n);
-      return !!module && !n.params.requireConstant && module.supports(n,context);
-    });
+    // Ghosts are kept but never emitted, so they do not block this path (as the flat compiler). Ghost 不產碼，不擋這條路（同平面編譯器）。
+    return data.nodes.every(n=>ghost(g,n,owner,stagesOf)||!n.params.requireConstant);
   }
   // Where a subgraph can run comes from its content (Q46); the target is each node's own check. 子圖能用的 Stage 由內容推算；target 由每個節點自己檢查。
   function usableDefinition(g:Graph,f:SubgraphData,stagesOf:(id:string)=>string[]):boolean {
-    return validInterface(f) && stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f);
+    return validInterface(f) && stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f,stagesOf);
   }
-  /** The definitions the network's calls reach, nested calls followed. 網路的呼叫走得到的定義，巢狀一路跟進。 */
-  function reachable(g:Graph,data:NetworkData):Set<string> {
+  /** The definitions the network's calls reach, nested calls followed; a ghost call reaches nothing. 網路的呼叫走得到的定義，巢狀
+   * 一路跟進；Ghost 呼叫走不到任何東西。 */
+  function reachable(g:Graph,data:NetworkData,stagesOf:(id:string)=>string[]):Set<string> {
     const byId=new Map((g.subgraphs??[]).map(f=>[f.id,f])),found=new Set<string>();
-    const walk=(nodes:readonly Node[])=>{for(const n of nodes){const ref=moduleOf(n)?.referencedGraph?.(n);
-      if(ref!==undefined&&!found.has(ref)){found.add(ref);const f=byId.get(ref);if(f&&Array.isArray(f.graph?.nodes))walk(f.graph.nodes);}}};
-    if(Array.isArray(data.nodes))walk(data.nodes);
+    const walk=(nodes:readonly Node[],owner:SubgraphData|undefined)=>{for(const n of nodes){const ref=moduleOf(n)?.referencedGraph?.(n);
+      if(ref!==undefined&&!found.has(ref)&&!ghost(g,n,owner,stagesOf)){found.add(ref);const f=byId.get(ref);if(f&&Array.isArray(f.graph?.nodes))walk(f.graph.nodes,f);}}};
+    if(Array.isArray(data.nodes))walk(data.nodes,undefined);
     return found;
   }
   /** The definitions that cannot be used in this host (amendment A8): what code generation would refuse, and those on a cycle of
@@ -96,19 +115,21 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     for (const f of g.subgraphs!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
       if (typeof f.name!=='string'||!f.name.length||f.name.length>80) throw Error('Invalid Subgraph definition');
-      requireSubgraph(contextFor(g),f.id);definitions.set(f.id,f);
+      definitions.set(f.id,f);
     }
-    const active=new Set<string>(),done=new Set<string>();
+    const stagesOf=stageLookup(g),active=new Set<string>(),done=new Set<string>();
     function visit(id:string):void {
       if (active.has(id)) throw Error('Subgraph reference cycle: '+id);
       if (done.has(id)) return;
       const f=definitions.get(id);if (!f) throw Error('Missing Subgraph: '+id);
       active.add(id);
-      for (const n of f.graph.nodes) {const child=moduleOf(n)?.referencedGraph?.(n);if(child)visit(child);}
+      for (const n of f.graph.nodes) {const child=moduleOf(n)?.referencedGraph?.(n);if(child&&!ghost(g,n,f,stagesOf))visit(child);}
       active.delete(id);done.add(id);
     }
-    const used=reachable(g,g.stages.pixel!);
-    for (const id of used) visit(id);
+    const used=reachable(g,g.stages.pixel!,stagesOf);
+    // Only the definitions in use have their interface checked here (A8); the rest are the Subgraphs panel's to report.
+    // 只有用到的定義在這裡驗接口（A8）；其餘由子圖面板回報。
+    for (const id of used) {if(definitions.has(id))requireSubgraph(contextFor(g),id);visit(id);}
 
     function expanded(probe?:SubgraphData) {
       const flat:NetworkData={nodes:[],edges:[]},origins=new Map<string,Location>();
@@ -122,12 +143,14 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       type End=readonly [string,string];
       type Endpoints={inputs:Record<string,End>;outputs:Record<string,End>};
       function expand(data:NetworkData,path:string[],owner?:SubgraphData,boundary?:Endpoints):void {
-        const context=contextFor(g,owner),maps=new Map<string,Endpoints>(),names=new Set<string>();
+        const context=contextFor(g,owner),maps=new Map<string,Endpoints>(),names=new Set<string>(),ghosts=new Set<string>();
         let inputCount=0,outputCount=0;
         for (const node of data.nodes) {
           const origin=location(node,path);
           try {
-            if(!identity.test(node.id)||maps.has(node.id))throw Error('Invalid or duplicate node ID');
+            if(!identity.test(node.id)||maps.has(node.id)||ghosts.has(node.id))throw Error('Invalid or duplicate node ID');
+            // A ghost is kept in the graph and left out here (Q37 1-1). Ghost 留在圖裡，這裡跳過。
+            if(ghost(g,node,owner,stagesOf)){ghosts.add(node.id);continue;}
             if(node.name!==undefined){
               if(!identifiers||!validNodeName(node.name,identifiers.reservedNames)||names.has(node.name))throw Error('Invalid or duplicate node name');
               names.add(node.name);
@@ -184,6 +207,8 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
         if(owner&&(inputCount!==1||outputCount!==1))throw Object.assign(Error('Exactly one Subgraph Input and Output are required'),{stage:'pixel',trail:path,subgraphId:owner.id});
         for(const edge of data.edges){
           const source=maps.get(edge.from[0]),target=maps.get(edge.to[0]);
+          // A wire from or to a ghost is a ghost wire: not connected here (Q37 1-3). 接到 Ghost 的線是 Ghost 線：這裡當作沒接。
+          if((!source&&ghosts.has(edge.from[0]))||(!target&&ghosts.has(edge.to[0])))continue;
           if(!source||!target)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{subgraphId:owner.id}:{})});
           const from=source.outputs[edge.from[1]],to=target.inputs[edge.to[1]];
           // A wire to a port its node no longer has is a ghost wire (Q37 1-3, TECH-2): kept in the graph, not connected here.

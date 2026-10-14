@@ -138,7 +138,8 @@ test('a call whose subgraph content cannot run in this stage is a misplaced ghos
  assert.deepEqual(plain(G.subgraphStages(g,'wrapper',custom)),['vertex'],'nested subgraphs are followed');
  const ghosts=G.ghostsOf(doc.networks.get('pixel'),G.values.policy);
  assert.equal(ghosts.nodes.get('first'),'misplaced');assert.equal(ghosts.nodes.get('second'),'misplaced');
- assert.equal(createCompiler(custom).supports(g),false,'code generation does not take it');
+ // Ghosts never refuse the graph (Q37 1-1): the misplaced calls are left out, the rest compiles. Ghost 不拒絕整張圖：放錯的呼叫跳過、其餘照產。
+ assert.equal(createCompiler(custom).supports(g),true);assert.doesNotThrow(()=>createCompiler(custom).compile(g));
  assert.deepEqual(plain(G.subgraphStages(g,'gain',registry)),['vertex','pixel']);
  assert.equal(G.ghostsOf(new GraphDocument(g,registry).networks.get('pixel'),G.values.policy).nodes.size,0,'with the content fitting again, nothing is a ghost');
 });
