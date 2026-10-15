@@ -100,6 +100,9 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
   // 展開只在這一頁、不存檔（要不要存進圖待人類決定）。
   const [expanded, setExpanded] = useState(false);
+  // A wired value cannot be opened, by the button or the leading text, and is drawn closed even if it was open: wiring never
+  // changes the height (subgraph visual notes 22). 接了線的值不能展開（按鈕與開頭文字都不行），之前展開的也照收起畫：接線不改變高度。
+  const open = expanded && !wired;
   // A component TD reports a value for shows TD's (Q57: TD is the authority; a bound one shows the value
   // it is bound to); otherwise the graph's. TD 有回報值的分量顯示 TD 的（Bind 顯示綁到的值），否則顯示圖裡的。
   const list = Array.from({ length: count }, (_, i) => modes?.[i]?.value !== undefined ? modes[i]!.value!
@@ -145,7 +148,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   // the components, on a card as in the panel (TD; the left button did nothing there); holding still opens the whole-value
   // ladder; moving away does neither. 開頭文字（名稱與型別）上的左鍵，和數值框一樣（人類）：點一下展開／收起分量，卡片和面板都一樣
   // （照 TD；那裡左鍵本來沒有作用）；按住不動打開整組的梯尺；移開就都不做。
-  const toggle = count > 1 ? () => setExpanded(open => !open) : undefined;
+  const toggle = count > 1 && !wired ? () => setExpanded(was => !was) : undefined;
   const hold = useRef<{ x: number; y: number; id: number; timer: number } | null>(null);
   const letGo = () => { if (hold.current) { clearTimeout(hold.current.timer); hold.current = null; } };
   useEffect(() => letGo, []);
@@ -202,7 +205,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
           preview={preview && (next => preview(withComponent(next)))} />}
     </label>;
   };
-  const expand = count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+  const expand = count > 1 && <button type="button" className="value-expand" aria-expanded={open} disabled={wired || undefined} onClick={() => setExpanded(!expanded)}
     aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
     <Icon name="chevronDown" /></button>;
   const popups = <>{presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} fit onClose={() => setPresets(false)}
@@ -214,7 +217,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       <div className={'value-group nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
         <div className="value-fields" data-family={family} style={{ '--components': count } as CSSProperties}>{list.map((item, i) => field(item, i, true))}</div></div>
     </div>
-    {expanded && list.map((item, i) => <div className="value-line component-line" key={i}>
+    {open && list.map((item, i) => <div className="value-line component-line" key={i}>
       <span className="value-caption"><span className="component-letter letter-slot" data-component={i}>{names[i]}</span></span>
       <span className="value-type" style={{ '--port-color': typeColor(family) } as CSSProperties}>{family}</span>
       <div className="value-group nodrag nopan">{field(item, i, false)}</div>
@@ -224,14 +227,14 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   </>;
   return <div className="value-row">
     {leading}
-    <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
+    <div className={'value-group nodrag nopan' + (open ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
     {expand}
     <div className="value-fields" data-family={family} style={{ '--components': count } as CSSProperties}>
       {list.map((item, i) => field(item, i, true))}
-      {expanded && swatch}
+      {open && swatch}
     </div>
     </div>
-    {!expanded && swatch}
+    {!open && swatch}
     {popups}
   </div>;
 }
