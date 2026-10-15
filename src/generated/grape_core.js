@@ -2102,27 +2102,47 @@ function newNodeName(label, taken) {
 function validSubgraphTitle(title) {
     return title.length > 0 && title === (0, exports.typedName)(title).trim() && !/ {2}/.test(title) && validNodeName((0, exports.storedName)(title));
 }
-/** The base of a subgraph call's default name: its definition's title as a stored name, or Subgraph when the title cannot make one
- * (an old graph). 子圖呼叫預設名的底：定義的 Title 存成名稱；做不出來（舊圖）就用 Subgraph。 */
+/** A call's default name for a base and a number: base + _N within the name limit — the base is shortened, never the number, and a
+ * trailing underscore left by shortening is dropped. Making and recognising default names both go through here, so a name this makes is
+ * always recognised (Codex R116-2). 某個底與編號的呼叫預設名：底＋_N，不超過名稱上限——縮短的是底、不是編號，縮短後留下的結尾底線拿掉。
+ * 產生與辨認預設名都經過這裡，產生出來的一定認得回來。 */
+/** The largest number a default call name carries: the maker picks the smallest free number, so it never passes a network's node
+ * count; far above that, and small enough that counting on from it stays exact. 預設呼叫名最大的編號：產生器取最小的空號，不會超過網路的
+ * 節點數；這個值遠高於此，又小到往上數一定精確。 */
+const CALL_NUMBER_LIMIT = 1000000;
+function composeCallName(base, n) {
+    const suffix = '_' + n;
+    return base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+}
+/** The base of a subgraph call's default name: its definition's title as a stored name without trailing underscores, or Subgraph when
+ * that cannot make a name (an old graph). The check is on a composed name, so a long title is shortened rather than dropped (R116-2).
+ * 子圖呼叫預設名的底：定義的 Title 存成名稱、去掉結尾底線；做不出名稱（舊圖）才用 Subgraph。檢查的是組好的名稱，長 Title 是縮短而不是放棄。 */
 function callNameBase(title) {
-    const base = (0, exports.storedName)(title);
-    return base && validNodeName(base + '_1') ? base : 'Subgraph';
+    const base = (0, exports.storedName)(title).replace(/_+$/, '');
+    return base && validNodeName(composeCallName(base, 1)) ? base : 'Subgraph';
 }
 /** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
- * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字
- * 不往上加，Subgraph_1 的呼叫是 Subgraph_1_1、Subgraph_1_2，不會看起來像另一份定義（人類）。 */
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). The search is bounded: among taken.size + 1
+ * numbers one is free (Codex R116-1). 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。找的範圍有上限：taken.size + 1 個
+ * 編號裡一定有一個沒人用。 */
 function newCallName(title, taken, from = 1) {
-    const base = callNameBase(title);
-    for (let n = from;; n++) {
-        const suffix = '_' + n, name = base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
+    const base = callNameBase(title), start = Number.isInteger(from) && from > 0 && from <= CALL_NUMBER_LIMIT ? from : 1;
+    for (let n = start; n <= start + taken.size; n++) {
+        const name = composeCallName(base, n);
         if (!taken.has(name) && validNodeName(name))
             return name;
     }
+    throw Error('No free name for a subgraph call');
 }
-/** The number of a call still named by default for this title (base_N), else null. 仍是這個 Title 預設名的呼叫編號；不是就 null。 */
+/** The number of a call still named by default for this title, else null: only a name the maker would have made — a plain number
+ * from 1 (no leading zero, at most CALL_NUMBER_LIMIT) whose composed name is exactly this one (Codex R116-1, R116-2). 仍是這個 Title 預設名的呼叫
+ * 編號，不是就 null：只認產生器會做出的名稱——從 1 起的一般數字（無前導零、安全整數），組出來和這個名稱完全相同。 */
 function defaultCallNumber(name, title) {
-    const base = callNameBase(title), match = name.startsWith(base + '_') ? /^(\d+)$/.exec(name.slice(base.length + 1)) : null;
-    return match ? Number(match[1]) : null;
+    const match = /_([1-9]\d*)$/.exec(name);
+    if (!match)
+        return null;
+    const n = Number(match[1]);
+    return n <= CALL_NUMBER_LIMIT && composeCallName(callNameBase(title), n) === name ? n : null;
 }
 /** The names already used in one network. 一張網路裡已用的名稱。 */
 const namesIn = (network) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));

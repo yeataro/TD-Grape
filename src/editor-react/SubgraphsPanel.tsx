@@ -54,7 +54,9 @@ function SubgraphCard({ definition, uses, current, unusable, onRemove }: { defin
   const focus = useSyncExternalStore(session.definitionFocusSubscribe, session.definitionFocusSnapshot), card = useRef<HTMLDivElement>(null);
   const [located, setLocated] = useState(false);
   useEffect(() => {
-    if (focus.id !== definition.id || !focus.n || !card.current) return;
+    // Another card located clears this one's cue (Codex R116-3). 定位到別張卡時，這張的提示清掉。
+    if (focus.id !== definition.id) { setLocated(false); return; }
+    if (!focus.n || !card.current) return;
     scrollToMiddle(card.current); setLocated(true);
     const timer = window.setTimeout(() => setLocated(false), 1200);
     return () => window.clearTimeout(timer);

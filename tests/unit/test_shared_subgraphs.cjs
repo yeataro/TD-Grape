@@ -214,3 +214,27 @@ test('a call is named after its title and follows a rename unless named by hand;
  const fixed=doc(read).change(m=>m.subgraph('gain').rename('Gain'));
  assert.equal(fixed.after.stages.pixel.nodes.find(n=>n.id==='first').name,'Gain_1');
 });
+
+// Codex R116-1, R116-2: a default name is only one the maker would make, so hand names that merely end in digits stay and renaming
+// always ends; making and recognising share one rule, so long titles and their 10th call still follow. 預設名只認產生器會做出的：
+// 只是結尾帶數字的手動名不動、改名一定會結束；產生與辨認同一條規則，長 Title 與第 10 個呼叫照樣跟著改。
+test('hand names ending in digits stay, renaming always ends, and long titles keep their calls in step',()=>{
+ const {newCallName}=c.GrapeGraph;
+ const withCalls=(title,names)=>{const g=sharedGraph();g.subgraphs[0].name=title;g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='first');
+  names.forEach((name,i)=>{const n=node('c'+i,'subgraph_call',{subgraphId:'gain'});n.name=name;g.stages.pixel.nodes.push(n);});return g;};
+ const after=(g,title)=>doc(g).change(m=>m.subgraph('gain').rename(title)).after.stages.pixel.nodes.filter(n=>/^c\d+$/.test(n.id)).map(n=>n.name);
+ assert.deepEqual(plain(after(withCalls('Gain',['Gain_0','Gain_01','Gain_001','Gain_Mine','Gain_2']),'Blur')),['Gain_0','Gain_01','Gain_001','Gain_Mine','Blur_2']);
+ // Huge numbers are hand names, and the rename returns (it used to spin). 超大數字是手動名，改名會返回（以前會卡住）。
+ const huge=withCalls('Gain',['Gain_1000000000000000000000','Gain_9007199254740992']);huge.stages.pixel.nodes.push({...node('blocker','float',{value:1}),name:'Blur_9007199254740992'});
+ const started=Date.now();
+ assert.deepEqual(plain(after(huge,'Blur')),['Gain_1000000000000000000000','Gain_9007199254740992']);
+ assert.ok(Date.now()-started<500);
+ // A 46-letter title: the 10th call is shortened by the maker and still follows. 46 字 Title：第 10 個呼叫被縮短，照樣跟著改。
+ const long='A'.repeat(46),names=[];const taken=new Set();for(let i=0;i<10;i++){const name=newCallName(long,taken);names.push(name);taken.add(name);}
+ assert.equal(names[9],'A'.repeat(45)+'_10');
+ assert.deepEqual(plain(after(withCalls(long,names),'Blur')),Array.from({length:10},(_,i)=>'Blur_'+(i+1)));
+ // Valid titles the old check dropped: 47 or 48 letters, a trailing underscore. 舊檢查會放棄的合法 Title：47、48 字，結尾底線。
+ assert.equal(newCallName('A'.repeat(47),new Set()),'A'.repeat(46)+'_1');
+ assert.equal(newCallName('A'.repeat(48),new Set()),'A'.repeat(46)+'_1');
+ assert.equal(newCallName('Gain_',new Set()),'Gain_1');
+});
