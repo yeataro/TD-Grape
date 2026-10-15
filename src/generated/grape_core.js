@@ -2122,12 +2122,19 @@ function callNameBase(title) {
     return base && validNodeName(composeCallName(base, 1)) ? base : 'Subgraph';
 }
 /** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
- * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). The search is bounded: among taken.size + 1
- * numbers one is free (Codex R116-1). 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。找的範圍有上限：taken.size + 1 個
- * 編號裡一定有一個沒人用。 */
-function newCallName(title, taken, from = 1) {
-    const base = callNameBase(title), start = Number.isInteger(from) && from > 0 && from <= CALL_NUMBER_LIMIT ? from : 1;
-    for (let n = start; n <= start + taken.size; n++) {
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). `keep`: a renamed call keeps its number when
+ * that is free; otherwise, as for a new call, the smallest free number from 1 — never counting on past a number, so every name made
+ * here is one defaultCallNumber recognises (it stays at most the network's node count + 1; Codex R116.1-1). The search is bounded.
+ * 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。keep：改名的呼叫編號沒人用就保留；否則和新呼叫一樣取從 1 起最小的空號
+ * ——不從某個編號往後數，所以這裡做出的名稱一定被 defaultCallNumber 認得（最多是網路節點數＋1）。找的範圍有上限。 */
+function newCallName(title, taken, keep) {
+    const base = callNameBase(title);
+    if (keep !== undefined && Number.isInteger(keep) && keep > 0 && keep <= CALL_NUMBER_LIMIT) {
+        const kept = composeCallName(base, keep);
+        if (!taken.has(kept) && validNodeName(kept))
+            return kept;
+    }
+    for (let n = 1; n <= taken.size + 1; n++) {
         const name = composeCallName(base, n);
         if (!taken.has(name) && validNodeName(name))
             return name;

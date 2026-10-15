@@ -238,3 +238,15 @@ test('hand names ending in digits stay, renaming always ends, and long titles ke
  assert.equal(newCallName('A'.repeat(48),new Set()),'A'.repeat(46)+'_1');
  assert.equal(newCallName('Gain_',new Set()),'Gain_1');
 });
+
+// Codex R116.1-1: a name made on a rename is always one that is recognised as default, so a second rename still follows.
+// 改名時做出的名稱一定被認作預設名，第二次改名照樣跟著。
+test('a call renamed into a taken number gets the smallest free one and keeps following later renames',()=>{
+ const g=sharedGraph();g.stages.pixel.nodes.find(n=>n.id==='first').name='Gain_1000000';
+ g.stages.pixel.nodes.push({...node('blocker','float',{value:1}),name:'Blur_1000000'});
+ const once=doc(g).change(m=>m.subgraph('gain').rename('Blur')).after;
+ const first=once.stages.pixel.nodes.find(n=>n.id==='first').name;
+ assert.equal(first,'Blur_1','the kept number is taken: the smallest free one, never past the limit');
+ const twice=doc(once).change(m=>m.subgraph('gain').rename('Glow')).after;
+ assert.equal(twice.stages.pixel.nodes.find(n=>n.id==='first').name,'Glow_1','and it follows the next rename');
+});
