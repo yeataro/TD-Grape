@@ -52,6 +52,6 @@ export const CORE_CONFIG:CoreConfig = Object.freeze({
   documentBytes:512000,
   subgraphDefinitions:64, // legacy-era choice
   // Legacy-era choice (legacy sgrape_core.py:2104), no measured basis; checked when a subgraph is created, its
-  // interface edited and a call resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析呼叫時檢查。
+  // interface edited and an instance resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析實例時檢查。
   subgraphPortsPerSide:16,
 });

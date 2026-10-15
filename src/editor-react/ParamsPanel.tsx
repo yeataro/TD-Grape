@@ -56,9 +56,9 @@ type Tab = 'parameters' | 'settings' | 'subgraph' | 'notes';
 let shownTab: Tab = 'parameters';
 const TABS: readonly [Tab, ReturnType<typeof tr>][] = [['parameters', tr('params.tabParameters', 'Parameters')],
   ['settings', tr('params.tabSettings', 'Settings')], ['notes', tr('params.notes', 'Notes')]];
-// A subgraph call has a fourth tab for its definition (visual notes 7): the same card as inside the subgraph with nothing selected.
-// 子圖呼叫多一個「子圖」分頁（外觀意見 7）：和子圖裡無選取時同一張卡。
-const CALL_TABS: readonly [Tab, ReturnType<typeof tr>][] = [TABS[0]!, TABS[1]!, ['subgraph', tr('params.tabSubgraph', 'Subgraph')], TABS[2]!];
+// A subgraph instance has a fourth tab for its definition (visual notes 7): the same card as inside the subgraph with nothing selected.
+// 子圖實例多一個「子圖」分頁（外觀意見 7）：和子圖裡無選取時同一張卡。
+const INSTANCE_TABS: readonly [Tab, ReturnType<typeof tr>][] = [TABS[0]!, TABS[1]!, ['subgraph', tr('params.tabSubgraph', 'Subgraph')], TABS[2]!];
 function Tabs({ tab, tabs, choose }: { tab: Tab; tabs: readonly [Tab, ReturnType<typeof tr>][]; choose(tab: Tab): void }) {
   return <div className="params-tabs" role="tablist">{tabs.map(([key, label]) => <button key={key} type="button" role="tab"
     aria-selected={tab === key} onClick={() => choose(key)}>{say(label)}</button>)}</div>;
@@ -81,10 +81,10 @@ function NodeSettings({ id }: { id: string }) {
 // The interface of the subgraph being edited, on its boundary nodes (basic design §3.5; Refactor.110): the Parameters tab holds each
 // port's default value; the Settings tab the list — drag to reorder, label, type, remove — and Add. A boundary is known by its module's
 // role, as structure.ts knows it; the panel still names no node kind. The ports live on the definition, so every edit is the session's
-// interface edit (one step, one Undo; the core keeps every call in step).
+// interface edit (one step, one Undo; the core keeps every instance in step).
 // 正在編輯的子圖的介面，在它的邊界節點上（§3.5；R.110）：參數分頁放每個接口的預設值；設定分頁是清單——拖排序、標籤、型別、移除——與新增。
 // 邊界節點由模組的 role 辨認，同 structure.ts；面板仍不認節點種類。接口住在定義上，所以每次修改都是 session 的介面修改（一步、一次 Undo；
-// 核心讓每個呼叫跟上）。
+// 核心讓每個實例跟上）。
 const boundarySide = (nodeType: string): 'inputs' | 'outputs' | null => {
   const role = core.registry.get(nodeType)?.role;
   return role === 'subgraph-input' ? 'inputs' : role === 'subgraph-output' ? 'outputs' : null;
@@ -160,7 +160,7 @@ function InterfaceSettings({ direction, ports }: { direction: Direction; ports: 
 }
 
 /** Nothing selected inside a subgraph: the subgraph itself (basic design §3.12: its name; read-only and make-local come with the Library
- * round), and how many calls it has. 子圖裡沒選東西：子圖本身（§3.12：名稱；唯讀與轉為本地在 Library 那一輪），以及它有幾個呼叫。 */
+ * round), and how many instances it has. 子圖裡沒選東西：子圖本身（§3.12：名稱；唯讀與轉為本地在 Library 那一輪），以及它有幾個實例。 */
 /** The definition's fields (visual notes 6, the part this round has): Title, the identifier (grey, "in-graph id" for a local one), and
  * its uses. Description, Category and Credits come with the Library round. 定義的欄位（外觀意見 6，本輪有的部分）：Title、識別碼（本地：
  * 灰字「圖內 id」）、使用數。Description、Category、Credits 在 Library 那一輪。 */
@@ -177,9 +177,9 @@ function SubgraphFields({ definition, uses }: { definition: SubgraphData; uses: 
       <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code>
       {/* Locate the definition in the Subgraphs panel (visual notes 20). 在子圖面板定位這份定義（外觀意見 20）。 */}
       <button type="button" className="params-link" onClick={() => session.locateDefinition(definition.id)}
-        title={say(tr('params.locateDefinitionHint', 'Show this subgraph in the Subgraphs panel'))}>{say(tr('params.locateDefinition', 'Locate definition'))}</button></div>
+        title={say(tr('params.locateDefinitionHint', 'Show this subgraph in the Subgraphs panel'))}>{say(tr('params.locateDefinition', 'Locate subgraph'))}</button></div>
     <div className="control-field"><span>{say(tr('params.subgraphUsesLabel', 'Uses'))}</span>
-      <span className="subgraph-uses">{say(tr('params.subgraphUsesText', '{direct} call(s), {expanded} in effect after expansion; a change here changes all of them', uses))}</span></div>
+      <span className="subgraph-uses">{say(tr('params.subgraphUsesText', '{direct} instance(s), {expanded} in effect after expansion; a change here changes all of them', uses))}</span></div>
   </div>;
 }
 /** Nothing selected inside a subgraph: the subgraph itself as a card (basic design §3.12; visual notes 7). 子圖裡沒選東西：子圖本身的卡
@@ -232,9 +232,9 @@ function NodeParameters({ node, lookup }: { node: FlowNode; lookup: Lookup }) {
   const kind = data.declaration && sourceKinds[data.declaration.kind];
   // A boundary node edits the interface of the subgraph being edited (its owner is always the current definition). 邊界節點編輯正在編輯的子圖的介面。
   const side = boundarySide(authored.nodeType), definition = side ? session.currentSubgraph() : null;
-  // A call's definition, for its Subgraph tab (visual notes 7); the tab list follows. 呼叫的定義，給它的「子圖」分頁；分頁清單跟著。
-  const called = data.subgraph === undefined ? null : session.definitions().find(f => f.id === data.subgraph) ?? null;
-  const tabs = called ? CALL_TABS : TABS, shown = tab === 'subgraph' && !called ? 'parameters' : tab;
+  // An instance's definition, for its Subgraph tab (visual notes 7); the tab list follows. 實例的定義，給它的「子圖」分頁；分頁清單跟著。
+  const instanceOf = data.subgraph === undefined ? null : session.definitions().find(f => f.id === data.subgraph) ?? null;
+  const tabs = instanceOf ? INSTANCE_TABS : TABS, shown = tab === 'subgraph' && !instanceOf ? 'parameters' : tab;
   return <article className={`grape-node params-card${data.ghost ? ' ghost' : ''}${floating ? ' floating' : ''}${wiring ? ' wiring' : ''}`}
     style={{ '--group-color': `var(--group-${data.ghost ? 'ghost' : data.colorGroup})` } as CSSProperties}>
     {/* Floating, the node card is the panel (Refactor.85, human 2026-10-11: no frame, no panel title): its head holds the triangle,
@@ -254,7 +254,7 @@ function NodeParameters({ node, lookup }: { node: FlowNode; lookup: Lookup }) {
     {!floating?.collapsed && <Tabs tab={shown} tabs={tabs} choose={choose} />}
     {!floating?.collapsed && shown === 'settings' && (side && definition ? <InterfaceSettings direction={side} ports={definition[side]} /> : <NodeSettings id={id} />)}
     {!floating?.collapsed && shown === 'parameters' && side && definition && <InterfaceDefaults direction={side} ports={definition[side]} />}
-    {!floating?.collapsed && shown === 'subgraph' && called && <SubgraphFields definition={called} uses={session.useCounts().get(called.id) ?? { direct: 0, expanded: 0 }} />}
+    {!floating?.collapsed && shown === 'subgraph' && instanceOf && <SubgraphFields definition={instanceOf} uses={session.useCounts().get(instanceOf.id) ?? { direct: 0, expanded: 0 }} />}
     {!floating?.collapsed && shown === 'notes' && <NodeNote id={id} note={typeof authored.comment === 'string' ? authored.comment : ''} />}
     {/* One grid for the whole body, as TD's parameter dialog (Refactor.76.2): expand | names flush right | types | fields;
         every row lines up with the others (subgrid). 整個本體一張格線，照 TD 參數視窗（R.76.2）：展開｜名稱靠右｜型別｜欄位；

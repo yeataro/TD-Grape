@@ -29,8 +29,8 @@ export function copyNodes(graph: GraphDocument, ids: Iterable<string>, source: s
   const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
   const used = new Set(nodes.flatMap(node => { const id = graph.registry.get(node.nodeType)?.referencedDeclaration?.(node); return id ? [id] : []; }));
   const groups = completeGroups(groupsOf(network), kept);
-  // A copy always carries the definitions its calls use, with their whole dependency closure (basic design §3.13, amendment B4: the
-  // paste may land where the Library is not, so the content must travel). 複製永遠帶著呼叫用到的定義，連同完整的依賴閉包（§3.13、B4：
+  // A copy always carries the definitions its instances use, with their whole dependency closure (basic design §3.13, amendment B4: the
+  // paste may land where the Library is not, so the content must travel). 複製永遠帶著實例用到的定義，連同完整的依賴閉包（§3.13、B4：
   // 貼上的地方可能沒有 Library，內容必須跟著走）。
   const byId = new Map((data.subgraphs ?? []).map(f => [f.id, f])), needed = new Map<string, SubgraphData>();
   const visit = (id: string) => { const f = byId.get(id); if (!f || needed.has(id)) return; needed.set(id, f);
@@ -67,13 +67,13 @@ const placeOf = (node: NodeData) => {
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
 /** `sameSource`: the copy came from this very graph (the editor compares the Grape OP); `newSubgraphId` names definitions brought in.
- * Definitions (basic design §3.13, amendment A5 rules 1–2, amendment 2 B3): from the same graph, a pasted call whose definition is
- * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted calls need
+ * Definitions (basic design §3.13, amendment A5 rules 1–2, amendment 2 B3): from the same graph, a pasted instance whose definition is
+ * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted instances need
  * that is gone comes back under a new identity together with everything it depends on in the copy (its dependencies are never
  * resolved to the current ones); from another graph the whole copied closure comes in under new identities. One batch keeps its
  * shared relations; locals are never merged by content. Every definition in the copy is validated first; one carrying a Library ID
  * refuses the paste (amendment 2 B7-5). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義
- * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的呼叫所指的定義還在就用現在這份，實例值對齊目前接口；呼叫需要、但已刪的定義以新身分
+ * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的實例所指的定義還在就用現在這份，實例值對齊目前接口；實例需要、但已刪的定義以新身分
  * 回來，連同它在複製裡的所有依賴（依賴不改指現有的）；別張圖時整個閉包以新身分進來。同批保留共用關係；本地永不按內容合併。複製裡每份定義
  * 先驗證；帶 Library ID 的整筆拒絕（B7-5）。 */
 export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string,
@@ -89,11 +89,11 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   const snapshot = new Map(carried.map(f => [f.id, f]));
   const current = new Map((candidate.document.subgraphs ?? []).map(f => [f.id, f]));
   const referenceOf = (node: NodeData) => candidate.registry.get(node.nodeType)?.referencedGraph?.(node);
-  const calls = clip.stages.pixel!.nodes.map(referenceOf).filter((ref): ref is string => ref !== undefined);
-  // What comes in (TECH-1, amendment 2 B3): from another graph, the whole closure; from this graph, the definitions the pasted calls
-  // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted call whose definition is still
-  // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的呼叫所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
-  // 定義還在的呼叫沿用它。
+  const instances = clip.stages.pixel!.nodes.map(referenceOf).filter((ref): ref is string => ref !== undefined);
+  // What comes in (TECH-1, amendment 2 B3): from another graph, the whole closure; from this graph, the definitions the pasted instances
+  // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
+  // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
+  // 定義還在的實例沿用它。
   const imported = new Set<string>();
   const bring = (id: string) => {
     const f = snapshot.get(id);
@@ -101,7 +101,7 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
     imported.add(id);
     for (const node of f.graph.nodes) { const ref = referenceOf(node); if (ref) bring(ref); }
   };
-  for (const id of sameSource ? calls.filter(ref => !current.has(ref)) : snapshot.keys()) bring(id);
+  for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys()) bring(id);
   const ids = new Map([...imported].map(id => [id, newSubgraphId()]));
   if (ids.size) candidate.appendSubgraphs([...imported].map(id => snapshot.get(id)!), ids);
   for (const declaration of clip.declarations) {
@@ -115,11 +115,11 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
     const place = placeOf(node);
     const fresh: NodeData = { ...copy(node), id: nodeIds.get(node.id)!, ui: { ...copy(node.ui ?? {}), x: place.x - x + at.x, y: place.y - y + at.y } };
     if (node.name !== undefined && takesName(candidate.registry, node.nodeType)) { fresh.name = freeName(node.name, taken); taken.add(fresh.name); }
-    // A call keeps the definition still here, else follows its new identity. 呼叫沿用還在的定義，否則跟著新身分。
+    // An instance keeps the definition still here, else follows its new identity. 實例沿用還在的定義，否則跟著新身分。
     const module = candidate.registry.get(node.nodeType), ref = module?.referencedGraph?.(node);
     const kept = ref !== undefined && sameSource && current.has(ref), mapped = ref !== undefined && !kept ? ids.get(ref) : undefined;
     if (module?.reference && mapped) fresh.params = { ...fresh.params, ...copy(module.reference(mapped)) };
-    // A call copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
+    // An instance copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
     if (kept && fresh.inputValues) fresh.inputValues = fitInstanceValues(fresh.inputValues, current.get(ref!)!.inputs);
     return fresh;
   });

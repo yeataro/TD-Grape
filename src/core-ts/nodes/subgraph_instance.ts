@@ -11,16 +11,16 @@ import {
 const definition: NodeModule = {
   catalog: {
     definition: {
-      key: 'subgraph_call',
+      key: 'subgraph_instance',
       label: 'Subgraph',
       inputs: {},
       outputs: {},
       stages: ['vertex', 'pixel'],
       defaults: {},
-      descriptionKey: 'help.function'
+      descriptionKey: 'help.subgraph_instance'
     },
     emitter: {
-      id: 'subgraph_call',
+      id: 'subgraph_instance',
       version: 1
     },
     browser: {}
@@ -36,10 +36,10 @@ const definition: NodeModule = {
     validInterface(context.subgraph?.(String(node.params.subgraphId))),
 
   ports: (node, context) =>
-    subgraphPorts(requireSubgraph(context, String(node.params.subgraphId)), 'call'),
+    subgraphPorts(requireSubgraph(context, String(node.params.subgraphId)), 'instance'),
 
   presentation: (node, context) =>
-    subgraphPresentation(requireSubgraph(context, String(node.params.subgraphId)), 'call'),
+    subgraphPresentation(requireSubgraph(context, String(node.params.subgraphId)), 'instance'),
 
   validate: (node, context) => {
     requireSubgraph(context, String(node.params.subgraphId));

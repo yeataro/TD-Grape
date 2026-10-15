@@ -17,16 +17,16 @@ export type GhostKind = 'unknown' | 'misplaced' | 'missing';
  * 原因（Q37 1-1；Q45：引用的宣告已不存在）。 */
 export function unusableNodes(network: Network): Map<string, GhostKind> {
   const nodes = new Map<string, GhostKind>();
-  // Subgraph networks have no stage of their own; their nodes follow the calling stage.
+  // Subgraph networks have no stage of their own; their nodes follow the stage of their instance.
   const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
-  let stagesOf: ((id: string) => string[]) | undefined; // one table for every call here (TECH-3) 這裡所有呼叫共用一張表
+  let stagesOf: ((id: string) => string[]) | undefined; // one table for every instance here (TECH-3) 這裡所有實例共用一張表
   for (const node of network.nodes) {
     const data = node.data!, module = node.definition;
     const referred = module?.referencedDeclaration?.(data);
     if (!module) nodes.set(node.id, 'unknown');
     else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage)) nodes.set(node.id, 'misplaced');
-    // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
-    // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
+    // A subgraph instance whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
+    // 子圖內容不能在這個 Stage 用的實例：保留、標示，內容改回能用就恢復。
     else if (stage && module.referencedGraph && !(stagesOf ??= subgraphStageTable(network.graph.document, network.graph.registry))(module.referencedGraph(data)).includes(stage)) nodes.set(node.id, 'misplaced');
     // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
     else if (referred !== undefined && !stage) nodes.set(node.id, 'misplaced');

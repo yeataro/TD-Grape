@@ -12,7 +12,7 @@ import type { Graph } from './model';
 
 export interface SubgraphOptions {id:string;name:string}
 export interface SelectionSubgraphOptions extends SubgraphOptions {
-  callId:string;
+  instanceId:string;
   /** Transitional descriptions only for types/nodes without a migrated module. */
   port?:(node:Node,direction:'input'|'output',key:string)=>PortSpec;
   defaultValue?:(type:string)=>Value;
@@ -40,9 +40,9 @@ export function validPort(p:InterfacePort):boolean {
 export function portEntry(id:string,type:string,label?:string,value?:Value):InterfacePort {
   return {id,...(label === undefined ? {} : {label}),type,...(value === undefined ? {} : {default:value})};
 }
-function structural(graph:GraphDocument,role:'call'|'input'|'output'):NodeModule {
+function structural(graph:GraphDocument,role:'instance'|'input'|'output'):NodeModule {
   const matches = graph.registry.modules.filter(m => m.structural &&
-    (role === 'call' ? !!m.reference : m.role === 'subgraph-' + role));
+    (role === 'instance' ? !!m.reference : m.role === 'subgraph-' + role));
   if (matches.length !== 1) throw Error('Subgraph structural module is unavailable or ambiguous');
   return matches[0]!;
 }
@@ -53,7 +53,7 @@ function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue=
 export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
   if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');
   if ((graph.document.subgraphs?.length || 0) + additional > CORE_CONFIG.subgraphDefinitions)
-    throw Object.assign(Error('At most '+CORE_CONFIG.subgraphDefinitions+' Subgraph definitions are supported'),{code:'function.limit'});
+    throw Object.assign(Error('At most '+CORE_CONFIG.subgraphDefinitions+' subgraphs are supported'),{code:'subgraph.limit'});
 }
 export function validateSubgraphData(f:SubgraphData):void {
   if (!validId(f.id)) throw Error('Invalid Subgraph identity');
@@ -109,7 +109,7 @@ export function instantiateSubgraph(network:Network,definitionId:string,id:strin
   network.assertEditable();
   const graph = network.graph,f = graph.document.subgraphs?.find(f => f.id === definitionId);
   if (!f) throw Error('Subgraph definition no longer exists');
-  const module = structural(graph,'call');
+  const module = structural(graph,'instance');
   const n = authored(module,id,copy(ui),module.reference!(definitionId));
   // Structural graph editing also preserves interfaces whose compiler has not
   // migrated yet. Their descriptions remain the explicit editor adapter's job.
@@ -129,7 +129,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   const graph = network.graph,data = network.data;
   const chosen = data.nodes.filter(n => selection.has(n.id)),ids = new Set(chosen.map(n => n.id));
   if (!chosen.length || chosen.length !== selection.size) throw Error('Invalid Subgraph selection');
-  if (!validId(options.callId) || data.nodes.some(n => n.id === options.callId))
+  if (!validId(options.instanceId) || data.nodes.some(n => n.id === options.instanceId))
     throw Error('Invalid or duplicate instance identity');
   if (chosen.some(n => {
     const role = graph.registry.get(n.nodeType)?.role;
@@ -167,7 +167,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
         const value = opaque.includes(spec.type) ? undefined : copy(n.inputValues?.[e.to[1]] ?? spec.default ?? defaultValue(spec.type,options));
         const p = newPort('inputs',spec.type,options.inputName?.(byId.get(e.from[0])!,e.from[1],e.to[1]) || e.to[1],value);
         inputs.push(p);incoming.set(key,p.id);
-        outside.push({...e,to:[options.callId,p.id]});
+        outside.push({...e,to:[options.instanceId,p.id]});
       }
       edges.push({...e,from:[inputId,incoming.get(key)!]});
     } else {
@@ -177,7 +177,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
         outputs.push(p);outgoing.set(key,p.id);
         edges.push({...e,to:[outputId,p.id]});
       }
-      outside.push({...e,from:[options.callId,outgoing.get(key)!]});
+      outside.push({...e,from:[options.instanceId,outgoing.get(key)!]});
     }
   }
   const coordinate = (n:Node,key:'x'|'y') => Number(n.ui?.[key] ?? 0);
@@ -198,20 +198,20 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   const f:SubgraphData = {id:options.id,name:options.name,inputs,outputs,
     graph:{nodes,edges,...(options.ui || groups.length ? {ui:{...copy(options.ui || {}),...(groups.length ? {groups:copy(groups) as unknown as Value} : {})}} : {})}};
   validate(graph,f);
-  const callModule = structural(graph,'call');
-  const call = authored(callModule,options.callId,{x,y},callModule.reference!(f.id));
+  const instanceModule = structural(graph,'instance');
+  const instance = authored(instanceModule,options.instanceId,{x,y},instanceModule.reference!(f.id));
   const owner = graph.document.subgraphs?.find(f => f.graph === data),oldScope = owner ? 'fn_'+owner.id : network.id;
   insertSubgraph(graph,f);
   // A move must not collect definitions used by the nodes it is moving.
-  data.nodes = data.nodes.filter(n => !selected.has(n.id));data.nodes.push(call);data.edges = outside;
+  data.nodes = data.nodes.filter(n => !selected.has(n.id));data.nodes.push(instance);data.edges = outside;
   ScopeReferences.walk(graph.document,(ref,old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
     ScopeReferences.token('fn_'+f.id,ref.source) : old);
-  return call;
+  return instance;
 }
 
-/** The first definition that, through its calls, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
- * a paste or a call placed inside a definition could make one, legacy clipboard.cycle). 第一份經由呼叫回到自己的定義；沒有就是 null
- * （循環展不開；貼上或在定義裡放呼叫可能造成，照舊產品 clipboard.cycle）。 */
+/** The first definition that, through its instances, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
+ * a paste or an instance placed inside a definition could make one, legacy clipboard.cycle). 第一份經由實例回到自己的定義；沒有就是 null
+ * （循環展不開；貼上或在定義裡放實例可能造成，照舊產品 clipboard.cycle）。 */
 export function subgraphCycle(g:Graph,registry:Registry):string|null {
   const definitions = new Map((g.subgraphs || []).map(f => [f.id,f])),active = new Set<string>(),done = new Set<string>();
   const visit = (id:string):string|null => {
@@ -226,8 +226,8 @@ export function subgraphCycle(g:Graph,registry:Registry):string|null {
   return null;
 }
 
-/** Which definitions each definition calls: the (parent, child) edges of the document's definitions. 每份定義呼叫哪些定義：父→子的邊。 */
-function callEdges(g:Graph,registry:Registry):Map<string,Set<string>> {
+/** Which definitions each definition instantiates: the (parent, child) edges of the document's definitions. 每份定義含有哪些定義的實例：父→子的邊。 */
+function instanceEdges(g:Graph,registry:Registry):Map<string,Set<string>> {
   const edges = new Map<string,Set<string>>();
   for (const f of g.subgraphs || []) {
     const children = new Set<string>();
@@ -237,11 +237,11 @@ function callEdges(g:Graph,registry:Registry):Map<string,Set<string>> {
   return edges;
 }
 /** A cycle this edit makes (technical review TECH-8): the parent of the first new (parent, child) edge whose child reaches back to
- * it, a self-call included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
+ * it, a self-instance included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
  * removes an old cycle while adding edges passes when those edges close none. 這次修改造成的循環：第一條新的父→子邊，子能走回父（含自己
- * 呼叫自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
+ * 實例自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
 export function newSubgraphCycle(before:Graph,after:Graph,registry:Registry):string|null {
-  const old = callEdges(before,registry),now = callEdges(after,registry);
+  const old = instanceEdges(before,registry),now = instanceEdges(after,registry);
   const reaches = (from:string,to:string):boolean => {
     const seen = new Set<string>(),stack = [from];
     while (stack.length) {
@@ -257,9 +257,9 @@ export function newSubgraphCycle(before:Graph,after:Graph,registry:Registry):str
   return null;
 }
 
-/** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
- * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */
-export function callCounts(graph:GraphDocument):ReadonlyMap<string,number> {
+/** How many instances point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
+ * instances, not expanded uses). 每份定義被幾個實例指著，算遍文件的每張網路（§3.6 的「×N」：直接實例數，不是展開後的使用數）。 */
+export function instanceCounts(graph:GraphDocument):ReadonlyMap<string,number> {
   const counts = new Map<string,number>();
   for (const data of [...Object.values(graph.document.stages),...(graph.document.subgraphs || []).map(f => f.graph)])
     for (const n of data.nodes) {
@@ -269,21 +269,21 @@ export function callCounts(graph:GraphDocument):ReadonlyMap<string,number> {
   return counts;
 }
 
-/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many call nodes point at it anywhere; `expanded` = how many
- * times it is in effect once every caller is expanded (a call inside P counts P's own expanded uses). One scan of every network;
- * the gate keeps the call graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個呼叫節點指著它；expanded＝
- * 展開所有呼叫者後實際用到幾次（P 裡的呼叫算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
+/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many instances point at it anywhere; `expanded` = how many
+ * times it is in effect once every enclosing instance is expanded (an instance inside P counts P's own expanded uses). One scan of every network;
+ * the gate keeps the instance graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個實例指著它；expanded＝
+ * 展開所有外層實例後實際用到幾次（P 裡的實例算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
 export function useCounts(graph:GraphDocument):ReadonlyMap<string,{direct:number;expanded:number}> {
   const stage = new Map<string,number>(),inside = new Map<string,Map<string,number>>();
   const bump = (m:Map<string,number>,id:string) => m.set(id,(m.get(id) ?? 0) + 1);
   for (const data of Object.values(graph.document.stages)) for (const n of data.nodes) {const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);if (ref) bump(stage,ref);}
   for (const f of graph.document.subgraphs || []) {
-    const calls = new Map<string,number>();
-    for (const n of f.graph.nodes) {const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);if (ref) bump(calls,ref);}
-    if (calls.size) inside.set(f.id,calls);
+    const instances = new Map<string,number>();
+    for (const n of f.graph.nodes) {const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);if (ref) bump(instances,ref);}
+    if (instances.size) inside.set(f.id,instances);
   }
   const parents = new Map<string,{parent:string;count:number}[]>();
-  for (const [parent,calls] of inside) for (const [child,count] of calls) (parents.get(child) ?? parents.set(child,[]).get(child)!).push({parent,count});
+  for (const [parent,instances] of inside) for (const [child,count] of instances) (parents.get(child) ?? parents.set(child,[]).get(child)!).push({parent,count});
   const expanded = new Map<string,number>(),active = new Set<string>();
   const total = (id:string):number => {
     const known = expanded.get(id);if (known !== undefined) return known;
@@ -295,28 +295,28 @@ export function useCounts(graph:GraphDocument):ReadonlyMap<string,{direct:number
   };
   const result = new Map<string,{direct:number;expanded:number}>();
   for (const f of graph.document.subgraphs || []) {
-    const direct = (stage.get(f.id) ?? 0) + [...inside.values()].reduce((sum,calls) => sum + (calls.get(f.id) ?? 0),0);
+    const direct = (stage.get(f.id) ?? 0) + [...inside.values()].reduce((sum,instances) => sum + (instances.get(f.id) ?? 0),0);
     result.set(f.id,{direct,expanded:total(f.id)});
   }
   return result;
 }
 
-/** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
- * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
+/** Remove a definition with no instances (the subgraph panel's Delete on a zero-use card, basic design §3.9); one that still has instances is
+ * refused. 刪掉沒有實例的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有實例的拒絕。 */
 export function removeSubgraph(graph:GraphDocument,id:string):void {
   graph.assertEditable();
   const definitions = graph.document.subgraphs || [];
   if (!definitions.some(f => f.id === id)) throw Error('Subgraph definition no longer exists');
-  if (callCounts(graph).get(id)) throw Object.assign(Error('The Subgraph definition is still in use'),{code:'subgraph.inUse'});
+  if (instanceCounts(graph).get(id)) throw Object.assign(Error('The Subgraph definition is still in use'),{code:'subgraph.inUse'});
   graph.document.subgraphs = definitions.filter(f => f.id !== id);
 }
 
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
  * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
- * Library). A local definition is never collected: deleting a call must not lose the person's work; it stays listed in the
+ * Library). A local definition is never collected: deleting an instance must not lose the person's work; it stays listed in the
  * subgraph panel with zero uses. Other reusable definitions and the active scope remain untouched.
- * 刪掉呼叫後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
- * 刪錯呼叫不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
+ * 刪掉實例後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
+ * 刪錯實例不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
 export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],active:NetworkData,collectible:ReadonlySet<string>):void {
   if (!roots.length || !collectible.size) return;
   const definitions = new Map((graph.document.subgraphs || []).map(f => [f.id,f]));

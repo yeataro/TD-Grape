@@ -84,10 +84,10 @@ function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition,
  * 新節點的名稱，照同一套命名規則（R.76）：Split_1、Split_2…；代表共用來源的節點沒有。 */
 function nameFor(net: Network, nodeType: string, params: object = {}): { name?: string } {
   if (!core.takesName(core.registry, nodeType)) return {};
-  // A subgraph call is named after its definition's title: Gain_1, Gain_2 (visual notes 27, human 2026-10-14). 子圖呼叫照定義的 Title 命名。
+  // A subgraph instance is named after its definition's title: Gain_1, Gain_2 (visual notes 27, human 2026-10-14). 子圖實例照定義的 Title 命名。
   const ref = core.registry.get(nodeType)!.referencedGraph?.({ id: '', nodeType, params } as never);
   const title = ref === undefined ? undefined : net.graph.document.subgraphs?.find(f => f.id === ref)?.name;
-  if (title !== undefined) return { name: core.newCallName(title, core.namesIn(net.data)) };
+  if (title !== undefined) return { name: core.newInstanceName(title, core.namesIn(net.data)) };
   return { name: core.newNodeName(String(core.registry.get(nodeType)!.catalog.definition.label), core.namesIn(net.data)) };
 }
 class Rehearsed extends Error {}
@@ -149,7 +149,7 @@ function unwire(net: Network, node: string, port: string) {
 // 核心以資料回報上限；用語由這一層決定。
 const limitName: Record<Measure['key'], Message> = {
   nodesPerNetwork: tr('limit.nodesPerNetwork', 'nodes per network'), edgesPerNetwork: tr('limit.edgesPerNetwork', 'wires per network'),
-  expandedNodes: tr('limit.expandedNodes', 'nodes after subgraph expansion'), subgraphDefinitions: tr('limit.subgraphDefinitions', 'subgraph definitions') };
+  expandedNodes: tr('limit.expandedNodes', 'nodes after subgraph expansion'), subgraphDefinitions: tr('limit.subgraphDefinitions', 'subgraphs') };
 const limitText = (measures: readonly Measure[]) => measures.map(m =>
   tr('limit.measure', '{name} {value}/{limit}', { name: limitName[m.key], value: m.value, limit: m.limit }));
 // Identified by name and data, not instanceof: the core may come from another script realm.
@@ -436,11 +436,11 @@ export class Editor {
   // stage down; empty at the top level. Session state, as the selection: never in the graph, Undo or TD. 進入子圖的路徑（R.110）：從 stage
   // 往下的定義 id；最外層是空的。同選取一樣是 session 的狀態：不進圖、Undo 或 TD。
   private trail: readonly string[] = [];
-  // The call node entered at each level (null when entered from the panel), so going up lands on it (visual notes 8). 每一層是從哪個
-  // 呼叫節點進來的（從面板進來是 null），上一層時落在它上面（外觀意見 8）。
-  private callTrail: readonly (string | null)[] = [];
-  /** Where the view should land after the network changed (visual notes 8): everything (Home) after entering, the call left behind
-   * after going up. Taken once by the canvas. 網路換了之後視野要落在哪（外觀意見 8）：進入後是全部（Home），上一層後是剛離開的呼叫。畫布取一次。 */
+  // The instance entered at each level (null when entered from the panel), so going up lands on it (visual notes 8). 每一層是從哪個
+  // 實例進來的（從面板進來是 null），上一層時落在它上面（外觀意見 8）。
+  private instanceTrail: readonly (string | null)[] = [];
+  /** Where the view should land after the network changed (visual notes 8): everything (Home) after entering, the instance left behind
+   * after going up. Taken once by the canvas. 網路換了之後視野要落在哪（外觀意見 8）：進入後是全部（Home），上一層後是剛離開的實例。畫布取一次。 */
   private landing: { frame: 'all' } | { frame: 'node'; id: string } | null = null;
   takeLanding = () => { const landing = this.landing; this.landing = null; return landing; };
   private networkId = () => this.trail.length ? 'subgraph:' + this.trail[this.trail.length - 1] : 'pixel';
@@ -449,9 +449,9 @@ export class Editor {
   currentSubgraph = (): SubgraphData | null => this.trail.length ? this.document.document.subgraphs?.find(f => f.id === this.trail[this.trail.length - 1]) ?? null : null;
   /** The document's definitions: the same list until the document changes (a panel memoises on it). 文件的定義清單：文件沒變就是同一份。 */
   definitions = (): readonly SubgraphData[] => this.document.document.subgraphs ?? [];
-  /** How many calls each definition has, over every network: the subgraph panel's own derivation, asked per version (as references()).
-   * 每份定義有幾個呼叫，算遍每張網路：子圖面板自己的推導，每一版問一次（同 references()）。 */
-  callCounts = () => core.callCounts(this.document);
+  /** How many instances each definition has, over every network: the subgraph panel's own derivation, asked per version (as references()).
+   * 每份定義有幾個實例，算遍每張網路：子圖面板自己的推導，每一版問一次（同 references()）。 */
+  instanceCounts = () => core.instanceCounts(this.document);
   /** Direct and expanded uses of each definition (core useCounts; visual notes: the path bar writes both, compact places the expanded).
    * 每份定義的直接與展開使用數（核心 useCounts；路徑列兩個都寫，緊湊處寫展開數）。 */
   useCounts = () => core.useCounts(this.document);
@@ -462,39 +462,39 @@ export class Editor {
    * 這些定義的顏色（§3.14；外觀意見 3）：群組色盤的一個，或 null＝預設。 */
   setSubgraphColor = (ids: readonly string[], color: string | null) =>
     this.transactGraph(tr('subgraph.recolored', 'Subgraph colour updated'), document => { for (const id of ids) document.subgraph(id).recolor(color); });
-  /** Enter the subgraph a call node points at (a double-click on it; legacy functions_ui.js:44 enterFunction): the path grows by
-   * one, the selection is cleared (legacy navigateGraph). 進入呼叫節點指向的子圖（雙擊它；照舊產品）：路徑多一層、選取清掉。 */
-  enterSubgraph = (callId: string) => {
-    const node = this.net().node(callId), id = node.data && node.definition?.referencedGraph?.(node.data);
-    if (id) this.navigate([...this.trail, id], [...this.callTrail, callId], { frame: 'all' });
+  /** Enter the subgraph an instance points at (a double-click on it; legacy functions_ui.js:44 enterFunction): the path grows by
+   * one, the selection is cleared (legacy navigateGraph). 進入實例指向的子圖（雙擊它；照舊產品）：路徑多一層、選取清掉。 */
+  enterSubgraph = (instanceId: string) => {
+    const node = this.net().node(instanceId), id = node.data && node.definition?.referencedGraph?.(node.data);
+    if (id) this.navigate([...this.trail, id], [...this.instanceTrail, instanceId], { frame: 'all' });
   };
   /** Enter a definition from the subgraph panel: the path is the stage, then it. 從子圖面板進入定義：路徑是 stage、再來是它。 */
   enterDefinition = (id: string) => this.navigate([id], [null], { frame: 'all' });
-  /** Up one level (legacy Alt+ArrowUp, graph_ui.js:2565): lands on the call left behind, selected (visual notes 8). 上一層：落在剛離開的
-   * 呼叫上並選取它（外觀意見 8）。 */
+  /** Up one level (legacy Alt+ArrowUp, graph_ui.js:2565): lands on the instance left behind, selected (visual notes 8). 上一層：落在剛離開的
+   * 實例上並選取它（外觀意見 8）。 */
   goUp = () => { if (this.trail.length) this.goToDepth(this.trail.length - 1); };
-  /** To a level of the path: 0 is the stage; `home` lands on everything instead of the call (the Stage button, visual notes). 到路徑的
-   * 某一層：0 是 stage；home＝落在全部而不是那個呼叫（Stage 按鈕）。 */
+  /** To a level of the path: 0 is the stage; `home` lands on everything instead of the instance (the Stage button, visual notes). 到路徑的
+   * 某一層：0 是 stage；home＝落在全部而不是那個實例（Stage 按鈕）。 */
   goToDepth = (depth: number, home = false) => {
-    const call = this.callTrail[depth] ?? null;
-    this.navigate(this.trail.slice(0, depth), this.callTrail.slice(0, depth), !home && call ? { frame: 'node', id: call } : { frame: 'all' });
+    const instance = this.instanceTrail[depth] ?? null;
+    this.navigate(this.trail.slice(0, depth), this.instanceTrail.slice(0, depth), !home && instance ? { frame: 'node', id: instance } : { frame: 'all' });
   };
-  private navigate(trail: readonly string[], calls: readonly (string | null)[], landing: { frame: 'all' } | { frame: 'node'; id: string }) {
+  private navigate(trail: readonly string[], instances: readonly (string | null)[], landing: { frame: 'all' } | { frame: 'node'; id: string }) {
     const id = trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel';
     // A subgraph already on the path cannot be entered again (legacy function.cycle). 已在路徑上的子圖不能再進（照舊產品）。
     if (new Set(trail).size !== trail.length) { this.warn(tr('subgraph.cycle', 'This subgraph is already open on the path.')); return; }
     if (!this.document.networks.has(id)) { this.warn(tr('subgraph.gone', 'This subgraph no longer exists.')); return; }
     if (id === this.networkId()) return;
-    this.trail = [...trail]; this.callTrail = [...calls];
+    this.trail = [...trail]; this.instanceTrail = [...instances];
     const projection = project(this.document, EMPTY_PROJECTION, this.bootstrap.typeContract, undefined, id);
-    // The call left behind is selected when it is still there; else the view lands on everything. 剛離開的呼叫還在就選取它；否則落在全部。
-    const call = landing.frame === 'node' && projection.nodes.some(node => node.id === landing.id) ? landing.id : null;
-    this.landing = call ? { frame: 'node', id: call } : { frame: 'all' };
+    // The instance left behind is selected when it is still there; else the view lands on everything. 剛離開的實例還在就選取它；否則落在全部。
+    const instance = landing.frame === 'node' && projection.nodes.some(node => node.id === landing.id) ? landing.id : null;
+    this.landing = instance ? { frame: 'node', id: instance } : { frame: 'all' };
     // Another network drawn: the version moves, so what reads the projection once per version reads it again (the Parameter
     // panel's lookup, the groups). The selection is written after the new projection is in place, so its look lands on the new
     // nodes. 畫另一張網路：版本前進，每一版讀一次投影的部分（參數面板的查表、群組）會重讀。選取在新投影就位之後才寫，樣子才會落在新節點上。
     this.state = { ...this.state, projection, version: this.state.version + 1, network: id, trail: this.trail };
-    this.writeSelection(call ? { nodes: new Set([call]), edges: NONE, primary: call } : NO_SELECTION, null, null);
+    this.writeSelection(instance ? { nodes: new Set([instance]), edges: NONE, primary: instance } : NO_SELECTION, null, null);
     this.grouped = null;
     // Ghosts here were reported when the graph opened or the edit was made; entering says nothing. 這裡的 Ghost 在開圖或修改時已報過；進入不說。
     this.ghostTotal = projection.nodes.filter(node => node.data.ghost).length + projection.edges.filter(edge => edge.type === 'ghost').length;
@@ -508,25 +508,25 @@ export class Editor {
     return next.networks.has(id) ? project(next, this.state.projection, this.bootstrap.typeContract, changes, id) : EMPTY_PROJECTION;
   }
   /** The path cut back to what still holds (an edit, Undo, a draft or TD's version changed the document); whether it was cut. Checked
-   * from the top down (TECH-5): each level's definition is still there, and the call it was entered through (none when entered from
+   * from the top down (TECH-5): each level's definition is still there, and the instance it was entered through (none when entered from
    * the panel) is still in the level above and still points at it. The path is cut at the first level that fails, and the view lands on
-   * everything. 路徑切回仍成立的部分（修改、Undo、草稿或 TD 的版本改了文件）；回傳有沒有切。由上往下驗：每一層的定義還在，進來的那個呼叫
+   * everything. 路徑切回仍成立的部分（修改、Undo、草稿或 TD 的版本改了文件）；回傳有沒有切。由上往下驗：每一層的定義還在，進來的那個實例
    * （從面板進來的沒有）還在上一層、而且仍指向它。在第一個不成立的那層切斷，視野落在全部。 */
   private cutTrail() {
     const holds = (depth: number) => {
-      const id = this.trail[depth]!, call = this.callTrail[depth] ?? null;
+      const id = this.trail[depth]!, instance = this.instanceTrail[depth] ?? null;
       if (!this.document.networks.has('subgraph:' + id)) return false;
-      if (call === null) return true;
-      const node = this.document.networks.get(depth ? 'subgraph:' + this.trail[depth - 1] : 'pixel')?.nodeData(call);
+      if (instance === null) return true;
+      const node = this.document.networks.get(depth ? 'subgraph:' + this.trail[depth - 1] : 'pixel')?.nodeData(instance);
       return !!node && this.document.registry.get(node.nodeType)?.referencedGraph?.(node) === id;
     };
     let depth = 0;
     while (depth < this.trail.length && holds(depth)) depth++;
     if (depth === this.trail.length) return false;
-    this.trail = this.trail.slice(0, depth); this.callTrail = this.callTrail.slice(0, depth); this.landing = { frame: 'all' }; return true;
+    this.trail = this.trail.slice(0, depth); this.instanceTrail = this.instanceTrail.slice(0, depth); this.landing = { frame: 'all' }; return true;
   }
   /** Edit the interface of the subgraph being edited (its boundary nodes' panel, basic design §3.5): one step, one Undo; the core
-   * keeps every call and boundary in step. 修改正在編輯的子圖的介面（邊界節點的面板，§3.5）：一步、一次 Undo；核心讓每個呼叫與邊界跟上。 */
+   * keeps every instance and boundary in step. 修改正在編輯的子圖的介面（邊界節點的面板，§3.5）：一步、一次 Undo；核心讓每個實例與邊界跟上。 */
   editInterface = (direction: 'inputs' | 'outputs', edit: InterfaceEdit) => {
     const id = this.trail[this.trail.length - 1];
     if (!id) return;
@@ -548,18 +548,18 @@ export class Editor {
     if (!text || text === this.document.document.subgraphs?.find(f => f.id === id)?.name) return;
     this.transactGraph(tr('subgraph.renamed', 'Subgraph renamed'), document => document.subgraph(id).rename(text));
   };
-  /** Delete a definition nobody calls, from the subgraph panel (basic design §3.9). 從子圖面板刪掉沒人呼叫的定義（§3.9）。 */
+  /** Delete a definition with no instances, from the subgraph panel (basic design §3.9). 從子圖面板刪掉沒有實例的定義（§3.9）。 */
   removeSubgraph = (id: string) => this.transactGraph(tr('subgraph.removed', 'Subgraph deleted'), document => document.removeSubgraph(id));
-  /** Place a call to a definition (the subgraph panel's Add to graph, or a card dragged onto the canvas); inside a subgraph too (nesting,
-   * amendment A3 C level) — one that would call itself is refused by the core's gate. 放一個呼叫節點（子圖面板的加到圖上、卡片拖到畫布）；
-   * 在子圖裡也可以（巢狀，A3 C 級）——會呼叫到自己的由核心關卡拒絕。 */
+  /** Place an instance of a definition (the subgraph panel's Add to graph, or a card dragged onto the canvas); inside a subgraph too (nesting,
+   * amendment A3 C level) — one that would contain an instance of itself is refused by the core's gate. 放一個實例（子圖面板的加到圖上、卡片拖到畫布）；
+   * 在子圖裡也可以（巢狀，A3 C 級）——會包含自己的實例的由核心關卡拒絕。 */
   placeSubgraph = (id: string, position: XYPosition) => {
     const module = core.registry.modules.find(m => m.structural && m.reference);
     if (!module) return;
     this.addNode({ nodeType: module.catalog.definition.definitionUuid!, params: module.reference!(id) }, position);
   };
-  /** Select the calls of a definition in the network being edited (the subgraph panel's count). 選取正在編輯的網路裡這份定義的呼叫（子圖面板的數量）。 */
-  selectCalls = (id: string) => {
+  /** Select the instances of a definition in the network being edited (the subgraph panel's count). 選取正在編輯的網路裡這份定義的實例（子圖面板的數量）。 */
+  selectSubgraphInstances = (id: string) => {
     const nodes = this.state.projection.nodes.filter(node => node.data.subgraph === id).map(node => node.id);
     this.boxSelect(new Set(nodes), nodes);
     return nodes;
@@ -574,28 +574,28 @@ export class Editor {
   });
   /** Selection to subgraph (basic design §3.2–3.3; legacy functions_ui.js:277 groupSelection): the chosen nodes, the wires between
    * them and their complete groups move into a new definition; a wire crossing the edge becomes a port — an input labelled after the
-   * source it came from (a shared source's name, else the port), an output after the port — and the call takes the selection's place,
+   * source it came from (a shared source's name, else the port), an output after the port — and the instance takes the selection's place,
    * selected. One step, one Undo. 從選取建立子圖（§3.2–3.3；照舊產品）：選到的節點、其間的線、完整的群組搬進新定義；跨過邊界的線變成接口
-   * ——輸入照它來自的來源取標籤（共用來源的名字，否則接孔名）、輸出照接孔——呼叫節點放在選取的位置、被選取。一步、一次 Undo。 */
+   * ——輸入照它來自的來源取標籤（共用來源的名字，否則接孔名）、輸出照接孔——實例放在選取的位置、被選取。一步、一次 Undo。 */
   selectionToSubgraph = (ids: readonly string[] = this.selectedInOrder()) => {
     const chosen = this.subgraphCandidates(ids);
     if (!chosen.length) { this.warn(tr('subgraph.nothingToGroup', 'Select nodes that can go into a subgraph first.')); return null; }
-    const id = newSubgraphId(), callId = newId(), declarations = this.document.document.declarations, version = this.state.version;
+    const id = newSubgraphId(), instanceId = newId(), declarations = this.document.document.declarations, version = this.state.version;
     const name = core.freeName('Subgraph_1', new Set(this.definitions().map(f => f.name)), 80);
     this.transact(tr('subgraph.made', 'Subgraph {name} made from the selection', { name }), net => {
-      const call = net.subgraphFromSelection(new Set(chosen), { id, callId, name,
+      const instance = net.subgraphFromSelection(new Set(chosen), { id, instanceId, name,
         inputName: (source, _port, fallback) => { const ref = core.registry.get(source.nodeType)?.referencedDeclaration?.(source); return (ref && declarations.find(d => d.id === ref)?.name) || fallback; } });
-      call.update({ ...nameFor(net, call.data!.nodeType, call.data!.params) });
+      instance.update({ ...nameFor(net, instance.data!.nodeType, instance.data!.params) });
     });
     if (this.state.version === version) return null;
-    this.boxSelect(new Set([callId]), [callId]);
+    this.boxSelect(new Set([instanceId]), [instanceId]);
     return id;
   };
-  /** Make Single User (basic design §3.10; legacy Make Independent): this call gets a copy of its definition, named by the one rule; the
-   * other calls keep the shared one. 設為唯一（§3.10；照舊產品 Make Independent）：這個呼叫拿到定義的複本（照同一套命名）；其他呼叫仍共用原來的。 */
-  makeUnique = (callId: string) => this.transact(tr('subgraph.madeUnique', 'This call now has its own subgraph'), net => {
-    const node = net.node(callId);
-    if (!node.data || !node.definition?.referencedGraph) throw Error('Not a subgraph call');
+  /** Make Single User (basic design §3.10; legacy Make Independent): this instance gets a copy of its definition, named by the one rule; the
+   * other instances keep the shared one. 設為唯一（§3.10；照舊產品 Make Independent）：這個實例拿到定義的複本（照同一套命名）；其他實例仍共用原來的。 */
+  makeUnique = (instanceId: string) => this.transact(tr('subgraph.madeUnique', 'This instance now has its own subgraph'), net => {
+    const node = net.node(instanceId);
+    if (!node.data || !node.definition?.referencedGraph) throw Error('Not a subgraph instance');
     net.independentSubgraph(node, newSubgraphId);
   });
   /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
@@ -635,10 +635,10 @@ export class Editor {
     if (declaration) { this.tell('warning', declaration); return; }
     // The core's subgraph refusals, by code (Refactor.111). 核心對子圖的拒絕，依代號（R.111）。
     const code = (error as { code?: string } | null)?.code;
-    if (code === 'subgraph.cycle') { this.warn(tr('subgraph.cycleRefused', 'Not done: the subgraph would call itself (directly or through another subgraph).')); return; }
+    if (code === 'subgraph.cycle') { this.warn(tr('subgraph.cycleRefused', 'Not done: the subgraph would contain an instance of itself (directly or through another subgraph).')); return; }
     if (code === 'subgraph.library') { this.warn(tr('subgraph.libraryRefused', 'Not done: a subgraph from a Library is not supported in this version.')); return; }
     if (code === 'subgraph.title') { this.warn(tr('subgraph.titleRefused', 'Not done: a subgraph title uses letters, digits, spaces and underscores, and starts with a letter.')); return; }
-    if (code === 'subgraph.inUse') { this.warn(tr('subgraph.inUseRefused', 'Not done: the subgraph is still called; delete its calls first.')); return; }
+    if (code === 'subgraph.inUse') { this.warn(tr('subgraph.inUseRefused', 'Not done: the subgraph still has instances; delete them first.')); return; }
     const limit = capacityMessage(error) ?? structureMessage(error);
     this.tell(limit ? 'warning' : 'error', limit ?? errorText(error));
   };
@@ -1305,8 +1305,8 @@ export class Editor {
   selectNode = (id: string) => this.boxSelect(new Set([id]), [id]);
   /** Select a node wherever it is (TECH-6): `key` is its place (glsl_lines placeKey). In the network on screen it is selected and
    * true comes back (the caller frames it); in another network the view goes there, entered as from the panel (a path holds
-   * definitions only, not which call, so none is guessed), and lands on it selected. 不管節點在哪都選到它：在畫面上這張網路就選取、
-   * 回傳 true（呼叫的人負責對準）；在別張網路就導覽過去——像從面板進入（路徑只記定義、不記哪個呼叫，所以不猜）——落在它上面並選取。 */
+   * definitions only, not which instance, so none is guessed), and lands on it selected. 不管節點在哪都選到它：在畫面上這張網路就選取、
+   * 回傳 true（呼叫的人負責對準）；在別張網路就導覽過去——像從面板進入（路徑只記定義、不記哪個實例，所以不猜）——落在它上面並選取。 */
   locateNode = (key: string): boolean => {
     const { node, trail } = placeOf(key);
     if ((trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel') === this.networkId()) { this.selectNode(node); return true; }

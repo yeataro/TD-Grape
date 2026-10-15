@@ -35,9 +35,9 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   componentStyle: typeof componentNames.componentStyle; componentStyles: typeof componentNames.componentStyles;
   componentLetters: typeof componentNames.componentLetters;
   upgradeGraph: typeof upgrades.upgradeGraph; nodeUpgrades: typeof upgrades.nodeUpgrades;
-  /** Subgraphs (Refactor.110): a new port's identity; how many calls each definition has. 子圖：新接口的身分；每份定義的呼叫數。 */
-  newPortId: typeof subgraphOps.newPortId; callCounts: typeof subgraphOps.callCounts; useCounts: typeof subgraphOps.useCounts;
-} & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT' | 'validSubgraphTitle' | 'newCallName'>
+  /** Subgraphs (Refactor.110): a new port's identity; how many instances each definition has. 子圖：新接口的身分；每份定義的實例數。 */
+  newPortId: typeof subgraphOps.newPortId; instanceCounts: typeof subgraphOps.instanceCounts; useCounts: typeof subgraphOps.useCounts;
+} & Pick<typeof nodeNames, 'validNodeName' | 'typedName' | 'storedName' | 'shownName' | 'freeName' | 'newNodeName' | 'namesIn' | 'takesName' | 'NAME_LIMIT' | 'validSubgraphTitle' | 'newInstanceName'>
   & Pick<typeof clipboard, 'copyNodes' | 'readClip' | 'pasteClip' | 'clipCorner'> & { groups: typeof groups };
 export type { GraphGroup } from '../core-ts/groups';
 export type { Clip } from '../core-ts/clipboard';
@@ -91,7 +91,7 @@ export const supportedDefinitions = [
   // editor tools (Refactor.63.1) 編輯工具
   'force_compile_error',
   // subgraphs (Refactor.110, basic design 2026-10-14: B level) 子圖（R.110，基本設計 B 級）
-  'subgraph_call', 'subgraph_input', 'subgraph_output',
+  'subgraph_instance', 'subgraph_input', 'subgraph_output',
 ].map(key => 'sgrape.builtin.' + key);
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.

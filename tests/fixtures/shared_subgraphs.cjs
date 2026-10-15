@@ -11,11 +11,11 @@ function sharedGraph(){
  }};
  gain.graph.nodes[1].inputValues={b:3};
  const wrapper={id:'wrapper',name:'Wrapper',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
-  nodes:[node('in','subgraph_input'),node('inner','subgraph_call',{subgraphId:'gain'}),node('out','subgraph_output')],
+  nodes:[node('in','subgraph_input'),node('inner','subgraph_instance',{subgraphId:'gain'}),node('out','subgraph_output')],
   edges:[edge('in','inner','value','value'),edge('inner','out','result','result')]
  }};
  return {format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[gain,wrapper],stages:{pixel:{
-  nodes:[node('source','float',{value:2}),node('first','subgraph_call',{subgraphId:'gain'}),node('second','subgraph_call',{subgraphId:'wrapper'}),node('sum','add',{type:'float'}),node('output','pixel_out')],
+  nodes:[node('source','float',{value:2}),node('first','subgraph_instance',{subgraphId:'gain'}),node('second','subgraph_instance',{subgraphId:'wrapper'}),node('sum','add',{type:'float'}),node('output','pixel_out')],
   edges:[edge('source','first','out','value'),edge('source','second','out','value'),edge('first','sum','result','a'),edge('second','sum','result','b'),edge('sum','output','out','color')]
  }}};
 }

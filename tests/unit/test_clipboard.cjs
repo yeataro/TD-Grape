@@ -71,32 +71,32 @@ test('a place that is not a number counts as 0',()=>{
 });
 
 // Definitions travel with a copy (basic design 2026-10-14 §3.13, amendment A5; Refactor.111). 定義跟著複製走（§3.13、A5；R.111）。
-test('a copy carries the definitions its calls use, with their closure; pasted into the same graph the calls keep their definition, elsewhere a new one',()=>{
+test('a copy carries the definitions its instances use, with their closure; pasted into the same graph the instances keep their definition, elsewhere a new one',()=>{
   const doc=graph();
   const made=new G.GraphDocument(doc.change(c=>{
     c.createSubgraph({id:'inner',name:'Inner'});
     const outer=c.createSubgraph({id:'outer',name:'Outer'});
     c.networks.get('subgraph:outer').instantiateSubgraph('inner','nested',{x:0,y:0});
-    c.networks.get('pixel').instantiateSubgraph('outer','call',{x:10,y:10});
+    c.networks.get('pixel').instantiateSubgraph('outer','instance',{x:10,y:10});
     void outer;
   }).after,registry);
-  const clip=plain(G.copyNodes(made,['call'],OP));
+  const clip=plain(G.copyNodes(made,['instance'],OP));
   assert.deepEqual(clip.subgraphs.map(f=>f.id).sort(),['inner','outer'],'the closure comes along');
   assert.deepEqual(plain(G.readClip(JSON.stringify(clip))).subgraphs.map(f=>f.id).sort(),['inner','outer']);
-  // Same graph, definitions still there: the pasted call points at the same definition. 同圖、定義還在：貼上的呼叫指同一份。
+  // Same graph, definitions still there: the pasted instance points at the same definition. 同圖、定義還在：貼上的實例指同一份。
   let counter2=0;const newSub=()=>'s'+(++counter2);
   const same=made.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,true);});
   assert.equal(same.after.subgraphs.length,2);
-  assert.deepEqual(plain(same.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call').map(n=>n.params.subgraphId)),['outer','outer']);
+  assert.deepEqual(plain(same.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_instance').map(n=>n.params.subgraphId)),['outer','outer']);
   // Another graph: new identities, the nested relation kept. 別張圖：新身分，巢狀關係保留。
   const other=made.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);});
   assert.equal(other.after.subgraphs.length,4);
-  const pastedCall=other.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call').at(-1);
-  assert.notEqual(pastedCall.params.subgraphId,'outer');
-  const newOuter=other.after.subgraphs.find(f=>f.id===pastedCall.params.subgraphId),newInner=newOuter.graph.nodes.find(n=>n.nodeType==='sgrape.builtin.subgraph_call').params.subgraphId;
+  const pastedInstance=other.after.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_instance').at(-1);
+  assert.notEqual(pastedInstance.params.subgraphId,'outer');
+  const newOuter=other.after.subgraphs.find(f=>f.id===pastedInstance.params.subgraphId),newInner=newOuter.graph.nodes.find(n=>n.nodeType==='sgrape.builtin.subgraph_instance').params.subgraphId;
   assert.notEqual(newInner,'inner');assert.ok(other.after.subgraphs.some(f=>f.id===newInner));
   // Same graph, the definition deleted since: it comes back under a new identity (A5 rule 1). 同圖、定義已刪：以新身分恢復。
-  const gone=new G.GraphDocument(made.change(c=>{const net=c.networks.get('pixel');net.removeAll([net.node('call')],new Set(['outer','inner']));}).after,registry);
+  const gone=new G.GraphDocument(made.change(c=>{const net=c.networks.get('pixel');net.removeAll([net.node('instance')],new Set(['outer','inner']));}).after,registry);
   assert.equal(gone.document.subgraphs.length,0);
   const back=gone.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,true);});
   assert.equal(back.after.subgraphs.length,2);assert.ok(back.after.subgraphs.every(f=>!['outer','inner'].includes(f.id)));
@@ -108,12 +108,12 @@ test('a copy carries the definitions its calls use, with their closure; pasted i
 // Technical review R109–R112 (Refactor.113). 子圖技術審查的修正。
 const {sharedGraph,node:fixtureNode}=require('../fixtures/shared_subgraphs.cjs');
 const compiles=g=>{try{G.createCompiler(registry).compile(plain(g));return true;}catch(e){return e.message;}};
-const callsIn=network=>network.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_call');
+const callsIn=network=>network.nodes.filter(n=>n.nodeType==='sgrape.builtin.subgraph_instance');
 let reviewCounter=0;const reviewSub=()=>'r'+(++reviewCounter);
 
-test('TECH-1: a restored definition brings its dependencies from the copy; pasted calls whose definition is here keep it',()=>{
+test('TECH-1: a restored definition brings its dependencies from the copy; pasted instances whose definition is here keep it',()=>{
   const raw=sharedGraph(),wrapper2={...plain(raw.subgraphs[1]),id:'wrapper2',name:'Wrapper2'};
-  raw.subgraphs.push(wrapper2);raw.stages.pixel.nodes.push(fixtureNode('third','subgraph_call',{subgraphId:'wrapper2'}));
+  raw.subgraphs.push(wrapper2);raw.stages.pixel.nodes.push(fixtureNode('third','subgraph_instance',{subgraphId:'wrapper2'}));
   const original=new G.GraphDocument(raw,registry),clip=plain(G.copyNodes(original,['first','second','third'],OP));
   const changed=new G.GraphDocument(original.change(c=>{
     const net=c.networks.get('pixel');net.remove(net.node('second'));net.remove(net.node('third'));
@@ -122,7 +122,7 @@ test('TECH-1: a restored definition brings its dependencies from the copy; paste
   }).after,registry);
   const step=changed.change(c=>{G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);});
   const pasted=callsIn(step.after.stages.pixel).slice(-3),[first,second,third]=pasted.map(n=>n.params.subgraphId);
-  assert.equal(first,'gain','a pasted call whose definition is still here keeps it');
+  assert.equal(first,'gain','a pasted instance whose definition is still here keeps it');
   const inner=id=>callsIn(step.after.subgraphs.find(f=>f.id===id).graph)[0].params.subgraphId;
   assert.notEqual(inner(second),'gain','a restored parent never points at the current child');
   assert.equal(inner(second),inner(third),'parents restored together share one restored child');
@@ -132,7 +132,7 @@ test('TECH-1: a restored definition brings its dependencies from the copy; paste
   assert.equal(compiles(step.after),true);
 });
 
-test('TECH-2: a call copied before its interface changed takes the current interface; a wire to a removed port is a ghost wire',()=>{
+test('TECH-2: an instance copied before its interface changed takes the current interface; a wire to a removed port is a ghost wire',()=>{
   const setup=edit=>{
     const raw=sharedGraph();raw.stages.pixel.nodes.find(n=>n.id==='first').inputValues={value:5};
     const gain=raw.subgraphs.find(f=>f.id==='gain');gain.graph.edges=gain.graph.edges.filter(e=>e.from[0]!=='in');

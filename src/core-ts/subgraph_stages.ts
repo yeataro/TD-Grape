@@ -16,21 +16,21 @@ export function subgraphStages(graph: Graph, id: string, registry: Registry): st
 }
 
 /** The same answer for many definitions at once (technical review TECH-3, R113-1): the definitions are grouped into the sets that
- * reach each other (strongly connected components; a definition calling itself is one), and each set is worked out once, after the
- * sets it calls. A definition's answer is every node it reaches, so the members of one cycle share an answer, and a graph opened
- * with a cycle costs the same as one without. 一次回答多份定義：定義先分成「彼此走得到」的組（強連通分量；自己呼叫自己也算一組），
- * 每組在它呼叫的組之後算一次。定義的答案是它走得到的每個節點，所以同一個循環的成員答案相同；開著循環的圖和沒有循環的一樣花費。 */
+ * reach each other (strongly connected components; a definition containing an instance of itself is one), and each set is worked out once, after the
+ * sets it instantiates. A definition's answer is every node it reaches, so the members of one cycle share an answer, and a graph opened
+ * with a cycle costs the same as one without. 一次回答多份定義：定義先分成「彼此走得到」的組（強連通分量；包含自己的實例也算一組），
+ * 每組在它用到的組之後算一次。定義的答案是它走得到的每個節點，所以同一個循環的成員答案相同；開著循環的圖和沒有循環的一樣花費。 */
 export function subgraphStageTable(graph: Graph, registry: Registry): (id: string) => string[] {
   const { stagesOf } = subgraphGroups(graph, registry);
   return id => [...stagesOf(id)];
 }
 
-/** The strongly connected components of the definitions' calls (Tarjan), with each one's stages, and which definitions lie on a
- * cycle (they cannot be expanded; amendment A8 shows them in the Subgraphs panel). 定義呼叫關係的強連通分量（Tarjan）與各自的 Stage，
+/** The strongly connected components of the definitions' instances (Tarjan), with each one's stages, and which definitions lie on a
+ * cycle (they cannot be expanded; amendment A8 shows them in the Subgraphs panel). 定義之間的實例關係的強連通分量（Tarjan）與各自的 Stage，
  * 以及哪些定義在循環上（展不開；A8 在子圖面板顯示）。 */
 export function subgraphGroups(graph: Graph, registry: Registry): { stagesOf: (id: string) => readonly string[]; cyclic: ReadonlySet<string> } {
   const byId = new Map((graph.subgraphs ?? []).map(item => [item.id, item]));
-  const own = new Map<string, string[]>(), calls = new Map<string, string[]>();
+  const own = new Map<string, string[]>(), instances = new Map<string, string[]>();
   for (const [id, subgraph] of byId) {
     let stages = [...SUBGRAPH_STAGES];
     const children: string[] = [];
@@ -42,14 +42,14 @@ export function subgraphGroups(graph: Graph, registry: Registry): { stagesOf: (i
       const child = module.referencedGraph?.(node);
       if (child !== undefined && byId.has(child)) children.push(child);
     }
-    own.set(id, stages); calls.set(id, children);
+    own.set(id, stages); instances.set(id, children);
   }
   const index = new Map<string, number>(), low = new Map<string, number>(), stack: string[] = [], onStack = new Set<string>();
   const groupOf = new Map<string, number>(), groupStages: string[][] = [], cyclic = new Set<string>();
   let counter = 0;
   const connect = (id: string) => {
     index.set(id, counter); low.set(id, counter); counter++; stack.push(id); onStack.add(id);
-    for (const child of calls.get(id)!) {
+    for (const child of instances.get(id)!) {
       if (!index.has(child)) { connect(child); low.set(id, Math.min(low.get(id)!, low.get(child)!)); }
       else if (onStack.has(child)) low.set(id, Math.min(low.get(id)!, index.get(child)!));
     }
@@ -57,16 +57,16 @@ export function subgraphGroups(graph: Graph, registry: Registry): { stagesOf: (i
     const members: string[] = [];
     let member: string;
     do { member = stack.pop()!; onStack.delete(member); members.push(member); } while (member !== id);
-    // Components finish children first, so every set this one calls already has its answer. 子分量先完成，這組呼叫的組都已有答案。
+    // Components finish children first, so every set this one instantiates already has its answer. 子分量先完成，這組用到的組都已有答案。
     const group = groupStages.length, inside = new Set(members);
     let stages = [...SUBGRAPH_STAGES];
     for (const m of members) {
       stages = stages.filter(stage => own.get(m)!.includes(stage));
-      for (const child of calls.get(m)!) if (!inside.has(child)) stages = stages.filter(stage => groupStages[groupOf.get(child)!]!.includes(stage));
+      for (const child of instances.get(m)!) if (!inside.has(child)) stages = stages.filter(stage => groupStages[groupOf.get(child)!]!.includes(stage));
       groupOf.set(m, group);
     }
     groupStages.push(stages);
-    if (members.length > 1 || calls.get(id)!.includes(id)) for (const m of members) cyclic.add(m);
+    if (members.length > 1 || instances.get(id)!.includes(id)) for (const m of members) cyclic.add(m);
   };
   for (const id of byId.keys()) if (!index.has(id)) connect(id);
   return { stagesOf: id => byId.has(id) ? groupStages[groupOf.get(id)!]! : SUBGRAPH_STAGES, cyclic };

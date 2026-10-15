@@ -21,9 +21,9 @@ const boundary = (module:NodeModule|undefined) => module?.role === 'subgraph-inp
 /** Nodes with a fixed identity: never offered, never deleted. 身分固定的節點：不在新增選單、不能刪。 */
 const fixed = (module:NodeModule|undefined) => stageOutput(module) || boundary(module);
 
-/** Whether a module may be offered for adding a new node: not one with a fixed identity, nor a structural one (a subgraph call is made
+/** Whether a module may be offered for adding a new node: not one with a fixed identity, nor a structural one (a subgraph instance is made
  * from a definition — the subgraph panel, a copy — never from the palette; node_module.ts). 新增選單只提供這些：身分固定的不行，結構性的
- * 也不行（子圖呼叫從定義來——子圖面板、複製——不從目錄來）。 */
+ * 也不行（子圖實例從定義來——子圖面板、複製——不從目錄來）。 */
 export const offered = (module:NodeModule) => !fixed(module) && !module.structural;
 /** Whether the user may delete this node. 能不能刪。 */
 export const removable = (module:NodeModule|undefined) => !fixed(module);

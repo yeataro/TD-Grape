@@ -51,24 +51,24 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     if (!g.declarations.every(d=>!declarationKinds.has(d.kind)||declarationKinds.get(d.kind)!.types.includes(d.type))) return false;
     const pixel=g.stages.pixel!,stagesOf=stageLookup(g);
     if (!usableNetwork(g,pixel,undefined,stagesOf)) return false;
-    // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
-    // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
+    // Only the definitions the stage reaches through its instances are checked (amendment A8, TECH-3): an unused one never blocks the
+    // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由實例走得到的定義：沒用到的不擋整張圖；
     // 它的問題在子圖面板顯示。
-    // The stage table is built only when a call reaches something (Codex 3rd check: a graph with no calls reads no definitions).
-    // 有呼叫走得到東西才建 Stage 表（沒有呼叫的圖不讀任何定義）。
+    // The stage table is built only when an instance reaches something (Codex 3rd check: a graph with no instances reads no definitions).
+    // 有實例走得到東西才建 Stage 表（沒有實例的圖不讀任何定義）。
     const used=reachable(g,pixel,stagesOf);
     return [...used].every(id=>{const f=g.subgraphs!.find(item=>item.id===id);return !f||usableDefinition(g,f,stagesOf);});
   }
-  /** The stage table, built on first use only (Codex 3rd check: a graph whose calls reach nothing reads no definitions). Stage 表，
-   * 第一次用到才建（呼叫走不到任何定義的圖不讀定義）。 */
+  /** The stage table, built on first use only (Codex 3rd check: a graph whose instances reach nothing reads no definitions). Stage 表，
+   * 第一次用到才建（實例走不到任何定義的圖不讀定義）。 */
   function stageLookup(g:Graph):(id:string)=>string[] {
     let table:((id:string)=>string[])|undefined;
     return id=>(table??=subgraphStageTable(g,registry))(id);
   }
   /** A ghost (design-interview Q37 1-1; the flat compiler's rule, top_compiler.ts supports, and the editor's, connectivity.ts): a node
-   * this build does not know, one that does not belong to the pixel stage, a call whose content cannot run there, one its module does
+   * this build does not know, one that does not belong to the pixel stage, an instance whose content cannot run there, one its module does
    * not support, or one whose ports cannot be worked out. It is kept and left out of code generation, never a reason to refuse the
-   * graph; its wires count as not connected. Ghost：這一版不認得的節點、不屬於 pixel 的、內容不能在那裡跑的呼叫、模組不支援的、算不出接孔的。
+   * graph; its wires count as not connected. Ghost：這一版不認得的節點、不屬於 pixel 的、內容不能在那裡跑的實例、模組不支援的、算不出接孔的。
    * 保留、不產碼，絕不是拒絕整張圖的理由；接到它的線當作沒接。 */
   function ghost(g:Graph,n:Node,owner:SubgraphData|undefined,stagesOf:(id:string)=>string[]):boolean {
     const module=moduleOf(n);
@@ -96,8 +96,8 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     try { requireSubgraph(contextFor(g),f.id); } catch { return false; }
     return stagesOf(f.id).includes('pixel') && usableNetwork(g,f.graph,f,stagesOf);
   }
-  /** The definitions the network's calls reach, nested calls followed; a ghost call reaches nothing. 網路的呼叫走得到的定義，巢狀
-   * 一路跟進；Ghost 呼叫走不到任何東西。 */
+  /** The definitions the network's instances reach, nested instances followed; a ghost instance reaches nothing. 網路的實例走得到的定義，巢狀
+   * 一路跟進；Ghost 實例走不到任何東西。 */
   function reachable(g:Graph,data:NetworkData,stagesOf:(id:string)=>string[]):Set<string> {
     const byId=new Map((g.subgraphs??[]).map(f=>[f.id,f])),found=new Set<string>();
     const walk=(nodes:readonly Node[],owner:SubgraphData|undefined)=>{for(const n of nodes){const ref=moduleOf(n)?.referencedGraph?.(n);
@@ -106,8 +106,8 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     return found;
   }
   /** The definitions that cannot be used in this host (amendment A8): what code generation would refuse, and those on a cycle of
-   * calls (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
-   * 產碼會拒絕的，以及在呼叫循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
+   * instances (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
+   * 產碼會拒絕的，以及在實例循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
   function unusableSubgraphs(g:Graph):Set<string> {
     const {stagesOf,cyclic}=subgraphGroups(g,registry);
     return new Set((g.subgraphs??[]).filter(f=>cyclic.has(f.id)||!usableDefinition(g,f,id=>[...stagesOf(id)])).map(f=>f.id));

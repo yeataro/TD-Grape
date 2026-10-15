@@ -38,8 +38,8 @@ function Sources({ session }: { session: EditorSession }) {
 }
 function Subgraphs({ session }: { session: EditorSession }) {
   const { version, trail } = useEditorFields(session, SUBGRAPH_FIELDS)!;
-  // The definitions and their call counts are this panel's own derivation, per version of the graph (as the Sources panel's references).
-  // 定義與呼叫數是這個面板自己的推導，圖每一版算一次（同共用來源面板的引用數）。
+  // The definitions and their instance counts are this panel's own derivation, per version of the graph (as the Sources panel's references).
+  // 定義與實例數是這個面板自己的推導，圖每一版算一次（同共用來源面板的引用數）。
   const definitions = useMemo(() => session.definitions(), [session, version]);
   const counts = useMemo(() => session.useCounts(), [session, version]);
   const unusable = useMemo(() => session.unusableSubgraphs(), [session, version]);

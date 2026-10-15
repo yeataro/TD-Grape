@@ -112,3 +112,17 @@ test('a graph made before names were given is named once as it opens; sources an
   assert.ok(compiler.compile(graph).pixel.includes('sg_n_Color_RGBA_1'),'the name is the GLSL name');
   assert.equal(G.upgradeGraph(g).changes.filter(c=>c.rule==='node-name').length,0,'without the registry, names are not touched');
 });
+
+// 【發布前清理】Refactor.117 (human 2026-10-16): a subgraph's node is an instance, not a call. Development graphs saved with the old
+// type, at the stage and inside a definition, open as instances with their wires and code unchanged. 子圖節點改叫實例：舊名的開發中的圖
+// （Stage 上與定義裡）開圖換成實例，線與產碼不變。
+test('subgraph calls saved before Refactor.117 open as instances, nested ones too, with the same code',()=>{
+  const {sharedGraph}=require('../fixtures/shared_subgraphs.cjs');
+  const current=sharedGraph(),old=JSON.parse(JSON.stringify(current).split('sgrape.builtin.subgraph_instance').join('sgrape.builtin.subgraph_call'));
+  assert.ok(JSON.stringify(old).includes('subgraph_call')&&JSON.stringify(current).includes('subgraph_instance'));
+  const {graph,changes}=G.upgradeGraph(old,G.nodeUpgrades);
+  assert.deepEqual(plain(graph),plain(current));
+  assert.ok(changes.length>1&&changes.every(c=>c.rule==='subgraph-instance'));
+  assert.ok(changes.some(c=>c.network.startsWith('subgraph:')),'a nested one is upgraded too');
+  assert.equal(compiler.compile(graph).pixel,compiler.compile(current).pixel);
+});

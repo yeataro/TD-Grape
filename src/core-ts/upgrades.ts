@@ -27,13 +27,19 @@ export interface NodeUpgrade {
 }
 
 const TD_VALUE = 'sgrape.builtin.td_value';
-/** The rules, oldest first. Never remove one: a graph saved long ago may still need it. 規則，舊的在前；不要刪，很久以前存的圖可能還用得到。 */
+/** The rules, oldest first. Never remove one that shipped: a graph saved long ago may still need it. A rule added before the first
+ * release (for development graphs only) carries 【發布前清理】 and is removed before release (human 2026-10-16).
+ * 規則，舊的在前；發布過的不要刪，很久以前存的圖可能還用得到。第一次發布前加的（只為開發中的圖）標【發布前清理】，發布前拿掉（人類 10-16）。 */
 export const nodeUpgrades: readonly NodeUpgrade[] = Object.freeze([
-  // Refactor.64: vUV.st folded into vUV, which has U, UV and UVW outputs. vUV.st 併進 vUV（U、UV、UVW 三個輸出）。
+  // 【發布前清理】Refactor.64: vUV.st folded into vUV, which has U, UV and UVW outputs. vUV.st 併進 vUV（U、UV、UVW 三個輸出）。
   { id: 'td-value-vuv-st', nodeType: TD_VALUE, params: { entry: 'vUVSt' }, set: { params: { entry: 'vUV' } }, outputs: { out: 'uv' },
     note: tr('upgrade.vUVSt', 'vUV.st became vUV; its wires now leave from the UV output') },
   { id: 'td-value-vuv-out', nodeType: TD_VALUE, params: { entry: 'vUV' }, outputs: { out: 'uvw' },
     note: tr('upgrade.vUVOut', 'vUV now has U, UV and UVW outputs; its wires now leave from the UVW output') },
+  // 【發布前清理】Refactor.117: a subgraph's node is an instance, not a call (human 2026-10-16: the name came from the early "subgraph =
+  // function" idea, dropped when subgraphs became expansions). 子圖節點是實例、不是呼叫（名字來自早期「子圖＝函式」的構想）。
+  { id: 'subgraph-instance', nodeType: 'sgrape.builtin.subgraph_call', set: { nodeType: 'sgrape.builtin.subgraph_instance' },
+    note: tr('upgrade.subgraphInstance', 'Subgraph nodes are now called instances') },
 ]);
 
 /** One node an upgrade changed: where it is, which rule, and how many wires followed. 被升級的一個節點：在哪、哪條規則、跟著改了幾條線。 */
@@ -70,7 +76,7 @@ function upgradeNetwork(network: NetworkData, name: string, rule: NodeUpgrade): 
  * chain of renames is followed; a rule table that never settles is a programming error.
  * 把存著的圖升級成目前的節點寫法。不改輸入；別的格式（或壞掉的）原樣回傳，交給匯入器或格式檢查。規則一直套到沒有可換為止；
  * 停不下來代表規則表寫錯了。 */
-// With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
+// 【發布前清理】With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
 // before names were given get them once, said like any upgrade). 有 registry 時，也替該有名字卻沒有的節點補名（R.76，人類：
 // 給名字之前做的圖補一次，和其他升級一樣會說）。
 export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeUpgrades, registry?: Registry): UpgradeResult {

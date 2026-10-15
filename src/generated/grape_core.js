@@ -77,8 +77,8 @@ const sin_1 = require("./nodes/sin");
 const smoothstep_1 = require("./nodes/smoothstep");
 const split_1 = require("./nodes/split");
 const sqrt_1 = require("./nodes/sqrt");
-const subgraph_call_1 = require("./nodes/subgraph_call");
 const subgraph_input_1 = require("./nodes/subgraph_input");
+const subgraph_instance_1 = require("./nodes/subgraph_instance");
 const subgraph_output_1 = require("./nodes/subgraph_output");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
@@ -90,9 +90,9 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, callCounts: subgraph_operations_1.callCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newCallName: node_names_1.newCallName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
 
 },
 "capacity":function(require,module,exports){
@@ -285,8 +285,8 @@ function copyNodes(graph, ids, source, networkId = 'pixel') {
     const edges = network.edges.filter(edge => kept.has(edge.from[0]) && kept.has(edge.to[0]));
     const used = new Set(nodes.flatMap(node => { var _a, _b; const id = (_b = (_a = graph.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedDeclaration) === null || _b === void 0 ? void 0 : _b.call(_a, node); return id ? [id] : []; }));
     const groups = (0, groups_1.completeGroups)((0, groups_1.groupsOf)(network), kept);
-    // A copy always carries the definitions its calls use, with their whole dependency closure (basic design §3.13, amendment B4: the
-    // paste may land where the Library is not, so the content must travel). 複製永遠帶著呼叫用到的定義，連同完整的依賴閉包（§3.13、B4：
+    // A copy always carries the definitions its instances use, with their whole dependency closure (basic design §3.13, amendment B4: the
+    // paste may land where the Library is not, so the content must travel). 複製永遠帶著實例用到的定義，連同完整的依賴閉包（§3.13、B4：
     // 貼上的地方可能沒有 Library，內容必須跟著走）。
     const byId = new Map(((_b = data.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f])), needed = new Map();
     const visit = (id) => {
@@ -343,13 +343,13 @@ const placeOf = (node) => {
  * 複製之後被刪掉的宣告，ID 與名字都還沒人用時就加回來；否則它的節點變 Ghost，同開圖。有名字的節點取下一個沒人用的名字。newId 給節點、newGroupId 給群組（編輯器的，
  * 同新建群組）。 */
 /** `sameSource`: the copy came from this very graph (the editor compares the Grape OP); `newSubgraphId` names definitions brought in.
- * Definitions (basic design §3.13, amendment A5 rules 1–2, amendment 2 B3): from the same graph, a pasted call whose definition is
- * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted calls need
+ * Definitions (basic design §3.13, amendment A5 rules 1–2, amendment 2 B3): from the same graph, a pasted instance whose definition is
+ * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted instances need
  * that is gone comes back under a new identity together with everything it depends on in the copy (its dependencies are never
  * resolved to the current ones); from another graph the whole copied closure comes in under new identities. One batch keeps its
  * shared relations; locals are never merged by content. Every definition in the copy is validated first; one carrying a Library ID
  * refuses the paste (amendment 2 B7-5). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義
- * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的呼叫所指的定義還在就用現在這份，實例值對齊目前接口；呼叫需要、但已刪的定義以新身分
+ * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的實例所指的定義還在就用現在這份，實例值對齊目前接口；實例需要、但已刪的定義以新身分
  * 回來，連同它在複製裡的所有依賴（依賴不改指現有的）；別張圖時整個閉包以新身分進來。同批保留共用關係；本地永不按內容合併。複製裡每份定義
  * 先驗證；帶 Library ID 的整筆拒絕（B7-5）。 */
 function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', newSubgraphId = newId, sameSource = true) {
@@ -368,11 +368,11 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
     const snapshot = new Map(carried.map(f => [f.id, f]));
     const current = new Map(((_b = candidate.document.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f]));
     const referenceOf = (node) => { var _a, _b; return (_b = (_a = candidate.registry.get(node.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, node); };
-    const calls = clip.stages.pixel.nodes.map(referenceOf).filter((ref) => ref !== undefined);
-    // What comes in (TECH-1, amendment 2 B3): from another graph, the whole closure; from this graph, the definitions the pasted calls
-    // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted call whose definition is still
-    // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的呼叫所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
-    // 定義還在的呼叫沿用它。
+    const instances = clip.stages.pixel.nodes.map(referenceOf).filter((ref) => ref !== undefined);
+    // What comes in (TECH-1, amendment 2 B3): from another graph, the whole closure; from this graph, the definitions the pasted instances
+    // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
+    // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
+    // 定義還在的實例沿用它。
     const imported = new Set();
     const bring = (id) => {
         const f = snapshot.get(id);
@@ -385,7 +385,7 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
                 bring(ref);
         }
     };
-    for (const id of sameSource ? calls.filter(ref => !current.has(ref)) : snapshot.keys())
+    for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys())
         bring(id);
     const ids = new Map([...imported].map(id => [id, newSubgraphId()]));
     if (ids.size)
@@ -409,12 +409,12 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
             fresh.name = (0, node_names_1.freeName)(node.name, taken);
             taken.add(fresh.name);
         }
-        // A call keeps the definition still here, else follows its new identity. 呼叫沿用還在的定義，否則跟著新身分。
+        // An instance keeps the definition still here, else follows its new identity. 實例沿用還在的定義，否則跟著新身分。
         const module = candidate.registry.get(node.nodeType), ref = (_b = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node);
         const kept = ref !== undefined && sameSource && current.has(ref), mapped = ref !== undefined && !kept ? ids.get(ref) : undefined;
         if ((module === null || module === void 0 ? void 0 : module.reference) && mapped)
             fresh.params = { ...fresh.params, ...(0, model_1.copy)(module.reference(mapped)) };
-        // A call copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
+        // An instance copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
         if (kept && fresh.inputValues)
             fresh.inputValues = (0, subgraphs_1.fitInstanceValues)(fresh.inputValues, current.get(ref).inputs);
         return fresh;
@@ -541,7 +541,7 @@ exports.CORE_CONFIG = Object.freeze({
     documentBytes: 512000,
     subgraphDefinitions: 64, // legacy-era choice
     // Legacy-era choice (legacy sgrape_core.py:2104), no measured basis; checked when a subgraph is created, its
-    // interface edited and a call resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析呼叫時檢查。
+    // interface edited and an instance resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析實例時檢查。
     subgraphPortsPerSide: 16,
 });
 
@@ -557,9 +557,9 @@ const subgraph_stages_1 = require("./subgraph_stages");
 function unusableNodes(network) {
     var _a;
     const nodes = new Map();
-    // Subgraph networks have no stage of their own; their nodes follow the calling stage.
+    // Subgraph networks have no stage of their own; their nodes follow the stage of their instance.
     const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
-    let stagesOf; // one table for every call here (TECH-3) 這裡所有呼叫共用一張表
+    let stagesOf; // one table for every instance here (TECH-3) 這裡所有實例共用一張表
     for (const node of network.nodes) {
         const data = node.data, module = node.definition;
         const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
@@ -567,8 +567,8 @@ function unusableNodes(network) {
             nodes.set(node.id, 'unknown');
         else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
             nodes.set(node.id, 'misplaced');
-        // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
-        // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
+        // A subgraph instance whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
+        // 子圖內容不能在這個 Stage 用的實例：保留、標示，內容改回能用就恢復。
         else if (stage && module.referencedGraph && !(stagesOf !== null && stagesOf !== void 0 ? stagesOf : (stagesOf = (0, subgraph_stages_1.subgraphStageTable)(network.graph.document, network.graph.registry)))(module.referencedGraph(data)).includes(stage))
             nodes.set(node.id, 'misplaced');
         // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
@@ -1138,11 +1138,11 @@ class Network {
     }
     subgraphFromSelection(ids, options) {
         this.assertEditable();
-        if (this.removedNodes.has(options.callId))
+        if (this.removedNodes.has(options.instanceId))
             throw Error('Retired node ID');
-        const call = (0, subgraph_operations_1.subgraphFromSelection)(this, ids, options);
+        const instance = (0, subgraph_operations_1.subgraphFromSelection)(this, ids, options);
         ids.forEach(id => this.removedNodes.add(id));
-        return this.node(call.id);
+        return this.node(instance.id);
     }
     instantiateSubgraph(definitionId, id, ui = {}) {
         return this.node((0, subgraph_operations_1.instantiateSubgraph)(this, definitionId, id, ui).id);
@@ -1235,8 +1235,8 @@ class Network {
     remove(node) {
         this.removeAll([node]);
     }
-    /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last call goes
-     * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個呼叫時可回收的定義，預設沒有。 */
+    /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last instance goes
+     * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個實例時可回收的定義，預設沒有。 */
     removeAll(nodes, collectible = new Set()) {
         this.assertEditable();
         if (nodes.some(n => n.network !== this))
@@ -1489,7 +1489,7 @@ class GraphDocument {
         return this.networkHandles;
     }
     createSubgraph(options) { return this.subgraph((0, subgraph_operations_1.createSubgraph)(this, options).id); }
-    /** Remove a definition nobody calls (subgraph_operations.ts). 刪掉沒人呼叫的定義。 */
+    /** Remove a definition with no instances (subgraph_operations.ts). 刪掉沒有實例的定義。 */
     removeSubgraph(id) { (0, subgraph_operations_1.removeSubgraph)(this, id); }
     ensureSubgraphCapacity(additional = 0) { (0, subgraph_operations_1.ensureSubgraphCapacity)(this, additional); }
     appendSubgraphs(definitions, ids = new Map()) {
@@ -1525,9 +1525,9 @@ class GraphDocument {
             // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
             (0, capacity_1.requireCapacity)(before, after, this.registry);
             (0, structure_1.requireStructure)(before, after, this.registry);
-            // A subgraph that reaches itself through its calls cannot be expanded: an edit that adds a call edge closing a cycle is refused
+            // A subgraph that reaches itself through its instances cannot be expanded: an edit that adds an instance edge closing a cycle is refused
             // as a whole, even when the graph already has another one (TECH-8); a graph opened with one stays editable and repairable (the
-            // compiler reports it). 經由呼叫回到自己的子圖展不開：新增的呼叫邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
+            // compiler reports it). 經由實例回到自己的子圖展不開：新增的實例邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
             const cycle = (0, subgraph_operations_1.newSubgraphCycle)(before, after, this.registry);
             if (cycle)
                 throw Object.assign(Error('Subgraph reference cycle: ' + cycle), { code: 'subgraph.cycle', subgraphId: cycle });
@@ -2044,9 +2044,9 @@ exports.validNodeName = validNodeName;
 exports.freeName = freeName;
 exports.newNodeName = newNodeName;
 exports.validSubgraphTitle = validSubgraphTitle;
-exports.callNameBase = callNameBase;
-exports.newCallName = newCallName;
-exports.defaultCallNumber = defaultCallNumber;
+exports.instanceNameBase = instanceNameBase;
+exports.newInstanceName = newInstanceName;
+exports.defaultInstanceNumber = defaultInstanceNumber;
 exports.nameMissing = nameMissing;
 /** Node names (Refactor.76, human 2026-10-11; design-interview Q47 supplement 6). A node's name is also its GLSL name
  * (`sg_n_<name>`), so it is an identifier: letters, digits and underscores, a letter first. People see underscores as spaces
@@ -2102,54 +2102,54 @@ function newNodeName(label, taken) {
 function validSubgraphTitle(title) {
     return title.length > 0 && title === (0, exports.typedName)(title).trim() && !/ {2}/.test(title) && validNodeName((0, exports.storedName)(title));
 }
-/** A call's default name for a base and a number: base + _N within the name limit — the base is shortened, never the number, and a
+/** An instance's default name for a base and a number: base + _N within the name limit — the base is shortened, never the number, and a
  * trailing underscore left by shortening is dropped. Making and recognising default names both go through here, so a name this makes is
- * always recognised (Codex R116-2). 某個底與編號的呼叫預設名：底＋_N，不超過名稱上限——縮短的是底、不是編號，縮短後留下的結尾底線拿掉。
+ * always recognised (Codex R116-2). 某個底與編號的實例預設名：底＋_N，不超過名稱上限——縮短的是底、不是編號，縮短後留下的結尾底線拿掉。
  * 產生與辨認預設名都經過這裡，產生出來的一定認得回來。 */
-/** The largest number a default call name carries: the maker picks the smallest free number, so it never passes a network's node
- * count; far above that, and small enough that counting on from it stays exact. 預設呼叫名最大的編號：產生器取最小的空號，不會超過網路的
+/** The largest number a default instance name carries: the maker picks the smallest free number, so it never passes a network's node
+ * count; far above that, and small enough that counting on from it stays exact. 預設實例名最大的編號：產生器取最小的空號，不會超過網路的
  * 節點數；這個值遠高於此，又小到往上數一定精確。 */
-const CALL_NUMBER_LIMIT = 1000000;
-function composeCallName(base, n) {
+const INSTANCE_NUMBER_LIMIT = 1000000;
+function composeInstanceName(base, n) {
     const suffix = '_' + n;
     return base.slice(0, exports.NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
 }
-/** The base of a subgraph call's default name: its definition's title as a stored name without trailing underscores, or Subgraph when
+/** The base of a subgraph instance's default name: its definition's title as a stored name without trailing underscores, or Subgraph when
  * that cannot make a name (an old graph). The check is on a composed name, so a long title is shortened rather than dropped (R116-2).
- * 子圖呼叫預設名的底：定義的 Title 存成名稱、去掉結尾底線；做不出名稱（舊圖）才用 Subgraph。檢查的是組好的名稱，長 Title 是縮短而不是放棄。 */
-function callNameBase(title) {
+ * 子圖實例預設名的底：定義的 Title 存成名稱、去掉結尾底線；做不出名稱（舊圖）才用 Subgraph。檢查的是組好的名稱，長 Title 是縮短而不是放棄。 */
+function instanceNameBase(title) {
     const base = (0, exports.storedName)(title).replace(/_+$/, '');
-    return base && validNodeName(composeCallName(base, 1)) ? base : 'Subgraph';
+    return base && validNodeName(composeInstanceName(base, 1)) ? base : 'Subgraph';
 }
-/** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
- * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). `keep`: a renamed call keeps its number when
- * that is free; otherwise, as for a new call, the smallest free number from 1 — never counting on past a number, so every name made
- * here is one defaultCallNumber recognises (it stays at most the network's node count + 1; Codex R116.1-1). The search is bounded.
- * 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。keep：改名的呼叫編號沒人用就保留；否則和新呼叫一樣取從 1 起最小的空號
- * ——不從某個編號往後數，所以這裡做出的名稱一定被 defaultCallNumber 認得（最多是網路節點數＋1）。找的範圍有上限。 */
-function newCallName(title, taken, keep) {
-    const base = callNameBase(title);
-    if (keep !== undefined && Number.isInteger(keep) && keep > 0 && keep <= CALL_NUMBER_LIMIT) {
-        const kept = composeCallName(base, keep);
+/** A new instance's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the instances of Subgraph_1 are
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). `keep`: a renamed instance keeps its number when
+ * that is free; otherwise, as for a new instance, the smallest free number from 1 — never counting on past a number, so every name made
+ * here is one defaultInstanceNumber recognises (it stays at most the network's node count + 1; Codex R116.1-1). The search is bounded.
+ * 新實例的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。keep：改名的實例編號沒人用就保留；否則和新實例一樣取從 1 起最小的空號
+ * ——不從某個編號往後數，所以這裡做出的名稱一定被 defaultInstanceNumber 認得（最多是網路節點數＋1）。找的範圍有上限。 */
+function newInstanceName(title, taken, keep) {
+    const base = instanceNameBase(title);
+    if (keep !== undefined && Number.isInteger(keep) && keep > 0 && keep <= INSTANCE_NUMBER_LIMIT) {
+        const kept = composeInstanceName(base, keep);
         if (!taken.has(kept) && validNodeName(kept))
             return kept;
     }
     for (let n = 1; n <= taken.size + 1; n++) {
-        const name = composeCallName(base, n);
+        const name = composeInstanceName(base, n);
         if (!taken.has(name) && validNodeName(name))
             return name;
     }
-    throw Error('No free name for a subgraph call');
+    throw Error('No free name for a subgraph instance');
 }
-/** The number of a call still named by default for this title, else null: only a name the maker would have made — a plain number
- * from 1 (no leading zero, at most CALL_NUMBER_LIMIT) whose composed name is exactly this one (Codex R116-1, R116-2). 仍是這個 Title 預設名的呼叫
+/** The number of an instance still named by default for this title, else null: only a name the maker would have made — a plain number
+ * from 1 (no leading zero, at most INSTANCE_NUMBER_LIMIT) whose composed name is exactly this one (Codex R116-1, R116-2). 仍是這個 Title 預設名的實例
  * 編號，不是就 null：只認產生器會做出的名稱——從 1 起的一般數字（無前導零、安全整數），組出來和這個名稱完全相同。 */
-function defaultCallNumber(name, title) {
+function defaultInstanceNumber(name, title) {
     const match = /_([1-9]\d*)$/.exec(name);
     if (!match)
         return null;
     const n = Number(match[1]);
-    return n <= CALL_NUMBER_LIMIT && composeCallName(callNameBase(title), n) === name ? n : null;
+    return n <= INSTANCE_NUMBER_LIMIT && composeInstanceName(instanceNameBase(title), n) === name ? n : null;
 }
 /** The names already used in one network. 一張網路裡已用的名稱。 */
 const namesIn = (network) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));
@@ -2169,9 +2169,9 @@ function nameMissing(graph, registry) {
         for (const node of data.nodes) {
             if (node.name !== undefined || !(0, exports.takesName)(registry, node.nodeType))
                 continue;
-            // A subgraph call is named after its definition's title (visual notes 27). 子圖呼叫照定義的 Title 命名。
+            // A subgraph instance is named after its definition's title (visual notes 27). 子圖實例照定義的 Title 命名。
             const ref = (_c = (_b = registry.get(node.nodeType)).referencedGraph) === null || _c === void 0 ? void 0 : _c.call(_b, node), title = ref === undefined ? undefined : (_e = (_d = graph.subgraphs) === null || _d === void 0 ? void 0 : _d.find(f => f.id === ref)) === null || _e === void 0 ? void 0 : _e.name;
-            const name = title !== undefined ? newCallName(title, taken) : newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
+            const name = title !== undefined ? newInstanceName(title, taken) : newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
             node.name = name;
             taken.add(name);
             named.push({ network, node: node.id, name, note: (0, text_1.tr)('upgrade.named', 'Given the name {name}', { name: (0, exports.shownName)(name) }) });
@@ -5035,43 +5035,6 @@ exports.default = (0, node_sdk_1.unaryNode)({
 });
 
 },
-"nodes/subgraph_call":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-// The common compiler expands this structural module using its declared role
-// and graph reference. Only ordinary value modules need an emit callback.
-const definition = {
-    catalog: {
-        definition: {
-            key: 'subgraph_call',
-            label: 'Subgraph',
-            inputs: {},
-            outputs: {},
-            stages: ['vertex', 'pixel'],
-            defaults: {},
-            descriptionKey: 'help.function'
-        },
-        emitter: {
-            id: 'subgraph_call',
-            version: 1
-        },
-        browser: {}
-    },
-    structural: true,
-    role: 'value',
-    referencedGraph: node => String(node.params.subgraphId),
-    reference: graphId => ({ subgraphId: graphId }),
-    supports: (node, context) => { var _a; return (0, node_sdk_1.validInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.subgraphId))); },
-    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
-    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'call'),
-    validate: (node, context) => {
-        (0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId));
-    }
-};
-exports.default = definition;
-
-},
 "nodes/subgraph_input":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -5088,7 +5051,7 @@ const definition = {
             outputs: {},
             stages: ['vertex', 'pixel'],
             defaults: {},
-            descriptionKey: 'help.functionPorts'
+            descriptionKey: 'help.subgraph_ports'
         },
         emitter: {
             id: 'subgraph_input',
@@ -5116,6 +5079,43 @@ const definition = {
 exports.default = definition;
 
 },
+"nodes/subgraph_instance":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// The common compiler expands this structural module using its declared role
+// and graph reference. Only ordinary value modules need an emit callback.
+const definition = {
+    catalog: {
+        definition: {
+            key: 'subgraph_instance',
+            label: 'Subgraph',
+            inputs: {},
+            outputs: {},
+            stages: ['vertex', 'pixel'],
+            defaults: {},
+            descriptionKey: 'help.subgraph_instance'
+        },
+        emitter: {
+            id: 'subgraph_instance',
+            version: 1
+        },
+        browser: {}
+    },
+    structural: true,
+    role: 'value',
+    referencedGraph: node => String(node.params.subgraphId),
+    reference: graphId => ({ subgraphId: graphId }),
+    supports: (node, context) => { var _a; return (0, node_sdk_1.validInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.subgraphId))); },
+    ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'instance'),
+    presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId)), 'instance'),
+    validate: (node, context) => {
+        (0, node_sdk_1.requireSubgraph)(context, String(node.params.subgraphId));
+    }
+};
+exports.default = definition;
+
+},
 "nodes/subgraph_output":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -5132,7 +5132,7 @@ const definition = {
             outputs: {},
             stages: ['vertex', 'pixel'],
             defaults: {},
-            descriptionKey: 'help.functionPorts'
+            descriptionKey: 'help.subgraph_ports'
         },
         emitter: {
             id: 'subgraph_output',
@@ -5938,9 +5938,9 @@ const stageOutput = (module) => (module === null || module === void 0 ? void 0 :
 const boundary = (module) => (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-input' || (module === null || module === void 0 ? void 0 : module.role) === 'subgraph-output';
 /** Nodes with a fixed identity: never offered, never deleted. 身分固定的節點：不在新增選單、不能刪。 */
 const fixed = (module) => stageOutput(module) || boundary(module);
-/** Whether a module may be offered for adding a new node: not one with a fixed identity, nor a structural one (a subgraph call is made
+/** Whether a module may be offered for adding a new node: not one with a fixed identity, nor a structural one (a subgraph instance is made
  * from a definition — the subgraph panel, a copy — never from the palette; node_module.ts). 新增選單只提供這些：身分固定的不行，結構性的
- * 也不行（子圖呼叫從定義來——子圖面板、複製——不從目錄來）。 */
+ * 也不行（子圖實例從定義來——子圖面板、複製——不從目錄來）。 */
 const offered = (module) => !fixed(module) && !module.structural;
 exports.offered = offered;
 /** Whether the user may delete this node. 能不能刪。 */
@@ -6030,24 +6030,24 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         const pixel = g.stages.pixel, stagesOf = stageLookup(g);
         if (!usableNetwork(g, pixel, undefined, stagesOf))
             return false;
-        // Only the definitions the stage reaches through its calls are checked (amendment A8, TECH-3): an unused one never blocks the
-        // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由呼叫走得到的定義：沒用到的不擋整張圖；
+        // Only the definitions the stage reaches through its instances are checked (amendment A8, TECH-3): an unused one never blocks the
+        // graph; its problems are shown in the Subgraphs panel (unusableSubgraphs). 只檢查 Stage 經由實例走得到的定義：沒用到的不擋整張圖；
         // 它的問題在子圖面板顯示。
-        // The stage table is built only when a call reaches something (Codex 3rd check: a graph with no calls reads no definitions).
-        // 有呼叫走得到東西才建 Stage 表（沒有呼叫的圖不讀任何定義）。
+        // The stage table is built only when an instance reaches something (Codex 3rd check: a graph with no instances reads no definitions).
+        // 有實例走得到東西才建 Stage 表（沒有實例的圖不讀任何定義）。
         const used = reachable(g, pixel, stagesOf);
         return [...used].every(id => { const f = g.subgraphs.find(item => item.id === id); return !f || usableDefinition(g, f, stagesOf); });
     }
-    /** The stage table, built on first use only (Codex 3rd check: a graph whose calls reach nothing reads no definitions). Stage 表，
-     * 第一次用到才建（呼叫走不到任何定義的圖不讀定義）。 */
+    /** The stage table, built on first use only (Codex 3rd check: a graph whose instances reach nothing reads no definitions). Stage 表，
+     * 第一次用到才建（實例走不到任何定義的圖不讀定義）。 */
     function stageLookup(g) {
         let table;
         return id => (table !== null && table !== void 0 ? table : (table = (0, subgraph_stages_1.subgraphStageTable)(g, registry)))(id);
     }
     /** A ghost (design-interview Q37 1-1; the flat compiler's rule, top_compiler.ts supports, and the editor's, connectivity.ts): a node
-     * this build does not know, one that does not belong to the pixel stage, a call whose content cannot run there, one its module does
+     * this build does not know, one that does not belong to the pixel stage, an instance whose content cannot run there, one its module does
      * not support, or one whose ports cannot be worked out. It is kept and left out of code generation, never a reason to refuse the
-     * graph; its wires count as not connected. Ghost：這一版不認得的節點、不屬於 pixel 的、內容不能在那裡跑的呼叫、模組不支援的、算不出接孔的。
+     * graph; its wires count as not connected. Ghost：這一版不認得的節點、不屬於 pixel 的、內容不能在那裡跑的實例、模組不支援的、算不出接孔的。
      * 保留、不產碼，絕不是拒絕整張圖的理由；接到它的線當作沒接。 */
     function ghost(g, n, owner, stagesOf) {
         var _a;
@@ -6093,8 +6093,8 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         }
         return stagesOf(f.id).includes('pixel') && usableNetwork(g, f.graph, f, stagesOf);
     }
-    /** The definitions the network's calls reach, nested calls followed; a ghost call reaches nothing. 網路的呼叫走得到的定義，巢狀
-     * 一路跟進；Ghost 呼叫走不到任何東西。 */
+    /** The definitions the network's instances reach, nested instances followed; a ghost instance reaches nothing. 網路的實例走得到的定義，巢狀
+     * 一路跟進；Ghost 實例走不到任何東西。 */
     function reachable(g, data, stagesOf) {
         var _a;
         const byId = new Map(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])), found = new Set();
@@ -6115,8 +6115,8 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         return found;
     }
     /** The definitions that cannot be used in this host (amendment A8): what code generation would refuse, and those on a cycle of
-     * calls (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
-     * 產碼會拒絕的，以及在呼叫循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
+     * instances (R113-1: a cycle cannot be expanded). For the Subgraphs panel, never a reason to refuse the graph. 在目前 host 用不了的定義：
+     * 產碼會拒絕的，以及在實例循環上的（循環展不開）。給子圖面板標示，不是拒絕整張圖的理由。 */
     function unusableSubgraphs(g) {
         var _a;
         const { stagesOf, cyclic } = (0, subgraph_stages_1.subgraphGroups)(g, registry);
@@ -6410,9 +6410,9 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
         ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(...pending);
     return pending;
 }
-/** Make Single User (basic design §3.10): copy only this instance's definition for this one call. Nested children remain
+/** Make Single User (basic design §3.10): copy only this instance's definition for this one instance. Nested children remain
  * shared; the graph already owns their complete content. The copy is named by the one naming rule (node_names.ts), not
- * "… Copy". 設為唯一：只為這個呼叫節點複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
+ * "… Copy". 設為唯一：只為這個實例複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
 function independentSubgraph(network, nodeId, next) {
     var _a;
     network.assertEditable();
@@ -6473,10 +6473,10 @@ function requireSubgraph(context, id) {
 }
 function subgraphPorts(f, kind) {
     const ports = [];
-    if (kind === 'call' || kind === 'input')
+    if (kind === 'instance' || kind === 'input')
         for (const p of f.inputs)
             ports.push({ key: p.id, direction: kind === 'input' ? 'output' : 'input', type: p.type, ...(p.default === undefined ? {} : { default: p.default }) });
-    if (kind === 'call' || kind === 'output')
+    if (kind === 'instance' || kind === 'output')
         for (const p of f.outputs)
             ports.push({ key: p.id, direction: kind === 'output' ? 'input' : 'output', type: p.type, ...(p.default === undefined ? {} : { default: p.default }) });
     return ports;
@@ -6485,8 +6485,8 @@ function subgraphPresentation(f, kind) {
     // A port shows its label; with none, nothing but the type (§3.3: the id is never shown). 接孔顯示標籤；沒有就只剩型別。
     const names = (ports) => Object.fromEntries(ports.map(p => { var _a; return [p.id, (_a = p.label) !== null && _a !== void 0 ? _a : '']; }));
     return {
-        ...(kind === 'call' ? { label: f.name, descriptionKey: f.descriptionKey || 'help.function' } : {}),
-        portLabels: kind === 'call' ? { inputs: names(f.inputs), outputs: names(f.outputs) } :
+        ...(kind === 'instance' ? { label: f.name, descriptionKey: f.descriptionKey || 'help.subgraph_instance' } : {}),
+        portLabels: kind === 'instance' ? { inputs: names(f.inputs), outputs: names(f.outputs) } :
             kind === 'input' ? { outputs: names(f.inputs) } : { inputs: names(f.outputs) }
     };
 }
@@ -6507,7 +6507,7 @@ exports.instantiateSubgraph = instantiateSubgraph;
 exports.subgraphFromSelection = subgraphFromSelection;
 exports.subgraphCycle = subgraphCycle;
 exports.newSubgraphCycle = newSubgraphCycle;
-exports.callCounts = callCounts;
+exports.instanceCounts = instanceCounts;
 exports.useCounts = useCounts;
 exports.removeSubgraph = removeSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
@@ -6542,7 +6542,7 @@ function portEntry(id, type, label, value) {
 }
 function structural(graph, role) {
     const matches = graph.registry.modules.filter(m => m.structural &&
-        (role === 'call' ? !!m.reference : m.role === 'subgraph-' + role));
+        (role === 'instance' ? !!m.reference : m.role === 'subgraph-' + role));
     if (matches.length !== 1)
         throw Error('Subgraph structural module is unavailable or ambiguous');
     return matches[0];
@@ -6556,7 +6556,7 @@ function ensureSubgraphCapacity(graph, additional = 0) {
     if (!Number.isInteger(additional) || additional < 0)
         throw Error('Invalid definition count');
     if ((((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > config_1.CORE_CONFIG.subgraphDefinitions)
-        throw Object.assign(Error('At most ' + config_1.CORE_CONFIG.subgraphDefinitions + ' Subgraph definitions are supported'), { code: 'function.limit' });
+        throw Object.assign(Error('At most ' + config_1.CORE_CONFIG.subgraphDefinitions + ' subgraphs are supported'), { code: 'subgraph.limit' });
 }
 function validateSubgraphData(f) {
     if (!validId(f.id))
@@ -6621,7 +6621,7 @@ function instantiateSubgraph(network, definitionId, id, ui = {}) {
     const graph = network.graph, f = (_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === definitionId);
     if (!f)
         throw Error('Subgraph definition no longer exists');
-    const module = structural(graph, 'call');
+    const module = structural(graph, 'instance');
     const n = authored(module, id, (0, model_1.copy)(ui), module.reference(definitionId));
     // Structural graph editing also preserves interfaces whose compiler has not
     // migrated yet. Their descriptions remain the explicit editor adapter's job.
@@ -6643,7 +6643,7 @@ function subgraphFromSelection(network, selection, options) {
     const chosen = data.nodes.filter(n => selection.has(n.id)), ids = new Set(chosen.map(n => n.id));
     if (!chosen.length || chosen.length !== selection.size)
         throw Error('Invalid Subgraph selection');
-    if (!validId(options.callId) || data.nodes.some(n => n.id === options.callId))
+    if (!validId(options.instanceId) || data.nodes.some(n => n.id === options.instanceId))
         throw Error('Invalid or duplicate instance identity');
     if (chosen.some(n => {
         var _a;
@@ -6695,7 +6695,7 @@ function subgraphFromSelection(network, selection, options) {
                 const p = newPort('inputs', spec.type, ((_d = options.inputName) === null || _d === void 0 ? void 0 : _d.call(options, byId.get(e.from[0]), e.from[1], e.to[1])) || e.to[1], value);
                 inputs.push(p);
                 incoming.set(key, p.id);
-                outside.push({ ...e, to: [options.callId, p.id] });
+                outside.push({ ...e, to: [options.instanceId, p.id] });
             }
             edges.push({ ...e, from: [inputId, incoming.get(key)] });
         }
@@ -6707,7 +6707,7 @@ function subgraphFromSelection(network, selection, options) {
                 outgoing.set(key, p.id);
                 edges.push({ ...e, to: [outputId, p.id] });
             }
-            outside.push({ ...e, from: [options.callId, outgoing.get(key)] });
+            outside.push({ ...e, from: [options.instanceId, outgoing.get(key)] });
         }
     }
     const coordinate = (n, key) => { var _a, _b; return Number((_b = (_a = n.ui) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : 0); };
@@ -6728,21 +6728,21 @@ function subgraphFromSelection(network, selection, options) {
     const f = { id: options.id, name: options.name, inputs, outputs,
         graph: { nodes, edges, ...(options.ui || groups.length ? { ui: { ...(0, model_1.copy)(options.ui || {}), ...(groups.length ? { groups: (0, model_1.copy)(groups) } : {}) } } : {}) } };
     validate(graph, f);
-    const callModule = structural(graph, 'call');
-    const call = authored(callModule, options.callId, { x, y }, callModule.reference(f.id));
+    const instanceModule = structural(graph, 'instance');
+    const instance = authored(instanceModule, options.instanceId, { x, y }, instanceModule.reference(f.id));
     const owner = (_e = graph.document.subgraphs) === null || _e === void 0 ? void 0 : _e.find(f => f.graph === data), oldScope = owner ? 'fn_' + owner.id : network.id;
     insertSubgraph(graph, f);
     // A move must not collect definitions used by the nodes it is moving.
     data.nodes = data.nodes.filter(n => !selected.has(n.id));
-    data.nodes.push(call);
+    data.nodes.push(instance);
     data.edges = outside;
     scope_references_1.ScopeReferences.walk(graph.document, (ref, old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
         scope_references_1.ScopeReferences.token('fn_' + f.id, ref.source) : old);
-    return call;
+    return instance;
 }
-/** The first definition that, through its calls, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
- * a paste or a call placed inside a definition could make one, legacy clipboard.cycle). 第一份經由呼叫回到自己的定義；沒有就是 null
- * （循環展不開；貼上或在定義裡放呼叫可能造成，照舊產品 clipboard.cycle）。 */
+/** The first definition that, through its instances, reaches itself; null when none does (a cycle cannot be expanded, subgraph_compiler.ts;
+ * a paste or an instance placed inside a definition could make one, legacy clipboard.cycle). 第一份經由實例回到自己的定義；沒有就是 null
+ * （循環展不開；貼上或在定義裡放實例可能造成，照舊產品 clipboard.cycle）。 */
 function subgraphCycle(g, registry) {
     const definitions = new Map((g.subgraphs || []).map(f => [f.id, f])), active = new Set(), done = new Set();
     const visit = (id) => {
@@ -6774,8 +6774,8 @@ function subgraphCycle(g, registry) {
     }
     return null;
 }
-/** Which definitions each definition calls: the (parent, child) edges of the document's definitions. 每份定義呼叫哪些定義：父→子的邊。 */
-function callEdges(g, registry) {
+/** Which definitions each definition instantiates: the (parent, child) edges of the document's definitions. 每份定義含有哪些定義的實例：父→子的邊。 */
+function instanceEdges(g, registry) {
     var _a, _b;
     const edges = new Map();
     for (const f of g.subgraphs || []) {
@@ -6790,12 +6790,12 @@ function callEdges(g, registry) {
     return edges;
 }
 /** A cycle this edit makes (technical review TECH-8): the parent of the first new (parent, child) edge whose child reaches back to
- * it, a self-call included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
+ * it, a self-instance included; null when no new edge lies on a cycle. Cycles already there do not let new ones in, and an edit that
  * removes an old cycle while adding edges passes when those edges close none. 這次修改造成的循環：第一條新的父→子邊，子能走回父（含自己
- * 呼叫自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
+ * 實例自己）就回傳那個父；新邊都不在循環上就是 null。已有的循環不會放行新的；拆掉舊循環、新邊不成環的修改照樣通過。 */
 function newSubgraphCycle(before, after, registry) {
     var _a;
-    const old = callEdges(before, registry), now = callEdges(after, registry);
+    const old = instanceEdges(before, registry), now = instanceEdges(after, registry);
     const reaches = (from, to) => {
         var _a;
         const seen = new Set(), stack = [from];
@@ -6816,9 +6816,9 @@ function newSubgraphCycle(before, after, registry) {
                 return parent;
     return null;
 }
-/** How many call nodes point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
- * calls, not expanded uses). 每份定義被幾個呼叫節點指著，算遍文件的每張網路（§3.6 的「×N」：直接呼叫數，不是展開後的使用數）。 */
-function callCounts(graph) {
+/** How many instances point at each definition, over every network of the document (the "×N" of basic design §3.6: direct
+ * instances, not expanded uses). 每份定義被幾個實例指著，算遍文件的每張網路（§3.6 的「×N」：直接實例數，不是展開後的使用數）。 */
+function instanceCounts(graph) {
     var _a, _b, _c;
     const counts = new Map();
     for (const data of [...Object.values(graph.document.stages), ...(graph.document.subgraphs || []).map(f => f.graph)])
@@ -6829,10 +6829,10 @@ function callCounts(graph) {
         }
     return counts;
 }
-/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many call nodes point at it anywhere; `expanded` = how many
- * times it is in effect once every caller is expanded (a call inside P counts P's own expanded uses). One scan of every network;
- * the gate keeps the call graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個呼叫節點指著它；expanded＝
- * 展開所有呼叫者後實際用到幾次（P 裡的呼叫算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
+/** Each definition's uses (visual notes 2026-10-14, ×N): `direct` = how many instances point at it anywhere; `expanded` = how many
+ * times it is in effect once every enclosing instance is expanded (an instance inside P counts P's own expanded uses). One scan of every network;
+ * the gate keeps the instance graph acyclic, and a cycle found anyway counts once. 每份定義的使用數：direct＝幾個實例指著它；expanded＝
+ * 展開所有外層實例後實際用到幾次（P 裡的實例算 P 自己的展開數）。掃每張網路一次；關卡保證無循環，萬一有就只算一次。 */
 function useCounts(graph) {
     var _a, _b, _c, _d, _e, _f;
     const stage = new Map(), inside = new Map();
@@ -6844,18 +6844,18 @@ function useCounts(graph) {
                 bump(stage, ref);
         }
     for (const f of graph.document.subgraphs || []) {
-        const calls = new Map();
+        const instances = new Map();
         for (const n of f.graph.nodes) {
             const ref = (_d = (_c = graph.registry.get(n.nodeType)) === null || _c === void 0 ? void 0 : _c.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(_c, n);
             if (ref)
-                bump(calls, ref);
+                bump(instances, ref);
         }
-        if (calls.size)
-            inside.set(f.id, calls);
+        if (instances.size)
+            inside.set(f.id, instances);
     }
     const parents = new Map();
-    for (const [parent, calls] of inside)
-        for (const [child, count] of calls)
+    for (const [parent, instances] of inside)
+        for (const [child, count] of instances)
             ((_e = parents.get(child)) !== null && _e !== void 0 ? _e : parents.set(child, []).get(child)).push({ parent, count });
     const expanded = new Map(), active = new Set();
     const total = (id) => {
@@ -6875,28 +6875,28 @@ function useCounts(graph) {
     };
     const result = new Map();
     for (const f of graph.document.subgraphs || []) {
-        const direct = ((_f = stage.get(f.id)) !== null && _f !== void 0 ? _f : 0) + [...inside.values()].reduce((sum, calls) => { var _a; return sum + ((_a = calls.get(f.id)) !== null && _a !== void 0 ? _a : 0); }, 0);
+        const direct = ((_f = stage.get(f.id)) !== null && _f !== void 0 ? _f : 0) + [...inside.values()].reduce((sum, instances) => { var _a; return sum + ((_a = instances.get(f.id)) !== null && _a !== void 0 ? _a : 0); }, 0);
         result.set(f.id, { direct, expanded: total(f.id) });
     }
     return result;
 }
-/** Remove a definition nobody calls (the subgraph panel's Delete on a zero-use card, basic design §3.9); one still called is
- * refused. 刪掉沒人呼叫的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有人呼叫的拒絕。 */
+/** Remove a definition with no instances (the subgraph panel's Delete on a zero-use card, basic design §3.9); one that still has instances is
+ * refused. 刪掉沒有實例的定義（子圖面板上 0 個引用的卡片的刪除，§3.9）；還有實例的拒絕。 */
 function removeSubgraph(graph, id) {
     graph.assertEditable();
     const definitions = graph.document.subgraphs || [];
     if (!definitions.some(f => f.id === id))
         throw Error('Subgraph definition no longer exists');
-    if (callCounts(graph).get(id))
+    if (instanceCounts(graph).get(id))
         throw Object.assign(Error('The Subgraph definition is still in use'), { code: 'subgraph.inUse' });
     graph.document.subgraphs = definitions.filter(f => f.id !== id);
 }
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
  * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
- * Library). A local definition is never collected: deleting a call must not lose the person's work; it stays listed in the
+ * Library). A local definition is never collected: deleting an instance must not lose the person's work; it stays listed in the
  * subgraph panel with zero uses. Other reusable definitions and the active scope remain untouched.
- * 刪掉呼叫後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
- * 刪錯呼叫不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
+ * 刪掉實例後只回收呼叫端指名「可回收」的定義（能整份拉回來的 Library 副本；由呼叫端解析，核心不讀 Library）。本地定義永不回收：
+ * 刪錯實例不該把人做的子圖弄丟，它留在子圖面板、顯示 0 個引用。 */
 function collectSubgraphs(graph, roots, active, collectible) {
     if (!roots.length || !collectible.size)
         return;
@@ -6967,21 +6967,21 @@ function subgraphStages(graph, id, registry) {
     return subgraphStageTable(graph, registry)(id);
 }
 /** The same answer for many definitions at once (technical review TECH-3, R113-1): the definitions are grouped into the sets that
- * reach each other (strongly connected components; a definition calling itself is one), and each set is worked out once, after the
- * sets it calls. A definition's answer is every node it reaches, so the members of one cycle share an answer, and a graph opened
- * with a cycle costs the same as one without. 一次回答多份定義：定義先分成「彼此走得到」的組（強連通分量；自己呼叫自己也算一組），
- * 每組在它呼叫的組之後算一次。定義的答案是它走得到的每個節點，所以同一個循環的成員答案相同；開著循環的圖和沒有循環的一樣花費。 */
+ * reach each other (strongly connected components; a definition containing an instance of itself is one), and each set is worked out once, after the
+ * sets it instantiates. A definition's answer is every node it reaches, so the members of one cycle share an answer, and a graph opened
+ * with a cycle costs the same as one without. 一次回答多份定義：定義先分成「彼此走得到」的組（強連通分量；包含自己的實例也算一組），
+ * 每組在它用到的組之後算一次。定義的答案是它走得到的每個節點，所以同一個循環的成員答案相同；開著循環的圖和沒有循環的一樣花費。 */
 function subgraphStageTable(graph, registry) {
     const { stagesOf } = subgraphGroups(graph, registry);
     return id => [...stagesOf(id)];
 }
-/** The strongly connected components of the definitions' calls (Tarjan), with each one's stages, and which definitions lie on a
- * cycle (they cannot be expanded; amendment A8 shows them in the Subgraphs panel). 定義呼叫關係的強連通分量（Tarjan）與各自的 Stage，
+/** The strongly connected components of the definitions' instances (Tarjan), with each one's stages, and which definitions lie on a
+ * cycle (they cannot be expanded; amendment A8 shows them in the Subgraphs panel). 定義之間的實例關係的強連通分量（Tarjan）與各自的 Stage，
  * 以及哪些定義在循環上（展不開；A8 在子圖面板顯示）。 */
 function subgraphGroups(graph, registry) {
     var _a, _b, _c, _d;
     const byId = new Map(((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(item => [item.id, item]));
-    const own = new Map(), calls = new Map();
+    const own = new Map(), instances = new Map();
     for (const [id, subgraph] of byId) {
         let stages = [...exports.SUBGRAPH_STAGES];
         const children = [];
@@ -6997,7 +6997,7 @@ function subgraphGroups(graph, registry) {
                 children.push(child);
         }
         own.set(id, stages);
-        calls.set(id, children);
+        instances.set(id, children);
     }
     const index = new Map(), low = new Map(), stack = [], onStack = new Set();
     const groupOf = new Map(), groupStages = [], cyclic = new Set();
@@ -7008,7 +7008,7 @@ function subgraphGroups(graph, registry) {
         counter++;
         stack.push(id);
         onStack.add(id);
-        for (const child of calls.get(id)) {
+        for (const child of instances.get(id)) {
             if (!index.has(child)) {
                 connect(child);
                 low.set(id, Math.min(low.get(id), low.get(child)));
@@ -7025,18 +7025,18 @@ function subgraphGroups(graph, registry) {
             onStack.delete(member);
             members.push(member);
         } while (member !== id);
-        // Components finish children first, so every set this one calls already has its answer. 子分量先完成，這組呼叫的組都已有答案。
+        // Components finish children first, so every set this one instantiates already has its answer. 子分量先完成，這組用到的組都已有答案。
         const group = groupStages.length, inside = new Set(members);
         let stages = [...exports.SUBGRAPH_STAGES];
         for (const m of members) {
             stages = stages.filter(stage => own.get(m).includes(stage));
-            for (const child of calls.get(m))
+            for (const child of instances.get(m))
                 if (!inside.has(child))
                     stages = stages.filter(stage => groupStages[groupOf.get(child)].includes(stage));
             groupOf.set(m, group);
         }
         groupStages.push(stages);
-        if (members.length > 1 || calls.get(id).includes(id))
+        if (members.length > 1 || instances.get(id).includes(id))
             for (const m of members)
                 cyclic.add(m);
     };
@@ -7068,8 +7068,8 @@ class Subgraph {
         var _a;
         return (_a = this.graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === this.id);
     }
-    /** The definition's colour (basic design §3.14): a hex colour as a group's, every call shows it; null takes it away (the default
-     * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個呼叫都顯示；null 拿掉（畫面用預設顏色組）。 */
+    /** The definition's colour (basic design §3.14): a hex colour as a group's, every instance shows it; null takes it away (the default
+     * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個實例都顯示；null 拿掉（畫面用預設顏色組）。 */
     recolor(color) {
         this.graph.assertEditable();
         const f = this.data;
@@ -7083,8 +7083,8 @@ class Subgraph {
             f.color = color;
     }
     /** A new title, by the node-name rule (visual notes 27, human 2026-10-14). Calls still named by default for the old title follow it,
-     * keeping their number when it is free (Gain_2 → Blur_2); calls named by hand stay. Old graphs may hold a title outside the rule;
-     * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的呼叫跟著改，編號沒人用就保留
+     * keeping their number when it is free (Gain_2 → Blur_2); instances named by hand stay. Old graphs may hold a title outside the rule;
+     * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的實例跟著改，編號沒人用就保留
      * （Gain_2 → Blur_2）；手動取名的不動。舊圖的 Title 可能不合規則，只在改的時候檢查。 */
     rename(title) {
         var _a, _b;
@@ -7102,11 +7102,11 @@ class Subgraph {
             for (const n of data.nodes) {
                 if (n.name === undefined || ((_b = (_a = this.graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n)) !== this.id)
                     continue;
-                const number = (0, node_names_1.defaultCallNumber)(n.name, old);
+                const number = (0, node_names_1.defaultInstanceNumber)(n.name, old);
                 if (number === null)
                     continue;
                 taken.delete(n.name);
-                n.name = (0, node_names_1.newCallName)(title, taken, number);
+                n.name = (0, node_names_1.newInstanceName)(title, taken, number);
                 taken.add(n.name);
             }
         }
@@ -7194,11 +7194,11 @@ class Subgraph {
     }
 }
 exports.Subgraph = Subgraph;
-/** A call's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
+/** An instance's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
  * dropped, an opaque port keeps none, a numeric value takes its port's shape, and one that cannot falls back to the port default.
- * Values not given stay not given. One rule for an interface edit and for pasting a call copied before the interface changed.
- * 呼叫的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
- * 改接口與貼上舊呼叫用同一條規則。 */
+ * Values not given stay not given. One rule for an interface edit and for pasting an instance copied before the interface changed.
+ * 實例的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
+ * 改接口與貼上舊實例用同一條規則。 */
 function fitInstanceValues(values, ports) {
     const fitted = {};
     for (const [key, value] of Object.entries(values)) {
@@ -7660,13 +7660,19 @@ const model_1 = require("./model");
 const node_names_1 = require("./node_names");
 const text_1 = require("./text");
 const TD_VALUE = 'sgrape.builtin.td_value';
-/** The rules, oldest first. Never remove one: a graph saved long ago may still need it. 規則，舊的在前；不要刪，很久以前存的圖可能還用得到。 */
+/** The rules, oldest first. Never remove one that shipped: a graph saved long ago may still need it. A rule added before the first
+ * release (for development graphs only) carries 【發布前清理】 and is removed before release (human 2026-10-16).
+ * 規則，舊的在前；發布過的不要刪，很久以前存的圖可能還用得到。第一次發布前加的（只為開發中的圖）標【發布前清理】，發布前拿掉（人類 10-16）。 */
 exports.nodeUpgrades = Object.freeze([
-    // Refactor.64: vUV.st folded into vUV, which has U, UV and UVW outputs. vUV.st 併進 vUV（U、UV、UVW 三個輸出）。
+    // 【發布前清理】Refactor.64: vUV.st folded into vUV, which has U, UV and UVW outputs. vUV.st 併進 vUV（U、UV、UVW 三個輸出）。
     { id: 'td-value-vuv-st', nodeType: TD_VALUE, params: { entry: 'vUVSt' }, set: { params: { entry: 'vUV' } }, outputs: { out: 'uv' },
         note: (0, text_1.tr)('upgrade.vUVSt', 'vUV.st became vUV; its wires now leave from the UV output') },
     { id: 'td-value-vuv-out', nodeType: TD_VALUE, params: { entry: 'vUV' }, outputs: { out: 'uvw' },
         note: (0, text_1.tr)('upgrade.vUVOut', 'vUV now has U, UV and UVW outputs; its wires now leave from the UVW output') },
+    // 【發布前清理】Refactor.117: a subgraph's node is an instance, not a call (human 2026-10-16: the name came from the early "subgraph =
+    // function" idea, dropped when subgraphs became expansions). 子圖節點是實例、不是呼叫（名字來自早期「子圖＝函式」的構想）。
+    { id: 'subgraph-instance', nodeType: 'sgrape.builtin.subgraph_call', set: { nodeType: 'sgrape.builtin.subgraph_instance' },
+        note: (0, text_1.tr)('upgrade.subgraphInstance', 'Subgraph nodes are now called instances') },
 ]);
 const matches = (node, rule) => {
     var _a;
@@ -7711,7 +7717,7 @@ function upgradeNetwork(network, name, rule) {
  * chain of renames is followed; a rule table that never settles is a programming error.
  * 把存著的圖升級成目前的節點寫法。不改輸入；別的格式（或壞掉的）原樣回傳，交給匯入器或格式檢查。規則一直套到沒有可換為止；
  * 停不下來代表規則表寫錯了。 */
-// With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
+// 【發布前清理】With the registry, nodes that should have a name and have none are named too (Refactor.76, human 2026-10-11: graphs made
 // before names were given get them once, said like any upgrade). 有 registry 時，也替該有名字卻沒有的節點補名（R.76，人類：
 // 給名字之前做的圖補一次，和其他升級一樣會說）。
 function upgradeGraph(value, rules = exports.nodeUpgrades, registry) {

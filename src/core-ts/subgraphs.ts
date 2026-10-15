@@ -3,7 +3,7 @@ import { type, literal, reshape, fill, opaque } from './values';
 import { validPort } from './subgraph_operations';
 import type { GraphDocument } from './graph';
 import { CORE_CONFIG } from './config';
-import { validSubgraphTitle, defaultCallNumber, newCallName, namesIn } from './node_names';
+import { validSubgraphTitle, defaultInstanceNumber, newInstanceName, namesIn } from './node_names';
 
 type Direction = 'inputs'|'outputs';
 export type InterfaceEdit =
@@ -21,8 +21,8 @@ export class Subgraph {
     return this.graph.document.subgraphs?.find(f => f.id === this.id);
   }
 
-  /** The definition's colour (basic design §3.14): a hex colour as a group's, every call shows it; null takes it away (the default
-   * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個呼叫都顯示；null 拿掉（畫面用預設顏色組）。 */
+  /** The definition's colour (basic design §3.14): a hex colour as a group's, every instance shows it; null takes it away (the default
+   * colour group draws it). 定義的顏色（§3.14）：和群組一樣的色碼，每個實例都顯示；null 拿掉（畫面用預設顏色組）。 */
   recolor(color:string|null):void {
     this.graph.assertEditable();const f=this.data;
     if(!f)throw Error('Subgraph definition no longer exists');
@@ -30,8 +30,8 @@ export class Subgraph {
     if(color===null)delete f.color;else f.color=color;
   }
   /** A new title, by the node-name rule (visual notes 27, human 2026-10-14). Calls still named by default for the old title follow it,
-   * keeping their number when it is free (Gain_2 → Blur_2); calls named by hand stay. Old graphs may hold a title outside the rule;
-   * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的呼叫跟著改，編號沒人用就保留
+   * keeping their number when it is free (Gain_2 → Blur_2); instances named by hand stay. Old graphs may hold a title outside the rule;
+   * it is checked only when it changes. 新的 Title，照節點名稱規則（外觀意見 27，人類）。仍是舊 Title 預設名的實例跟著改，編號沒人用就保留
    * （Gain_2 → Blur_2）；手動取名的不動。舊圖的 Title 可能不合規則，只在改的時候檢查。 */
   rename(title:string):void {
     this.graph.assertEditable();const f=this.data;
@@ -43,9 +43,9 @@ export class Subgraph {
       const taken=namesIn(data);
       for(const n of data.nodes){
         if(n.name===undefined||this.graph.registry.get(n.nodeType)?.referencedGraph?.(n)!==this.id)continue;
-        const number=defaultCallNumber(n.name,old);
+        const number=defaultInstanceNumber(n.name,old);
         if(number===null)continue;
-        taken.delete(n.name);n.name=newCallName(title,taken,number);taken.add(n.name);
+        taken.delete(n.name);n.name=newInstanceName(title,taken,number);taken.add(n.name);
       }
     }
   }
@@ -114,11 +114,11 @@ export class Subgraph {
   }
 }
 
-/** A call's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
+/** An instance's explicit values fitted to its definition's current inputs (technical review TECH-2): a value whose port is gone is
  * dropped, an opaque port keeps none, a numeric value takes its port's shape, and one that cannot falls back to the port default.
- * Values not given stay not given. One rule for an interface edit and for pasting a call copied before the interface changed.
- * 呼叫的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
- * 改接口與貼上舊呼叫用同一條規則。 */
+ * Values not given stay not given. One rule for an interface edit and for pasting an instance copied before the interface changed.
+ * 實例的實例值對齊定義目前的輸入：接口不在就拿掉、opaque 接口不留值、數值換成接口的形狀，換不了就退回接口預設；沒給的維持沒給。
+ * 改接口與貼上舊實例用同一條規則。 */
 export function fitInstanceValues(values:Readonly<Record<string,Value>>,ports:readonly InterfacePort[]):Record<string,Value> {
   const fitted:Record<string,Value> = {};
   for (const [key,value] of Object.entries(values)) {

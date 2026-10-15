@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.117 — 子圖節點改名「子圖實例」 — 2026-10-16
+
+- 決定：design-interview Q76、GLOSSARY「子圖」。畫布上的子圖節點叫**子圖實例**（子圖上下文可省略成「實例」），子圖本身介面只叫「子圖」；程式、存檔、介面一起改。`call` 是早期「子圖＝函式」構想的殘留（v2 規格改展開後沒跟著改）。
+- 存檔：節點種類 `sgrape.builtin.subgraph_call` → `sgrape.builtin.subgraph_instance`（檔案 `nodes/subgraph_instance.ts`）；參數 `subgraphId` 不變。舊圖由 `upgrades.ts` 新規則 `subgraph-instance` 換名，標【發布前清理】；原有 vUV 兩條與補名字也補標，規則表說明改為「發布過的不刪；發布前加的標記、發布前拿掉」。CURRENT 記一條發布前清理。
+- 程式：`callCounts`→`instanceCounts`、`callEdges`→`instanceEdges`、`newCallName`／`composeCallName`／`callNameBase`／`defaultCallNumber`→`…Instance…`、`CALL_NUMBER_LIMIT`→`INSTANCE_NUMBER_LIMIT`、`callId`→`instanceId`、`callTrail`→`instanceTrail`、`session.selectCalls`→`selectSubgraphInstances`、角色／接口種類 `'call'`→`'instance'`；子圖意思的註解與測試名稱一起改（白名單逐檔替換後人工看 diff）。函式時代的代號 `help.function`／`help.functionPorts`→`help.subgraph_instance`／`help.subgraph_ports`，錯誤代號 `function.limit`→`subgraph.limit`（附帶發現：`descriptionKey` 目前整個編輯器都沒顯示，所有節點一樣，不是這兩個代號特有）。真的在呼叫函式的（`numericCall`、Clamp 等的 `call`、`host.call`）與 TD 幾何 instancing 不動。程式裡的 definition 保留。
+- 介面：中英文約十五條改成實例／instance，「定義」從介面拿掉（定位子圖、這個子圖有 N 個實例）；node-texts 四條（含過時的「本地化保留來源快照」一句）；子圖面板說明過時的「在下一輪」改成指向「選取轉為子圖」。
+- 證據：checkpoint 標籤 `checkpoint/pre-R117-instance-rename`；TD 五張圖（TOP1、REF、test、logic、perf）改名前存下，用改名前後的核心產碼對照，GLSL 全部相同，TOP1 的兩個子圖節點經升級規則換名（workspace `work/refactor/r117-instance-rename/`）。新增 `test_upgrades.cjs` 一條（Stage 與巢狀的舊名換成實例、產碼相同）。core 195／195、editor 179／179（1 略過，同前）、check 全過、locales 未翻譯 9 條同前。瀏覽器（localhost，Grape_TOP_test）：選取轉為子圖→卡片選單「打開／加一個實例到圖上／選取實例（1）」、提示「1 個實例」「還有 1 個實例；請先刪掉實例」、路徑列提示與子圖設定「1 個實例；展開後實際用到 1 次…」、「定位子圖」；TD 存的是 `subgraph_instance`；Undo 後圖內容與測試前相同（只有 `savedBy` 變成本版，送圖時照例寫上）。
+- 限制：英文介面只核對了原文與 en.json，沒有切語言實看。Grape_TOP1 沒有在編輯器開（開圖升級可能寫回），只用核心離線升級驗證。
+
 ## Refactor.116.2 — Codex 核對 R.116.1 的收尾 — 2026-10-15
 
 - 依 workspace `Review/2026-10-14-fable/Codex對Refactor116.1修正的核對.md`（R116-1 的 P1、R116-3 結案；新增一項 P2）。評閱見同資料夾 `Opus對Refactor116.1核對的評閱.md`。

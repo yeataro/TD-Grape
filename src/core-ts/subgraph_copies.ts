@@ -60,9 +60,9 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
   return pending;
 }
 
-/** Make Single User (basic design §3.10): copy only this instance's definition for this one call. Nested children remain
+/** Make Single User (basic design §3.10): copy only this instance's definition for this one instance. Nested children remain
  * shared; the graph already owns their complete content. The copy is named by the one naming rule (node_names.ts), not
- * "… Copy". 設為唯一：只為這個呼叫節點複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
+ * "… Copy". 設為唯一：只為這個實例複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
 export function independentSubgraph(network:Network,nodeId:string,next:AllocateSubgraphId):SubgraphData|null {
   network.assertEditable();
   const graph=network.graph,n=network.nodeData(nodeId);

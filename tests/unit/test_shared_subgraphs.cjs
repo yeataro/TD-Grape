@@ -61,7 +61,7 @@ test('nested compilation keeps graph ownership, bindings and diagnostics scoped 
 });
 test('subgraph validation rejects cycles and duplicate boundaries before returning code; a wire to a missing port is a ghost wire',()=>{
  const compiler=c.GrapeTopCompiler;
- const cycle=sharedGraph();cycle.subgraphs[0].graph.nodes.push(node('recurse','subgraph_call',{subgraphId:'wrapper'}));
+ const cycle=sharedGraph();cycle.subgraphs[0].graph.nodes.push(node('recurse','subgraph_instance',{subgraphId:'wrapper'}));
  assert.equal(compiler.supports(cycle),true);assert.throws(()=>compiler.compile(cycle),/reference cycle/);
  const duplicate=sharedGraph();duplicate.subgraphs[0].graph.nodes.push(node('in2','subgraph_input'));
  assert.throws(()=>compiler.compile(duplicate),/Exactly one/);
@@ -69,8 +69,8 @@ test('subgraph validation rejects cycles and duplicate boundaries before returni
  // A wire to a port that is gone is a ghost wire (Q37 1-3, TECH-2), and an unused definition does not block code (A8, TECH-3).
  // 接到已不存在接孔的線是 Ghost 線；沒被引用的定義不擋產碼。
  assert.doesNotThrow(()=>compiler.compile(unused));
- // A definition with an interface this build cannot use: its calls are ghosts, the graph still compiles, the panel reports it (Q37 1-1, A8).
- // 接口這一版用不了的定義：呼叫是 Ghost、整張圖照產、面板回報。
+ // A definition with an interface this build cannot use: its instances are ghosts, the graph still compiles, the panel reports it (Q37 1-1, A8).
+ // 接口這一版用不了的定義：實例是 Ghost、整張圖照產、面板回報。
  const unsupported=sharedGraph();unsupported.subgraphs[0].inputs[0].type='mat4';
  assert.equal(compiler.supports(unsupported),true);assert.doesNotThrow(()=>compiler.compile(unsupported));
  assert.ok([...compiler.unusableSubgraphs(unsupported)].includes('gain'));
@@ -107,11 +107,11 @@ test('boundary annotations survive expansion and malformed boundary defaults ide
 // code and is reported for the Subgraphs panel instead. 只檢查 Stage 走得到的定義；沒用到的不擋產碼，改給子圖面板。
 test('an unused definition never blocks code: deep unused chains compile, an unusable one is only reported',()=>{
  const compiler=c.GrapeTopCompiler;
- // A chain of unused definitions, each calling the next twice: expanding it would pass the 2048-node limit. 沒用到的鏈，每層呼叫下一層兩次。
+ // A chain of unused definitions, each calling the next twice: expanding it would pass the 2048-node limit. 沒用到的鏈，每層實例下一層兩次。
  const deep=sharedGraph();
  for(let i=0;i<14;i++){
   const f={id:'chain'+i,name:'Chain '+i,inputs:[port('value')],outputs:[port('result')],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}};
-  if(i<13){f.graph.nodes.push(node('a','subgraph_call',{subgraphId:'chain'+(i+1)}),node('b','subgraph_call',{subgraphId:'chain'+(i+1)}));
+  if(i<13){f.graph.nodes.push(node('a','subgraph_instance',{subgraphId:'chain'+(i+1)}),node('b','subgraph_instance',{subgraphId:'chain'+(i+1)}));
    f.graph.edges.push({id:'e1',from:['in','value'],to:['a','value']},{id:'e2',from:['a','result'],to:['b','value']},{id:'e3',from:['b','result'],to:['out','result']});}
   else f.graph.edges.push({id:'e1',from:['in','value'],to:['out','result']});
   deep.subgraphs.push(f);
@@ -121,8 +121,8 @@ test('an unused definition never blocks code: deep unused chains compile, an unu
  const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',name:'Odd'});odd.subgraphs[2].inputs[0].type='mat4';
  assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
  assert.deepEqual([...compiler.unusableSubgraphs(odd)],['odd']);
- // Called, its call is a ghost: left out, the graph still compiles (Q37 1-1). 被呼叫時，呼叫是 Ghost：跳過、整張圖照產。
- odd.stages.pixel.nodes.push(node('useOdd','subgraph_call',{subgraphId:'odd'}));
+ // Called, its instance is a ghost: left out, the graph still compiles (Q37 1-1). 被實例時，實例是 Ghost：跳過、整張圖照產。
+ odd.stages.pixel.nodes.push(node('useOdd','subgraph_instance',{subgraphId:'odd'}));
  assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
  // A ghost node inside a used definition is left out like one at the stage. 被用到的定義裡的 Ghost，和 stage 上的一樣跳過。
  const inside=sharedGraph();inside.subgraphs[0].graph.nodes.push({id:'mystery',nodeType:'unknown.node',params:{},ui:{x:0,y:0}});
@@ -132,10 +132,10 @@ test('an unused definition never blocks code: deep unused chains compile, an unu
 });
 test('the stage table remembers each definition once and never keeps a result cut short by a cycle',()=>{
  const {subgraphStages,subgraphStageTable}=c.GrapeGraph;
- // A calls B, B calls A, and A holds a pixel-only node: from B, the answer is pixel only. A→B→A，A 有只能在 pixel 的節點。
+ // A holds an instance of B, B holds an instance of A, and A holds a pixel-only node: from B, the answer is pixel only. A→B→A，A 有只能在 pixel 的節點。
  const g=sharedGraph();
- g.subgraphs=[{id:'A',name:'A',inputs:[],outputs:[],graph:{nodes:[node('b','subgraph_call',{subgraphId:'B'}),node('t','texture_sample')],edges:[]}},
-  {id:'B',name:'B',inputs:[],outputs:[],graph:{nodes:[node('a','subgraph_call',{subgraphId:'A'})],edges:[]}}];
+ g.subgraphs=[{id:'A',name:'A',inputs:[],outputs:[],graph:{nodes:[node('b','subgraph_instance',{subgraphId:'B'}),node('t','texture_sample')],edges:[]}},
+  {id:'B',name:'B',inputs:[],outputs:[],graph:{nodes:[node('a','subgraph_instance',{subgraphId:'A'})],edges:[]}}];
  const table=subgraphStageTable(g,registry);
  assert.deepEqual(plain(table('A')),['pixel']);
  assert.deepEqual(plain(table('B')),plain(subgraphStages(g,'B',registry)));
@@ -148,17 +148,17 @@ test('the panel diagnosis stays linear with an old cycle and reports the definit
  const g=sharedGraph();g.stages.pixel={nodes:[node('output','pixel_out')],edges:[]};g.subgraphs=[];
  const def=i=>({id:'d'+i,name:'D'+i,inputs:[],outputs:[],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}});
  for(let i=0;i<=20;i++){const f=def(i);
-  if(i===0)f.graph.nodes.push(node('self','subgraph_call',{subgraphId:'d0'}));
-  else f.graph.nodes.push(node('a','subgraph_call',{subgraphId:'d'+(i-1)}),node('b','subgraph_call',{subgraphId:'d'+(i-1)}));
+  if(i===0)f.graph.nodes.push(node('self','subgraph_instance',{subgraphId:'d0'}));
+  else f.graph.nodes.push(node('a','subgraph_instance',{subgraphId:'d'+(i-1)}),node('b','subgraph_instance',{subgraphId:'d'+(i-1)}));
   g.subgraphs.push(f);}
  let visits=0;const counting={...registry,get:type=>{if(type==='sgrape.builtin.subgraph_input')visits++;return registry.get(type);}};
  subgraphGroups(g,counting);
- assert.ok(visits<=g.subgraphs.length,'each definition is read once, not once per call path');
+ assert.ok(visits<=g.subgraphs.length,'each definition is read once, not once per instance path');
  const started=Date.now(),unusable=compiler.unusableSubgraphs(g);
  assert.ok(Date.now()-started<200,'one pass, well under the old 900 ms');
  assert.deepEqual([...unusable],['d0'],'only the self-calling definition is on a cycle');
- // An unused self-call no longer passes unseen. 沒用到的自環不再沒人發現。
- const loop=sharedGraph();loop.subgraphs[0].graph.nodes.push(node('again','subgraph_call',{subgraphId:'gain'}));
+ // An unused self-instance no longer passes unseen. 沒用到的自環不再沒人發現。
+ const loop=sharedGraph();loop.subgraphs[0].graph.nodes.push(node('again','subgraph_instance',{subgraphId:'gain'}));
  loop.stages.pixel.nodes=loop.stages.pixel.nodes.filter(n=>n.params.subgraphId!=='gain'&&n.params.subgraphId!=='wrapper');
  loop.stages.pixel.edges=loop.stages.pixel.edges.filter(e=>!['first','second'].includes(e.from[0])&&!['first','second'].includes(e.to[0]));
  assert.ok([...compiler.unusableSubgraphs(loop)].includes('gain'));
@@ -173,7 +173,7 @@ test('a ghost node at the stage no longer refuses a graph that has subgraphs',()
  assert.equal(compiler.supports(g),true);
  const glsl=compiler.compile(g,{reservedNames:[]}).pixel;
  assert.ok(!glsl.includes('future'),'the ghost writes nothing');
- const flat=sharedGraph();flat.subgraphs=[];flat.stages.pixel.nodes=flat.stages.pixel.nodes.filter(n=>n.nodeType!=='sgrape.builtin.subgraph_call');
+ const flat=sharedGraph();flat.subgraphs=[];flat.stages.pixel.nodes=flat.stages.pixel.nodes.filter(n=>n.nodeType!=='sgrape.builtin.subgraph_instance');
  flat.stages.pixel.edges=flat.stages.pixel.edges.filter(e=>!['first','second'].includes(e.from[0])&&!['first','second'].includes(e.to[0]));
  flat.stages.pixel.nodes.push({id:'future',nodeType:'vendor.future.node',params:{},ui:{x:0,y:0}});
  assert.equal(compiler.supports(flat),true,'and the flat graph still compiles, as before');
@@ -181,33 +181,33 @@ test('a ghost node at the stage no longer refuses a graph that has subgraphs',()
  assert.equal(compiler.supports(flat),true,'adding a first, unused definition keeps it compiling');
 });
 
-// Call names (visual notes 27, human 2026-10-14): a call is named after its definition's title plus its own number, the title's own
-// trailing number never counted up; calls still named by default follow a renamed title, hand-named ones stay; the title takes the
-// node-name rule. 呼叫名稱：照定義的 Title 加自己的編號、不把 Title 結尾的數字往上加；仍是預設名的呼叫跟著改名，手動取名的不動；Title 照節點名稱規則。
-test('a call is named after its title and follows a rename unless named by hand; a title takes the node-name rule',()=>{
- const {newCallName,validSubgraphTitle,upgradeGraph,nodeUpgrades}=c.GrapeGraph;
+// Call names (visual notes 27, human 2026-10-14): an instance is named after its definition's title plus its own number, the title's own
+// trailing number never counted up; instances still named by default follow a renamed title, hand-named ones stay; the title takes the
+// node-name rule. 實例名稱：照定義的 Title 加自己的編號、不把 Title 結尾的數字往上加；仍是預設名的實例跟著改名，手動取名的不動；Title 照節點名稱規則。
+test('an instance is named after its title and follows a rename unless named by hand; a title takes the node-name rule',()=>{
+ const {newInstanceName,validSubgraphTitle,upgradeGraph,nodeUpgrades}=c.GrapeGraph;
  const none=new Set();
- assert.equal(newCallName('Gain',none),'Gain_1');assert.equal(newCallName('Gain',new Set(['Gain_1'])),'Gain_2');
- assert.equal(newCallName('Subgraph_1',new Set(['Subgraph_1_1'])),'Subgraph_1_2','the title\'s own number is not counted up');
- assert.equal(newCallName('Soft Glow',none),'Soft_Glow_1');
- assert.equal(newCallName('增益',none),'Subgraph_1','a title that cannot make a name falls back');
+ assert.equal(newInstanceName('Gain',none),'Gain_1');assert.equal(newInstanceName('Gain',new Set(['Gain_1'])),'Gain_2');
+ assert.equal(newInstanceName('Subgraph_1',new Set(['Subgraph_1_1'])),'Subgraph_1_2','the title\'s own number is not counted up');
+ assert.equal(newInstanceName('Soft Glow',none),'Soft_Glow_1');
+ assert.equal(newInstanceName('增益',none),'Subgraph_1','a title that cannot make a name falls back');
  for(const ok of ['Gain','Soft Glow','Subgraph_1','Gain2'])assert.equal(validSubgraphTitle(ok),true,ok);
  for(const bad of ['2Gain','TD Blur','Soft  Glow',' Gain','增益','a__b',''])assert.equal(validSubgraphTitle(bad),false,bad);
- // Rename: the default-named calls follow, the hand-named one stays, a taken number moves on. 改名：預設名跟著、手動名不動、編號被占就往後。
+ // Rename: the default-named instances follow, the hand-named one stays, a taken number moves on. 改名：預設名跟著、手動名不動、編號被占就往後。
  const g=sharedGraph();
  const first=g.stages.pixel.nodes.find(n=>n.id==='first');first.name='Gain_1';
- g.stages.pixel.nodes.push(node('again','subgraph_call',{subgraphId:'gain'}),node('mine','subgraph_call',{subgraphId:'gain'}),node('blocker','float',{value:1}));
+ g.stages.pixel.nodes.push(node('again','subgraph_instance',{subgraphId:'gain'}),node('mine','subgraph_instance',{subgraphId:'gain'}),node('blocker','float',{value:1}));
  g.stages.pixel.nodes.find(n=>n.id==='again').name='Gain_2';g.stages.pixel.nodes.find(n=>n.id==='mine').name='Mine';
  g.stages.pixel.nodes.find(n=>n.id==='blocker').name='Blur_2';
  g.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name='Gain_1';
  const step=doc(g).change(m=>m.subgraph('gain').rename('Blur'));
  const name=id=>step.after.stages.pixel.nodes.find(n=>n.id===id).name;
  assert.equal(name('first'),'Blur_1');assert.equal(name('again'),'Blur_3','Blur_2 is taken by another node');assert.equal(name('mine'),'Mine');
- assert.equal(step.after.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name,'Blur_1','calls inside other definitions follow too');
+ assert.equal(step.after.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name,'Blur_1','instances inside other definitions follow too');
  assert.equal(step.after.subgraphs[0].name,'Blur');
  assert.throws(()=>doc(g).change(m=>m.subgraph('gain').rename('2Blur')),e=>e.code==='subgraph.title');
- // An old graph's title outside the rule opens as it is; its calls were named with the fallback and follow a valid rename.
- // 舊圖的 Title 不合規則照開；它的呼叫用退路命名，改成合法 Title 時跟著改。
+ // An old graph's title outside the rule opens as it is; its instances were named with the fallback and follow a valid rename.
+ // 舊圖的 Title 不合規則照開；它的實例用退路命名，改成合法 Title 時跟著改。
  const old=sharedGraph();old.subgraphs[0].name='增益';delete old.stages.pixel.nodes.find(n=>n.id==='first').name;
  const read=upgradeGraph(old,nodeUpgrades,registry).graph;
  assert.equal(read.stages.pixel.nodes.find(n=>n.id==='first').name,'Subgraph_1','opening names it by the fallback');
@@ -216,32 +216,32 @@ test('a call is named after its title and follows a rename unless named by hand;
 });
 
 // Codex R116-1, R116-2: a default name is only one the maker would make, so hand names that merely end in digits stay and renaming
-// always ends; making and recognising share one rule, so long titles and their 10th call still follow. 預設名只認產生器會做出的：
-// 只是結尾帶數字的手動名不動、改名一定會結束；產生與辨認同一條規則，長 Title 與第 10 個呼叫照樣跟著改。
-test('hand names ending in digits stay, renaming always ends, and long titles keep their calls in step',()=>{
- const {newCallName}=c.GrapeGraph;
- const withCalls=(title,names)=>{const g=sharedGraph();g.subgraphs[0].name=title;g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='first');
-  names.forEach((name,i)=>{const n=node('c'+i,'subgraph_call',{subgraphId:'gain'});n.name=name;g.stages.pixel.nodes.push(n);});return g;};
+// always ends; making and recognising share one rule, so long titles and their 10th instance still follow. 預設名只認產生器會做出的：
+// 只是結尾帶數字的手動名不動、改名一定會結束；產生與辨認同一條規則，長 Title 與第 10 個實例照樣跟著改。
+test('hand names ending in digits stay, renaming always ends, and long titles keep their instances in step',()=>{
+ const {newInstanceName}=c.GrapeGraph;
+ const withInstances=(title,names)=>{const g=sharedGraph();g.subgraphs[0].name=title;g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='first');
+  names.forEach((name,i)=>{const n=node('c'+i,'subgraph_instance',{subgraphId:'gain'});n.name=name;g.stages.pixel.nodes.push(n);});return g;};
  const after=(g,title)=>doc(g).change(m=>m.subgraph('gain').rename(title)).after.stages.pixel.nodes.filter(n=>/^c\d+$/.test(n.id)).map(n=>n.name);
- assert.deepEqual(plain(after(withCalls('Gain',['Gain_0','Gain_01','Gain_001','Gain_Mine','Gain_2']),'Blur')),['Gain_0','Gain_01','Gain_001','Gain_Mine','Blur_2']);
+ assert.deepEqual(plain(after(withInstances('Gain',['Gain_0','Gain_01','Gain_001','Gain_Mine','Gain_2']),'Blur')),['Gain_0','Gain_01','Gain_001','Gain_Mine','Blur_2']);
  // Huge numbers are hand names, and the rename returns (it used to spin). 超大數字是手動名，改名會返回（以前會卡住）。
- const huge=withCalls('Gain',['Gain_1000000000000000000000','Gain_9007199254740992']);huge.stages.pixel.nodes.push({...node('blocker','float',{value:1}),name:'Blur_9007199254740992'});
+ const huge=withInstances('Gain',['Gain_1000000000000000000000','Gain_9007199254740992']);huge.stages.pixel.nodes.push({...node('blocker','float',{value:1}),name:'Blur_9007199254740992'});
  const started=Date.now();
  assert.deepEqual(plain(after(huge,'Blur')),['Gain_1000000000000000000000','Gain_9007199254740992']);
  assert.ok(Date.now()-started<500);
- // A 46-letter title: the 10th call is shortened by the maker and still follows. 46 字 Title：第 10 個呼叫被縮短，照樣跟著改。
- const long='A'.repeat(46),names=[];const taken=new Set();for(let i=0;i<10;i++){const name=newCallName(long,taken);names.push(name);taken.add(name);}
+ // A 46-letter title: the 10th instance is shortened by the maker and still follows. 46 字 Title：第 10 個實例被縮短，照樣跟著改。
+ const long='A'.repeat(46),names=[];const taken=new Set();for(let i=0;i<10;i++){const name=newInstanceName(long,taken);names.push(name);taken.add(name);}
  assert.equal(names[9],'A'.repeat(45)+'_10');
- assert.deepEqual(plain(after(withCalls(long,names),'Blur')),Array.from({length:10},(_,i)=>'Blur_'+(i+1)));
+ assert.deepEqual(plain(after(withInstances(long,names),'Blur')),Array.from({length:10},(_,i)=>'Blur_'+(i+1)));
  // Valid titles the old check dropped: 47 or 48 letters, a trailing underscore. 舊檢查會放棄的合法 Title：47、48 字，結尾底線。
- assert.equal(newCallName('A'.repeat(47),new Set()),'A'.repeat(46)+'_1');
- assert.equal(newCallName('A'.repeat(48),new Set()),'A'.repeat(46)+'_1');
- assert.equal(newCallName('Gain_',new Set()),'Gain_1');
+ assert.equal(newInstanceName('A'.repeat(47),new Set()),'A'.repeat(46)+'_1');
+ assert.equal(newInstanceName('A'.repeat(48),new Set()),'A'.repeat(46)+'_1');
+ assert.equal(newInstanceName('Gain_',new Set()),'Gain_1');
 });
 
 // Codex R116.1-1: a name made on a rename is always one that is recognised as default, so a second rename still follows.
 // 改名時做出的名稱一定被認作預設名，第二次改名照樣跟著。
-test('a call renamed into a taken number gets the smallest free one and keeps following later renames',()=>{
+test('an instance renamed into a taken number gets the smallest free one and keeps following later renames',()=>{
  const g=sharedGraph();g.stages.pixel.nodes.find(n=>n.id==='first').name='Gain_1000000';
  g.stages.pixel.nodes.push({...node('blocker','float',{value:1}),name:'Blur_1000000'});
  const once=doc(g).change(m=>m.subgraph('gain').rename('Blur')).after;

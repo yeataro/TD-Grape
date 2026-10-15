@@ -14,8 +14,8 @@ test('value literals reject invalid boolean/integer state and preserve full uint
 test('boolean subgraph ports, manual reshape and If connections retain ownership and fixed outputs',()=>{
  const row=logicCases().find(r=>r.key==='if'&&r.type==='float'),g=structuredClone(row.graph);
  g.subgraphs=[{id:'logic',name:'Logic',scope:'local',stages:['pixel'],inputs:[port('condition','bool',false)],outputs:[port('result','bool',false)],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[edge('in','out','condition','result')]}}];
- g.stages.pixel.nodes.push(node('flag','scalar',{type:'bool',value:true}),node('call','subgraph_call',{subgraphId:'logic'}));
- g.stages.pixel.edges.push(edge('flag','call','out','condition'),edge('call','operation','result','condition'));
+ g.stages.pixel.nodes.push(node('flag','scalar',{type:'bool',value:true}),node('instance','subgraph_instance',{subgraphId:'logic'}));
+ g.stages.pixel.edges.push(edge('flag','instance','out','condition'),edge('instance','operation','result','condition'));
  assert.equal(compiler.supports(g),true);assert.match(compiler.compile(g).pixel,/bool/);
  const step=new GraphDocument(g,registry).change(d=>{d.subgraph('logic').editInterface('inputs',{kind:'update',id:'condition',patch:{type:'int'}});});
  assert.equal(step.after.subgraphs[0].inputs[0].default,0);

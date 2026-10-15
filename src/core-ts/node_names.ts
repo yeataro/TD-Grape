@@ -52,51 +52,51 @@ export function newNodeName(label: string, taken: ReadonlySet<string>): string {
 export function validSubgraphTitle(title: string): boolean {
   return title.length > 0 && title === typedName(title).trim() && !/ {2}/.test(title) && validNodeName(storedName(title));
 }
-/** A call's default name for a base and a number: base + _N within the name limit — the base is shortened, never the number, and a
+/** An instance's default name for a base and a number: base + _N within the name limit — the base is shortened, never the number, and a
  * trailing underscore left by shortening is dropped. Making and recognising default names both go through here, so a name this makes is
- * always recognised (Codex R116-2). 某個底與編號的呼叫預設名：底＋_N，不超過名稱上限——縮短的是底、不是編號，縮短後留下的結尾底線拿掉。
+ * always recognised (Codex R116-2). 某個底與編號的實例預設名：底＋_N，不超過名稱上限——縮短的是底、不是編號，縮短後留下的結尾底線拿掉。
  * 產生與辨認預設名都經過這裡，產生出來的一定認得回來。 */
-/** The largest number a default call name carries: the maker picks the smallest free number, so it never passes a network's node
- * count; far above that, and small enough that counting on from it stays exact. 預設呼叫名最大的編號：產生器取最小的空號，不會超過網路的
+/** The largest number a default instance name carries: the maker picks the smallest free number, so it never passes a network's node
+ * count; far above that, and small enough that counting on from it stays exact. 預設實例名最大的編號：產生器取最小的空號，不會超過網路的
  * 節點數；這個值遠高於此，又小到往上數一定精確。 */
-const CALL_NUMBER_LIMIT = 1_000_000;
-function composeCallName(base: string, n: number): string {
+const INSTANCE_NUMBER_LIMIT = 1_000_000;
+function composeInstanceName(base: string, n: number): string {
   const suffix = '_' + n;
   return base.slice(0, NAME_LIMIT - suffix.length).replace(/_+$/, '') + suffix;
 }
-/** The base of a subgraph call's default name: its definition's title as a stored name without trailing underscores, or Subgraph when
+/** The base of a subgraph instance's default name: its definition's title as a stored name without trailing underscores, or Subgraph when
  * that cannot make a name (an old graph). The check is on a composed name, so a long title is shortened rather than dropped (R116-2).
- * 子圖呼叫預設名的底：定義的 Title 存成名稱、去掉結尾底線；做不出名稱（舊圖）才用 Subgraph。檢查的是組好的名稱，長 Title 是縮短而不是放棄。 */
-export function callNameBase(title: string): string {
+ * 子圖實例預設名的底：定義的 Title 存成名稱、去掉結尾底線；做不出名稱（舊圖）才用 Subgraph。檢查的是組好的名稱，長 Title 是縮短而不是放棄。 */
+export function instanceNameBase(title: string): string {
   const base = storedName(title).replace(/_+$/, '');
-  return base && validNodeName(composeCallName(base, 1)) ? base : 'Subgraph';
+  return base && validNodeName(composeInstanceName(base, 1)) ? base : 'Subgraph';
 }
-/** A new call's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the calls of Subgraph_1 are
- * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). `keep`: a renamed call keeps its number when
- * that is free; otherwise, as for a new call, the smallest free number from 1 — never counting on past a number, so every name made
- * here is one defaultCallNumber recognises (it stays at most the network's node count + 1; Codex R116.1-1). The search is bounded.
- * 新呼叫的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。keep：改名的呼叫編號沒人用就保留；否則和新呼叫一樣取從 1 起最小的空號
- * ——不從某個編號往後數，所以這裡做出的名稱一定被 defaultCallNumber 認得（最多是網路節點數＋1）。找的範圍有上限。 */
-export function newCallName(title: string, taken: ReadonlySet<string>, keep?: number): string {
-  const base = callNameBase(title);
-  if (keep !== undefined && Number.isInteger(keep) && keep > 0 && keep <= CALL_NUMBER_LIMIT) {
-    const kept = composeCallName(base, keep);
+/** A new instance's name: the base, then _1, _2… — the title's own trailing number is never counted up, so the instances of Subgraph_1 are
+ * Subgraph_1_1, Subgraph_1_2 and never look like another definition (human 2026-10-14). `keep`: a renamed instance keeps its number when
+ * that is free; otherwise, as for a new instance, the smallest free number from 1 — never counting on past a number, so every name made
+ * here is one defaultInstanceNumber recognises (it stays at most the network's node count + 1; Codex R116.1-1). The search is bounded.
+ * 新實例的名稱：底加 _1、_2…——Title 結尾的數字不往上加（人類）。keep：改名的實例編號沒人用就保留；否則和新實例一樣取從 1 起最小的空號
+ * ——不從某個編號往後數，所以這裡做出的名稱一定被 defaultInstanceNumber 認得（最多是網路節點數＋1）。找的範圍有上限。 */
+export function newInstanceName(title: string, taken: ReadonlySet<string>, keep?: number): string {
+  const base = instanceNameBase(title);
+  if (keep !== undefined && Number.isInteger(keep) && keep > 0 && keep <= INSTANCE_NUMBER_LIMIT) {
+    const kept = composeInstanceName(base, keep);
     if (!taken.has(kept) && validNodeName(kept)) return kept;
   }
   for (let n = 1; n <= taken.size + 1; n++) {
-    const name = composeCallName(base, n);
+    const name = composeInstanceName(base, n);
     if (!taken.has(name) && validNodeName(name)) return name;
   }
-  throw Error('No free name for a subgraph call');
+  throw Error('No free name for a subgraph instance');
 }
-/** The number of a call still named by default for this title, else null: only a name the maker would have made — a plain number
- * from 1 (no leading zero, at most CALL_NUMBER_LIMIT) whose composed name is exactly this one (Codex R116-1, R116-2). 仍是這個 Title 預設名的呼叫
+/** The number of an instance still named by default for this title, else null: only a name the maker would have made — a plain number
+ * from 1 (no leading zero, at most INSTANCE_NUMBER_LIMIT) whose composed name is exactly this one (Codex R116-1, R116-2). 仍是這個 Title 預設名的實例
  * 編號，不是就 null：只認產生器會做出的名稱——從 1 起的一般數字（無前導零、安全整數），組出來和這個名稱完全相同。 */
-export function defaultCallNumber(name: string, title: string): number | null {
+export function defaultInstanceNumber(name: string, title: string): number | null {
   const match = /_([1-9]\d*)$/.exec(name);
   if (!match) return null;
   const n = Number(match[1]);
-  return n <= CALL_NUMBER_LIMIT && composeCallName(callNameBase(title), n) === name ? n : null;
+  return n <= INSTANCE_NUMBER_LIMIT && composeInstanceName(instanceNameBase(title), n) === name ? n : null;
 }
 /** The names already used in one network. 一張網路裡已用的名稱。 */
 export const namesIn = (network: NetworkData) => new Set(network.nodes.flatMap(node => node.name === undefined ? [] : [node.name]));
@@ -114,9 +114,9 @@ export function nameMissing(graph: Graph, registry: Registry): NamedNode[] {
     const taken = namesIn(data);
     for (const node of data.nodes) {
       if (node.name !== undefined || !takesName(registry, node.nodeType)) continue;
-      // A subgraph call is named after its definition's title (visual notes 27). 子圖呼叫照定義的 Title 命名。
+      // A subgraph instance is named after its definition's title (visual notes 27). 子圖實例照定義的 Title 命名。
       const ref = registry.get(node.nodeType)!.referencedGraph?.(node), title = ref === undefined ? undefined : graph.subgraphs?.find(f => f.id === ref)?.name;
-      const name = title !== undefined ? newCallName(title, taken) : newNodeName(String(registry.get(node.nodeType)!.catalog.definition.label), taken);
+      const name = title !== undefined ? newInstanceName(title, taken) : newNodeName(String(registry.get(node.nodeType)!.catalog.definition.label), taken);
       node.name = name; taken.add(name);
       named.push({ network, node: node.id, name, note: tr('upgrade.named', 'Given the name {name}', { name: shownName(name) }) });
     }

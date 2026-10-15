@@ -47,12 +47,12 @@ const saved = graph => ({ ...clone(graph), savedBy: '9.9.9 Test' });
 // `initial`: the graph TD holds when the page opens (default: the fixture). initial：開頁時 TD 拿著的圖（預設是 fixture）。
 function open(t, request, retry = 60000, generator, live, initial) {
   let remote = { document: JSON.stringify(initial ?? fixture()), revision: 4, targetId: target };
-  const calls = [];
+  const instances = [];
   const loaded = () => ({ state: clone(remote), format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
     frontendCompiler: { protocol: GrapeTopCompiler.protocol, catalogHash: bootstrap.catalogHash, required: true } });
   const fetcher = async (url, options) => {
     const action = url.split('?')[0].split('/').at(-1), body = options.body && JSON.parse(options.body);
-    calls.push({ action, body });
+    instances.push({ action, body });
     const result = request ? await request(action, body, { get: loaded, set: state => { remote = state; } }) :
       action === 'state' ? loaded() : action === 'save' ? { saved: 'test.toe' } : action === 'live' ? { ok: true, applied: true } :
       { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
@@ -60,7 +60,7 @@ function open(t, request, retry = 60000, generator, live, initial) {
   };
   const session = new EditorSession(new HostClient(target, '', fetcher, 20000, live), bootstrap, loaded(), 60000, retry, generator, '9.9.9 Test');
   t.after(() => session.dispose());
-  return { session, calls, loaded };
+  return { session, instances, loaded };
 }
 const setValue = (net, id, value) => {
   const node = net.node(id), command = node.definition.presentation(node.data, net.context).value.valueCommand;
@@ -89,15 +89,15 @@ test('one real transaction publishes one aggregate; untouched nodes/data/edges r
 test('bulk delete and history each publish once, without dangling intermediate endpoints', t => {
   const { session } = open(t);
   const before = clone(session.graph());
-  let calls = 0; session.subscribe(() => {
-    calls++;
+  let instances = 0; session.subscribe(() => {
+    instances++;
     const view = session.snapshot().projection, ids = new Set(view.nodes.map(n => n.id));
     assert.ok(view.edges.every(e => ids.has(e.source) && ids.has(e.target)));
   });
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => ['color', 'a'].includes(n.id)), edges: [] });
-  assert.equal(calls, 1);
-  session.history(false); assert.equal(calls, 2); assert.deepEqual(clone(session.graph()), before);
-  session.history(true); assert.equal(calls, 3); assert.equal(session.graph().stages.pixel.edges.length, 0);
+  assert.equal(instances, 1);
+  session.history(false); assert.equal(instances, 2); assert.deepEqual(clone(session.graph()), before);
+  session.history(true); assert.equal(instances, 3); assert.equal(session.graph().stages.pixel.edges.length, 0);
 });
 
 test('no-op and failed candidate never publish a new document projection or consume redo', t => {
@@ -115,11 +115,11 @@ test('no-op and failed candidate never publish a new document projection or cons
 });
 
 test('RF selection, measurement and dragging never enter serialization or write per frame', t => {
-  const { session, calls } = open(t), before = clone(session.graph());
+  const { session, instances } = open(t), before = clone(session.graph());
   const data = session.snapshot().projection.nodes.find(n => n.id === 'a').data;
   session.nodeChanges([{ type: 'select', id: 'a', selected: true }, { type: 'dimensions', id: 'a', dimensions: { width: 250, height: 90 } },
     { type: 'position', id: 'a', position: { x: 55, y: 60 }, dragging: true }]);
-  assert.deepEqual(clone(session.graph()), before); assert.equal(calls.length, 0);
+  assert.deepEqual(clone(session.graph()), before); assert.equal(instances.length, 0);
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 60, y: 60 }, dragging: false }]);
   assert.equal(session.snapshot().version, 1);
   assert.equal(session.snapshot().projection.nodes.find(n => n.id === 'a').data, data);
@@ -129,7 +129,7 @@ test('RF selection, measurement and dragging never enter serialization or write 
 
 test('late apply acknowledges its snapshot then sends latest edits, never overwriting local state', async t => {
   const gate = deferred(); let count = 0;
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     if (++count === 1) await gate.promise;
     const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
@@ -138,10 +138,10 @@ test('late apply acknowledges its snapshot then sends latest edits, never overwr
   const pending = session.flush();
   session.transact('second', net => setValue(net, 'a', 8));
   gate.resolve(); await pending;
-  assert.equal(calls.length, 2); assert.equal(calls[1].body.revision, 5);
+  assert.equal(instances.length, 2); assert.equal(instances[1].body.revision, 5);
   assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === 'a').params.value, 8);
   assert.equal(session.snapshot().dirty, false);
-  for (const { body } of calls) {
+  for (const { body } of instances) {
     assert.equal(body.format, 'grape-next-1');
     assert.equal(body.editorVersion, '9.9.9 Test');
     assert.deepEqual(clone(GrapeTopCompiler.compile(JSON.parse(body.document), bootstrap.typeContract.glslCode)), JSON.parse(body.runtime));
@@ -151,18 +151,18 @@ test('late apply acknowledges its snapshot then sends latest edits, never overwr
 
 test('undo during apply is delivered after the acknowledgement and keeps graph metadata', async t => {
   const gate = deferred(); let count = 0;
-  const { session, calls } = open(t, async (_action, body) => {
+  const { session, instances } = open(t, async (_action, body) => {
     if (++count === 1) await gate.promise;
     return { state: { document: body.document, revision: body.revision + 1 } };
   });
   const before = clone(session.graph()); session.transact('edit', net => setValue(net, 'a', 20));
   const pending = session.flush(); session.history(false); gate.resolve(); await pending;
-  assert.equal(calls.length, 2); assert.deepEqual(clone(session.graph()), before);
+  assert.equal(instances.length, 2); assert.deepEqual(clone(session.graph()), before);
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().redo, true);
 });
 
 test('lost response blocks replay; read-only check can confirm the previously accepted snapshot', async t => {
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     remote.set({ document: body.document, revision: body.revision + 1, targetId: target });
     throw Error('response lost');
@@ -171,8 +171,8 @@ test('lost response blocks replay; read-only check can confirm the previously ac
   // A transport failure reads as "can't reach TD", but the write may have landed: no replay.
   assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'unreachable');
   assert.equal(session.snapshot().dirty, true);
-  await session.flush(); assert.equal(calls.length, 1);
-  await session.check(); assert.equal(calls.length, 2); assert.equal(calls[1].action, 'state');
+  await session.flush(); assert.equal(instances.length, 1);
+  await session.check(); assert.equal(instances.length, 2); assert.equal(instances[1].action, 'state');
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 5);
 });
 
@@ -204,7 +204,7 @@ test('a build change on apply is not a conflict, and replies say which TD answer
 // 換新 Grape ID 只在所有修改都已送到 TD 之後。
 test('a new Grape ID is asked only when nothing is left unsent', async t => {
   let down = false;
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (down) return notResponding();
     if (action === 'identity') return { targetId: 'd'.repeat(32) };
     return strictHost()(action, body, remote);
@@ -212,11 +212,11 @@ test('a new Grape ID is asked only when nothing is left unsent', async t => {
   down = true; session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
   assert.equal(await session.renewId(), null, 'refused while a change is not in TD');
   assert.equal(session.snapshot().message.code, 'identity.renewPending');
-  assert.ok(!calls.some(c => c.action === 'identity'));
+  assert.ok(!instances.some(c => c.action === 'identity'));
   down = false; await session.check();
   await until(() => !session.snapshot().dirty);
   assert.equal(await session.renewId(), 'd'.repeat(32));
-  assert.equal(calls.filter(c => c.action === 'identity').length, 1);
+  assert.equal(instances.filter(c => c.action === 'identity').length, 1);
 });
 
 // Host that enforces baseRevision like host_api (409 on a stale revision).
@@ -233,25 +233,25 @@ const otherEntryEdits = remote => {
 
 test('migration convenience: overwrite rebases the draft on the latest TD revision only after a conflict', async t => {
   let external = true;
-  const { session, calls, loaded } = open(t, strictHost(remote => { if (external) { external = false; otherEntryEdits(remote); } }));
-  await session.overwrite(); assert.equal(calls.length, 0);
+  const { session, instances, loaded } = open(t, strictHost(remote => { if (external) { external = false; otherEntryEdits(remote); } }));
+  await session.overwrite(); assert.equal(instances.length, 0);
   session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
   assert.equal(session.snapshot().phase, 'conflict'); assert.equal(session.snapshot().dirty, true);
   const draft = clone(session.graph());
   await session.overwrite();
-  assert.deepEqual(calls.map(c => c.action), ['apply', 'state', 'apply']); assert.equal(calls[2].body.revision, 5);
+  assert.deepEqual(instances.map(c => c.action), ['apply', 'state', 'apply']); assert.equal(instances[2].body.revision, 5);
   assert.deepEqual(doc(loaded().state), saved(draft)); assert.equal(loaded().state.revision, 6);
   assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 6);
 });
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
-  const { session, calls, loaded } = open(t, strictHost());
+  const { session, instances, loaded } = open(t, strictHost());
   // A definition from a Library is outside this version (amendment 2 B7; Refactor.110). 來自 Library 的定義這一版不支援。
   const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
-  assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
-  assert.deepEqual(JSON.parse(calls[1].body.runtime), clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
+  assert.deepEqual(instances.map(c => c.action), ['state', 'apply']); assert.equal(instances[1].body.revision, 4);
+  assert.deepEqual(JSON.parse(instances[1].body.runtime), clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
   assert.deepEqual(doc(loaded().state), saved(bootstrap.defaultDocument.graph)); assert.equal(loaded().state.revision, 5);
 });
 
@@ -277,14 +277,14 @@ test('migration convenience: overwrite still conflicts if TD changes again befor
 const flaky = () => { const g = { fail: false, key: graph => GrapeTopCompiler.key(graph),
   compile: (...args) => { if (g.fail) throw Error('forced failure'); return GrapeTopCompiler.compile(...args); } }; return g; };
 test('failed code generation still saves the document; TD keeps the last known good Shader', async t => {
-  const generator = flaky(), { session, calls } = open(t, undefined, 60000, generator);
+  const generator = flaky(), { session, instances } = open(t, undefined, 60000, generator);
   generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
   await session.flush();
-  assert.equal(calls.length, 1); assert.equal(calls[0].body.runtime, null);
-  assert.deepEqual(JSON.parse(calls[0].body.document), saved(session.graph()));
+  assert.equal(instances.length, 1); assert.equal(instances[0].body.runtime, null);
+  assert.deepEqual(JSON.parse(instances[0].body.document), saved(session.graph()));
   assert.equal(session.snapshot().dirty, false); assert.match(zh(session.snapshot().message), /產碼失敗/);
   generator.fail = false; session.history(false); await session.flush();
-  assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
+  assert.equal(instances.length, 2); assert.notEqual(instances[1].body.runtime, null);
 });
 
 // GLSL that does not compile in TD (Refactor.34): TD still saves the graph and keeps the last good
@@ -292,13 +292,13 @@ test('failed code generation still saves the document; TD keeps the last known g
 // failing program. TD 編譯失敗：圖照存、Shader 停在上次成功版；編輯器如實顯示、不重送同一個失敗的程式。
 test('GLSL that fails in TD: the graph is delivered, the failing program is not resent until it changes', async t => {
   let failing = true;
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state);
     return { state, shaderError: body.runtime && failing ? 'ERROR: 0:12: syntax error' : null };
   });
   session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
-  assert.notEqual(calls.at(-1).body.runtime, null);
+  assert.notEqual(instances.at(-1).body.runtime, null);
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 5);
   // The summary is the first line (the status line shows it); TD's log follows. 摘要在第一行，TD 紀錄在後。
   assert.match(zh(session.snapshot().message), /^GLSL 在 TD 編譯失敗。圖已存到 TD[^\n]*\nERROR: 0:12: syntax error$/);
@@ -307,14 +307,14 @@ test('GLSL that fails in TD: the graph is delivered, the failing program is not 
   assert.deepEqual([failed.level, failed.source, failed.message.code], ['error', 'sync', 'sync.glslFailedInTd']);
   assert.doesNotMatch(zh(session.snapshot().message), /拒絕/);
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
-  assert.equal(calls.at(-1).body.runtime, null, 'same failing program: graph only');
+  assert.equal(instances.at(-1).body.runtime, null, 'same failing program: graph only');
   assert.match(zh(session.snapshot().message), /先前在 TD 編譯失敗/);
   failing = false;
   session.transact('value', net => setValue(net, 'a', 4)); await session.flush();
-  assert.notEqual(calls.at(-1).body.runtime, null, 'a changed program is sent again');
+  assert.notEqual(instances.at(-1).body.runtime, null, 'a changed program is sent again');
   assert.equal(zh(session.snapshot().message), '已套用 TD；專案尚需保存');
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 320, y: 90 }, dragging: false }]); await session.flush();
-  assert.equal(calls.at(-1).body.runtime, null, 'now running: layout only again');
+  assert.equal(instances.at(-1).body.runtime, null, 'now running: layout only again');
 });
 
 test('a host refusal names TD-Grape, not TD', async t => {
@@ -326,7 +326,7 @@ test('a host refusal names TD-Grape, not TD', async t => {
 });
 
 test('wrong producer and out-of-slice graphs reject without changing the host', t => {
-  const { session, calls, loaded } = open(t), state = loaded();
+  const { session, instances, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), error => /版本不一致/.test(zh(errorText(error))));
   // A definition from a Library is outside this version and is named (amendment 2 B7; Refactor.110). Every registered node is in the
@@ -339,7 +339,7 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));
   const newer = loaded(); withDoc(newer.state, graph => { graph.version = 2; });
   assert.throws(() => new EditorSession(session.host, bootstrap, newer), error => !(error instanceof UnsupportedGraphError) && /較新版的 Grape/.test(zh(errorText(error))));
-  assert.equal(calls.length, 0);
+  assert.equal(instances.length, 0);
 });
 
 test('explicit geometry notification is limited to internal handle changes; size is RF-owned', () => {
@@ -520,8 +520,8 @@ test('every offered node can be added, wired to the output and compiled', t => {
   };
   const failures = [];
   // The reference node needs a declaration; its own test below covers it. 引用宣告節點需要宣告，另有測試。
-  // Structural nodes (a subgraph call and its boundaries) need a definition; the subgraph tests below cover them (Refactor.110).
-  // 結構性節點（子圖呼叫與邊界）需要定義；下面的子圖測試涵蓋（R.110）。
+  // Structural nodes (a subgraph instance and its boundaries) need a definition; the subgraph tests below cover them (Refactor.110).
+  // 結構性節點（子圖實例與邊界）需要定義；下面的子圖測試涵蓋（R.110）。
   for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value') && !u.includes('.subgraph_'))) {
     const { session } = open(t);
     session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
@@ -544,7 +544,7 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   // Stage outputs are never offered (Q42); the reference nodes are made from the Sources panel (Q45).
   // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
   // Structural nodes are made from a definition, never from the menu (Refactor.110; node_module.ts). 結構性節點從定義來，不從選單來。
-  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value', 'sgrape.builtin.subgraph_call', 'sgrape.builtin.subgraph_input', 'sgrape.builtin.subgraph_output'];
+  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value', 'sgrape.builtin.subgraph_instance', 'sgrape.builtin.subgraph_input', 'sgrape.builtin.subgraph_output'];
   assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
   // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
@@ -558,7 +558,7 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
 // graph keeps only type and fixedType (never which entry). 固定入口：鎖型別、以型別為標題、沒有型別選單；圖只存 type 與 fixedType。
 test('a fixed entry makes a locked node that compiles; the graph does not record the entry', async t => {
   const { creatableEntries } = load(path.join(root, 'src/editor-react/core.ts'));
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   for (const label of ['vec3', 'bvec2', 'int']) {
     const entry = creatableEntries.find(e => e.label === label);
     session.add(entry.uuid, { x: 0, y: 0 }, entry.params);
@@ -574,7 +574,7 @@ test('a fixed entry makes a locked node that compiles; the graph does not record
   assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === added[0].id).params.type, 'vec3', 'the core refuses another type');
   session.connect({ source: added[0].id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
-  assert.match(JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime).pixel, /vec3\(0\.0, 0\.0, 0\.0\)/);
+  assert.match(JSON.parse(instances.filter(c => c.action === 'apply').at(-1).body.runtime).pixel, /vec3\(0\.0, 0\.0, 0\.0\)/);
 });
 
 // A legacy fixed entry (Vector locked to vec2) opens; changing its type is refused by the core.
@@ -592,10 +592,10 @@ test('legacy fixed-type Vector opens and keeps its locked type', t => {
 // Path rebuild A1 (design-interview Q38): code generation follows each finished edit, not delivery.
 // 產碼跟著每次修改完成，不再等送出；TD 不在時 GLSL 與錯誤照樣更新。
 test('GLSL is generated on open and after every edit, before anything is sent', t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   assert.equal(session.snapshot().glsl, GrapeTopCompiler.compile(session.graph(), bootstrap.typeContract.glslCode).pixel);
   session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
-  assert.equal(calls.length, 0, 'nothing sent yet');
+  assert.equal(instances.length, 0, 'nothing sent yet');
   assert.equal(session.snapshot().glsl, GrapeTopCompiler.compile(session.graph(), bootstrap.typeContract.glslCode).pixel);
 });
 
@@ -610,37 +610,37 @@ test('TD away: GLSL and code generation errors still update while sending is sto
 });
 
 test('a code generation failure is reported at edit time; the last good GLSL stays visible', t => {
-  const generator = flaky(), { session, calls } = open(t, undefined, 60000, generator), good = session.snapshot().glsl;
+  const generator = flaky(), { session, instances } = open(t, undefined, 60000, generator), good = session.snapshot().glsl;
   generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
   assert.match(zh(session.snapshot().message), /產碼失敗/);
   assert.equal(session.snapshot().glsl, good);
-  assert.equal(calls.length, 0);
+  assert.equal(instances.length, 0);
 });
 
 // Path rebuild A3 (design-interview Q38 2-1, Q31): the code-generation fingerprint decides.
 // 產碼指紋決定：純版面不產碼、TD 不做 GPU；註記只更新這裡的 GLSL；程式改變才送執行用部分。
 test('moving a node sends the document only; a value edit sends the program', async t => {
-  const { session, calls } = open(t, undefined, 60000);
+  const { session, instances } = open(t, undefined, 60000);
   session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
-  assert.notEqual(calls.at(-1).body.runtime, null, 'first delivery carries the program');
+  assert.notEqual(instances.at(-1).body.runtime, null, 'first delivery carries the program');
   const glsl = session.snapshot().glsl;
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 400, y: 90 }, dragging: false }]); await session.flush();
-  assert.equal(calls.at(-1).body.runtime, null, 'layout only: no program, so TD skips GPU work');
-  assert.equal(JSON.parse(calls.at(-1).body.document).stages.pixel.nodes.find(n => n.id === 'a').ui.x, 400);
+  assert.equal(instances.at(-1).body.runtime, null, 'layout only: no program, so TD skips GPU work');
+  assert.equal(JSON.parse(instances.at(-1).body.document).stages.pixel.nodes.find(n => n.id === 'a').ui.x, 400);
   assert.equal(session.snapshot().glsl, glsl);
   session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
-  assert.notEqual(calls.at(-1).body.runtime, null, 'a program change is sent');
+  assert.notEqual(instances.at(-1).body.runtime, null, 'a program change is sent');
 });
 
 test('a note refreshes the GLSL shown in the editor but is not sent as a program change (rule B)', async t => {
-  const { session, calls } = open(t, undefined, 60000);
+  const { session, instances } = open(t, undefined, 60000);
   session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
   session.transact('note', net => { net.node('a').update({ comment: 'hello note' }); });
   assert.match(session.snapshot().glsl, /hello note/);
   await session.flush();
-  assert.equal(calls.at(-1).body.runtime, null);
+  assert.equal(instances.at(-1).body.runtime, null);
 });
 
 // Editing-time limit (capacity.ts): warnings on the status line. 編輯時的上限：狀態列警告。
@@ -736,7 +736,7 @@ test('each report is logged once, with its source; status updates without news a
 test('a graph with an unknown node and a bad wire opens; ghosts survive edits and delivery unchanged', async t => {
   const future = { id: 'future', nodeType: 'vendor.pack.future', params: { knob: 3, nested: { keep: [1, 2] } }, ui: { x: 400, y: 40 } };
   let sent;
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (action === 'state') {
       const state = remote.get();
       withDoc(state.state, graph => {
@@ -765,7 +765,7 @@ test('a graph with an unknown node and a bad wire opens; ghosts survive edits an
   const stored = JSON.parse(sent.document).stages.pixel;
   assert.deepEqual(stored.nodes.find(node => node.id === 'future'), future, 'the ghost is stored byte for byte');
   assert.ok(stored.edges.some(edge => edge.id === 'eFuture'));
-  assert.ok(calls.length >= 2);
+  assert.ok(instances.length >= 2);
 });
 
 test('a Library subgraph definition still refuses the document: as a ghost it would silently leave TD', t => {
@@ -777,7 +777,7 @@ test('a Library subgraph definition still refuses the document: as a ghost it wo
 // Shared sources: global constants (Refactor.40; design-interview Q41, Q45).
 // 共用來源：全域常數——新增、放到圖上、接線、送出、改名、名稱衝突、刪除連同引用、Undo。
 test('a global constant: add, place, wire, apply; rename; refused names; delete with its nodes; undo', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   // The default graph already has a texture input (Refactor.43); constants are counted on their own.
   // 預設圖已經有一個貼圖輸入；常數另外算。
   const constants = () => session.snapshot().declarations.filter(d => d.kind === 'constant');
@@ -797,7 +797,7 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node(ref.id).outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node('sum').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
-  const pixel = JSON.parse(calls.at(-1).body.runtime).pixel;
+  const pixel = JSON.parse(instances.at(-1).body.runtime).pixel;
   assert.match(pixel, /^const float cValue = 0\.25;$/m);
   assert.equal(session.renameDeclaration(declaration.id, 'kGain'), true);
   assert.equal(constants()[0].name, 'kGain');
@@ -817,7 +817,7 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
 // TD built-in values (Refactor.41; Q45 01): placed from the Sources panel, read straight from TD.
 // TD 內建值：從共用來源面板放到圖上，直接讀 TD 的值。
 test('a TD built-in value is placed, coloured as runtime info, wired and sent as TD wrote it', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   session.placeTdValue('uTDOutputInfoResZw', { x: 0, y: 0 });
   const node = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.td_value');
   assert.equal(node.data.colorGroup, 'runtime');
@@ -828,25 +828,25 @@ test('a TD built-in value is placed, coloured as runtime info, wired and sent as
     net.connect(net.node('len').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy);
   });
   await session.flush();
-  assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec2 sg_n_\w+ = uTDOutputInfo\.res\.zw;/);
+  assert.match(JSON.parse(instances.at(-1).body.runtime).pixel, /vec2 sg_n_\w+ = uTDOutputInfo\.res\.zw;/);
   assert.equal(session.snapshot().declarations.filter(d => d.kind !== 'topInput').length, 0, 'no declaration is needed');
 });
 
 // Color Output takes anything (Refactor.42; Q46): vUV's UV output wires straight to it (one UV node, Refactor.64).
 test('the UV output of vUV can be wired straight to Color Output and is filled to (x, y, 0.5, 1)', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   session.placeTdValue('vUV', { x: 0, y: 0 });
   const id = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.td_value').id;
   const wire = { source: id, sourceHandle: 'uv', target: 'pixel_out', targetHandle: 'color' };
   assert.equal(session.valid(wire), true);
   session.connect(wire); await session.flush();
-  assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec4 sg_color = vec4\(vec2\(sg_n_\w+\), 0\.5, 1\.0\);/);
+  assert.match(JSON.parse(instances.at(-1).body.runtime).pixel, /vec4 sg_color = vec4\(vec2\(sg_n_\w+\), 0\.5, 1\.0\);/);
 });
 
 // TOP texture inputs (Refactor.43; texture-inputs.md): added in the Sources panel, sampled, sent to TD
 // as an ordered binding list. TOP 貼圖輸入：在共用來源面板新增、取樣、照順序當成綁定交給 TD。
 test('a texture input: add, choose its default image, place, sample, wire; the input list goes to TD in order', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   session.addTopInput();
   const inputs = () => JSON.parse(JSON.stringify(session.snapshot().declarations.filter(d => d.kind === 'topInput')));
   // The template's input1 shows Grape (its own content); a new input starts transparent, as TD (Refactor.60).
@@ -863,7 +863,7 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
   session.connect({ source: ref.id, sourceHandle: 'out', target: tex.id, targetHandle: 'sampler' });
   session.connect({ source: tex.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
-  const runtime = JSON.parse(calls.at(-1).body.runtime);
+  const runtime = JSON.parse(instances.at(-1).body.runtime);
   assert.match(runtime.pixel, /vec4 sg_n_\w+ = texture\(sTD2DInputs\[1\], vUV\.st\);/);
   assert.deepEqual(runtime.bindings.map(d => [d.kind, d.name, d.defaultTexture]), [['topInput', 'input1', 'grape'], ['topInput', 'input2', 'black']]);
 });
@@ -871,7 +871,7 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
 // Uniforms, round A (Refactor.44; uniform-round.md, Q51): added in the Sources panel; the value goes
 // to TD as a binding, so changing it leaves the GLSL as it was. Uniform A：值以綁定交給 TD，改值不改 GLSL。
 test('a Uniform: add, vec4 colour, value, place, wire; a value change only changes the binding', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   session.addUniform();
   assert.deepEqual(['name', 'type'].map(k => session.snapshot().declarations.find(d => d.kind === 'uniform')[k]), ['uValue', 'float']);
   session.removeDeclaration(session.snapshot().declarations.find(d => d.kind === 'uniform').id);
@@ -885,12 +885,12 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   assert.equal(ref.data.colorGroup, 'uniform');
   session.connect({ source: ref.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
-  const first = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
+  const first = JSON.parse(instances.filter(c => c.action === 'apply').at(-1).body.runtime);
   assert.match(first.pixel, /^uniform vec4 uColor;$/m);
   assert.deepEqual(first.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.type, b.value, b.color]), [['uColor', 'vec4', [1, 0.5, 0, 1], true]]);
   session.setDeclarationValue(uniform().id, [0, 1, 0, 1]);
   await session.flush();
-  const second = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
+  const second = JSON.parse(instances.filter(c => c.action === 'apply').at(-1).body.runtime);
   assert.equal(second.pixel, first.pixel, 'the GLSL is the same');
   assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
   // Names in the GLSL panel (Refactor.63.4): the Uniform's name leads to its declaration and selects its reference nodes;
@@ -908,7 +908,7 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
 // Time (Refactor.45, D1; Q61): a preset Uniform, created once when placed and reused after.
 // 時間：預設 Uniform，第一次放到圖上時建立，之後重用。
 test('a time value placed twice is one declaration with two reference nodes; it goes to TD by its entry', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   session.placePreset('absTime', { x: 0, y: 0 });
   session.placePreset('absTime', { x: 0, y: 200 });
   const builtins = session.snapshot().declarations.filter(d => d.kind === 'uniform' && d.entry === 'absTime');
@@ -918,7 +918,7 @@ test('a time value placed twice is one declaration with two reference nodes; it 
   assert.equal(session.references()[builtins[0].id], 2);
   session.connect({ source: refs[0].id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
-  const runtime = JSON.parse(calls.at(-1).body.runtime);
+  const runtime = JSON.parse(instances.at(-1).body.runtime);
   assert.match(runtime.pixel, /^uniform float uAbsTime;$/m);
   assert.deepEqual(runtime.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.entry, b.value]), [['uAbsTime', 'absTime', 0]]);
   session.renameDeclaration(builtins[0].id, 'uClock');
@@ -962,7 +962,7 @@ function fakeSocket() {
 const nextFrame = () => new Promise(resolve => setTimeout(resolve, 30));
 test('Uniform values go live over the WebSocket: once per frame, latest only; dragging never edits; dropped while disconnected', async t => {
   const sockets = [];
-  const { session, calls } = open(t, undefined, 60000, undefined, () => { const socket = fakeSocket(); sockets.push(socket); return socket; });
+  const { session, instances } = open(t, undefined, 60000, undefined, () => { const socket = fakeSocket(); sockets.push(socket); return socket; });
   const socket = sockets[0];
   session.addUniform();
   const id = session.snapshot().declarations.find(d => d.kind === 'uniform').id;
@@ -982,7 +982,7 @@ test('Uniform values go live over the WebSocket: once per frame, latest only; dr
   session.history(false);
   await nextFrame();
   assert.deepEqual(socket.sent.at(-1).value, 0, 'Undo sends the value it brings back');
-  assert.ok(!calls.some(c => c.action === 'live'), 'never over HTTP any more');
+  assert.ok(!instances.some(c => c.action === 'live'), 'never over HTTP any more');
   session.addConstant();
   const constant = session.snapshot().declarations.find(d => d.kind === 'constant').id, count = socket.sent.length;
   session.previewDeclarationValue(constant, 1);
@@ -1256,7 +1256,7 @@ test('after an apply the editor says how far the saved project is behind; a save
 // (a selected node keeps its group); nodes and wires never together; the primary is the last pressed.
 // 選取：Ctrl 切換、Shift 只加選、一般取代（已選的保留整組）；節點與接線不混選；主要＝最後按下的。
 test('selection follows TD: Ctrl toggles, Shift adds, nodes and wires apart, a primary that is never saved', async t => {
-  const { session, calls } = open(t);
+  const { session, instances } = open(t);
   const selected = () => session.snapshot().projection.nodes.filter(n => n.selected).map(n => n.id).sort();
   const wires = () => session.snapshot().projection.edges.filter(e => e.selected).map(e => e.id);
   const version = session.snapshot().version, graph = JSON.stringify(session.graph());
@@ -1289,7 +1289,7 @@ test('selection follows TD: Ctrl toggles, Shift adds, nodes and wires apart, a p
   await session.flush();
   assert.equal(session.snapshot().version, version, 'selection is not an edit');
   assert.equal(JSON.stringify(session.graph()), graph);
-  assert.ok(!calls.some(c => c.action === 'apply'), 'never sent to TD');
+  assert.ok(!instances.some(c => c.action === 'apply'), 'never sent to TD');
 });
 
 // Refactor.49.1 (human 2026-10-09): wire multi-selection behaves exactly like node multi-selection.
@@ -1567,9 +1567,9 @@ test('a vector node added from a wire takes the component names of the node at t
 // inputs are asked once more, since rewiring while away sent no word. 接線通知只是提醒；重新連上時再問一次。
 test('the inputs are asked again when TD says it was rewired and when the socket connects again', async t => {
   const sockets = [], wired = { inputs: [{ id: 'tex', node: 'in1', source: '/project1/moviefilein1' }] };
-  const { session, calls } = open(t, (action, body, remote) => action === 'inputs' ? wired : action === 'state' ? remote.get() : { saved: 'test.toe' },
+  const { session, instances } = open(t, (action, body, remote) => action === 'inputs' ? wired : action === 'state' ? remote.get() : { saved: 'test.toe' },
     60000, undefined, () => { const socket = fakeSocket(); sockets.push(socket); return socket; });
-  const asked = () => calls.filter(c => c.action === 'inputs').length;
+  const asked = () => instances.filter(c => c.action === 'inputs').length;
   const socket = sockets[0];
   socket.readyState = 1; socket.onopen();
   await nextFrame();
@@ -1643,7 +1643,7 @@ test('TD compile errors are read for their lines; a stuck Shader can go back to 
 // 同一個分頁回到 TD 仍在跑的程式時，卡住要解除：照樣送程式，TD 記成正在跑並忘掉失敗（不重新編譯）。
 test('going back to the running program in the same tab clears a stuck Shader', async t => {
   let failing = false, failure = null, running = 4;
-  const { session, calls } = open(t, async (action, body, remote) => {
+  const { session, instances } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     const revision = body.revision + 1;
     if (body.runtime && failing) failure = { kind: 'compile', revision, log: 'ERROR: /p/pixel_shader:5: oops', pixel: JSON.parse(body.runtime).pixel };
@@ -1660,10 +1660,10 @@ test('going back to the running program in the same tab clears a stuck Shader', 
   assert.equal(session.snapshot().stuck.failure.kind, 'compile', 'stuck');
   failing = false;
   session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
-  assert.notEqual(calls.at(-1).body.runtime, null, 'the running program is sent again while stuck');
+  assert.notEqual(instances.at(-1).body.runtime, null, 'the running program is sent again while stuck');
   assert.equal(session.snapshot().stuck, undefined, 'no longer stuck');
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
-  assert.equal(calls.at(-1).body.runtime, null, 'not stuck: a layout edit sends the graph only, as before');
+  assert.equal(instances.at(-1).body.runtime, null, 'not stuck: a layout edit sends the graph only, as before');
 });
 
 // Node upgrades (Refactor.65, human 2026-10-10): a graph stored with older node forms opens in the current ones, with a
@@ -1703,7 +1703,7 @@ test('older node forms are upgraded as the graph opens, reported, and sent with 
 // opening a graph another version saved is not an edit, and the code fingerprint ignores it.
 // 最後是哪一版存的：只記最後一次存的事實，送出時寫上；打開別版存的圖不算修改，產碼指紋也不看它。
 test('savedBy names the editor of the last save; opening a graph another editor saved sends nothing', async t => {
-  const { session, calls, loaded } = open(t, async (action, body, remote) => {
+  const { session, instances, loaded } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
   });
@@ -1712,10 +1712,10 @@ test('savedBy names the editor of the last save; opening a graph another editor 
   const reopened = new EditorSession(session.host, bootstrap, stored, 0, 60000, undefined, '9.9.9 Test');
   t.after(() => reopened.dispose());
   assert.equal(reopened.snapshot().dirty, false, 'opening is not an edit');
-  await reopened.flush(); assert.equal(calls.filter(c => c.action === 'apply').length, 0);
+  await reopened.flush(); assert.equal(instances.filter(c => c.action === 'apply').length, 0);
   assert.equal(GrapeTopCompiler.key(reopened.graph()), GrapeTopCompiler.key({ ...clone(reopened.graph()), savedBy: 'other' }), 'not in the fingerprint');
   reopened.transact('edit', net => setValue(net, 'a', 3)); await reopened.flush();
-  assert.equal(JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.document).savedBy, '9.9.9 Test', 'only the last save is named');
+  assert.equal(JSON.parse(instances.filter(c => c.action === 'apply').at(-1).body.document).savedBy, '9.9.9 Test', 'only the last save is named');
   assert.equal(reopened.snapshot().dirty, false);
 });
 
@@ -1796,14 +1796,14 @@ test('trial: any node with names to choose, made from a wire, takes the names of
 });
 
 // Subgraphs, B level (basic design 2026-10-14 §3.5, §3.12, amendment A3; Refactor.110): entering, the path, ×N, the interface edited
-// from inside, the boundary nodes' spare ports, no call inside a subgraph yet. 子圖 B 級（R.110）：進入、路徑、×N、在裡面改介面、
-// 邊界節點的備用接孔、子圖裡還不能放呼叫。
+// from inside, the boundary nodes' spare ports, no instance inside a subgraph yet. 子圖 B 級（R.110）：進入、路徑、×N、在裡面改介面、
+// 邊界節點的備用接孔、子圖裡還不能放實例。
 test('subgraphs: entering shows the definition network, the path and ×N; up returns; Undo past the definition cuts the path', t => {
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
     net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
-  const call = session.snapshot().projection.nodes.find(n => n.id === 'call1');
-  assert.equal(call.data.subgraph, 'gain'); assert.equal(call.data.uses, 2); assert.equal(call.data.colorGroup, 'subgraph');
+  const instance = session.snapshot().projection.nodes.find(n => n.id === 'call1');
+  assert.equal(instance.data.subgraph, 'gain'); assert.equal(instance.data.uses, 2); assert.equal(instance.data.colorGroup, 'subgraph');
   const version = session.snapshot().version;
   session.enterSubgraph('call1');
   const inside = session.snapshot();
@@ -1823,7 +1823,7 @@ test('subgraphs: entering shows the definition network, the path and ×N; up ret
   session.history(true); session.history(true); assert.equal(session.graph().subgraphs.length, 1);
 });
 
-test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; a subgraph cannot call itself', t => {
+test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; a subgraph cannot instance itself', t => {
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); c.networks.get('pixel').instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); });
   session.enterSubgraph('call1');
@@ -1843,33 +1843,33 @@ test('subgraphs: the interface is edited from inside; a wire on a boundary spare
   assert.equal(session.valid({ source: 'input', sourceHandle: spareHandle, target: 'm', targetHandle: 'b' }), true);
   session.connect({ source: 'input', sourceHandle: spareHandle, target: 'm', targetHandle: 'b' });
   f = session.currentSubgraph(); assert.equal(f.inputs.length, 3); assert.equal(f.inputs[2].type, 'float'); assert.equal(f.inputs[2].default, 3); assert.equal(f.inputs[2].label, 'b');
-  const callNow = () => session.graph().stages.pixel.nodes.find(n => n.id === 'call1');
+  const instanceNow = () => session.graph().stages.pixel.nodes.find(n => n.id === 'call1');
   session.history(false); assert.equal(session.currentSubgraph().inputs.length, 2, 'one Undo per step');
   session.history(true);
-  // A call of the subgraph itself cannot be placed inside it (a cycle, Refactor.111): refused by the core's gate, said as a warning, nothing
-  // changes. 子圖裡不能放它自己的呼叫（循環，R.111）：核心關卡拒絕、以警告說出、什麼都不變。
+  // An instance of the subgraph itself cannot be placed inside it (a cycle, Refactor.111): refused by the core's gate, said as a warning, nothing
+  // changes. 子圖裡不能放它自己的實例（循環，R.111）：核心關卡拒絕、以警告說出、什麼都不變。
   const version = session.snapshot().version;
   session.placeSubgraph('gain', { x: 0, y: 0 });
-  assert.equal(session.snapshot().version, version); assert.match(zh(session.snapshot().message), /呼叫到自己/);
-  // Copy and paste work inside the subgraph; a copy holding a call of the subgraph itself is refused inside (the same cycle). 子圖裡能
-  // 複製貼上；含它自己的呼叫的複製在裡面拒絕（同一種循環）。
+  assert.equal(session.snapshot().version, version); assert.match(zh(session.snapshot().message), /包含自己的實例/);
+  // Copy and paste work inside the subgraph; a copy holding an instance of the subgraph itself is refused inside (the same cycle). 子圖裡能
+  // 複製貼上；含它自己的實例的複製在裡面拒絕（同一種循環）。
   const clip = session.copyNodes(['m']);
   assert.ok(session.paste(clip, { x: 10, y: 10 })); assert.equal(session.graph().subgraphs[0].graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.multiply').length, 2);
-  session.goUp(); const callClip = session.copyNodes(['call1']); session.enterSubgraph('call1');
-  assert.equal(session.paste(callClip, { x: 0, y: 0 }), false); assert.match(zh(session.snapshot().message), /呼叫到自己/);
-  // The call outside follows the interface (the core keeps it in step). 外面的呼叫跟著介面走（核心讓它跟上）。
+  session.goUp(); const instanceClip = session.copyNodes(['call1']); session.enterSubgraph('call1');
+  assert.equal(session.paste(instanceClip, { x: 0, y: 0 }), false); assert.match(zh(session.snapshot().message), /包含自己的實例/);
+  // The instance outside follows the interface (the core keeps it in step). 外面的實例跟著介面走（核心讓它跟上）。
   session.goUp();
   assert.deepEqual(clone(session.snapshot().projection.nodes.find(n => n.id === 'call1').data.inputs.map(p => p.type)), ['vec4', 'vec2', 'float']);
-  assert.equal(callNow().params.subgraphId, 'gain');
-  // The definition cannot be deleted while called; renaming goes through the one path. 還有呼叫就不能刪定義；改名走同一條路。
-  assert.equal(session.callCounts().get('gain'), 1);
+  assert.equal(instanceNow().params.subgraphId, 'gain');
+  // The definition cannot be deleted while it has instances; renaming goes through the one path. 還有實例就不能刪定義；改名走同一條路。
+  assert.equal(session.instanceCounts().get('gain'), 1);
   const before = clone(session.graph()); session.removeSubgraph('gain'); assert.deepEqual(clone(session.graph()), before);
   session.renameSubgraph('gain', ' Tint '); assert.equal(session.definitions()[0].name, 'Tint');
 });
 
 // C level (basic design §3.2–3.3, §3.10, §3.13, amendment A5; Refactor.111): selection to subgraph, Make Single User, copy and paste with
 // definitions, nesting. C 級（R.111）：從選取建立、設為唯一、複製貼上帶定義、巢狀。
-test('subgraphs: selection to subgraph moves the nodes, keeps a shared source outside as a named input, carries whole groups; the call is selected', t => {
+test('subgraphs: selection to subgraph moves the nodes, keeps a shared source outside as a named input, carries whole groups; the instance is selected', t => {
   const { session } = open(t);
   session.transactGraph('setup', c => {
     c.addDeclaration({ id: 'k1', kind: 'constant', name: 'kGain', type: 'float', value: 2 });
@@ -1890,16 +1890,16 @@ test('subgraphs: selection to subgraph moves the nodes, keeps a shared source ou
   assert.deepEqual(clone(GrapeGraph.groups.groupsOf(f.graph).map(g => [g.name, g.nodes])), [['Pair', ['a', 'sum']]]);
   const pixel = session.graph().stages.pixel;
   assert.ok(pixel.nodes.some(n => n.id === 'ref') && !pixel.nodes.some(n => n.id === 'a'));
-  const call = pixel.nodes.find(n => n.nodeType === 'sgrape.builtin.subgraph_call');
-  assert.equal(call.params.subgraphId, id); assert.equal(call.name, 'Subgraph_1_1'); // the call is named after its title, plus its own number (visual notes 27) 呼叫照 Title 命名、再加自己的編號
-  assert.ok(pixel.edges.some(e => e.from[0] === 'ref' && e.to[0] === call.id), 'the source feeds the call');
-  assert.deepEqual([...session.selectionSnapshot()], [call.id]);
+  const instance = pixel.nodes.find(n => n.nodeType === 'sgrape.builtin.subgraph_instance');
+  assert.equal(instance.params.subgraphId, id); assert.equal(instance.name, 'Subgraph_1_1'); // the instance is named after its title, plus its own number (visual notes 27) 實例照 Title 命名、再加自己的編號
+  assert.ok(pixel.edges.some(e => e.from[0] === 'ref' && e.to[0] === instance.id), 'the source feeds the instance');
+  assert.deepEqual([...session.selectionSnapshot()], [instance.id]);
   session.history(false); assert.equal(session.graph().subgraphs.length, 0); assert.ok(session.graph().stages.pixel.nodes.some(n => n.id === 'a'));
   // Nothing eligible: said, nothing done. 沒有能進的：說一聲、不做。
   assert.equal(session.selectionToSubgraph(['pixel_out']), null); assert.match(zh(session.snapshot().message), /先選取/);
 });
 
-test('subgraphs: Make Single User copies the definition for one call; paste from the same graph keeps the definition, a foreign one comes in new; nesting works', t => {
+test('subgraphs: Make Single User copies the definition for one instance; paste from the same graph keeps the definition, a foreign one comes in new; nesting works', t => {
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
     net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
@@ -1907,23 +1907,23 @@ test('subgraphs: Make Single User copies the definition for one call; paste from
   const own = session.graph().stages.pixel.nodes.find(n => n.id === 'call2').params.subgraphId;
   assert.notEqual(own, 'gain'); assert.equal(session.graph().subgraphs.find(f => f.id === own).name, 'Gain_1');
   assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === 'call1').params.subgraphId, 'gain');
-  // Same graph: the pasted call keeps the definition (the count grows). 同圖：貼上的呼叫沿用定義（數量變多）。
+  // Same graph: the pasted instance keeps the definition (the count grows). 同圖：貼上的實例沿用定義（數量變多）。
   const clip = session.copyNodes(['call1']);
   assert.deepEqual(clone(clip.subgraphs.map(f => f.id)), ['gain']);
   assert.ok(session.paste(clip, { x: 50, y: 50 }));
-  assert.equal(session.callCounts().get('gain'), 2); assert.equal(session.graph().subgraphs.length, 2);
+  assert.equal(session.instanceCounts().get('gain'), 2); assert.equal(session.graph().subgraphs.length, 2);
   // Another Grape OP is still refused by the editor (human 2026-10-12). 別的 Grape OP 的複製編輯器仍拒絕（人類 10-12）。
   assert.equal(session.paste({ ...clip, source: 'f'.repeat(32) }, { x: 0, y: 0 }), false);
   // A definition this graph does not have comes in under a new identity (A5 rule 1: the original is gone). 這張圖沒有的定義以新身分進來。
   const foreign = JSON.parse(JSON.stringify(clip)); foreign.subgraphs[0].id = 'elsewhere'; foreign.stages.pixel.nodes[0].params.subgraphId = 'elsewhere';
   assert.ok(session.paste(foreign, { x: 0, y: 0 }));
   assert.equal(session.graph().subgraphs.length, 3); assert.ok(!session.graph().subgraphs.some(f => f.id === 'elsewhere'));
-  // Nesting: a call placed inside another subgraph; the counts follow. 巢狀：在另一個子圖裡放呼叫；數量跟著。
+  // Nesting: an instance placed inside another subgraph; the counts follow. 巢狀：在另一個子圖裡放實例；數量跟著。
   session.enterDefinition(own);
   session.placeSubgraph('gain', { x: 0, y: 0 });
-  assert.equal(session.graph().subgraphs.find(f => f.id === own).graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.subgraph_call').length, 1);
-  assert.equal(session.callCounts().get('gain'), 3);
-  // Inside the nested call the path has two levels; the path bar's level buttons go back. 進到巢狀呼叫裡路徑兩層；路徑列的層級按鈕回去。
+  assert.equal(session.graph().subgraphs.find(f => f.id === own).graph.nodes.filter(n => n.nodeType === 'sgrape.builtin.subgraph_instance').length, 1);
+  assert.equal(session.instanceCounts().get('gain'), 3);
+  // Inside the nested instance the path has two levels; the path bar's level buttons go back. 進到巢狀實例裡路徑兩層；路徑列的層級按鈕回去。
   const nested = session.snapshot().projection.nodes.find(n => n.data.subgraph === 'gain');
   session.enterSubgraph(nested.id); assert.deepEqual(clone(session.snapshot().trail), [own, 'gain']);
   session.goToDepth(1); assert.deepEqual(clone(session.snapshot().trail), [own]);
@@ -1931,24 +1931,24 @@ test('subgraphs: Make Single User copies the definition for one call; paste from
 
 // TECH-5 (technical review R109–R112): the path is checked from the top down after the document changes; the first level that no
 // longer holds cuts it, and the view lands on everything. 文件改變後路徑由上往下驗；第一個不成立的層切斷，視野落在全部。
-test('subgraphs: Undo that removes an ancestor or the call a level was entered through cuts the path there; Redo leaves it', t => {
+test('subgraphs: Undo that removes an ancestor or the instance a level was entered through cuts the path there; Redo leaves it', t => {
   const { session } = open(t);
   session.transactGraph('child', c => { c.createSubgraph({ id: 'B', name: 'B' }); });
   session.transactGraph('parent', c => { c.createSubgraph({ id: 'A', name: 'A' });
-    c.networks.get('subgraph:A').instantiateSubgraph('B', 'innerB', { x: 0, y: 0 }); c.networks.get('pixel').instantiateSubgraph('A', 'callA', { x: 0, y: 0 }); });
-  session.enterSubgraph('callA'); session.enterSubgraph('innerB');
+    c.networks.get('subgraph:A').instantiateSubgraph('B', 'innerB', { x: 0, y: 0 }); c.networks.get('pixel').instantiateSubgraph('A', 'instanceA', { x: 0, y: 0 }); });
+  session.enterSubgraph('instanceA'); session.enterSubgraph('innerB');
   assert.deepEqual(clone(session.snapshot().trail), ['A', 'B']);
   session.history(false);
   assert.ok(session.graph().subgraphs.some(f => f.id === 'B'), 'the leaf is still there');
   assert.deepEqual(clone(session.snapshot().trail), [], 'the ancestor is gone: the path is cut at the top');
   assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.takeLanding()), { frame: 'all' });
   session.history(true); assert.deepEqual(clone(session.snapshot().trail), [], 'Redo does not bring the path back');
-  // The first level entered through a call that Undo removes, while its definition stays. 從呼叫進的第一層：Undo 拿掉那個呼叫、定義還在。
-  session.transactGraph('second call', c => { c.networks.get('pixel').instantiateSubgraph('A', 'callA2', { x: 0, y: 100 }); });
+  // The first level entered through an instance that Undo removes, while its definition stays. 從實例進的第一層：Undo 拿掉那個實例、定義還在。
+  session.transactGraph('second instance', c => { c.networks.get('pixel').instantiateSubgraph('A', 'callA2', { x: 0, y: 100 }); });
   session.enterSubgraph('callA2'); assert.deepEqual(clone(session.snapshot().trail), ['A']);
   session.history(false);
   assert.ok(session.graph().subgraphs.some(f => f.id === 'A'));
-  assert.deepEqual(clone(session.snapshot().trail), [], 'the call it was entered through is gone');
+  assert.deepEqual(clone(session.snapshot().trail), [], 'the instance it was entered through is gone');
   // Entered from the panel: only the definition is checked. 從面板進來：只驗定義。
   session.enterDefinition('A'); session.history(true); session.history(false);
   assert.deepEqual(clone(session.snapshot().trail), ['A']);
@@ -1966,8 +1966,8 @@ test('subgraphs: a GLSL line or variable leads into the subgraph that wrote it; 
     inner.connect(inner.node('twin').outputs[0], inner.node('output').port('input', f.data.outputs[0].id), GrapeGraph.values.policy);
     stage.create('twin', 'sgrape.builtin.float', { value: 0.25 });
     c.createSubgraph({ id: 'B', name: 'Beta' }); c.networks.get('subgraph:B').instantiateSubgraph('A', 'viaB', { x: 0, y: 0 });
-    stage.instantiateSubgraph('A', 'callA'); stage.instantiateSubgraph('B', 'callB', { x: 0, y: 200 });
-    stage.connect(stage.node('callA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
+    stage.instantiateSubgraph('A', 'instanceA'); stage.instantiateSubgraph('B', 'instanceB', { x: 0, y: 200 });
+    stage.connect(stage.node('instanceA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
   });
   const compiled = session.snapshot().compiled;
   const inside = glslMapOf(compiled).find(row => row.node === 'twin' && row.trail?.join() === 'A');
@@ -2007,8 +2007,8 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
     c.createSubgraph({ id: 'A', name: 'Alpha' });
     const a = c.networks.get('subgraph:A'); a.instantiateSubgraph('B', 'toB', { x: 0, y: 0 });
     a.connect(a.node('toB').outputs[0], a.node('output').port('input', c.subgraph('A').data.outputs[0].id), GrapeGraph.values.policy);
-    const stage = c.networks.get('pixel'); stage.instantiateSubgraph('A', 'callA');
-    stage.connect(stage.node('callA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
+    const stage = c.networks.get('pixel'); stage.instantiateSubgraph('A', 'instanceA');
+    stage.connect(stage.node('instanceA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
   });
   // Tracing: the line was written along root → A → B; entered from the panel the path is [B]; the same authored node. 追蹤。
   const compiled = session.snapshot().compiled, map = glslMapOf(compiled);
@@ -2036,22 +2036,22 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
   assert.deepEqual(clone(reopened.snapshot().codegenFailure?.at), { trail: ['A'] });
 });
 
-// Call names in the editor (visual notes 27): placing a call names it after the title; renaming the title renames default-named calls;
-// a title outside the rule is refused with a message and nothing changes. 編輯器裡的呼叫名稱：放下時照 Title、改 Title 時預設名跟著改；
+// Call names in the editor (visual notes 27): placing an instance names it after the title; renaming the title renames default-named instances;
+// a title outside the rule is refused with a message and nothing changes. 編輯器裡的實例名稱：放下時照 Title、改 Title 時預設名跟著改；
 // 不合規則的 Title 被拒、說明、什麼都不變。
-test('subgraphs: a placed call is named after its title, follows a rename, and a bad title is refused', t => {
+test('subgraphs: a placed instance is named after its title, follows a rename, and a bad title is refused', t => {
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
   session.placeSubgraph('gain', { x: 0, y: 0 }); session.placeSubgraph('gain', { x: 0, y: 100 });
-  const calls = () => clone(session.graph().stages.pixel.nodes.filter(n => n.params.subgraphId === 'gain').map(n => n.name).sort());
-  assert.deepEqual(calls(), ['Gain_1', 'Gain_2']);
+  const instances = () => clone(session.graph().stages.pixel.nodes.filter(n => n.params.subgraphId === 'gain').map(n => n.name).sort());
+  assert.deepEqual(instances(), ['Gain_1', 'Gain_2']);
   session.renameSubgraph('gain', 'Soft  Glow ');
   assert.equal(session.graph().subgraphs[0].name, 'Soft Glow', 'trimmed, one space between words');
-  assert.deepEqual(calls(), ['Soft_Glow_1', 'Soft_Glow_2']);
+  assert.deepEqual(instances(), ['Soft_Glow_1', 'Soft_Glow_2']);
   session.renameSubgraph('gain', '2 Glow');
   assert.equal(session.graph().subgraphs[0].name, 'Soft Glow');
   assert.match(zh(session.snapshot().message), /Title/);
-  session.history(false); assert.deepEqual(calls(), ['Gain_1', 'Gain_2'], 'one Undo puts title and calls back');
+  session.history(false); assert.deepEqual(instances(), ['Gain_1', 'Gain_2'], 'one Undo puts title and instances back');
 });
 
 // Locate a definition (visual notes 20): a request the workspace and the Subgraphs panel follow; it changes no selection and does not
@@ -2060,11 +2060,11 @@ test('subgraphs: locating a definition is a request that changes neither the sel
   const { session } = open(t);
   session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
   session.placeSubgraph('gain', { x: 0, y: 0 });
-  const call = session.graph().stages.pixel.nodes.find(n => n.params.subgraphId === 'gain').id;
-  session.selectNode(call);
+  const instance = session.graph().stages.pixel.nodes.find(n => n.params.subgraphId === 'gain').id;
+  session.selectNode(instance);
   let heard = 0; const stop = session.definitionFocusSubscribe(() => heard++);
   session.locateDefinition('gain'); session.locateDefinition('gain');
   stop();
   assert.equal(heard, 2, 'asking twice counts twice'); assert.deepEqual(clone(session.definitionFocusSnapshot()), { id: 'gain', n: 2 });
-  assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.selectedInOrder()), [call]);
+  assert.equal(session.snapshot().network, 'pixel'); assert.deepEqual(clone(session.selectedInOrder()), [instance]);
 });

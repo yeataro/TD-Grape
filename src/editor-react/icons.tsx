@@ -23,9 +23,9 @@ const paths = {
   expandCards: <path d="m7 6 5 5 5-5M7 13l5 5 5-5" />,
   group: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /><rect x="7" y="12" width="4" height="4" /><rect x="13" y="12" width="4" height="4" /></>,
   subgraph: <path d="m3 3 6 6M9 4v5H4M21 3l-6 6M15 4v5h5M3 21l6-6M4 15h5v5M21 21l-6-6M20 15h-5v5" />,
-  // A subgraph call's kind, on its title (visual notes 2026-10-14, item 1; placeholders, human 2026-10-14): a Library subgraph is
+  // A subgraph instance's kind, on its title (visual notes 2026-10-14, item 1; placeholders, human 2026-10-14): a Library subgraph is
   // "share" (three joined dots, as Material's share), a local one is "link" (two chain links, as Feather's link). Same stroke style.
-  // 子圖呼叫的種類，放標題列（外觀意見第 1 條；先站位，人類 10-14）：資源庫子圖＝分享（三點相連，照 Material share），本地＝鏈結
+  // 子圖實例的種類，放標題列（外觀意見第 1 條；先站位，人類 10-14）：資源庫子圖＝分享（三點相連，照 Material share），本地＝鏈結
   // （兩環相扣，照 Feather link）。同一套線條。
   subgraphLibrary: <><circle className="icon-solid" cx="18" cy="5" r="3.4" /><circle className="icon-solid" cx="6" cy="12" r="3.4" /><circle className="icon-solid" cx="18" cy="19" r="3.4" /><path d="m9 10.3 6-3.5M9 13.7l6 3.5" /></>,
   subgraphLocal: <path className="icon-bold" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.1 1.1M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.1-1.1" />,

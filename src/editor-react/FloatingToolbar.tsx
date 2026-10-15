@@ -78,15 +78,15 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
     // The selected nodes as React Flow holds them, found by id. 選取的節點，照 id 從 React Flow 拿。
     const selected = () => ids.flatMap(id => { const node = flow.getNode(id) as FlowNode | undefined; return node ? [node] : []; });
     const many = ids.length > 1, target = ids.length ? grouping.joinTarget(ids) : null, inGroup = ids.length > 0 && grouping.inGroup(ids);
-    // Subgraph calls in the selection (visual notes 3, 4): one call gets Open; a selection of nothing but local calls gets the colour
-    // swatch. Worked out here, once per selection, never per frame (the human's zero-cost condition). 選取裡的子圖呼叫（外觀意見 3、4）：
-    // 單一個呼叫有「打開」；全是本地呼叫時有色塊。在這裡算、每次選取算一次，不是每格（人類的零成本條件）。
+    // Subgraph instances in the selection (visual notes 3, 4): one instance gets Open; a selection of nothing but local instances gets the colour
+    // swatch. Worked out here, once per selection, never per frame (the human's zero-cost condition). 選取裡的子圖實例（外觀意見 3、4）：
+    // 單一個實例有「打開」；全是本地實例時有色塊。在這裡算、每次選取算一次，不是每格（人類的零成本條件）。
     // Read from the session's own projection, not React Flow's store: right after a network change the store is a render behind
     // (the toolbar is worked out in the same pass). 從 session 自己的投影讀，不從 React Flow 的 store：網路剛換時 store 晚一次重繪。
     const drawn = ids.length ? new Map(session.snapshot().projection.nodes.map(node => [node.id, node])) : null;
-    const calls = ids.flatMap(id => { const node = drawn?.get(id); return node && node.data.subgraph !== undefined ? [node] : []; });
-    const oneCall = ids.length === 1 && calls.length === 1, allCalls = ids.length > 0 && calls.length === ids.length;
-    const definitions = [...new Set(calls.map(node => node.data.subgraph!))], swatch = calls[0]?.data.color;
+    const instances = ids.flatMap(id => { const node = drawn?.get(id); return node && node.data.subgraph !== undefined ? [node] : []; });
+    const oneInstance = ids.length === 1 && instances.length === 1, allInstances = ids.length > 0 && instances.length === ids.length;
+    const definitions = [...new Set(instances.map(node => node.data.subgraph!))], swatch = instances[0]?.data.color;
     // Legacy's order and groups (selection_ui.js:433-439): what edits the selection, then what arranges it. 舊產品的順序與分組。
     const edit: Tool[] = [
       // Paste from here lands a third into the canvas (legacy graph_ui.js:2811). 從這裡貼上，貼在畫布三分之一處（照舊產品）。
@@ -103,7 +103,7 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
       ...(many ? [{ key: 'group', icon: 'group', label: tr('selection.group', 'Create group'), run: grouping.create, disabled: !grouping.canCreate(ids) }] as Tool[] : []),
       ...(target ? [{ key: 'joinGroup', icon: 'joinGroup', label: tr('selection.joinGroup', 'Move into “{name}”', { name: target.name }), run: grouping.join }] as Tool[] : []),
       ...(inGroup ? [{ key: 'leaveGroup', icon: 'leaveGroup', label: tr('selection.leaveGroup', 'Remove from group'), run: grouping.leave }] as Tool[] : []),
-      ...(oneCall ? [{ key: 'openSubgraph', icon: 'subgraphLocal', label: tr('selection.openSubgraph', 'Open subgraph'), run: () => session.enterSubgraph(ids[0]!) }] as Tool[] : []),
+      ...(oneInstance ? [{ key: 'openSubgraph', icon: 'subgraphLocal', label: tr('selection.openSubgraph', 'Open subgraph'), run: () => session.enterSubgraph(ids[0]!) }] as Tool[] : []),
       ...(many ? [
         { key: 'subgraph', icon: 'subgraph', label: tr('selection.subgraph', 'Selection to subgraph'), run: () => session.selectionToSubgraph(ids), disabled: !session.subgraphCandidates(ids).length },
         { key: 'arrange', icon: 'arrange', label: tr('selection.arrange', 'Arrange nodes') },
@@ -116,10 +116,10 @@ export function FloatingToolbar({ ids, wires, clip, groups, grouping, screen }: 
     // The inner part is what is seen, and it rises in when the bar appears or its buttons change (Refactor.104.2, human 2026-10-12: a
     // short fade with a slight growth, "floating up"), started again by a new key. 內層是看到的樣子，工具列出現或按鈕改變時浮現（R.104.2，
     // 人類 10-12：很短的淡入加些微放大，「浮現出來的感覺」），換 key 重播。
-    const face = <div key={`${many}|${target?.id ?? ''}|${inGroup}|${oneCall}|${allCalls}`} className="floating-toolbar-face network-bar-group">
+    const face = <div key={`${many}|${target?.id ?? ''}|${inGroup}|${oneInstance}|${allInstances}`} className="floating-toolbar-face network-bar-group">
       <div className="tool-group">{edit.map(tool)}</div>
       <div className="tool-group">{arrange.map(tool)}
-        {allCalls && <button type="button" className="group-color subgraph-color" style={{ '--group-color': swatch ?? 'var(--group-subgraph)' } as CSSProperties}
+        {allInstances && <button type="button" className="group-color subgraph-color" style={{ '--group-color': swatch ?? 'var(--group-subgraph)' } as CSSProperties}
           aria-label={say(tr('selection.subgraphColor', 'Subgraph colour'))} title={say(tr('selection.subgraphColor', 'Subgraph colour'))}
           aria-haspopup="dialog" onClick={event => setPalette(event.currentTarget)} />}
       </div>

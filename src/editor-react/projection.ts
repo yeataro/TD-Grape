@@ -15,15 +15,15 @@ export type FlowNode = RFNode<{
    * Taken from the wires every time, so a node follows when the node upstream changes type. 接進另一種型別的輸入與那個型別
    * （R.77.6：寫在接孔上，同舊產品）。每次都從線算，上游換型別時跟著變。 */
   conversions?: Record<string, string>;
-  /** A call node: the definition it points at, and how many calls that definition has in the whole document (the "×N" mark, basic
-   * design §3.6; Refactor.110). 呼叫節點：它指向的定義，以及這份定義在整份文件裡有幾個呼叫（「×N」標記，§3.6；R.110）。 */
+  /** An instance: the definition it points at, and how many instances that definition has in the whole document (the "×N" mark, basic
+   * design §3.6; Refactor.110). 實例：它指向的定義，以及這份定義在整份文件裡有幾個實例（「×N」標記，§3.6；R.110）。 */
   subgraph?: string; uses?: number;
   /** The definition's own colour, when set (basic design §3.14). 定義自己的顏色，有設時。 */
   color?: string;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
-/** `uses`: each definition's call count, kept with the projection and reused while no node was added or removed anywhere and no
- * definition changed (Refactor.110). uses：每份定義的呼叫數，跟著投影放，哪裡都沒有節點增減、定義也沒變時沿用。 */
+/** `uses`: each definition's instance count, kept with the projection and reused while no node was added or removed anywhere and no
+ * definition changed (Refactor.110). uses：每份定義的實例數，跟著投影放，哪裡都沒有節點增減、定義也沒變時沿用。 */
 export type Projection = { nodes: FlowNode[]; edges: FlowEdge[]; uses?: ReadonlyMap<string, { direct: number; expanded: number }> };
 const retainArray = <T,>(next: T[], old: T[]) =>
   next.length === old.length && next.every((item, i) => item === old[i]) ? old : next;
@@ -40,7 +40,7 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 /** A node's colour group (also the drag-to-add tile's, Refactor.104). 節點的顏色組（拖曳新增的圖塊也用，R.104）。 */
 export const colorGroupOf = (module: { role: string; colorGroup?: string; catalog?: { browser?: { category?: unknown } }; referencedDeclaration?: (node: Node) => string; referencedGraph?: (node: Node) => string }, node: Node, document: GraphDocument) => {
   if (module.colorGroup) return module.colorGroup;
-  // A subgraph call wears the subgraph colour (basic design §3.14: a definition's own colour comes later). 子圖呼叫用子圖色。
+  // A subgraph instance wears the subgraph colour (basic design §3.14: a definition's own colour comes later). 子圖實例用子圖色。
   if (module.referencedGraph) return 'subgraph';
   if (module.catalog?.browser?.category === 'logic') return 'logic';
   if (module.referencedDeclaration) {
@@ -56,8 +56,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
   const network = document.networks.get(networkId)!;
   const delta = changes?.networks.find(item => item.id === networkId);
   const all = !changes || !!changes.global.length || !!changes.definitions.length || delta?.complete === false;
-  // Call counts over the whole document, only with subgraphs, only when a node was added or removed somewhere or a definition
-  // changed; else the previous ones (Refactor.110). 整份文件的呼叫數：只在有子圖時算，且只在哪裡增減了節點或定義變了時；否則沿用。
+  // Instance counts over the whole document, only with subgraphs, only when a node was added or removed somewhere or a definition
+  // changed; else the previous ones (Refactor.110). 整份文件的實例數：只在有子圖時算，且只在哪裡增減了節點或定義變了時；否則沿用。
   const uses = !document.document.subgraphs?.length ? undefined
     : previous.uses && changes && !changes.definitions.length && !changes.networks.some(item => item.added.length || item.removed.length) ? previous.uses
     : core.useCounts(document);
@@ -111,7 +111,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // A wire can come into effect or drop out without this node being edited (a type changed upstream): drawn again then too.
     // 線可能在這個節點沒被編輯時接通或斷開（上游改了型別）：那時也重畫。
     } else if (!data || all || dirty.has(node.id) || data.ghost || !sameList(data.connected, connected.get(node.id)) || !sameList(data.wired, outgoing.get(node.id))
-      // A call's count can change without the call being edited (a call added or removed elsewhere). 呼叫數可能在這個呼叫沒被編輯時變。
+      // An instance's count can change without the instance being edited (an instance added or removed elsewhere). 實例數可能在這個實例沒被編輯時變。
       || (data.subgraph !== undefined && data.uses !== (uses?.get(data.subgraph)?.expanded ?? 0))) {
       const module = node.definition!, subgraph = module.referencedGraph?.(authored);
       const definition = subgraph === undefined ? undefined : document.document.subgraphs?.find(f => f.id === subgraph);

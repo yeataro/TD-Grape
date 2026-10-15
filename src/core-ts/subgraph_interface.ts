@@ -29,23 +29,23 @@ export function requireSubgraph(context:NodeContext,id?:string):SubgraphData {
   return f;
 }
 
-export function subgraphPorts(f:SubgraphData,kind:'call'|'input'|'output'):PortSpec[] {
+export function subgraphPorts(f:SubgraphData,kind:'instance'|'input'|'output'):PortSpec[] {
   const ports:PortSpec[] = [];
-  if (kind === 'call' || kind === 'input')
+  if (kind === 'instance' || kind === 'input')
     for (const p of f.inputs)
       ports.push({key:p.id,direction:kind === 'input' ? 'output' : 'input',type:p.type,...(p.default === undefined ? {} : {default:p.default})});
-  if (kind === 'call' || kind === 'output')
+  if (kind === 'instance' || kind === 'output')
     for (const p of f.outputs)
       ports.push({key:p.id,direction:kind === 'output' ? 'input' : 'output',type:p.type,...(p.default === undefined ? {} : {default:p.default})});
   return ports;
 }
 
-export function subgraphPresentation(f:SubgraphData,kind:'call'|'input'|'output'):NodePresentation {
+export function subgraphPresentation(f:SubgraphData,kind:'instance'|'input'|'output'):NodePresentation {
   // A port shows its label; with none, nothing but the type (§3.3: the id is never shown). 接孔顯示標籤；沒有就只剩型別。
   const names = (ports:typeof f.inputs) => Object.fromEntries(ports.map(p => [p.id,p.label ?? '']));
   return {
-    ...(kind === 'call' ? {label:f.name,descriptionKey:f.descriptionKey || 'help.function'} : {}),
-    portLabels:kind === 'call' ? {inputs:names(f.inputs),outputs:names(f.outputs)} :
+    ...(kind === 'instance' ? {label:f.name,descriptionKey:f.descriptionKey || 'help.subgraph_instance'} : {}),
+    portLabels:kind === 'instance' ? {inputs:names(f.inputs),outputs:names(f.outputs)} :
       kind === 'input' ? {outputs:names(f.inputs)} : {inputs:names(f.outputs)}
   };
 }

@@ -18,7 +18,7 @@ const definition: NodeModule = {
       outputs: {},
       stages: ['vertex', 'pixel'],
       defaults: {},
-      descriptionKey: 'help.functionPorts'
+      descriptionKey: 'help.subgraph_ports'
     },
     emitter: {
       id: 'subgraph_input',

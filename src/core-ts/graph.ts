@@ -146,10 +146,10 @@ export class Network {
   }
   subgraphFromSelection(ids:ReadonlySet<string>,options:SelectionSubgraphOptions):Node {
     this.assertEditable();
-    if(this.removedNodes.has(options.callId))throw Error('Retired node ID');
-    const call=subgraphFromSelection(this,ids,options);
+    if(this.removedNodes.has(options.instanceId))throw Error('Retired node ID');
+    const instance=subgraphFromSelection(this,ids,options);
     ids.forEach(id=>this.removedNodes.add(id));
-    return this.node(call.id);
+    return this.node(instance.id);
   }
   instantiateSubgraph(definitionId:string,id:string,ui:ObjectValue={}):Node {
     return this.node(instantiateSubgraph(this,definitionId,id,ui).id);
@@ -212,8 +212,8 @@ export class Network {
   remove(node:Node):void {
     this.removeAll([node]);
   }
-  /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last call goes
-   * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個呼叫時可回收的定義，預設沒有。 */
+  /** Remove nodes and their wires. `collectible` names the subgraph definitions that may go when their last instance goes
+   * (subgraph_operations.ts collectSubgraphs); by default none. 刪節點與線；collectible 是刪掉最後一個實例時可回收的定義，預設沒有。 */
   removeAll(nodes:readonly Node[],collectible:ReadonlySet<string>=new Set()):void {
     this.assertEditable();if(nodes.some(n=>n.network!==this))throw Error('Node belongs to another network');
     const ids=new Set(nodes.filter(n=>this.nodeData(n.id)).map(n=>n.id));if(!ids.size)return;
@@ -372,7 +372,7 @@ export class GraphDocument {
     return this.networkHandles;
   }
   createSubgraph(options:SubgraphOptions):Subgraph {return this.subgraph(createSubgraph(this,options).id);}
-  /** Remove a definition nobody calls (subgraph_operations.ts). 刪掉沒人呼叫的定義。 */
+  /** Remove a definition with no instances (subgraph_operations.ts). 刪掉沒有實例的定義。 */
   removeSubgraph(id:string):void {removeSubgraph(this,id);}
   ensureSubgraphCapacity(additional=0):void {ensureSubgraphCapacity(this,additional);}
   appendSubgraphs(definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):Subgraph[] {
@@ -403,9 +403,9 @@ export class GraphDocument {
       // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
       requireCapacity(before,after,this.registry);
       requireStructure(before,after,this.registry);
-      // A subgraph that reaches itself through its calls cannot be expanded: an edit that adds a call edge closing a cycle is refused
+      // A subgraph that reaches itself through its instances cannot be expanded: an edit that adds an instance edge closing a cycle is refused
       // as a whole, even when the graph already has another one (TECH-8); a graph opened with one stays editable and repairable (the
-      // compiler reports it). 經由呼叫回到自己的子圖展不開：新增的呼叫邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
+      // compiler reports it). 經由實例回到自己的子圖展不開：新增的實例邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
       const cycle=newSubgraphCycle(before,after,this.registry);
       if(cycle)throw Object.assign(Error('Subgraph reference cycle: '+cycle),{code:'subgraph.cycle',subgraphId:cycle});
       return {before,after,changes:changesBetween(before,after,this.registry)};

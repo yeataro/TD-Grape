@@ -191,8 +191,8 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
   const projection = useEditorSlice(session, state => state.projection);
   const version = useEditorSlice(session, state => state.version);
   // The network being edited (Refactor.112): after it changes the view lands where the session says (visual notes 8: Home after
-  // entering, the call left behind after going up). 正在編輯的網路（R.112）：換了之後視野落在 session 說的地方（外觀意見 8：進入後 Home、
-  // 上一層後是剛離開的呼叫）。
+  // entering, the instance left behind after going up). 正在編輯的網路（R.112）：換了之後視野落在 session 說的地方（外觀意見 8：進入後 Home、
+  // 上一層後是剛離開的實例）。
   const network = useEditorSlice(session, state => state.network);
   useEffect(() => {
     const landing = session.takeLanding();
@@ -394,8 +394,8 @@ const Canvas = memo(function Canvas({ session, bodyDrag, snap, boxSelect, dampin
       latest.current.onCreate({ screen: { x: event.clientX, y: event.clientY }, place: true });
   }, []);
   const onNodeDragStart = useCallback(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }, []);
-  // A double-click on a subgraph call opens the subgraph (legacy graph_ui.js:2034; basic design §3.12); on any other node's plain area
-  // it frames the node (human 2026-10-09; new); on fields, buttons and ports it does what it did. 雙擊子圖呼叫＝打開子圖（照舊產品；
+  // A double-click on a subgraph instance opens the subgraph (legacy graph_ui.js:2034; basic design §3.12); on any other node's plain area
+  // it frames the node (human 2026-10-09; new); on fields, buttons and ports it does what it did. 雙擊子圖實例＝打開子圖（照舊產品；
   // §3.12）；雙擊其他節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
   const onNodeDoubleClick = useCallback<FlowHandler<'onNodeDoubleClick'>>((event, node) => {
     if ((event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row')) return;
