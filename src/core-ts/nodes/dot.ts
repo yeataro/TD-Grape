@@ -19,7 +19,7 @@ export default numericCall({
       "type": "vec3"
     },
     "descriptionKey": "help.dot",
-    "definitionUuid": "sgrape.builtin.dot"
+    "nodeType": "sgrape.builtin.dot"
   },
   "emitter": {
     "id": "dot",

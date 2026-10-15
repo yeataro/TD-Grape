@@ -21,7 +21,7 @@ const catalog:CatalogRow={
       ]
     },
     "descriptionKey": "help.vec4",
-    "definitionUuid": "sgrape.builtin.vec4"
+    "nodeType": "sgrape.builtin.vec4"
   },
   "emitter": {
     "id": "vec4",

@@ -832,7 +832,7 @@ const wire_drop_1 = require("./wire_drop");
 function variants(module, target) {
     var _a;
     const definition = module.catalog.definition;
-    const base = { id: 'projection', nodeType: definition.definitionUuid, params: (0, model_1.copy)(definition.defaults) };
+    const base = { id: 'projection', nodeType: definition.nodeType, params: (0, model_1.copy)(definition.defaults) };
     const tokens = [...Object.values(definition.inputs), ...Object.values(definition.outputs)];
     const selector = tokens.includes('D') ? 'declaration' :
         tokens.includes('T') || typeof definition.defaults.type === 'string' ? 'parameter' : 'fixed';
@@ -899,7 +899,7 @@ function createEditorContract(registry, target = 'top') {
         resourceTypes: [...values.opaque], specConstantTypes: [],
         types: Object.fromEntries(values.types.map(t => [t, { family: values.family(t), components: values.count(t) }])),
         conversions: values.policy.conversions.map(row => ({ ...row, kind: values.count(row.from) === 1 && values.count(row.to) > 1 ? 'splat' : 'cast' })),
-        definitions: Object.fromEntries(modules.map(m => [m.catalog.definition.definitionUuid, variants(m, target)])),
+        definitions: Object.fromEntries(modules.map(m => [m.catalog.definition.nodeType, variants(m, target)])),
         convert: { types: [...values.types], fromParameter: 'fromType', toParameter: 'toType',
             pairs: Object.fromEntries(values.types.map(from => [from, values.types.filter(to => values.explicit(from, to))])) },
         vectors: { version: 1, types: [...values.vectors], components: 'xyzw',
@@ -1941,7 +1941,7 @@ function contextFor(graph, owner) {
 function createRegistry(modules) {
     const table = new Map();
     for (const module of modules) {
-        const d = module.catalog.definition, id = d.definitionUuid || 'sgrape.builtin.' + d.key;
+        const d = module.catalog.definition, id = d.nodeType || 'sgrape.builtin.' + d.key;
         if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.key) || table.has(id))
             throw Error('Invalid or duplicate node definition: ' + id);
         if (module.signatures && !module.configure)
@@ -1951,7 +1951,7 @@ function createRegistry(modules) {
             Object.freeze(value);
         } };
         const catalog = JSON.parse(JSON.stringify(module.catalog));
-        catalog.definition.definitionUuid = id;
+        catalog.definition.nodeType = id;
         freeze(catalog);
         table.set(id, Object.freeze({ ...module, catalog }));
     }
@@ -2333,7 +2333,7 @@ function unaryNode(spec) {
     const identifier = (v) => typeof v === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(v);
     if (![spec.key, spec.operator, spec.port].every(identifier))
         throw Error('Invalid unary node definition');
-    const catalog = { definition: { key: spec.key, label: spec.label, inputs: { [spec.port]: 'T' }, outputs: { out: 'T' }, stages: ['vertex', 'pixel'], defaults: { type: 'float' }, descriptionKey: spec.descriptionKey, definitionUuid: 'sgrape.builtin.' + spec.key }, emitter: { id: spec.key, version: 1, primitive: { operator: spec.operator, port: spec.port } }, browser: spec.browser };
+    const catalog = { definition: { key: spec.key, label: spec.label, inputs: { [spec.port]: 'T' }, outputs: { out: 'T' }, stages: ['vertex', 'pixel'], defaults: { type: 'float' }, descriptionKey: spec.descriptionKey, nodeType: 'sgrape.builtin.' + spec.key }, emitter: { id: spec.key, version: 1, primitive: { operator: spec.operator, port: spec.port } }, browser: spec.browser };
     const layouts = Object.fromEntries(numeric_1.types.map(t => [t, fixedPorts([{ key: spec.port, direction: 'input', type: t, default: (0, numeric_1.fill)(0, (0, numeric_1.type)(t)) }, out(t)])]));
     return { catalog, role: 'value', supports: numeric,
         configure: (n, s) => { const before = layouts[(0, numeric_1.type)(n.params.type || 'float')]; n.params.type = selectedType(n, s); return reshapeDefaults(n, before, layouts[(0, numeric_1.type)(n.params.type)]); },
@@ -2549,7 +2549,7 @@ const catalog = {
             "type": "float"
         },
         "descriptionKey": "help.add",
-        "definitionUuid": "sgrape.builtin.add"
+        "nodeType": "sgrape.builtin.add"
     },
     "emitter": {
         "id": "add",
@@ -2596,7 +2596,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.all",
-        "definitionUuid": "sgrape.builtin.all",
+        "nodeType": "sgrape.builtin.all",
         "targets": [
             "top",
             "mat"
@@ -2650,7 +2650,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.any",
-        "definitionUuid": "sgrape.builtin.any",
+        "nodeType": "sgrape.builtin.any",
         "targets": [
             "top",
             "mat"
@@ -2709,7 +2709,7 @@ const catalog = {
             "b": false
         },
         "descriptionKey": "help.boolean_operation",
-        "definitionUuid": "sgrape.builtin.boolean_operation",
+        "nodeType": "sgrape.builtin.boolean_operation",
         "targets": [
             "top",
             "mat"
@@ -2834,7 +2834,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "max": 1
         },
         "descriptionKey": "help.clamp",
-        "definitionUuid": "sgrape.builtin.clamp"
+        "nodeType": "sgrape.builtin.clamp"
     },
     "emitter": {
         "id": "clamp",
@@ -2903,7 +2903,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.color",
-        "definitionUuid": "sgrape.builtin.color"
+        "nodeType": "sgrape.builtin.color"
     },
     "emitter": {
         "id": "color",
@@ -2960,7 +2960,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.combine",
-        "definitionUuid": "sgrape.builtin.combine"
+        "nodeType": "sgrape.builtin.combine"
     },
     "emitter": {
         "id": "combine",
@@ -3016,7 +3016,7 @@ const catalog = {
             "b": 0
         },
         "descriptionKey": "help.compare",
-        "definitionUuid": "sgrape.builtin.compare"
+        "nodeType": "sgrape.builtin.compare"
     },
     "emitter": {
         "id": "compare",
@@ -3088,7 +3088,7 @@ const catalog = {
             "toType": "int"
         },
         "descriptionKey": "help.convert",
-        "definitionUuid": "sgrape.builtin.convert"
+        "nodeType": "sgrape.builtin.convert"
     },
     "emitter": {
         "id": "convert",
@@ -3201,7 +3201,7 @@ const catalog = {
             "declarationId": ""
         },
         "descriptionKey": "help.declaration",
-        "definitionUuid": "sgrape.builtin.declaration"
+        "nodeType": "sgrape.builtin.declaration"
     },
     "emitter": {
         "id": "declaration",
@@ -3254,7 +3254,7 @@ const catalog = {
             "b": 1
         },
         "descriptionKey": "help.divide",
-        "definitionUuid": "sgrape.builtin.divide"
+        "nodeType": "sgrape.builtin.divide"
     },
     "emitter": {
         "id": "divide",
@@ -3302,7 +3302,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "type": "vec3"
         },
         "descriptionKey": "help.dot",
-        "definitionUuid": "sgrape.builtin.dot"
+        "nodeType": "sgrape.builtin.dot"
     },
     "emitter": {
         "id": "dot",
@@ -3355,7 +3355,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.equal",
-        "definitionUuid": "sgrape.builtin.equal",
+        "nodeType": "sgrape.builtin.equal",
         "targets": [
             "top",
             "mat"
@@ -3406,7 +3406,7 @@ const catalog = {
             "value": 0.5
         },
         "descriptionKey": "help.float",
-        "definitionUuid": "sgrape.builtin.float"
+        "nodeType": "sgrape.builtin.float"
     },
     "emitter": {
         "id": "float",
@@ -3531,7 +3531,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.greaterThan",
-        "definitionUuid": "sgrape.builtin.greaterThan",
+        "nodeType": "sgrape.builtin.greaterThan",
         "targets": [
             "top",
             "mat"
@@ -3586,7 +3586,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.greaterThanEqual",
-        "definitionUuid": "sgrape.builtin.greaterThanEqual",
+        "nodeType": "sgrape.builtin.greaterThanEqual",
         "targets": [
             "top",
             "mat"
@@ -3646,7 +3646,7 @@ const catalog = {
             "false": 0
         },
         "descriptionKey": "help.if",
-        "definitionUuid": "sgrape.builtin.if"
+        "nodeType": "sgrape.builtin.if"
     },
     "emitter": {
         "id": "if",
@@ -3700,7 +3700,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.isinf",
-        "definitionUuid": "sgrape.builtin.isinf",
+        "nodeType": "sgrape.builtin.isinf",
         "targets": [
             "top",
             "mat"
@@ -3770,7 +3770,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.isnan",
-        "definitionUuid": "sgrape.builtin.isnan",
+        "nodeType": "sgrape.builtin.isnan",
         "targets": [
             "top",
             "mat"
@@ -3839,7 +3839,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "type": "vec3"
         },
         "descriptionKey": "help.length",
-        "definitionUuid": "sgrape.builtin.length"
+        "nodeType": "sgrape.builtin.length"
     },
     "emitter": {
         "id": "length",
@@ -3892,7 +3892,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.lessThan",
-        "definitionUuid": "sgrape.builtin.lessThan",
+        "nodeType": "sgrape.builtin.lessThan",
         "targets": [
             "top",
             "mat"
@@ -3947,7 +3947,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.lessThanEqual",
-        "definitionUuid": "sgrape.builtin.lessThanEqual",
+        "nodeType": "sgrape.builtin.lessThanEqual",
         "targets": [
             "top",
             "mat"
@@ -4021,7 +4021,7 @@ function name(index) { let value = index + 1, result = ''; while (value) {
 function ports(n) { var _a; const t = (0, node_sdk_1.type)((_a = n.params.type) !== null && _a !== void 0 ? _a : 'float'); return [...Array.from({ length: count(n) }, (_, i) => ({ key: 'input' + i, direction: 'input', type: t, default: (0, node_sdk_1.fill)(0, t) })), { key: 'out', direction: 'output', type: t }]; }
 function formula(n) { var _a; const rows = steps(n); return n.params.mode === 'shared' ? ['A', ...rows.map(s => name(s.input))].join(' ' + symbols[String((_a = n.params.operation) !== null && _a !== void 0 ? _a : 'add')] + ' ') : rows.reduce((text, s) => '(' + text + ' ' + symbols[s.operator] + ' ' + name(s.input) + ')', 'A'); }
 const mathModule = {
-    catalog: { definition: { key: 'math', label: 'Math', inputs: { input0: 'T', input1: 'T', input2: 'T' }, outputs: { out: 'T' }, stages: ['vertex', 'pixel'], defaults: { type: 'float', inputCount: 3, mode: 'steps', operation: 'add' }, descriptionKey: 'help.math', definitionUuid: 'sgrape.builtin.math' }, emitter: { id: 'math', version: 1 }, browser: { category: 'math', source: 'editor', aliases: ['chain', 'arithmetic', '連加', '連減', '連乘', '連除'], glslName: '', secondaryCategories: [], categoryPath: ['math', 'arithmetic'] } },
+    catalog: { definition: { key: 'math', label: 'Math', inputs: { input0: 'T', input1: 'T', input2: 'T' }, outputs: { out: 'T' }, stages: ['vertex', 'pixel'], defaults: { type: 'float', inputCount: 3, mode: 'steps', operation: 'add' }, descriptionKey: 'help.math', nodeType: 'sgrape.builtin.math' }, emitter: { id: 'math', version: 1 }, browser: { category: 'math', source: 'editor', aliases: ['chain', 'arithmetic', '連加', '連減', '連乘', '連除'], glslName: '', secondaryCategories: [], categoryPath: ['math', 'arithmetic'] } },
     role: 'value', supports: n => { var _a; return node_sdk_1.numericTypes.includes(String((_a = n.params.type) !== null && _a !== void 0 ? _a : 'float')); },
     ports, validate: n => { var _a; steps(n); (0, node_sdk_1.type)((_a = n.params.type) !== null && _a !== void 0 ? _a : 'float'); },
     configure: (n, selection) => { const before = ports(n); n.params.type = (0, node_sdk_1.selectedType)(n, selection); return (0, node_sdk_1.reshapeDefaults)(n, before, ports(n)); },
@@ -4092,7 +4092,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "type": "float"
         },
         "descriptionKey": "help.max",
-        "definitionUuid": "sgrape.builtin.max"
+        "nodeType": "sgrape.builtin.max"
     },
     "emitter": {
         "id": "max",
@@ -4153,7 +4153,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "type": "float"
         },
         "descriptionKey": "help.min",
-        "definitionUuid": "sgrape.builtin.min"
+        "nodeType": "sgrape.builtin.min"
     },
     "emitter": {
         "id": "min",
@@ -4215,7 +4215,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "type": "vec4"
         },
         "descriptionKey": "help.mix",
-        "definitionUuid": "sgrape.builtin.mix"
+        "nodeType": "sgrape.builtin.mix"
     },
     "emitter": {
         "id": "mix",
@@ -4271,7 +4271,7 @@ const catalog = {
             "type": "vec4"
         },
         "descriptionKey": "help.multiply",
-        "definitionUuid": "sgrape.builtin.multiply"
+        "nodeType": "sgrape.builtin.multiply"
     },
     "emitter": {
         "id": "multiply",
@@ -4321,7 +4321,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "value": 1
         },
         "descriptionKey": "help.normalize",
-        "definitionUuid": "sgrape.builtin.normalize"
+        "nodeType": "sgrape.builtin.normalize"
     },
     "emitter": {
         "id": "normalize",
@@ -4373,7 +4373,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.not",
-        "definitionUuid": "sgrape.builtin.not",
+        "nodeType": "sgrape.builtin.not",
         "targets": [
             "top",
             "mat"
@@ -4429,7 +4429,7 @@ const catalog = {
         },
         "inputDefaults": {},
         "descriptionKey": "help.notEqual",
-        "definitionUuid": "sgrape.builtin.notEqual",
+        "nodeType": "sgrape.builtin.notEqual",
         "targets": [
             "top",
             "mat"
@@ -4477,7 +4477,7 @@ const catalog = {
         ],
         "defaults": {},
         "descriptionKey": "help.pixel_out",
-        "definitionUuid": "sgrape.builtin.pixel_out"
+        "nodeType": "sgrape.builtin.pixel_out"
     },
     "emitter": {
         "id": "pixel_out",
@@ -4595,7 +4595,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.replace",
-        "definitionUuid": "sgrape.builtin.replace"
+        "nodeType": "sgrape.builtin.replace"
     },
     "emitter": {
         "id": "replace",
@@ -4641,7 +4641,7 @@ const catalog = {
         ],
         "defaults": {},
         "descriptionKey": "help.rgba",
-        "definitionUuid": "sgrape.builtin.rgba"
+        "nodeType": "sgrape.builtin.rgba"
     },
     "emitter": {
         "id": "rgba",
@@ -4722,7 +4722,7 @@ const catalog = {
             "type": "float"
         },
         "descriptionKey": "help.router",
-        "definitionUuid": "sgrape.builtin.router"
+        "nodeType": "sgrape.builtin.router"
     },
     "emitter": {
         "id": "router",
@@ -4774,7 +4774,7 @@ const catalog = {
             "value": 0
         },
         "descriptionKey": "help.scalar",
-        "definitionUuid": "sgrape.builtin.scalar"
+        "nodeType": "sgrape.builtin.scalar"
     },
     "emitter": {
         "id": "scalar",
@@ -4908,7 +4908,7 @@ exports.default = (0, node_sdk_1.numericCall)({
             "edge1": 1
         },
         "descriptionKey": "help.smoothstep",
-        "definitionUuid": "sgrape.builtin.smoothstep"
+        "nodeType": "sgrape.builtin.smoothstep"
     },
     "emitter": {
         "id": "smoothstep",
@@ -4976,7 +4976,7 @@ const catalog = {
         ],
         "defaults": {},
         "descriptionKey": "help.split",
-        "definitionUuid": "sgrape.builtin.split"
+        "nodeType": "sgrape.builtin.split"
     },
     "emitter": {
         "id": "split",
@@ -5183,7 +5183,7 @@ const catalog = {
             "type": "float"
         },
         "descriptionKey": "help.subtract",
-        "definitionUuid": "sgrape.builtin.subtract"
+        "nodeType": "sgrape.builtin.subtract"
     },
     "emitter": {
         "id": "subtract",
@@ -5231,7 +5231,7 @@ const catalog = {
             "mask": "xy"
         },
         "descriptionKey": "help.swizzle",
-        "definitionUuid": "sgrape.builtin.swizzle"
+        "nodeType": "sgrape.builtin.swizzle"
     },
     "emitter": {
         "id": "swizzle",
@@ -5362,7 +5362,7 @@ const catalog = {
             "entry": "vUV"
         },
         "descriptionKey": "help.td_value",
-        "definitionUuid": "sgrape.builtin.td_value"
+        "nodeType": "sgrape.builtin.td_value"
     },
     "emitter": {
         "id": "td_value",
@@ -5414,7 +5414,7 @@ const catalog = {
         ],
         "defaults": {},
         "descriptionKey": "help.texture_sample",
-        "definitionUuid": "sgrape.builtin.texture_sample"
+        "nodeType": "sgrape.builtin.texture_sample"
     },
     "emitter": {
         "id": "texture_sample",
@@ -5508,7 +5508,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.vec2",
-        "definitionUuid": "sgrape.builtin.vec2"
+        "nodeType": "sgrape.builtin.vec2"
     },
     "emitter": {
         "id": "vec2",
@@ -5559,7 +5559,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.vec3",
-        "definitionUuid": "sgrape.builtin.vec3"
+        "nodeType": "sgrape.builtin.vec3"
     },
     "emitter": {
         "id": "vec3",
@@ -5611,7 +5611,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.vec4",
-        "definitionUuid": "sgrape.builtin.vec4"
+        "nodeType": "sgrape.builtin.vec4"
     },
     "emitter": {
         "id": "vec4",
@@ -5665,7 +5665,7 @@ const catalog = {
             ]
         },
         "descriptionKey": "help.vector",
-        "definitionUuid": "sgrape.builtin.vector"
+        "nodeType": "sgrape.builtin.vector"
     },
     "emitter": {
         "id": "vector",
@@ -5752,7 +5752,7 @@ const catalog = {
             "type": "vec2"
         },
         "descriptionKey": "help.vector_split",
-        "definitionUuid": "sgrape.builtin.vector_split"
+        "nodeType": "sgrape.builtin.vector_split"
     },
     "emitter": {
         "id": "vector_split",
@@ -5997,7 +5997,7 @@ const declarations_1 = require("./declarations");
 const node_names_1 = require("./node_names");
 const relay = {
     catalog: {
-        definition: { key: 'subgraph_relay', definitionUuid: 'grape.internal.subgraph_relay', label: 'Subgraph value', inputs: {}, outputs: {}, stages: ['pixel'], defaults: {}, descriptionKey: '' },
+        definition: { key: 'subgraph_relay', nodeType: 'grape.internal.subgraph_relay', label: 'Subgraph value', inputs: {}, outputs: {}, stages: ['pixel'], defaults: {}, descriptionKey: '' },
         emitter: { id: 'subgraph_relay', version: 1 }, browser: {}
     },
     role: 'value',
@@ -6239,7 +6239,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                             for (const direction of ['inputs', 'outputs'])
                                 for (const p of fn[direction]) {
                                     const id = allocate(), value = direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default;
-                                    add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type },
+                                    add({ id, nodeType: relay.catalog.definition.nodeType, params: { type: p.type },
                                         ...(value === undefined ? {} : { inputValues: { value: (0, model_1.copy)(value) } }),
                                         ...(node.ui ? { ui: (0, model_1.copy)(node.ui) } : {}), ...(node.comment ? { comment: node.comment } : {}) }, origin);
                                     mapped[direction][p.id] = [id, direction === 'inputs' ? 'value' : 'out'];
@@ -6286,12 +6286,12 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 for (const direction of ['inputs', 'outputs'])
                     for (const p of probe[direction]) {
                         const id = allocate();
-                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, ...(p.default === undefined ? {} : { inputValues: { value: (0, model_1.copy)(p.default) } }) }, { node: '', stage: 'pixel', trail: [probe.id], subgraphId: probe.id });
+                        add({ id, nodeType: relay.catalog.definition.nodeType, params: { type: p.type }, ...(p.default === undefined ? {} : { inputValues: { value: (0, model_1.copy)(p.default) } }) }, { node: '', stage: 'pixel', trail: [probe.id], subgraphId: probe.id });
                         inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
                     }
                 expand(probe.graph, [probe.id], probe, inside);
                 const output = registry.modules.find(m => m.role === 'output');
-                add({ id: allocate(), nodeType: output.catalog.definition.definitionUuid, params: (0, model_1.copy)(output.catalog.definition.defaults) }, { node: '', stage: 'pixel', trail: [] });
+                add({ id: allocate(), nodeType: output.catalog.definition.nodeType, params: (0, model_1.copy)(output.catalog.definition.defaults) }, { node: '', stage: 'pixel', trail: [] });
             }
             else
                 expand(g.stages.pixel, []);
@@ -6549,7 +6549,7 @@ function structural(graph, role) {
 }
 function authored(module, id, ui, params = {}) {
     const d = module.catalog.definition;
-    return { id, nodeType: d.definitionUuid, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
+    return { id, nodeType: d.nodeType, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
 }
 function ensureSubgraphCapacity(graph, additional = 0) {
     var _a;
@@ -8083,7 +8083,7 @@ function wireDropTable(registry, types, target = 'top', context = { target, decl
         if (module.structural || !(0, structure_1.offered)(module) || !definition.stages.includes('pixel') || module.referencedDeclaration)
             continue;
         for (const entry of (_b = (_a = module.entries) === null || _a === void 0 ? void 0 : _a.call(module)) !== null && _b !== void 0 ? _b : [{ key: '', label: definition.label, params: {} }]) {
-            const base = { id: NEW, nodeType: definition.definitionUuid, params: { ...(0, model_1.copy)(definition.defaults), ...(0, model_1.copy)(entry.params) } };
+            const base = { id: NEW, nodeType: definition.nodeType, params: { ...(0, model_1.copy)(definition.defaults), ...(0, model_1.copy)(entry.params) } };
             if (!module.supports(base, context))
                 continue;
             const configurations = configurationsOf(module, base, types, context);
@@ -8094,7 +8094,7 @@ function wireDropTable(registry, types, target = 'top', context = { target, decl
                     if (fit)
                         row[side][type] = fit;
                 }
-            table[definition.definitionUuid + ':' + entry.key] = row;
+            table[definition.nodeType + ':' + entry.key] = row;
         }
     }
     return table;

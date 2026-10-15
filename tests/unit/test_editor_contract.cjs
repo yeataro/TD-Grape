@@ -6,7 +6,7 @@ const bootstrap=require('../../src/generated/editor-bootstrap.json');
 
 test('editor bootstrap comes from registered modules and identifies its actual bundle',()=>{
   const ordinary=graph.registry.modules.filter(m=>!m.structural);
-  assert.deepEqual(bootstrap.catalog.map(d=>d.definitionUuid),ordinary.map(m=>m.catalog.definition.definitionUuid));
+  assert.deepEqual(bootstrap.catalog.map(d=>d.nodeType),ordinary.map(m=>m.catalog.definition.nodeType));
   const {sources,...nodeContract}=bootstrap.typeContract;
   assert.deepEqual(nodeContract,graph.createEditorContract(graph.registry));
   const sourceCatalog=require('../../src/library/source_catalog.json');
@@ -19,13 +19,13 @@ test('editor bootstrap comes from registered modules and identifies its actual b
 test('default and native tuple ports retain the real module interfaces',()=>{
   for(const module of graph.registry.modules.filter(m=>!m.structural)){
     const d=module.catalog.definition,decl={id:'source',kind:'uniform',name:'uSource',type:'float',value:0};
-    const node={id:'node',nodeType:d.definitionUuid,params:{...structuredClone(d.defaults)}};
+    const node={id:'node',nodeType:d.nodeType,params:{...structuredClone(d.defaults)}};
     if(Object.values(d.outputs).includes('D'))node.params.declarationId=decl.id;
     const context={target:'top',declaration:()=>decl};
     assert.equal(module.supports(node,context),true,d.key);
     module.validate(node,context);
     const actual=graph.resolvePorts(module,node,context).types();
-    const variants=bootstrap.typeContract.definitions[d.definitionUuid].variants;
+    const variants=bootstrap.typeContract.definitions[d.nodeType].variants;
     assert.ok(variants.some(v=>JSON.stringify(v.inputs)===JSON.stringify(actual.inputs)&&JSON.stringify(v.outputs)===JSON.stringify(actual.outputs)),d.key);
   }
   const mix=bootstrap.typeContract.definitions['sgrape.builtin.mix'].variants.filter(v=>v.type==='vec3');
@@ -37,7 +37,7 @@ test('default and native tuple ports retain the real module interfaces',()=>{
 
 test('a developer module adds its palette contract without another node dispatch',()=>{
   const source=graph.registry.get('sgrape.builtin.abs'),catalog=structuredClone(source.catalog);
-  catalog.definition.key='developerAbs';catalog.definition.definitionUuid='developer.abs';
+  catalog.definition.key='developerAbs';catalog.definition.nodeType='developer.abs';
   const registry=graph.createRegistry([{...source,catalog}]);
   const contract=graph.createEditorContract(registry);
   assert.deepEqual(Object.keys(contract.definitions),['developer.abs']);
@@ -60,13 +60,13 @@ test('a broken advertised selection fails the build with its module and type',()
 test('omitted developer UUIDs use the same registry and catalog identity without collisions',()=>{
   const source=graph.registry.get('sgrape.builtin.abs');
   const modules=['firstCustom','secondCustom'].map(key=>{
-    const catalog=structuredClone(source.catalog);delete catalog.definition.definitionUuid;
+    const catalog=structuredClone(source.catalog);delete catalog.definition.nodeType;
     catalog.definition.key=key;return {...source,catalog};
   });
   const registry=graph.createRegistry(modules),contract=graph.createEditorContract(registry);
   for(const key of ['firstCustom','secondCustom']){
     const id='sgrape.builtin.'+key;
-    assert.equal(registry.get(id).catalog.definition.definitionUuid,id);
+    assert.equal(registry.get(id).catalog.definition.nodeType,id);
     assert.ok(contract.definitions[id].variants.length);
   }
   assert.equal(Object.keys(contract.definitions).length,2);

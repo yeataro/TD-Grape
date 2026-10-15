@@ -24,7 +24,7 @@ const catalog = {
       "b": false
     },
     "descriptionKey": "help.boolean_operation",
-    "definitionUuid": "sgrape.builtin.boolean_operation",
+    "nodeType": "sgrape.builtin.boolean_operation",
     "targets": [
       "top",
       "mat"

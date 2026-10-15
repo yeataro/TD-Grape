@@ -17,7 +17,7 @@ const catalog = {
     ],
     "defaults": {},
     "descriptionKey": "help.rgba",
-    "definitionUuid": "sgrape.builtin.rgba"
+    "nodeType": "sgrape.builtin.rgba"
   },
   "emitter": {
     "id": "rgba",

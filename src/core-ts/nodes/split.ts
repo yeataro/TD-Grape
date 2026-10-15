@@ -20,7 +20,7 @@ const catalog = {
     ],
     "defaults": {},
     "descriptionKey": "help.split",
-    "definitionUuid": "sgrape.builtin.split"
+    "nodeType": "sgrape.builtin.split"
   },
   "emitter": {
     "id": "split",

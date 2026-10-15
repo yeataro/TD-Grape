@@ -104,7 +104,7 @@ test('a wire whose types no longer fit is a ghost wire, not a failure',()=>{
 test('a node outside its stage is a misplaced ghost (ghostsOf)',()=>{
   const graph=context.GrapeGraph,registry=graph.registry;
   const add=registry.get('sgrape.builtin.add');
-  const vertexOnly={...add,catalog:{...add.catalog,definition:{...add.catalog.definition,definitionUuid:'test.vertex.only',key:'vertexOnly',stages:['vertex']}}};
+  const vertexOnly={...add,catalog:{...add.catalog,definition:{...add.catalog.definition,nodeType:'test.vertex.only',key:'vertexOnly',stages:['vertex']}}};
   const custom=graph.createRegistry([...registry.modules,vertexOnly]);
   const g=defaultGraph();g.stages.pixel.nodes.push({id:'v',nodeType:'test.vertex.only',params:{type:'vec4'},ui:{}});
   const doc=new graph.GraphDocument(g,custom),ghosts=graph.ghostsOf(doc.networks.get('pixel'),graph.values.policy);

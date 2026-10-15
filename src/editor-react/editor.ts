@@ -556,7 +556,7 @@ export class Editor {
   placeSubgraph = (id: string, position: XYPosition) => {
     const module = core.registry.modules.find(m => m.structural && m.reference);
     if (!module) return;
-    this.addNode({ nodeType: module.catalog.definition.definitionUuid!, params: module.reference!(id) }, position);
+    this.addNode({ nodeType: module.catalog.definition.nodeType!, params: module.reference!(id) }, position);
   };
   /** Select the instances of a definition in the network being edited (the subgraph panel's count). 選取正在編輯的網路裡這份定義的實例（子圖面板的數量）。 */
   selectSubgraphInstances = (id: string) => {
@@ -781,7 +781,7 @@ export class Editor {
   };
   // `params` come from the menu entry the module declared (Q37 1-5); the graph does not record the entry.
   // params 來自模組宣告的入口；圖不記錄來自哪個入口。
-  add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
+  add = (nodeType: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType, params }, position);
   /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
    * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
   addNode = (spec: NewNode, position: XYPosition, wire?: NewWire) =>

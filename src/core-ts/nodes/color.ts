@@ -21,7 +21,7 @@ const catalog:CatalogRow={
       ]
     },
     "descriptionKey": "help.color",
-    "definitionUuid": "sgrape.builtin.color"
+    "nodeType": "sgrape.builtin.color"
   },
   "emitter": {
     "id": "color",

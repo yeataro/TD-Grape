@@ -504,9 +504,9 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
 test('every offered node can be added, wired to the output and compiled', t => {
   const { supportedDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
   const chains = [[], ['length'], ['length:vec2'], ['if'], ['any', 'if'], ['length', 'if']]; // key:type = card's type selector
-  const attempt = (uuid, output, chain) => {
+  const attempt = (nodeType, output, chain) => {
     const { session } = open(t), ids = ['x', ...chain.map((_, i) => 'c' + i)];
-    session.transact('add', net => [[uuid], ...chain.map(k => k.split(':'))].forEach(([d, type], i) =>
+    session.transact('add', net => [[nodeType], ...chain.map(k => k.split(':'))].forEach(([d, type], i) =>
       net.insert({ id: ids[i], nodeType: i ? 'sgrape.builtin.' + d : d, params: type ? { type } : {}, ui: { x: 0, y: 0 } })));
     const view = id => session.snapshot().projection.nodes.find(n => n.id === id).data;
     let from = { source: 'x', sourceHandle: output };
@@ -522,17 +522,17 @@ test('every offered node can be added, wired to the output and compiled', t => {
   // The reference node needs a declaration; its own test below covers it. 引用宣告節點需要宣告，另有測試。
   // Structural nodes (a subgraph instance and its boundaries) need a definition; the subgraph tests below cover them (Refactor.110).
   // 結構性節點（子圖實例與邊界）需要定義；下面的子圖測試涵蓋（R.110）。
-  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value') && !u.includes('.subgraph_'))) {
+  for (const nodeType of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value') && !u.includes('.subgraph_'))) {
     const { session } = open(t);
-    session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
+    session.transact('add', net => net.insert({ id: 'x', nodeType, params: {}, ui: { x: 0, y: 0 } }));
     const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
     let graph = null;
-    for (const output of outputs) { for (const chain of chains) if ((graph = attempt(uuid, output, chain))) break; if (graph) break; }
-    if (!graph) { failures.push(uuid + ': no route to Color Output'); continue; }
+    for (const output of outputs) { for (const chain of chains) if ((graph = attempt(nodeType, output, chain))) break; if (graph) break; }
+    if (!graph) { failures.push(nodeType + ': no route to Color Output'); continue; }
     try {
       const compiled = GrapeTopCompiler.compile(graph, bootstrap.typeContract.glslCode);
-      if (!/sg_n_x(?![A-Za-z0-9])/.test(compiled.pixel)) failures.push(uuid + ': not emitted');
-    } catch (error) { failures.push(uuid + ': ' + error.message); }
+      if (!/sg_n_x(?![A-Za-z0-9])/.test(compiled.pixel)) failures.push(nodeType + ': not emitted');
+    } catch (error) { failures.push(nodeType + ': ' + error.message); }
   }
   assert.deepEqual(failures, []);
 });
@@ -545,10 +545,10 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
   // Structural nodes are made from a definition, never from the menu (Refactor.110; node_module.ts). 結構性節點從定義來，不從選單來。
   const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value', 'sgrape.builtin.subgraph_instance', 'sgrape.builtin.subgraph_input', 'sgrape.builtin.subgraph_output'];
-  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
+  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(nodeType => !retired.includes(nodeType) && !fixed.includes(nodeType)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
   // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
-  const of = uuid => creatableEntries.filter(e => e.uuid === uuid).map(e => e.label);
+  const of = nodeType => creatableEntries.filter(e => e.nodeType === nodeType).map(e => e.label);
   assert.deepEqual(of('sgrape.builtin.scalar'), ['Scalar', 'float', 'int', 'uint', 'bool']);
   assert.deepEqual(of('sgrape.builtin.vector'), ['Vector', 'vec2', 'vec3', 'vec4', 'ivec2', 'ivec3', 'ivec4', 'uvec2', 'uvec3', 'uvec4', 'bvec2', 'bvec3', 'bvec4']);
   assert.equal(creatableEntries.filter(e => e.literal).length, 16);
@@ -561,7 +561,7 @@ test('a fixed entry makes a locked node that compiles; the graph does not record
   const { session, instances } = open(t);
   for (const label of ['vec3', 'bvec2', 'int']) {
     const entry = creatableEntries.find(e => e.label === label);
-    session.add(entry.uuid, { x: 0, y: 0 }, entry.params);
+    session.add(entry.nodeType, { x: 0, y: 0 }, entry.params);
   }
   const added = session.graph().stages.pixel.nodes.slice(-3);
   assert.deepEqual(JSON.parse(JSON.stringify(added.map(n => [n.params.type, n.params.fixedType]))), [['vec3', 'vec3'], ['bvec2', 'bvec2'], ['int', 'int']]);

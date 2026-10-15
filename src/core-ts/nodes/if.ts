@@ -25,7 +25,7 @@ const catalog = {
       "false": 0
     },
     "descriptionKey": "help.if",
-    "definitionUuid": "sgrape.builtin.if"
+    "nodeType": "sgrape.builtin.if"
   },
   "emitter": {
     "id": "if",

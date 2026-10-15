@@ -94,7 +94,7 @@ test('capacity, invalid selections and missing type descriptions fail without pu
 });
 
 test('structural creation follows module capabilities rather than built-in identity strings',()=>{
- const modules=registry.modules.map(m=>!m.structural?m:{...m,catalog:{...m.catalog,definition:{...m.catalog.definition,definitionUuid:'test.'+m.catalog.definition.key}},
+ const modules=registry.modules.map(m=>!m.structural?m:{...m,catalog:{...m.catalog,definition:{...m.catalog.definition,nodeType:'test.'+m.catalog.definition.key}},
   ...(m.reference?{reference:id=>({child:id}),referencedGraph:n=>n.params.child,supports:()=>false}: {})});
  const custom=createRegistry(modules),g=empty();
  const step=new GraphDocument(g,custom).change(m=>{

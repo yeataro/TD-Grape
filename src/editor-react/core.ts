@@ -100,14 +100,14 @@ export const supportedKinds = ['constant', 'topInput', 'uniform'];
 // The add menu (design-interview Q37 1-5, Refactor.50): the entries the node modules declare, for the
 // nodes this entry has taken over; the core decides what may be added at all (a stage output never is,
 // Q42). No node name is special-cased here. 新增選單：已接管的節點模組自己宣告的入口；能不能新增由核心決定。這裡不認任何節點名字。
-export type MenuEntry = { uuid: string; key: string; label: string; literal?: boolean; params: modelTypes.ObjectValue };
-export const creatableEntries: readonly MenuEntry[] = supportedDefinitions.flatMap(uuid => {
-  const module = core.registry.get(uuid)!;
+export type MenuEntry = { nodeType: string; key: string; label: string; literal?: boolean; params: modelTypes.ObjectValue };
+export const creatableEntries: readonly MenuEntry[] = supportedDefinitions.flatMap(nodeType => {
+  const module = core.registry.get(nodeType)!;
   if (!core.offered(module)) return [];
   return (module.entries?.() ?? [{ key: '', label: module.catalog.definition.label, params: {} }])
-    .map(entry => ({ uuid, ...entry }));
+    .map(entry => ({ nodeType, ...entry }));
 });
-export const creatableDefinitions = [...new Set(creatableEntries.map(entry => entry.uuid))];
+export const creatableDefinitions = [...new Set(creatableEntries.map(entry => entry.nodeType))];
 export function requireSupported(graph: graph.GraphDocument['document']) {
   // Format first (Q44): a newer version is never written back, so no reset is offered for it.
   // 先看格式：比目前新的版本不寫回，所以不提供換成預設圖。

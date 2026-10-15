@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "86c6e1b094ada1037e52b44f1b000581bc98b1308ba5589adb8324953c1dddac",
+  "catalogHash": "c416d286ad8dbff83cad9bd5842ccc6b56f46c3662dcc0ef76f0d800a71e5ecb",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -153,7 +153,7 @@
         "type": "float"
       },
       "descriptionKey": "help.abs",
-      "definitionUuid": "sgrape.builtin.abs"
+      "nodeType": "sgrape.builtin.abs"
     },
     {
       "key": "add",
@@ -173,7 +173,7 @@
         "type": "float"
       },
       "descriptionKey": "help.add",
-      "definitionUuid": "sgrape.builtin.add"
+      "nodeType": "sgrape.builtin.add"
     },
     {
       "key": "all",
@@ -193,7 +193,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.all",
-      "definitionUuid": "sgrape.builtin.all",
+      "nodeType": "sgrape.builtin.all",
       "targets": [
         "top",
         "mat"
@@ -217,7 +217,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.any",
-      "definitionUuid": "sgrape.builtin.any",
+      "nodeType": "sgrape.builtin.any",
       "targets": [
         "top",
         "mat"
@@ -246,7 +246,7 @@
         "b": false
       },
       "descriptionKey": "help.boolean_operation",
-      "definitionUuid": "sgrape.builtin.boolean_operation",
+      "nodeType": "sgrape.builtin.boolean_operation",
       "targets": [
         "top",
         "mat"
@@ -269,7 +269,7 @@
         "type": "float"
       },
       "descriptionKey": "help.ceil",
-      "definitionUuid": "sgrape.builtin.ceil"
+      "nodeType": "sgrape.builtin.ceil"
     },
     {
       "key": "clamp",
@@ -293,7 +293,7 @@
         "max": 1
       },
       "descriptionKey": "help.clamp",
-      "definitionUuid": "sgrape.builtin.clamp"
+      "nodeType": "sgrape.builtin.clamp"
     },
     {
       "key": "color",
@@ -315,7 +315,7 @@
         ]
       },
       "descriptionKey": "help.color",
-      "definitionUuid": "sgrape.builtin.color"
+      "nodeType": "sgrape.builtin.color"
     },
     {
       "key": "combine",
@@ -342,7 +342,7 @@
         ]
       },
       "descriptionKey": "help.combine",
-      "definitionUuid": "sgrape.builtin.combine"
+      "nodeType": "sgrape.builtin.combine"
     },
     {
       "key": "compare",
@@ -367,7 +367,7 @@
         "b": 0
       },
       "descriptionKey": "help.compare",
-      "definitionUuid": "sgrape.builtin.compare"
+      "nodeType": "sgrape.builtin.compare"
     },
     {
       "key": "convert",
@@ -387,7 +387,7 @@
         "toType": "int"
       },
       "descriptionKey": "help.convert",
-      "definitionUuid": "sgrape.builtin.convert"
+      "nodeType": "sgrape.builtin.convert"
     },
     {
       "key": "cos",
@@ -406,7 +406,7 @@
         "type": "float"
       },
       "descriptionKey": "help.cos",
-      "definitionUuid": "sgrape.builtin.cos"
+      "nodeType": "sgrape.builtin.cos"
     },
     {
       "key": "declaration",
@@ -423,7 +423,7 @@
         "declarationId": ""
       },
       "descriptionKey": "help.declaration",
-      "definitionUuid": "sgrape.builtin.declaration"
+      "nodeType": "sgrape.builtin.declaration"
     },
     {
       "key": "divide",
@@ -446,7 +446,7 @@
         "b": 1
       },
       "descriptionKey": "help.divide",
-      "definitionUuid": "sgrape.builtin.divide"
+      "nodeType": "sgrape.builtin.divide"
     },
     {
       "key": "dot",
@@ -466,7 +466,7 @@
         "type": "vec3"
       },
       "descriptionKey": "help.dot",
-      "definitionUuid": "sgrape.builtin.dot"
+      "nodeType": "sgrape.builtin.dot"
     },
     {
       "key": "equal",
@@ -487,7 +487,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.equal",
-      "definitionUuid": "sgrape.builtin.equal",
+      "nodeType": "sgrape.builtin.equal",
       "targets": [
         "top",
         "mat"
@@ -508,7 +508,7 @@
         "value": 0.5
       },
       "descriptionKey": "help.float",
-      "definitionUuid": "sgrape.builtin.float"
+      "nodeType": "sgrape.builtin.float"
     },
     {
       "key": "floor",
@@ -527,7 +527,7 @@
         "type": "float"
       },
       "descriptionKey": "help.floor",
-      "definitionUuid": "sgrape.builtin.floor"
+      "nodeType": "sgrape.builtin.floor"
     },
     {
       "key": "force_compile_error",
@@ -546,7 +546,7 @@
         "type": "float"
       },
       "descriptionKey": "help.force_compile_error",
-      "definitionUuid": "sgrape.builtin.force_compile_error"
+      "nodeType": "sgrape.builtin.force_compile_error"
     },
     {
       "key": "fract",
@@ -565,7 +565,7 @@
         "type": "float"
       },
       "descriptionKey": "help.fract",
-      "definitionUuid": "sgrape.builtin.fract"
+      "nodeType": "sgrape.builtin.fract"
     },
     {
       "key": "greaterThan",
@@ -586,7 +586,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.greaterThan",
-      "definitionUuid": "sgrape.builtin.greaterThan",
+      "nodeType": "sgrape.builtin.greaterThan",
       "targets": [
         "top",
         "mat"
@@ -611,7 +611,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.greaterThanEqual",
-      "definitionUuid": "sgrape.builtin.greaterThanEqual",
+      "nodeType": "sgrape.builtin.greaterThanEqual",
       "targets": [
         "top",
         "mat"
@@ -641,7 +641,7 @@
         "false": 0
       },
       "descriptionKey": "help.if",
-      "definitionUuid": "sgrape.builtin.if"
+      "nodeType": "sgrape.builtin.if"
     },
     {
       "key": "isinf",
@@ -661,7 +661,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.isinf",
-      "definitionUuid": "sgrape.builtin.isinf",
+      "nodeType": "sgrape.builtin.isinf",
       "targets": [
         "top",
         "mat"
@@ -685,7 +685,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.isnan",
-      "definitionUuid": "sgrape.builtin.isnan",
+      "nodeType": "sgrape.builtin.isnan",
       "targets": [
         "top",
         "mat"
@@ -708,7 +708,7 @@
         "type": "vec3"
       },
       "descriptionKey": "help.length",
-      "definitionUuid": "sgrape.builtin.length"
+      "nodeType": "sgrape.builtin.length"
     },
     {
       "key": "lessThan",
@@ -729,7 +729,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.lessThan",
-      "definitionUuid": "sgrape.builtin.lessThan",
+      "nodeType": "sgrape.builtin.lessThan",
       "targets": [
         "top",
         "mat"
@@ -754,7 +754,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.lessThanEqual",
-      "definitionUuid": "sgrape.builtin.lessThanEqual",
+      "nodeType": "sgrape.builtin.lessThanEqual",
       "targets": [
         "top",
         "mat"
@@ -782,7 +782,7 @@
         "operation": "add"
       },
       "descriptionKey": "help.math",
-      "definitionUuid": "sgrape.builtin.math"
+      "nodeType": "sgrape.builtin.math"
     },
     {
       "key": "max",
@@ -802,7 +802,7 @@
         "type": "float"
       },
       "descriptionKey": "help.max",
-      "definitionUuid": "sgrape.builtin.max"
+      "nodeType": "sgrape.builtin.max"
     },
     {
       "key": "min",
@@ -822,7 +822,7 @@
         "type": "float"
       },
       "descriptionKey": "help.min",
-      "definitionUuid": "sgrape.builtin.min"
+      "nodeType": "sgrape.builtin.min"
     },
     {
       "key": "mix",
@@ -843,7 +843,7 @@
         "type": "vec4"
       },
       "descriptionKey": "help.mix",
-      "definitionUuid": "sgrape.builtin.mix"
+      "nodeType": "sgrape.builtin.mix"
     },
     {
       "key": "multiply",
@@ -863,7 +863,7 @@
         "type": "vec4"
       },
       "descriptionKey": "help.multiply",
-      "definitionUuid": "sgrape.builtin.multiply"
+      "nodeType": "sgrape.builtin.multiply"
     },
     {
       "key": "normalize",
@@ -885,7 +885,7 @@
         "value": 1
       },
       "descriptionKey": "help.normalize",
-      "definitionUuid": "sgrape.builtin.normalize"
+      "nodeType": "sgrape.builtin.normalize"
     },
     {
       "key": "not",
@@ -905,7 +905,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.not",
-      "definitionUuid": "sgrape.builtin.not",
+      "nodeType": "sgrape.builtin.not",
       "targets": [
         "top",
         "mat"
@@ -930,7 +930,7 @@
       },
       "inputDefaults": {},
       "descriptionKey": "help.notEqual",
-      "definitionUuid": "sgrape.builtin.notEqual",
+      "nodeType": "sgrape.builtin.notEqual",
       "targets": [
         "top",
         "mat"
@@ -948,7 +948,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.pixel_out",
-      "definitionUuid": "sgrape.builtin.pixel_out"
+      "nodeType": "sgrape.builtin.pixel_out"
     },
     {
       "key": "replace",
@@ -976,7 +976,7 @@
         ]
       },
       "descriptionKey": "help.replace",
-      "definitionUuid": "sgrape.builtin.replace"
+      "nodeType": "sgrape.builtin.replace"
     },
     {
       "key": "rgba",
@@ -994,7 +994,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.rgba",
-      "definitionUuid": "sgrape.builtin.rgba"
+      "nodeType": "sgrape.builtin.rgba"
     },
     {
       "key": "round",
@@ -1013,7 +1013,7 @@
         "type": "float"
       },
       "descriptionKey": "help.round",
-      "definitionUuid": "sgrape.builtin.round"
+      "nodeType": "sgrape.builtin.round"
     },
     {
       "key": "router",
@@ -1032,7 +1032,7 @@
         "type": "float"
       },
       "descriptionKey": "help.router",
-      "definitionUuid": "sgrape.builtin.router"
+      "nodeType": "sgrape.builtin.router"
     },
     {
       "key": "scalar",
@@ -1050,7 +1050,7 @@
         "value": 0
       },
       "descriptionKey": "help.scalar",
-      "definitionUuid": "sgrape.builtin.scalar"
+      "nodeType": "sgrape.builtin.scalar"
     },
     {
       "key": "sign",
@@ -1069,7 +1069,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sign",
-      "definitionUuid": "sgrape.builtin.sign"
+      "nodeType": "sgrape.builtin.sign"
     },
     {
       "key": "sin",
@@ -1088,7 +1088,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sin",
-      "definitionUuid": "sgrape.builtin.sin"
+      "nodeType": "sgrape.builtin.sin"
     },
     {
       "key": "smoothstep",
@@ -1112,7 +1112,7 @@
         "edge1": 1
       },
       "descriptionKey": "help.smoothstep",
-      "definitionUuid": "sgrape.builtin.smoothstep"
+      "nodeType": "sgrape.builtin.smoothstep"
     },
     {
       "key": "split",
@@ -1133,7 +1133,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.split",
-      "definitionUuid": "sgrape.builtin.split"
+      "nodeType": "sgrape.builtin.split"
     },
     {
       "key": "sqrt",
@@ -1152,7 +1152,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sqrt",
-      "definitionUuid": "sgrape.builtin.sqrt"
+      "nodeType": "sgrape.builtin.sqrt"
     },
     {
       "key": "subtract",
@@ -1172,7 +1172,7 @@
         "type": "float"
       },
       "descriptionKey": "help.subtract",
-      "definitionUuid": "sgrape.builtin.subtract"
+      "nodeType": "sgrape.builtin.subtract"
     },
     {
       "key": "swizzle",
@@ -1192,7 +1192,7 @@
         "mask": "xy"
       },
       "descriptionKey": "help.swizzle",
-      "definitionUuid": "sgrape.builtin.swizzle"
+      "nodeType": "sgrape.builtin.swizzle"
     },
     {
       "key": "td_value",
@@ -1209,7 +1209,7 @@
         "entry": "vUV"
       },
       "descriptionKey": "help.td_value",
-      "definitionUuid": "sgrape.builtin.td_value"
+      "nodeType": "sgrape.builtin.td_value"
     },
     {
       "key": "texture_sample",
@@ -1226,7 +1226,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.texture_sample",
-      "definitionUuid": "sgrape.builtin.texture_sample"
+      "nodeType": "sgrape.builtin.texture_sample"
     },
     {
       "key": "trunc",
@@ -1245,7 +1245,7 @@
         "type": "float"
       },
       "descriptionKey": "help.trunc",
-      "definitionUuid": "sgrape.builtin.trunc"
+      "nodeType": "sgrape.builtin.trunc"
     },
     {
       "key": "vec2",
@@ -1265,7 +1265,7 @@
         ]
       },
       "descriptionKey": "help.vec2",
-      "definitionUuid": "sgrape.builtin.vec2"
+      "nodeType": "sgrape.builtin.vec2"
     },
     {
       "key": "vec3",
@@ -1286,7 +1286,7 @@
         ]
       },
       "descriptionKey": "help.vec3",
-      "definitionUuid": "sgrape.builtin.vec3"
+      "nodeType": "sgrape.builtin.vec3"
     },
     {
       "key": "vec4",
@@ -1308,7 +1308,7 @@
         ]
       },
       "descriptionKey": "help.vec4",
-      "definitionUuid": "sgrape.builtin.vec4"
+      "nodeType": "sgrape.builtin.vec4"
     },
     {
       "key": "vector",
@@ -1331,7 +1331,7 @@
         ]
       },
       "descriptionKey": "help.vector",
-      "definitionUuid": "sgrape.builtin.vector"
+      "nodeType": "sgrape.builtin.vector"
     },
     {
       "key": "vector_split",
@@ -1351,7 +1351,7 @@
         "type": "vec2"
       },
       "descriptionKey": "help.vector_split",
-      "definitionUuid": "sgrape.builtin.vector_split"
+      "nodeType": "sgrape.builtin.vector_split"
     }
   ],
   "typeContract": {

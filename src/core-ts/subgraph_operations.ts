@@ -48,7 +48,7 @@ function structural(graph:GraphDocument,role:'instance'|'input'|'output'):NodeMo
 }
 function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue={}):Node {
   const d = module.catalog.definition;
-  return {id,nodeType:d.definitionUuid!,params:{...copy(d.defaults),...params},ui};
+  return {id,nodeType:d.nodeType!,params:{...copy(d.defaults),...params},ui};
 }
 export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
   if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');

@@ -11,7 +11,7 @@ type Variant={type:string|null;inputs:Record<string,string>;outputs:Record<strin
 
 function variants(module:NodeModule,target:string){
   const definition=module.catalog.definition;
-  const base:Node={id:'projection',nodeType:definition.definitionUuid!,params:copy(definition.defaults)};
+  const base:Node={id:'projection',nodeType:definition.nodeType!,params:copy(definition.defaults)};
   const tokens=[...Object.values(definition.inputs),...Object.values(definition.outputs)];
   const selector=tokens.includes('D')?'declaration':
     tokens.includes('T')||typeof definition.defaults.type==='string'?'parameter':'fixed';
@@ -65,7 +65,7 @@ export function createEditorContract(registry:Registry,target='top'){
     resourceTypes:[...values.opaque],specConstantTypes:[],
     types:Object.fromEntries(values.types.map(t=>[t,{family:values.family(t),components:values.count(t)}])),
     conversions:values.policy.conversions.map(row=>({...row,kind:values.count(row.from)===1&&values.count(row.to)>1?'splat':'cast'})),
-    definitions:Object.fromEntries(modules.map(m=>[m.catalog.definition.definitionUuid,variants(m,target)])),
+    definitions:Object.fromEntries(modules.map(m=>[m.catalog.definition.nodeType,variants(m,target)])),
     convert:{types:[...values.types],fromParameter:'fromType',toParameter:'toType',
       pairs:Object.fromEntries(values.types.map(from=>[from,values.types.filter(to=>values.explicit(from,to))]))},
     vectors:{version:1,types:[...values.vectors],components:'xyzw',

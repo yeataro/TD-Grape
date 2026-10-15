@@ -19,7 +19,7 @@ const catalog = {
       "toType": "int"
     },
     "descriptionKey": "help.convert",
-    "definitionUuid": "sgrape.builtin.convert"
+    "nodeType": "sgrape.builtin.convert"
   },
   "emitter": {
     "id": "convert",

@@ -2,6 +2,14 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.117.1 — 節點目錄的 definitionUuid 改成 nodeType — 2026-10-16
+
+- 考古（人類 10-16 要求）：v2 規格 §2.1 的 `definitionUuid` 原是真 UUID（概念身分），搭 `revisionHash`（實作版本）；0.8.5 前的評估期已換成可讀代號 `sgrape.builtin.<key>`，欄位名沒改（評估期沒有 repo，原因不在 git）。圖格式那一輪（R.26，`GRAPH_FORMAT.md`）已把圖裡的改成 `nodeType`、刪掉 `revisionHash`，目錄這一側留著（CURRENT 記著「未改」）。人類：「常看到他，以為他還重要，原來已經該退休了。」
+- 改：節點模組目錄定義 `definitionUuid` → `nodeType`（46 個節點檔、registry、編輯器合約、拉線新增表、子圖產碼器、建置）；`CatalogDefinition.revisionHash` 拿掉（只剩型別宣告，沒有作用）；編輯器新增清單 `MenuEntry.uuid`、`session.add(uuid…)` 同值同名改成 `nodeType`。舊格式圖的測試（`test_graph_format`、`test_uniforms`、`test_upgrades` 裡模擬舊圖的節點）與 `tools/dev/old_graph.cjs` 保留舊欄位名，舊格式本來就叫它。不動圖、不需升級規則。
+- 反例檢查：TD Python 不讀這個欄位（只核對 `catalogHash`）；每一處用途都是當 `nodeType` 建節點；子圖實例一種節點多份定義，目錄這列描述的正是這種節點；擴充包作者日後會用到，正好趁沒有外部使用者前改。
+- 證據：checkpoint `checkpoint/pre-R117.1-nodetype`；core 195／195、editor 179／179（1 略過）、check 全過；建置後的 `editor-bootstrap.json`、`grape_core.js` 不再有 `definitionUuid`／`revisionHash`；TD 五張圖產碼與 R.117 前基準相同。
+- 不改：`docs/architecture/CATALOG_CONTRACT.md`、`TYPE_CONTRACT.md` 描述的是舊產品已不存在的 `node_catalog.json`，屬歷史文件；`src/library/material_presets.json` 是舊格式 MAT 預設（285 處），MAT 遷移時處理。
+
 ## Refactor.117 — 子圖節點改名「子圖實例」 — 2026-10-16
 
 - 決定：design-interview Q76、GLOSSARY「子圖」。畫布上的子圖節點叫**子圖實例**（子圖上下文可省略成「實例」），子圖本身介面只叫「子圖」；程式、存檔、介面一起改。`call` 是早期「子圖＝函式」構想的殘留（v2 規格改展開後沒跟著改）。

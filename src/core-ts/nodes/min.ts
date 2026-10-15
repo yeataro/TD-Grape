@@ -19,7 +19,7 @@ export default numericCall({
       "type": "float"
     },
     "descriptionKey": "help.min",
-    "definitionUuid": "sgrape.builtin.min"
+    "nodeType": "sgrape.builtin.min"
   },
   "emitter": {
     "id": "min",

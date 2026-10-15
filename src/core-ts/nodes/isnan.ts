@@ -19,7 +19,7 @@ const catalog = {
     },
     "inputDefaults": {},
     "descriptionKey": "help.isnan",
-    "definitionUuid": "sgrape.builtin.isnan",
+    "nodeType": "sgrape.builtin.isnan",
     "targets": [
       "top",
       "mat"

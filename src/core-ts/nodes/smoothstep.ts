@@ -23,7 +23,7 @@ export default numericCall({
       "edge1": 1
     },
     "descriptionKey": "help.smoothstep",
-    "definitionUuid": "sgrape.builtin.smoothstep"
+    "nodeType": "sgrape.builtin.smoothstep"
   },
   "emitter": {
     "id": "smoothstep",

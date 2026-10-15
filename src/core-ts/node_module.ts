@@ -5,7 +5,7 @@ import type { ComponentStyle } from './component_names';
 export interface CatalogDefinition {
   key:string;label:string;inputs:Record<string,string>;outputs:Record<string,string>;
   stages:string[];defaults:ObjectValue;descriptionKey:string;
-  definitionUuid?:string;revisionHash?:string;[key:string]:Value|undefined;
+  nodeType?:string;[key:string]:Value|undefined;
 }
 export interface CatalogRow {definition:CatalogDefinition;emitter:{id:string;version:number;primitive?:{operator:string;port:string};call?:{operator:string;ports:readonly string[];defaults?:Readonly<Record<string,number>>}};browser:Record<string,Value>}
 export interface NodeContext {
@@ -140,12 +140,12 @@ export interface NodeModule {
 export function createRegistry(modules:readonly NodeModule[]){
   const table=new Map<string,NodeModule>();
   for(const module of modules){
-    const d=module.catalog.definition,id=d.definitionUuid||'sgrape.builtin.'+d.key;
+    const d=module.catalog.definition,id=d.nodeType||'sgrape.builtin.'+d.key;
     if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.key)||table.has(id))throw Error('Invalid or duplicate node definition: '+id);
     if(module.signatures&&!module.configure)throw Error('Signature module needs a configuration operation: '+id);
     const freeze=(value:unknown):void=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}};
     const catalog=JSON.parse(JSON.stringify(module.catalog)) as CatalogRow;
-    catalog.definition.definitionUuid=id;freeze(catalog);
+    catalog.definition.nodeType=id;freeze(catalog);
     table.set(id,Object.freeze({...module,catalog}));
   }
   // Do not expose a mutable registration table to a compilation in progress.

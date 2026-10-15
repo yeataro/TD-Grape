@@ -19,7 +19,7 @@ const catalog:CatalogRow={
       "type": "float"
     },
     "descriptionKey": "help.subtract",
-    "definitionUuid": "sgrape.builtin.subtract"
+    "nodeType": "sgrape.builtin.subtract"
   },
   "emitter": {
     "id": "subtract",

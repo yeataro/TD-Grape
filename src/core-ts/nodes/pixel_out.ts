@@ -13,7 +13,7 @@ const catalog: CatalogRow = {
     ],
     "defaults": {},
     "descriptionKey": "help.pixel_out",
-    "definitionUuid": "sgrape.builtin.pixel_out"
+    "nodeType": "sgrape.builtin.pixel_out"
   },
   "emitter": {
     "id": "pixel_out",

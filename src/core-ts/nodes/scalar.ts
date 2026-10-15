@@ -17,7 +17,7 @@ const catalog = {
       "value": 0
     },
     "descriptionKey": "help.scalar",
-    "definitionUuid": "sgrape.builtin.scalar"
+    "nodeType": "sgrape.builtin.scalar"
   },
   "emitter": {
     "id": "scalar",

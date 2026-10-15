@@ -19,7 +19,7 @@ const catalog = {
     },
     "inputDefaults": {},
     "descriptionKey": "help.any",
-    "definitionUuid": "sgrape.builtin.any",
+    "nodeType": "sgrape.builtin.any",
     "targets": [
       "top",
       "mat"

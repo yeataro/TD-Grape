@@ -19,7 +19,7 @@ const catalog = {
       "type": "vec2"
     },
     "descriptionKey": "help.vector_split",
-    "definitionUuid": "sgrape.builtin.vector_split"
+    "nodeType": "sgrape.builtin.vector_split"
   },
   "emitter": {
     "id": "vector_split",

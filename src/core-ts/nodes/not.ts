@@ -19,7 +19,7 @@ const catalog = {
     },
     "inputDefaults": {},
     "descriptionKey": "help.not",
-    "definitionUuid": "sgrape.builtin.not",
+    "nodeType": "sgrape.builtin.not",
     "targets": [
       "top",
       "mat"

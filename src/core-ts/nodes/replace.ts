@@ -27,7 +27,7 @@ const catalog = {
       ]
     },
     "descriptionKey": "help.replace",
-    "definitionUuid": "sgrape.builtin.replace"
+    "nodeType": "sgrape.builtin.replace"
   },
   "emitter": {
     "id": "replace",

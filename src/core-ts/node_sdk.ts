@@ -90,7 +90,7 @@ export function binaryNode(catalog:CatalogRow,operator:'+'|'-'|'*'|'/'):NodeModu
 export function unaryNode(spec:{key:string;label:string;descriptionKey:string;operator:string;port:string;browser:Record<string,Value>}):NodeModule {
   const identifier=(v:unknown)=>typeof v==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(v);
   if(![spec.key,spec.operator,spec.port].every(identifier))throw Error('Invalid unary node definition');
-  const catalog:CatalogRow={definition:{key:spec.key,label:spec.label,inputs:{[spec.port]:'T'},outputs:{out:'T'},stages:['vertex','pixel'],defaults:{type:'float'},descriptionKey:spec.descriptionKey,definitionUuid:'sgrape.builtin.'+spec.key},emitter:{id:spec.key,version:1,primitive:{operator:spec.operator,port:spec.port}},browser:spec.browser};
+  const catalog:CatalogRow={definition:{key:spec.key,label:spec.label,inputs:{[spec.port]:'T'},outputs:{out:'T'},stages:['vertex','pixel'],defaults:{type:'float'},descriptionKey:spec.descriptionKey,nodeType:'sgrape.builtin.'+spec.key},emitter:{id:spec.key,version:1,primitive:{operator:spec.operator,port:spec.port}},browser:spec.browser};
   const layouts=Object.fromEntries(types.map(t=>[t,fixedPorts([{key:spec.port,direction:'input',type:t,default:fill(0,type(t))},out(t)])]));
   return {catalog,role:'value',supports:numeric,
     configure:(n,s)=>{const before=layouts[type(n.params.type||'float')]!;n.params.type=selectedType(n,s);return reshapeDefaults(n,before,layouts[type(n.params.type)]!);},

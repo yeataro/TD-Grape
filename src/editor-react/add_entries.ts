@@ -52,13 +52,13 @@ function catalogChoices(text: (key: string) => string): readonly AddChoice[] {
   const kept = catalogs.get(text);
   if (kept) return kept;
   const nodes = creatableEntries.map((entry): AddChoice => {
-    const module = core.registry.get(entry.uuid)!, browser = module.catalog.browser;
+    const module = core.registry.get(entry.nodeType)!, browser = module.catalog.browser;
     const top = String(browser.category ?? 'uncategorized'), path = strings(browser.categoryPath);
-    return { id: entry.uuid + ':' + entry.key, label: entry.literal ? entry.label : text(entry.label),
+    return { id: entry.nodeType + ':' + entry.key, label: entry.literal ? entry.label : text(entry.label),
       source: (['editor', 'glsl', 'td'].includes(String(browser.source)) ? browser.source : 'editor') as ChoiceSource,
       // The legacy "inputs" nodes live under Source. 舊產品的 inputs 類節點放在 Source 底下。
       path: top === 'inputs' ? ['source'] : path.length ? path : [top],
-      key: entry.key || module.catalog.definition.key, aliases: strings(browser.aliases), spec: { nodeType: entry.uuid, params: entry.params } };
+      key: entry.key || module.catalog.definition.key, aliases: strings(browser.aliases), spec: { nodeType: entry.nodeType, params: entry.params } };
   });
   const presets = core.uniformPresets.map((preset): AddChoice => ({
     id: 'preset:' + preset.entry, label: preset.name, source: 'td', path: ['source', 'commonSources'], key: 'declaration', aliases: [preset.entry],

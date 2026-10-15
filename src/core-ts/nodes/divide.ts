@@ -22,7 +22,7 @@ const catalog:CatalogRow={
       "b": 1
     },
     "descriptionKey": "help.divide",
-    "definitionUuid": "sgrape.builtin.divide"
+    "nodeType": "sgrape.builtin.divide"
   },
   "emitter": {
     "id": "divide",

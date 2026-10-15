@@ -26,7 +26,7 @@ const catalog = {
       ]
     },
     "descriptionKey": "help.combine",
-    "definitionUuid": "sgrape.builtin.combine"
+    "nodeType": "sgrape.builtin.combine"
   },
   "emitter": {
     "id": "combine",

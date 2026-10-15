@@ -19,7 +19,7 @@ const catalog:CatalogRow={
       ]
     },
     "descriptionKey": "help.vec2",
-    "definitionUuid": "sgrape.builtin.vec2"
+    "nodeType": "sgrape.builtin.vec2"
   },
   "emitter": {
     "id": "vec2",

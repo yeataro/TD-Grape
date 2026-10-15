@@ -74,7 +74,7 @@ test('network identities and declaration invalidation cannot be mistaken for a l
 
 test('developer module owns arbitrary persisted signature state through the same graph/compiler interface',()=>{
   const template=registry.get('sgrape.builtin.abs'),catalog=plain(template.catalog);
-  catalog.definition={...catalog.definition,key:'blend_probe',definitionUuid:'probe.blend',defaults:{width:'vec3',weight:'vec3'}};
+  catalog.definition={...catalog.definition,key:'blend_probe',nodeType:'probe.blend',defaults:{width:'vec3',weight:'vec3'}};
   const port=(key,direction,type)=>({key,direction,type,default:type==='float'?0:[0,0,0]});
   const module={catalog,role:'value',supports:()=>true,validate:()=>{},
     ports:n=>[port('value','input',n.params.width),port('factor','input',n.params.weight),port('out','output',n.params.width)],

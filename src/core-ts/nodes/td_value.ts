@@ -19,7 +19,7 @@ const catalog:CatalogRow={
       "entry": "vUV"
     },
     "descriptionKey": "help.td_value",
-    "definitionUuid": "sgrape.builtin.td_value"
+    "nodeType": "sgrape.builtin.td_value"
   },
   "emitter": {
     "id": "td_value",

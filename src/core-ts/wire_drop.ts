@@ -19,7 +19,7 @@ import * as values from './values';
 /** Where a dropped wire goes on a new node: the configuration to create it in (none: as its entry makes it), the port and
  * that port's type. 線接到新節點的哪裡：用什麼設定建立（沒有＝照入口原樣）、哪個接孔、接孔型別。 */
 export type WireFit={port:string;type:string;configure?:Configuration};
-/** Per entry (`definitionUuid:entryKey`, as the add menu names it), per side of the wire's existing end, per wire type.
+/** Per entry (`nodeType:entryKey`, as the add menu names it), per side of the wire's existing end, per wire type.
  * 每個入口、線已有那一端的方向、線的型別。 */
 export type WireDropTable=Record<string,{output:Record<string,WireFit>;input:Record<string,WireFit>}>;
 
@@ -33,7 +33,7 @@ export function wireDropTable(registry:Registry,types:readonly string[],target='
     // 新增選單能提供的：放在 pixel 網路、不是階段輸出、不是宣告的引用。
     if(module.structural||!offered(module)||!definition.stages.includes('pixel')||module.referencedDeclaration)continue;
     for(const entry of module.entries?.()??[{key:'',label:definition.label,params:{}}]){
-      const base:Node={id:NEW,nodeType:definition.definitionUuid!,params:{...copy(definition.defaults),...copy(entry.params)}};
+      const base:Node={id:NEW,nodeType:definition.nodeType!,params:{...copy(definition.defaults),...copy(entry.params)}};
       if(!module.supports(base,context))continue;
       const configurations=configurationsOf(module,base,types,context);
       const row={output:{} as Record<string,WireFit>,input:{} as Record<string,WireFit>};
@@ -41,7 +41,7 @@ export function wireDropTable(registry:Registry,types:readonly string[],target='
         const fit=best(module,configurations,type,side,context);
         if(fit)row[side][type]=fit;
       }
-      table[definition.definitionUuid+':'+entry.key]=row;
+      table[definition.nodeType+':'+entry.key]=row;
     }
   }
   return table;

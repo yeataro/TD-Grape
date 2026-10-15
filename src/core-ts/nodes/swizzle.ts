@@ -19,7 +19,7 @@ const catalog = {
       "mask": "xy"
     },
     "descriptionKey": "help.swizzle",
-    "definitionUuid": "sgrape.builtin.swizzle"
+    "nodeType": "sgrape.builtin.swizzle"
   },
   "emitter": {
     "id": "swizzle",

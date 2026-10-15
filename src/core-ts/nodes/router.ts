@@ -18,7 +18,7 @@ const catalog = {
       "type": "float"
     },
     "descriptionKey": "help.router",
-    "definitionUuid": "sgrape.builtin.router"
+    "nodeType": "sgrape.builtin.router"
   },
   "emitter": {
     "id": "router",

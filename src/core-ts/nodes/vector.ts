@@ -22,7 +22,7 @@ const catalog = {
       ]
     },
     "descriptionKey": "help.vector",
-    "definitionUuid": "sgrape.builtin.vector"
+    "nodeType": "sgrape.builtin.vector"
   },
   "emitter": {
     "id": "vector",

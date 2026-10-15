@@ -22,7 +22,7 @@ interface Engine {supports(g:Graph):boolean;compile(g:Graph,identifiers?:{reserv
 
 const relay:NodeModule = {
   catalog:{
-    definition:{key:'subgraph_relay',definitionUuid:'grape.internal.subgraph_relay',label:'Subgraph value',inputs:{},outputs:{},stages:['pixel'],defaults:{},descriptionKey:''},
+    definition:{key:'subgraph_relay',nodeType:'grape.internal.subgraph_relay',label:'Subgraph value',inputs:{},outputs:{},stages:['pixel'],defaults:{},descriptionKey:''},
     emitter:{id:'subgraph_relay',version:1},browser:{}
   },
   role:'value',
@@ -192,7 +192,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               for(const key of Object.keys(node.inputValues||{}))if(!ports.inputs[key])throw Error('Invalid Subgraph input values');
               for(const direction of ['inputs','outputs'] as const)for(const p of fn[direction]){
                 const id=allocate(),value=direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default;
-                add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},
+                add({id,nodeType:relay.catalog.definition.nodeType!,params:{type:p.type},
                   ...(value===undefined?{}:{inputValues:{value:copy(value)}}),
                   ...(node.ui?{ui:copy(node.ui)}:{}),...(node.comment?{comment:node.comment}:{})},origin);
                 mapped[direction][p.id]=[id,direction==='inputs'?'value':'out'];
@@ -225,12 +225,12 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       if(probe){
         const inside:Endpoints={inputs:{},outputs:{}};
         for(const direction of ['inputs','outputs'] as const)for(const p of probe[direction]){
-          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},...(p.default===undefined?{}:{inputValues:{value:copy(p.default)}})},{node:'',stage:'pixel',trail:[probe.id],subgraphId:probe.id});
+          const id=allocate();add({id,nodeType:relay.catalog.definition.nodeType!,params:{type:p.type},...(p.default===undefined?{}:{inputValues:{value:copy(p.default)}})},{node:'',stage:'pixel',trail:[probe.id],subgraphId:probe.id});
           inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
         }
         expand(probe.graph,[probe.id],probe,inside);
         const output=registry.modules.find(m=>m.role==='output')!;
-        add({id:allocate(),nodeType:output.catalog.definition.definitionUuid!,params:copy(output.catalog.definition.defaults)},{node:'',stage:'pixel',trail:[]});
+        add({id:allocate(),nodeType:output.catalog.definition.nodeType!,params:copy(output.catalog.definition.defaults)},{node:'',stage:'pixel',trail:[]});
       } else expand(g.stages.pixel!,[]);
       const {subgraphs,...rest}=g;
       const document:Graph={...rest,stages:{pixel:flat}};

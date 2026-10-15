@@ -16,7 +16,7 @@ const catalog:CatalogRow={
       "value": 0.5
     },
     "descriptionKey": "help.float",
-    "definitionUuid": "sgrape.builtin.float"
+    "nodeType": "sgrape.builtin.float"
   },
   "emitter": {
     "id": "float",

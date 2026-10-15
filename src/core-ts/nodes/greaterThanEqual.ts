@@ -20,7 +20,7 @@ const catalog = {
     },
     "inputDefaults": {},
     "descriptionKey": "help.greaterThanEqual",
-    "definitionUuid": "sgrape.builtin.greaterThanEqual",
+    "nodeType": "sgrape.builtin.greaterThanEqual",
     "targets": [
       "top",
       "mat"

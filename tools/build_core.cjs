@@ -93,7 +93,7 @@ const implementationHash=createHash('sha256').update(bundled).digest('hex');
 // One TOP texture input from the start (human 2026-10-09, texture-inputs.md): the template's input1.
 // 一開始就有一個 TOP 貼圖輸入（人類 10-09）：對應範本裡的 input1。
 const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[{id:'input1',kind:'topInput',name:'input1',type:'sampler2D',defaultTexture:'grape'}],subgraphs:[],structDefinitions:[],stages:{pixel:{
-  nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,nodeType:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
+  nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,nodeType:d.nodeType,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
   edges:[{id:'color_output',from:['color','out'],to:['pixel_out','color']}]}}};
 // Its nodes are named as any new node is (Refactor.76). 預設圖的節點和新節點一樣取名（R.76）。
 {const taken=new Set();for(const n of defaultGraph.stages.pixel.nodes){const d=context.GrapeGraph.registry.get(n.nodeType);
@@ -104,7 +104,7 @@ const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.comp
 // Native source labels are cold host metadata, independent of Python graph compilation.
 const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
 const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));
-for(const row of rows)row.definition.definitionUuid||='sgrape.builtin.'+row.definition.key;
+for(const row of rows)row.definition.nodeType||='sgrape.builtin.'+row.definition.key;
 // Generated files live in src/generated/ (Refactor.25): the new editor, TD's Manager and tests read
 // them; never edit them by hand. 產生的檔案放 src/generated/，新編輯器、TD Manager、測試共用；不要手改。
 const generated=path.join(root,'src/generated');

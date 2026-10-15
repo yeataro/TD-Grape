@@ -20,7 +20,7 @@ export default numericCall({
       "type": "vec4"
     },
     "descriptionKey": "help.mix",
-    "definitionUuid": "sgrape.builtin.mix"
+    "nodeType": "sgrape.builtin.mix"
   },
   "emitter": {
     "id": "mix",

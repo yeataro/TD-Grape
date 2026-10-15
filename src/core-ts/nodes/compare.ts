@@ -24,7 +24,7 @@ const catalog = {
       "b": 0
     },
     "descriptionKey": "help.compare",
-    "definitionUuid": "sgrape.builtin.compare"
+    "nodeType": "sgrape.builtin.compare"
   },
   "emitter": {
     "id": "compare",

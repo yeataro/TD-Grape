@@ -21,7 +21,7 @@ export default numericCall({
       "value": 1
     },
     "descriptionKey": "help.normalize",
-    "definitionUuid": "sgrape.builtin.normalize"
+    "nodeType": "sgrape.builtin.normalize"
   },
   "emitter": {
     "id": "normalize",

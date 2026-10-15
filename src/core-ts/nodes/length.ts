@@ -18,7 +18,7 @@ export default numericCall({
       "type": "vec3"
     },
     "descriptionKey": "help.length",
-    "definitionUuid": "sgrape.builtin.length"
+    "nodeType": "sgrape.builtin.length"
   },
   "emitter": {
     "id": "length",

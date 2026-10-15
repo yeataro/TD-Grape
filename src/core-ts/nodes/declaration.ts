@@ -19,7 +19,7 @@ const catalog:CatalogRow={
       "declarationId": ""
     },
     "descriptionKey": "help.declaration",
-    "definitionUuid": "sgrape.builtin.declaration"
+    "nodeType": "sgrape.builtin.declaration"
   },
   "emitter": {
     "id": "declaration",

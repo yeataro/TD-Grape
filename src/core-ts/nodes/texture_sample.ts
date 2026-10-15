@@ -20,7 +20,7 @@ const catalog:CatalogRow={
     ],
     "defaults": {},
     "descriptionKey": "help.texture_sample",
-    "definitionUuid": "sgrape.builtin.texture_sample"
+    "nodeType": "sgrape.builtin.texture_sample"
   },
   "emitter": {
     "id": "texture_sample",

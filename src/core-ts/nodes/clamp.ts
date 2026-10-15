@@ -23,7 +23,7 @@ export default numericCall({
       "max": 1
     },
     "descriptionKey": "help.clamp",
-    "definitionUuid": "sgrape.builtin.clamp"
+    "nodeType": "sgrape.builtin.clamp"
   },
   "emitter": {
     "id": "clamp",

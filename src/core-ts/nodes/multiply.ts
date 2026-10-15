@@ -19,7 +19,7 @@ const catalog:CatalogRow={
       "type": "vec4"
     },
     "descriptionKey": "help.multiply",
-    "definitionUuid": "sgrape.builtin.multiply"
+    "nodeType": "sgrape.builtin.multiply"
   },
   "emitter": {
     "id": "multiply",

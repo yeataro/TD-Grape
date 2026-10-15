@@ -19,7 +19,7 @@ export default numericCall({
       "type": "float"
     },
     "descriptionKey": "help.max",
-    "definitionUuid": "sgrape.builtin.max"
+    "nodeType": "sgrape.builtin.max"
   },
   "emitter": {
     "id": "max",

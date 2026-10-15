@@ -86,7 +86,7 @@ test('ID allocation or module failure is atomic; a closed transaction cannot add
 });
 
 test('custom structural identity and reference fields support copies without central dispatch',()=>{
- const modules=registry.modules.map(m=>m.reference?{...m,catalog:{...m.catalog,definition:{...m.catalog.definition,definitionUuid:'example.call'}},
+ const modules=registry.modules.map(m=>m.reference?{...m,catalog:{...m.catalog,definition:{...m.catalog.definition,nodeType:'example.call'}},
   reference:id=>({child:id}),referencedGraph:n=>n.params.child,supports:()=>false}:m);
  const custom=createRegistry(modules),g=empty();g.subgraphs=[source()];
  g.stages.pixel.nodes=[{id:'use',nodeType:'example.call',params:{child:'source',label:'keep'}}];
