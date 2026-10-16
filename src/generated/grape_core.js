@@ -93,7 +93,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, sameLibraryCopy: library_1.sameLibraryCopy, validLibraryId: library_1.validLibraryId };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, libraryReuses: library_1.libraryReuses, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId };
 
 },
 "capacity":function(require,module,exports){
@@ -375,17 +375,23 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
     // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
     // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
     // 定義還在的實例沿用它。
-    // A Library copy already here with the same Library ID and the same standard form is reused, with what it holds (amendment 1 A5
-    // rule 3, amendment 2 B3–B4); anything else comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的 Library 副本就沿用
-    // （連同它用到的）；其他的帶進來，Library 副本仍然唯讀。
-    const imported = new Set(), reused = new Map();
+    // A Library copy already here with the same Library ID and the same standard form is reused together with its whole closure (amendment 1
+    // A5 rule 3, amendment 2 B3–B4). The batch stays one mapping: a definition of the copy never goes to two places and two never to one,
+    // so what was shared stays shared and what was separate stays separate (Codex R118-2); a reuse that would break that is not taken and
+    // the definition comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的副本，連同整個閉包一起沿用；整批是一張對照：複製
+    // 裡的一份不會對到兩處、兩份也不會對到同一處——共用的維持共用、分開的維持分開；會破壞這點的沿用不採用，改成帶進來（Library 副本仍唯讀）。
+    const imported = new Set(), reused = new Map(), claimed = new Set();
+    const fits = (mapping) => [...mapping].every(([from, to]) => !imported.has(from) && (reused.has(from) ? reused.get(from) === to : !claimed.has(to)));
     const bring = (id) => {
         const f = snapshot.get(id);
         if (!f || imported.has(id) || reused.has(id))
             return;
-        const same = f.libraryId === undefined ? undefined : (0, library_1.sameLibraryCopy)(candidate.document, clip, id, candidate.registry);
-        if (same !== undefined) {
-            reused.set(id, same);
+        const mapping = (0, library_1.libraryReuses)(candidate.document, clip, id, candidate.registry).find(fits);
+        if (mapping) {
+            for (const [from, to] of mapping) {
+                reused.set(from, to);
+                claimed.add(to);
+            }
             return;
         }
         imported.add(id);
@@ -1915,17 +1921,19 @@ exports.readOnly = exports.LibraryLedger = exports.validLibraryId = void 0;
 exports.requireCurrent = requireCurrent;
 exports.requireLibrary = requireLibrary;
 exports.standardForm = standardForm;
-exports.sameLibraryCopy = sameLibraryCopy;
+exports.closureOrder = closureOrder;
+exports.libraryReuses = libraryReuses;
 /** Library copies in a graph (basic design §3.7–3.10, amendment 1 A2–A6, amendment 2 B1–B4 revision 3; Refactor.118).
  * A definition carrying `libraryId` is a read-only copy: an ordinary edit may not change it, only the legal operations (add a copy,
  * make local, make single user, update from the Library, remove) may, and each passes through one transaction ledger. The gate at
  * the end of GraphDocument.change() checks the ledger against the edit's result. A graph without Library copies never builds a ledger
- * and the gate returns at once (zero cost). The core never reads a Library: content comes from the caller.
+ * and the gate returns after one scan of the definition lists, with no content comparison (zero cost, measured). The core never reads a Library: content comes from the caller.
  * 圖裡的 Library 副本：帶 libraryId 的定義唯讀，一般修改不能改它，只有合法操作（加入副本、轉為本地、設為唯一、從 Library 更新、移除）
- * 可以，而且都經過同一張交易帳本；change() 末尾的關卡拿帳本對結果。沒有 Library 副本的圖不建帳本、關卡立即返回（零成本）。核心不讀
+ * 可以，而且都經過同一張交易帳本；change() 末尾的關卡拿帳本對結果。沒有 Library 副本的圖不建帳本，關卡只掃一次定義清單、不比內容就返回（零成本，量過）。核心不讀
  * Library，內容由呼叫端給。 */
 const model_1 = require("./model");
 const changes_1 = require("./changes");
+const scope_references_1 = require("./scope_references");
 /** A Library identity is a UUID (Q74.1). Library ID 是 UUID。 */
 const validLibraryId = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
 exports.validLibraryId = validLibraryId;
@@ -1967,8 +1975,8 @@ function requireCurrent(ledger, f) {
 }
 const instancesOf = (f, registry) => f.graph.nodes.flatMap(n => { var _a, _b; const ref = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); return ref === undefined ? [] : [ref]; });
 /** The gate (B1, end of change()): every read-only identity in the ledger, before or after must end as the ledger says; and a
- * read-only definition may only use read-only ones (A3). A graph with no Library copy and no ledger returns at once.
- * 關卡：帳本、before、after 裡每個唯讀身分的結局都要符合帳本；唯讀定義只能用唯讀定義（A3）。沒有 Library 副本也沒有帳本的圖立即返回。 */
+ * read-only definition may only use read-only ones (A3). A graph with no Library copy and no ledger returns after scanning the definition lists.
+ * 關卡：帳本、before、after 裡每個唯讀身分的結局都要符合帳本；唯讀定義只能用唯讀定義（A3）。沒有 Library 副本也沒有帳本的圖，掃過定義清單就返回。 */
 function requireLibrary(before, after, ledger, registry) {
     var _a, _b;
     const held = (g) => { var _a; return ((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).filter(f => f.libraryId !== undefined); };
@@ -1994,8 +2002,9 @@ function requireLibrary(before, after, ledger, registry) {
                 throw (0, exports.readOnly)('it was changed');
             continue;
         }
+        // Made local means no Library ID at all, not merely not this one (Codex R118-1). 轉為本地＝不帶任何 Library ID，不只是不帶原本那個。
         if (state.kind === 'local') {
-            if ((found === null || found === void 0 ? void 0 : found.libraryId) === libraryId)
+            if ((found === null || found === void 0 ? void 0 : found.libraryId) !== undefined)
                 throw (0, exports.readOnly)('it was made local');
             continue;
         }
@@ -2022,20 +2031,10 @@ function canonical(value) {
  * 閉包的標準形（B4）：固定走訪給編號（根＝0，依序首次遇到的依賴），實例參照換成編號，每份保留 Library ID，不含圖內 ID 與推算欄位；
  * 閉包不完整就是 null。兩邊都在手上時直接比字串，不算雜湊。 */
 function standardForm(document, registry, rootId) {
-    var _a;
-    const byId = new Map(((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])), numbers = new Map(), order = [];
-    const visit = (id) => {
-        if (numbers.has(id))
-            return true;
-        const f = byId.get(id);
-        if (!f)
-            return false;
-        numbers.set(id, order.length);
-        order.push(f);
-        return instancesOf(f, registry).every(visit);
-    };
-    if (!visit(rootId))
+    const order = closureOrder(document, registry, rootId);
+    if (!order)
         return null;
+    const numbers = new Map(order.map((f, i) => [f.id, i]));
     return canonical(order.map(f => {
         const { id: _id, stages: _stages, targets: _targets, ...rest } = (0, model_1.copy)(f);
         rest.graph.nodes = rest.graph.nodes.map((n) => {
@@ -2043,21 +2042,48 @@ function standardForm(document, registry, rootId) {
             const module = registry.get(n.nodeType), ref = (_a = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, n);
             return ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference) ? n : { ...n, params: { ...n.params, ...module.reference('#' + numbers.get(ref)) } };
         });
+        // A scoped reference to a network in the closure takes that network's number too: only renumbering in-graph IDs must not make two
+        // copies differ (Codex R118-3). 指向閉包裡某張網路的 scoped 參照也換成那張網路的編號：只是圖內 ID 重配，不能讓兩份變得不同。
+        scope_references_1.ScopeReferences.walk(rest, (ref, old) => {
+            const n = ref.scope.startsWith('fn_') ? numbers.get(ref.scope.slice(3)) : undefined;
+            return n === undefined ? old : scope_references_1.ScopeReferences.token('fn_' + n, ref.source);
+        });
         return rest;
     }));
 }
-/** The copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library
- * copy, with the same Library ID and the same standard form; a local definition is never merged by content.
- * target 裡可以沿用的那份：只限 Library 副本、同 Library ID 且標準形相同；本地定義永不按內容合併。 */
-function sameLibraryCopy(target, source, id, registry) {
-    var _a, _b, _c;
+/** A definition's closure in the standard form's fixed walk (root first, then each dependency as first met); null when incomplete.
+ * Two closures with equal standard forms line up position by position. 標準形固定走訪下的閉包（根在先，依序首次遇到的依賴）；不完整就是 null。
+ * 標準形相同的兩個閉包可以逐位對齊。 */
+function closureOrder(document, registry, rootId) {
+    var _a;
+    const byId = new Map(((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])), seen = new Set(), order = [];
+    const visit = (id) => {
+        if (seen.has(id))
+            return true;
+        const f = byId.get(id);
+        if (!f)
+            return false;
+        seen.add(id);
+        order.push(f);
+        return instancesOf(f, registry).every(visit);
+    };
+    return visit(rootId) ? order : null;
+}
+/** Each copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library copy
+ * with the same Library ID and the same standard form — and with it its whole closure, position by position, since reusing a parent
+ * fixes what its children are. Returned as source ID → target ID maps; the caller keeps a batch consistent (Codex R118-2). A local
+ * definition is never merged by content. target 裡每一份可以沿用的：只限同 Library ID、同標準形的 Library 副本——連同整個閉包逐位對應，
+ * 因為沿用父就定了子是誰。回傳來源 ID→目標 ID 的對照；整批一致由呼叫端負責。本地定義永不按內容合併。 */
+function libraryReuses(target, source, id, registry) {
+    var _a, _b;
     const f = (_a = source.subgraphs) === null || _a === void 0 ? void 0 : _a.find(d => d.id === id);
     if ((f === null || f === void 0 ? void 0 : f.libraryId) === undefined)
-        return undefined;
-    const form = standardForm(source, registry, id);
-    if (form === null)
-        return undefined;
-    return (_c = ((_b = target.subgraphs) !== null && _b !== void 0 ? _b : []).find(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)) === null || _c === void 0 ? void 0 : _c.id;
+        return [];
+    const form = standardForm(source, registry, id), from = closureOrder(source, registry, id);
+    if (form === null || !from)
+        return [];
+    return ((_b = target.subgraphs) !== null && _b !== void 0 ? _b : []).filter(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)
+        .map(d => { const to = closureOrder(target, registry, d.id); return new Map(from.map((g, i) => [g.id, to[i].id])); });
 }
 
 },
@@ -2102,19 +2128,21 @@ function makeLocal(graph, id, next) {
         graph.library.set(id, libraryId, { kind: 'local' });
         return id;
     }
+    // The fork comes in through the ID map, so its own scoped references follow it, as in Make Single User (Codex R118-4).
+    // 分叉經由 ID 對照加入，自己的 scoped 參照跟著它走，同設為唯一。
     const fork = (0, model_1.copy)(f);
     delete fork.libraryId;
-    fork.id = next();
     fork.title = (0, node_names_1.freeName)(f.title, new Set(((_b = graph.document.subgraphs) !== null && _b !== void 0 ? _b : []).map(d => d.title)), 80);
-    (0, subgraph_copies_1.appendSubgraphs)(graph, [fork]);
-    const outside = [...Object.values(graph.document.stages), ...((_c = graph.document.subgraphs) !== null && _c !== void 0 ? _c : []).filter(d => d.libraryId === undefined && d.id !== fork.id).map(d => d.graph)];
+    const forkId = next();
+    (0, subgraph_copies_1.appendSubgraphs)(graph, [fork], new Map([[id, forkId]]));
+    const outside = [...Object.values(graph.document.stages), ...((_c = graph.document.subgraphs) !== null && _c !== void 0 ? _c : []).filter(d => d.libraryId === undefined && d.id !== forkId).map(d => d.graph)];
     for (const data of outside)
         for (const n of data.nodes)
             if (referenceOf(graph, n) === id) {
                 const module = graph.registry.get(n.nodeType);
-                n.params = { ...(0, model_1.copy)(n.params), ...(0, model_1.copy)(module.reference(fork.id)) };
+                n.params = { ...(0, model_1.copy)(n.params), ...(0, model_1.copy)(module.reference(forkId)) };
             }
-    return fork.id;
+    return forkId;
 }
 /** An explicit update (§3.11, B1 contract 2): the copy takes the Library's content whole, keeping its in-graph ID and Library ID; every
  * instance follows the new interface (values refit, wires to removed ports dropped — the same rules as an interface edit) and, when

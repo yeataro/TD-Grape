@@ -29,15 +29,18 @@ export function makeLocal(graph: GraphDocument, id: string, next: AllocateSubgra
   requireCurrent(graph.library, f);
   const readOnlyUsers = (graph.document.subgraphs ?? []).some(d => d.libraryId !== undefined && d.graph.nodes.some(n => referenceOf(graph, n) === id));
   if (!readOnlyUsers) { delete f.libraryId; graph.library.set(id, libraryId, { kind: 'local' }); return id; }
+  // The fork comes in through the ID map, so its own scoped references follow it, as in Make Single User (Codex R118-4).
+  // 分叉經由 ID 對照加入，自己的 scoped 參照跟著它走，同設為唯一。
   const fork = copy(f); delete fork.libraryId;
-  fork.id = next(); fork.title = freeName(f.title, new Set((graph.document.subgraphs ?? []).map(d => d.title)), 80);
-  appendSubgraphs(graph, [fork]);
-  const outside = [...Object.values(graph.document.stages), ...(graph.document.subgraphs ?? []).filter(d => d.libraryId === undefined && d.id !== fork.id).map(d => d.graph)];
+  fork.title = freeName(f.title, new Set((graph.document.subgraphs ?? []).map(d => d.title)), 80);
+  const forkId = next();
+  appendSubgraphs(graph, [fork], new Map([[id, forkId]]));
+  const outside = [...Object.values(graph.document.stages), ...(graph.document.subgraphs ?? []).filter(d => d.libraryId === undefined && d.id !== forkId).map(d => d.graph)];
   for (const data of outside) for (const n of data.nodes) if (referenceOf(graph, n) === id) {
     const module = graph.registry.get(n.nodeType)!;
-    n.params = { ...copy(n.params), ...copy(module.reference!(fork.id)) };
+    n.params = { ...copy(n.params), ...copy(module.reference!(forkId)) };
   }
-  return fork.id;
+  return forkId;
 }
 
 /** An explicit update (§3.11, B1 contract 2): the copy takes the Library's content whole, keeping its in-graph ID and Library ID; every

@@ -1,4 +1,4 @@
-import { sameLibraryCopy } from './library';
+import { libraryReuses } from './library';
 import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value, type SubgraphData } from './model';
 import type { GraphDocument } from './graph';
 import { freeName, namesIn, takesName } from './node_names';
@@ -95,15 +95,19 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
   // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
   // 定義還在的實例沿用它。
-  // A Library copy already here with the same Library ID and the same standard form is reused, with what it holds (amendment 1 A5
-  // rule 3, amendment 2 B3–B4); anything else comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的 Library 副本就沿用
-  // （連同它用到的）；其他的帶進來，Library 副本仍然唯讀。
-  const imported = new Set<string>(), reused = new Map<string, string>();
+  // A Library copy already here with the same Library ID and the same standard form is reused together with its whole closure (amendment 1
+  // A5 rule 3, amendment 2 B3–B4). The batch stays one mapping: a definition of the copy never goes to two places and two never to one,
+  // so what was shared stays shared and what was separate stays separate (Codex R118-2); a reuse that would break that is not taken and
+  // the definition comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的副本，連同整個閉包一起沿用；整批是一張對照：複製
+  // 裡的一份不會對到兩處、兩份也不會對到同一處——共用的維持共用、分開的維持分開；會破壞這點的沿用不採用，改成帶進來（Library 副本仍唯讀）。
+  const imported = new Set<string>(), reused = new Map<string, string>(), claimed = new Set<string>();
+  const fits = (mapping: Map<string, string>) => [...mapping].every(([from, to]) =>
+    !imported.has(from) && (reused.has(from) ? reused.get(from) === to : !claimed.has(to)));
   const bring = (id: string) => {
     const f = snapshot.get(id);
     if (!f || imported.has(id) || reused.has(id)) return;
-    const same = f.libraryId === undefined ? undefined : sameLibraryCopy(candidate.document, clip, id, candidate.registry);
-    if (same !== undefined) { reused.set(id, same); return; }
+    const mapping = libraryReuses(candidate.document, clip, id, candidate.registry).find(fits);
+    if (mapping) { for (const [from, to] of mapping) { reused.set(from, to); claimed.add(to); } return; }
     imported.add(id);
     for (const node of f.graph.nodes) { const ref = referenceOf(node); if (ref) bring(ref); }
   };

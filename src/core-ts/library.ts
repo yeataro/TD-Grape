@@ -2,13 +2,14 @@
  * A definition carrying `libraryId` is a read-only copy: an ordinary edit may not change it, only the legal operations (add a copy,
  * make local, make single user, update from the Library, remove) may, and each passes through one transaction ledger. The gate at
  * the end of GraphDocument.change() checks the ledger against the edit's result. A graph without Library copies never builds a ledger
- * and the gate returns at once (zero cost). The core never reads a Library: content comes from the caller.
+ * and the gate returns after one scan of the definition lists, with no content comparison (zero cost, measured). The core never reads a Library: content comes from the caller.
  * 圖裡的 Library 副本：帶 libraryId 的定義唯讀，一般修改不能改它，只有合法操作（加入副本、轉為本地、設為唯一、從 Library 更新、移除）
- * 可以，而且都經過同一張交易帳本；change() 末尾的關卡拿帳本對結果。沒有 Library 副本的圖不建帳本、關卡立即返回（零成本）。核心不讀
+ * 可以，而且都經過同一張交易帳本；change() 末尾的關卡拿帳本對結果。沒有 Library 副本的圖不建帳本，關卡只掃一次定義清單、不比內容就返回（零成本，量過）。核心不讀
  * Library，內容由呼叫端給。 */
 import { copy, type Graph, type SubgraphData, type Node } from './model';
 import { equal } from './changes';
 import type { Registry } from './node_module';
+import { ScopeReferences } from './scope_references';
 
 /** A Library identity is a UUID (Q74.1). Library ID 是 UUID。 */
 export const validLibraryId = (id: unknown): id is string =>
@@ -53,8 +54,8 @@ const instancesOf = (f: SubgraphData, registry: Registry) =>
   f.graph.nodes.flatMap(n => { const ref = registry.get(n.nodeType)?.referencedGraph?.(n); return ref === undefined ? [] : [ref]; });
 
 /** The gate (B1, end of change()): every read-only identity in the ledger, before or after must end as the ledger says; and a
- * read-only definition may only use read-only ones (A3). A graph with no Library copy and no ledger returns at once.
- * 關卡：帳本、before、after 裡每個唯讀身分的結局都要符合帳本；唯讀定義只能用唯讀定義（A3）。沒有 Library 副本也沒有帳本的圖立即返回。 */
+ * read-only definition may only use read-only ones (A3). A graph with no Library copy and no ledger returns after scanning the definition lists.
+ * 關卡：帳本、before、after 裡每個唯讀身分的結局都要符合帳本；唯讀定義只能用唯讀定義（A3）。沒有 Library 副本也沒有帳本的圖，掃過定義清單就返回。 */
 export function requireLibrary(before: Graph, after: Graph, ledger: LibraryLedger | undefined, registry: Registry): void {
   const held = (g: Graph) => (g.subgraphs ?? []).filter(f => f.libraryId !== undefined);
   const was = held(before), now = held(after);
@@ -68,7 +69,8 @@ export function requireLibrary(before: Graph, after: Graph, ledger: LibraryLedge
     const state = book.state(id, libraryId), found = after_.get(id);
     if (!state) { if (found?.libraryId === libraryId) throw readOnly('it entered without being added'); continue; }
     if (state.kind === 'content') { if (!found || !equal(found, state.data)) throw readOnly('it was changed'); continue; }
-    if (state.kind === 'local') { if (found?.libraryId === libraryId) throw readOnly('it was made local'); continue; }
+    // Made local means no Library ID at all, not merely not this one (Codex R118-1). 轉為本地＝不帶任何 Library ID，不只是不帶原本那個。
+    if (state.kind === 'local') { if (found?.libraryId !== undefined) throw readOnly('it was made local'); continue; }
     if (found) throw readOnly('it was removed');
   }
   for (const f of now) for (const ref of instancesOf(f, registry))
@@ -91,31 +93,49 @@ function canonical(value: unknown): string {
  * 閉包的標準形（B4）：固定走訪給編號（根＝0，依序首次遇到的依賴），實例參照換成編號，每份保留 Library ID，不含圖內 ID 與推算欄位；
  * 閉包不完整就是 null。兩邊都在手上時直接比字串，不算雜湊。 */
 export function standardForm(document: Graph, registry: Registry, rootId: string): string | null {
-  const byId = new Map((document.subgraphs ?? []).map(f => [f.id, f])), numbers = new Map<string, number>(), order: SubgraphData[] = [];
-  const visit = (id: string): boolean => {
-    if (numbers.has(id)) return true;
-    const f = byId.get(id); if (!f) return false;
-    numbers.set(id, order.length); order.push(f);
-    return instancesOf(f, registry).every(visit);
-  };
-  if (!visit(rootId)) return null;
+  const order = closureOrder(document, registry, rootId);
+  if (!order) return null;
+  const numbers = new Map(order.map((f, i) => [f.id, i]));
   return canonical(order.map(f => {
     const { id: _id, stages: _stages, targets: _targets, ...rest } = copy(f);
     rest.graph.nodes = rest.graph.nodes.map((n: Node) => {
       const module = registry.get(n.nodeType), ref = module?.referencedGraph?.(n);
       return ref === undefined || !module?.reference ? n : { ...n, params: { ...n.params, ...module.reference('#' + numbers.get(ref)) } };
     });
+    // A scoped reference to a network in the closure takes that network's number too: only renumbering in-graph IDs must not make two
+    // copies differ (Codex R118-3). 指向閉包裡某張網路的 scoped 參照也換成那張網路的編號：只是圖內 ID 重配，不能讓兩份變得不同。
+    ScopeReferences.walk(rest, (ref, old) => {
+      const n = ref.scope.startsWith('fn_') ? numbers.get(ref.scope.slice(3)) : undefined;
+      return n === undefined ? old : ScopeReferences.token('fn_' + n, ref.source);
+    });
     return rest;
   }));
 }
 
-/** The copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library
- * copy, with the same Library ID and the same standard form; a local definition is never merged by content.
- * target 裡可以沿用的那份：只限 Library 副本、同 Library ID 且標準形相同；本地定義永不按內容合併。 */
-export function sameLibraryCopy(target: Graph, source: Graph, id: string, registry: Registry): string | undefined {
+/** A definition's closure in the standard form's fixed walk (root first, then each dependency as first met); null when incomplete.
+ * Two closures with equal standard forms line up position by position. 標準形固定走訪下的閉包（根在先，依序首次遇到的依賴）；不完整就是 null。
+ * 標準形相同的兩個閉包可以逐位對齊。 */
+export function closureOrder(document: Graph, registry: Registry, rootId: string): SubgraphData[] | null {
+  const byId = new Map((document.subgraphs ?? []).map(f => [f.id, f])), seen = new Set<string>(), order: SubgraphData[] = [];
+  const visit = (id: string): boolean => {
+    if (seen.has(id)) return true;
+    const f = byId.get(id); if (!f) return false;
+    seen.add(id); order.push(f);
+    return instancesOf(f, registry).every(visit);
+  };
+  return visit(rootId) ? order : null;
+}
+
+/** Each copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library copy
+ * with the same Library ID and the same standard form — and with it its whole closure, position by position, since reusing a parent
+ * fixes what its children are. Returned as source ID → target ID maps; the caller keeps a batch consistent (Codex R118-2). A local
+ * definition is never merged by content. target 裡每一份可以沿用的：只限同 Library ID、同標準形的 Library 副本——連同整個閉包逐位對應，
+ * 因為沿用父就定了子是誰。回傳來源 ID→目標 ID 的對照；整批一致由呼叫端負責。本地定義永不按內容合併。 */
+export function libraryReuses(target: Graph, source: Graph, id: string, registry: Registry): Map<string, string>[] {
   const f = source.subgraphs?.find(d => d.id === id);
-  if (f?.libraryId === undefined) return undefined;
-  const form = standardForm(source, registry, id);
-  if (form === null) return undefined;
-  return (target.subgraphs ?? []).find(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)?.id;
+  if (f?.libraryId === undefined) return [];
+  const form = standardForm(source, registry, id), from = closureOrder(source, registry, id);
+  if (form === null || !from) return [];
+  return (target.subgraphs ?? []).filter(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)
+    .map(d => { const to = closureOrder(target, registry, d.id)!; return new Map(from.map((g, i) => [g.id, to[i]!.id])); });
 }

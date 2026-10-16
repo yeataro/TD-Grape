@@ -259,3 +259,61 @@ test('a pasted Library copy is reused when the same one is here, and comes in re
     assert.throws(()=>doc(step.after).change(m=>m.subgraph(added[0].id).rename('Nope')),readOnly);
   }
 });
+
+// ---- Codex review of R.118 (R118-1..4) Codex 對 R.118 的審查 ----
+const {ScopeReferences}=c.GrapeGraph;
+function emptyGraph(){const g=sharedGraph();g.subgraphs=[];g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id==='output');g.stages.pixel.edges=[];return g;}
+function gainCopy(id='gain'){return {...plain(sharedGraph().subgraphs[0]),id,libraryId:L1};}
+function wrapperCopy(id='wrapper',inner='gain',libraryId=L2){const f=plain(sharedGraph().subgraphs[1]);f.id=id;f.graph.nodes.find(n=>n.id==='inner').params.subgraphId=inner;if(libraryId)f.libraryId=libraryId;else delete f.libraryId;return f;}
+function withRoots(defs,refs){const g=emptyGraph();g.subgraphs=defs;refs.forEach((ref,i)=>g.stages.pixel.nodes.push(node('call'+i,'subgraph_instance',{subgraphId:ref})));return g;}
+const refsOf=f=>f.graph.nodes.filter(n=>n.nodeType.endsWith('subgraph_instance')).map(n=>n.params.subgraphId);
+function pasteInto(target,clip,sameSource=false,seed=0){let n=seed,d=seed;return doc(target).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},()=>'p'+ ++n,()=>'group','pixel',()=>'fresh'+ ++d,sameSource)).after;}
+const pastedRoots=g=>g.stages.pixel.nodes.filter(n=>n.id.startsWith('p')).map(n=>n.params.subgraphId);
+
+test('R118-1: a copy made local may not end with another Library ID, even after an ordinary removal and a legal add',()=>{
+  const start=doc(sharedGraph()).change(m=>m.appendSubgraphs([libraryCopy('x')])).after;
+  assert.throws(()=>doc(start).change(m=>{m.makeLocal('x',next);m.document.subgraphs=m.document.subgraphs.filter(f=>f.id!=='x');m.appendSubgraphs([libraryCopy('x',L1)]);}),readOnly);
+  assert.throws(()=>doc(start).change(m=>{m.makeLocal('x',next);def(m.document,'x').libraryId=L1;}),readOnly);
+  assert.equal(def(doc(start).change(m=>{m.makeLocal('x',next);m.subgraph('x').rename('Mine');}).after,'x').title,'Mine','the ordinary case still passes');
+});
+
+test('R118-2: a paste keeps separate dependencies separate, and pasting the same copy again adds nothing',()=>{
+  // wrapper uses gain and gainB, equal in content but two definitions. wrapper 用 gain 與 gainB：內容相同，但是兩份。
+  const w=wrapperCopy();w.graph.nodes.push(node('extra','subgraph_instance',{subgraphId:'gainB'}));
+  const source=withRoots([gainCopy(),gainCopy('gainB'),w],['wrapper']),clip=plain(c.GrapeGraph.copyNodes(doc(source),['call0'],'source'));
+  const after=pasteInto(withRoots([gainCopy('existing')],[]),clip),root=pastedRoots(after)[0];
+  const deps=refsOf(def(after,root));
+  assert.notEqual(deps[0],deps[1],'still two dependencies');
+  assert.equal(c.GrapeGraph.standardForm(source,registry,'wrapper'),c.GrapeGraph.standardForm(after,registry,root));
+  const again=pasteInto(after,clip,false,10);
+  assert.equal(again.subgraphs.length,after.subgraphs.length,'the second paste reuses everything');
+});
+
+test('R118-2: a paste keeps a shared dependency shared when reusing a parent fixes it, from another graph or restoring in this one',()=>{
+  for(const sameSource of [false,true]){
+    const source=withRoots([gainCopy(),wrapperCopy(),wrapperCopy('localC','gain',null)],['wrapper','localC']);
+    const target=withRoots([gainCopy('decoy'),gainCopy('usedByA'),wrapperCopy('existingA','usedByA')],[]);
+    const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')),sameSource);
+    const [a,cdef]=pastedRoots(after);
+    assert.equal(a,'existingA','the read-only parent is reused');
+    assert.deepEqual(plain(refsOf(def(after,cdef))),plain(refsOf(def(after,a))),'the local C uses the same gain as A');
+  }
+});
+
+test('R118-3: renumbering in-graph IDs inside scoped types keeps the standard form; a second paste adds nothing',()=>{
+  const source=withRoots([gainCopy()],['gain']);
+  def(source,'gain').outputs[0].type='float['+ScopeReferences.token('fn_gain',['mul','out'])+']';
+  const clip=plain(c.GrapeGraph.copyNodes(doc(source),['call0'],'source'));
+  const first=pasteInto(emptyGraph(),clip),copyId=first.subgraphs[0].id;
+  assert.notEqual(copyId,'gain');
+  assert.equal(c.GrapeGraph.standardForm(source,registry,'gain'),c.GrapeGraph.standardForm(first,registry,copyId));
+  assert.equal(pasteInto(first,clip,false,10).subgraphs.length,1);
+});
+
+test('R118-4: a fork moves its own scoped references to itself; the read-only original keeps its own',()=>{
+  const g=library(),scoped=id=>'float['+ScopeReferences.token('fn_'+id,['mul','out'])+']';
+  def(g,'gain').outputs[0].type=scoped('gain');
+  const step=doc(g).change(m=>m.makeLocal('gain',()=>'forked'));
+  assert.equal(def(step.after,'forked').outputs[0].type,scoped('forked'));
+  assert.equal(def(step.after,'gain').outputs[0].type,scoped('gain'));
+});
