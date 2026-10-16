@@ -9,6 +9,7 @@ import {types as valueTypes,fill,opaque} from './values';
 import { completeGroups, groupsOf } from './groups';
 import type { Registry } from './node_module';
 import type { Graph } from './model';
+import { validLibraryId, requireCurrent } from './library';
 
 export interface SubgraphOptions {id:string;title:string}
 export interface SelectionSubgraphOptions extends SubgraphOptions {
@@ -61,10 +62,9 @@ export function validateSubgraphData(f:SubgraphData):void {
     throw Error('Invalid Subgraph name');
   // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
   // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
-  // `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole, at every entry
-  // (open, paste, append), so no half-protected Library copy can enter a document (amendment 2 B7). libraryId 到 Library
-  // 那一輪才定義；之前帶著它的定義整份拒絕，開檔、貼上、加入都一樣，免得出現沒受保護的 Library 副本。
-  if ('libraryId' in f) throw Object.assign(Error('Subgraph definitions from a Library are not supported in this version'),{code:'subgraph.library'});
+  // A Library copy carries its Library ID, a UUID (Refactor.118); what it may become is the ledger's (library.ts).
+  // Library 副本帶著 Library ID（UUID）；它能怎麼變由帳本管。
+  if ('libraryId' in f && !validLibraryId(f.libraryId)) throw Error('Invalid Library ID');
   if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32)) throw Error('Invalid Subgraph color');
   for (const ports of [f.inputs,f.outputs]) {
     if (!Array.isArray(ports) || ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length || !ports.every(validPort))
@@ -308,7 +308,17 @@ export function removeSubgraph(graph:GraphDocument,id:string):void {
   const definitions = graph.document.subgraphs || [];
   if (!definitions.some(f => f.id === id)) throw Error('Subgraph definition no longer exists');
   if (instanceCounts(graph).get(id)) throw Object.assign(Error('The Subgraph definition is still in use'),{code:'subgraph.inUse'});
+  removed(graph,definitions.filter(f => f.id === id));
   graph.document.subgraphs = definitions.filter(f => f.id !== id);
+}
+/** A legal removal (amendment 2 B1): a Library copy passes the start check and its identity becomes removed; a definition made local
+ * earlier in this edit is removed under the identity it had. 合法移除：Library 副本過起點檢查、身分記成已移除；這筆修改裡剛轉為本地的，用它原本的身分記。 */
+function removed(graph:GraphDocument,going:readonly SubgraphData[]):void {
+  for (const f of going) {
+    if (f.libraryId !== undefined) {requireCurrent(graph.library,f);graph.library.set(f.id,f.libraryId,{kind:'removed'});continue;}
+    if (!graph.libraryInUse) continue;
+    for (const entry of graph.library.entries()) if (entry.id === f.id && entry.state.kind === 'local') graph.library.set(f.id,entry.libraryId,{kind:'removed'});
+  }
 }
 
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
@@ -346,5 +356,7 @@ export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],act
   const candidates = closure(roots),retained = references({...graph.document,subgraphs:[],catalogSnapshot:undefined});
   for (const [id,f] of definitions) if (!candidates.has(id) || f.graph === active) retained.add(id);
   const keep = closure(retained);
-  graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id) || !collectible.has(f.id));
+  const go = (f:SubgraphData) => candidates.has(f.id) && !keep.has(f.id) && collectible.has(f.id);
+  removed(graph,(graph.document.subgraphs || []).filter(go));
+  graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !go(f));
 }

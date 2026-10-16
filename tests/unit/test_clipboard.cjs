@@ -102,7 +102,7 @@ test('a copy carries the definitions its instances use, with their closure; past
   assert.equal(back.after.subgraphs.length,2);assert.ok(back.after.subgraphs.every(f=>!['outer','inner'].includes(f.id)));
   // A definition from a Library is refused as a whole (amendment B7). 來自 Library 的定義整份拒絕（B7）。
   const lib=plain(clip);lib.subgraphs[0].libraryId='x';
-  assert.throws(()=>made.change(c=>{G.pasteClip(c,lib,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);}),e=>e.code==='subgraph.library');
+  assert.throws(()=>made.change(c=>{G.pasteClip(c,lib,{x:0,y:0},newId,newGroupId,'pixel',newSub,false);}),e=>/Invalid Library ID/.test(e.message));
 });
 
 // Technical review R109–R112 (Refactor.113). 子圖技術審查的修正。
@@ -159,12 +159,12 @@ test('TECH-4: every definition the copy carries is validated, also one that will
   const original=new G.GraphDocument(sharedGraph(),registry),clip=plain(G.copyNodes(original,['second'],OP));
   clip.subgraphs.find(f=>f.id==='gain').libraryId='handmade';
   const parsed=G.readClip(JSON.stringify(clip)),before=JSON.stringify(original.document);
-  assert.throws(()=>original.change(c=>{G.pasteClip(c,parsed,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),e=>e.code==='subgraph.library');
+  assert.throws(()=>original.change(c=>{G.pasteClip(c,parsed,{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),e=>/Invalid Library ID/.test(e.message));
   assert.equal(JSON.stringify(original.document),before,'nothing is written');
   // R113-2: a refused definition cannot hide behind a good one with the same ID. 被拒的定義不能藏在同 ID 的正常定義後面。
   const hidden=plain(G.copyNodes(original,['second'],OP));
   hidden.subgraphs.unshift({...plain(hidden.subgraphs.find(f=>f.id==='gain')),libraryId:'handmade'});
-  assert.throws(()=>original.change(c=>{G.pasteClip(c,G.readClip(JSON.stringify(hidden)),{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),e=>e.code==='subgraph.library');
+  assert.throws(()=>original.change(c=>{G.pasteClip(c,G.readClip(JSON.stringify(hidden)),{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),e=>/Invalid Library ID/.test(e.message));
   const twice=plain(G.copyNodes(original,['second'],OP));twice.subgraphs.push(plain(twice.subgraphs[0]));
   assert.throws(()=>original.change(c=>{G.pasteClip(c,G.readClip(JSON.stringify(twice)),{x:0,y:0},newId,newGroupId,'pixel',reviewSub,true);}),/Duplicate Subgraph identity/);
   assert.equal(JSON.stringify(original.document),before);

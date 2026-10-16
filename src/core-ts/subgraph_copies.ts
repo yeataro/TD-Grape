@@ -3,6 +3,9 @@ import type { GraphDocument, Network } from './graph';
 import { ensureSubgraphCapacity, validateSubgraphData, withoutStoredUse } from './subgraph_operations';
 import { freeName } from './node_names';
 import { ScopeReferences } from './scope_references';
+import { tidyGroups } from './groups';
+import { readOnly, requireCurrent } from './library';
+import type { Graph } from './model';
 
 export type AllocateSubgraphId = () => string;
 const validId = (id:string) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
@@ -56,6 +59,16 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
     active.delete(id);done.add(id);
   };
   pending.forEach(f=>visit(f.id));
+  // A Library copy coming in is the legal "add a copy" (amendment 2 B1): an identity the ledger has never held, entered in its tidy
+  // final form so the end of the edit leaves it as recorded. 帶進來的 Library 副本＝合法的「加入副本」：帳本沒見過的身分，以整理好的最後樣子入帳，
+  // 修改結束時的整理不會再動它。
+  for (const f of pending) {
+    if (f.libraryId === undefined) continue;
+    if (graph.library.state(f.id,f.libraryId) !== undefined) throw readOnly('this identity was already used in this edit');
+    for (const e of f.graph.edges) if (!e.id) e.id = graph.nextEdgeId(f.graph);
+    tidyGroups({stages:{},subgraphs:[f]} as unknown as Graph);
+    graph.library.set(f.id,f.libraryId,{kind:'content',data:f});
+  }
   if (pending.length) (graph.document.subgraphs ||= []).push(...pending);
   return pending;
 }
@@ -69,9 +82,11 @@ export function independentSubgraph(network:Network,nodeId:string,next:AllocateS
   if(!n)throw Error('Subgraph instance no longer exists');
   const id=reference(graph,n),source=graph.document.subgraphs?.find(f=>f.id===id);
   if(!source)return null;
+  // The copy of a Library copy is local (§3.10): read the copy as it stands, then drop the Library ID. Library 副本的複本是本地的。
+  requireCurrent(graph.library,source);
   ensureSubgraphCapacity(graph,1);
   const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
-  const f=copy(source);f.id=newId;f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
+  const f=copy(source);f.id=newId;delete f.libraryId;f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
   remapScopes(f,new Map([[source.id,newId]]));
   const params=parameters(graph,n,newId);
   const owned=appendSubgraphs(graph,[f])[0]!;

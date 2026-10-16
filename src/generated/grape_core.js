@@ -29,6 +29,7 @@ const component_names_1 = require("./component_names");
 const upgrades_1 = require("./upgrades");
 const node_names_1 = require("./node_names");
 const clipboard_1 = require("./clipboard");
+const library_1 = require("./library");
 const groups = require("./groups");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -92,7 +93,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, sameLibraryCopy: library_1.sameLibraryCopy, validLibraryId: library_1.validLibraryId };
 
 },
 "capacity":function(require,module,exports){
@@ -947,6 +948,7 @@ var node_module_2 = require("./node_module");
 Object.defineProperty(exports, "contextFor", { enumerable: true, get: function () { return node_module_2.contextFor; } });
 Object.defineProperty(exports, "prepareNodeWire", { enumerable: true, get: function () { return node_module_2.prepareNodeWire; } });
 const subgraphs_1 = require("./subgraphs");
+const library_1 = require("./library");
 const subgraph_operations_1 = require("./subgraph_operations");
 const subgraph_copies_1 = require("./subgraph_copies");
 const declarations_1 = require("./declarations");
@@ -1505,6 +1507,10 @@ class GraphDocument {
     }
     assertEditable() { if (!this.editable || !this.active)
         throw Error('Graph changes require an active transaction'); }
+    /** This transaction's Library ledger (library.ts). 這筆交易的 Library 帳本。 */
+    get library() { var _a, _b; this.assertEditable(); return (_a = this.ledger) !== null && _a !== void 0 ? _a : (this.ledger = new library_1.LibraryLedger((_b = this.start) !== null && _b !== void 0 ? _b : this.document)); }
+    /** Whether this transaction has a ledger yet (asking does not make one). 這筆交易是否已有帳本（問了不會建）。 */
+    get libraryInUse() { return !!this.ledger; }
     close() { this.active = false; }
     nextEdgeId(data) {
         this.assertEditable();
@@ -1515,6 +1521,7 @@ class GraphDocument {
      * host receipts and UI selections remain the application's responsibility. */
     change(edit) {
         const before = this.snapshot(), candidate = new GraphDocument(clone(before), this.registry, this.fallback, true);
+        candidate.start = before;
         try {
             edit(candidate);
             if (!(0, changes_1.equal)(before, candidate.document))
@@ -1531,6 +1538,9 @@ class GraphDocument {
             const cycle = (0, subgraph_operations_1.newSubgraphCycle)(before, after, this.registry);
             if (cycle)
                 throw Object.assign(Error('Subgraph reference cycle: ' + cycle), { code: 'subgraph.cycle', subgraphId: cycle });
+            // Library copies change only through the legal operations, checked against this edit's ledger (library.ts, amendment 2 B1).
+            // Library 副本只能經由合法操作改變，對這筆修改的帳本檢查。
+            (0, library_1.requireLibrary)(before, after, candidate.ledger, this.registry);
             return { before, after, changes: (0, changes_1.changesBetween)(before, after, this.registry) };
         }
         finally {
@@ -1882,6 +1892,159 @@ exports.identifierRules = {
         "writeonly"
     ]
 };
+
+},
+"library":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.readOnly = exports.LibraryLedger = exports.validLibraryId = void 0;
+exports.requireCurrent = requireCurrent;
+exports.requireLibrary = requireLibrary;
+exports.standardForm = standardForm;
+exports.sameLibraryCopy = sameLibraryCopy;
+/** Library copies in a graph (basic design §3.7–3.10, amendment 1 A2–A6, amendment 2 B1–B4 revision 3; Refactor.118).
+ * A definition carrying `libraryId` is a read-only copy: an ordinary edit may not change it, only the legal operations (add a copy,
+ * make local, make single user, update from the Library, remove) may, and each passes through one transaction ledger. The gate at
+ * the end of GraphDocument.change() checks the ledger against the edit's result. A graph without Library copies never builds a ledger
+ * and the gate returns at once (zero cost). The core never reads a Library: content comes from the caller.
+ * 圖裡的 Library 副本：帶 libraryId 的定義唯讀，一般修改不能改它，只有合法操作（加入副本、轉為本地、設為唯一、從 Library 更新、移除）
+ * 可以，而且都經過同一張交易帳本；change() 末尾的關卡拿帳本對結果。沒有 Library 副本的圖不建帳本、關卡立即返回（零成本）。核心不讀
+ * Library，內容由呼叫端給。 */
+const model_1 = require("./model");
+const changes_1 = require("./changes");
+/** A Library identity is a UUID (Q74.1). Library ID 是 UUID。 */
+const validLibraryId = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
+exports.validLibraryId = validLibraryId;
+const key = (id, libraryId) => id + '\u0000' + libraryId;
+/** One transaction's ledger. A state is first taken from the document as the transaction began; legal operations replace it, never
+ * keep the old one. Content is held as its own copy, never shared with the candidate (B1-R2 implementation contract).
+ * 一筆交易的帳本：初值取自交易開始時的文件；合法操作取代它、不保留舊值。內容存自己的複本，不和候選文件共用參照。 */
+class LibraryLedger {
+    constructor(start) {
+        this.start = start;
+        this.states = new Map();
+    }
+    state(id, libraryId) {
+        var _a;
+        const held = this.states.get(key(id, libraryId));
+        if (held)
+            return held.state;
+        const f = (_a = this.start.subgraphs) === null || _a === void 0 ? void 0 : _a.find(d => d.id === id && d.libraryId === libraryId);
+        return f ? { kind: 'content', data: f } : undefined;
+    }
+    set(id, libraryId, state) {
+        this.states.set(key(id, libraryId), { id, libraryId, state: state.kind === 'content' ? { kind: 'content', data: (0, model_1.copy)(state.data) } : state });
+    }
+    /** Every identity the ledger was told about. 帳本被告知過的每個身分。 */
+    entries() { return [...this.states.values()]; }
+    get size() { return this.states.size; }
+}
+exports.LibraryLedger = LibraryLedger;
+const readOnly = (what) => Object.assign(Error('A subgraph from a Library is read-only (' + what + '); make it local to edit it'), { code: 'subgraph.readOnly' });
+exports.readOnly = readOnly;
+/** The start check of every legal operation (B1 contract 1): the definition as it stands in the candidate must equal the ledger's
+ * current content. 合法操作的起點檢查：候選文件裡的那份必須等於帳本目前的內容。 */
+function requireCurrent(ledger, f) {
+    if (f.libraryId === undefined)
+        return;
+    const state = ledger.state(f.id, f.libraryId);
+    if (!state || state.kind !== 'content' || !(0, changes_1.equal)(f, state.data))
+        throw (0, exports.readOnly)('it was changed in this edit');
+}
+const instancesOf = (f, registry) => f.graph.nodes.flatMap(n => { var _a, _b; const ref = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); return ref === undefined ? [] : [ref]; });
+/** The gate (B1, end of change()): every read-only identity in the ledger, before or after must end as the ledger says; and a
+ * read-only definition may only use read-only ones (A3). A graph with no Library copy and no ledger returns at once.
+ * 關卡：帳本、before、after 裡每個唯讀身分的結局都要符合帳本；唯讀定義只能用唯讀定義（A3）。沒有 Library 副本也沒有帳本的圖立即返回。 */
+function requireLibrary(before, after, ledger, registry) {
+    var _a, _b;
+    const held = (g) => { var _a; return ((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).filter(f => f.libraryId !== undefined); };
+    const was = held(before), now = held(after);
+    if (!was.length && !now.length && !(ledger === null || ledger === void 0 ? void 0 : ledger.size))
+        return;
+    const book = ledger !== null && ledger !== void 0 ? ledger : new LibraryLedger(before);
+    const identities = new Map();
+    for (const f of [...was, ...now])
+        identities.set(key(f.id, f.libraryId), { id: f.id, libraryId: f.libraryId });
+    for (const entry of book.entries())
+        identities.set(key(entry.id, entry.libraryId), entry);
+    const after_ = new Map(((_a = after.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f]));
+    for (const { id, libraryId } of identities.values()) {
+        const state = book.state(id, libraryId), found = after_.get(id);
+        if (!state) {
+            if ((found === null || found === void 0 ? void 0 : found.libraryId) === libraryId)
+                throw (0, exports.readOnly)('it entered without being added');
+            continue;
+        }
+        if (state.kind === 'content') {
+            if (!found || !(0, changes_1.equal)(found, state.data))
+                throw (0, exports.readOnly)('it was changed');
+            continue;
+        }
+        if (state.kind === 'local') {
+            if ((found === null || found === void 0 ? void 0 : found.libraryId) === libraryId)
+                throw (0, exports.readOnly)('it was made local');
+            continue;
+        }
+        if (found)
+            throw (0, exports.readOnly)('it was removed');
+    }
+    for (const f of now)
+        for (const ref of instancesOf(f, registry))
+            if (((_b = after_.get(ref)) === null || _b === void 0 ? void 0 : _b.libraryId) === undefined)
+                throw Object.assign(Error('A read-only subgraph may only use read-only subgraphs'), { code: 'subgraph.readOnlyClosure' });
+}
+/** A JSON text with its object keys in order, so equal content gives equal text. 物件鍵排好序的 JSON，內容相同就字串相同。 */
+function canonical(value) {
+    if (Array.isArray(value))
+        return '[' + value.map(canonical).join(',') + ']';
+    if (value && typeof value === 'object')
+        return '{' + Object.keys(value).filter(k => value[k] !== undefined).sort()
+            .map(k => JSON.stringify(k) + ':' + canonical(value[k])).join(',') + '}';
+    return JSON.stringify(value);
+}
+/** The standard form of a definition with its closure (amendment 2 B4): the closure numbered in a fixed walk (root 0, then each
+ * dependency as first met), instance references replaced by those numbers, each definition keeping its Library ID, without in-graph
+ * IDs and derived fields. null when the closure is incomplete. Compared as text where both sides are at hand (no hash).
+ * 閉包的標準形（B4）：固定走訪給編號（根＝0，依序首次遇到的依賴），實例參照換成編號，每份保留 Library ID，不含圖內 ID 與推算欄位；
+ * 閉包不完整就是 null。兩邊都在手上時直接比字串，不算雜湊。 */
+function standardForm(document, registry, rootId) {
+    var _a;
+    const byId = new Map(((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])), numbers = new Map(), order = [];
+    const visit = (id) => {
+        if (numbers.has(id))
+            return true;
+        const f = byId.get(id);
+        if (!f)
+            return false;
+        numbers.set(id, order.length);
+        order.push(f);
+        return instancesOf(f, registry).every(visit);
+    };
+    if (!visit(rootId))
+        return null;
+    return canonical(order.map(f => {
+        const { id: _id, stages: _stages, targets: _targets, ...rest } = (0, model_1.copy)(f);
+        rest.graph.nodes = rest.graph.nodes.map((n) => {
+            var _a;
+            const module = registry.get(n.nodeType), ref = (_a = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, n);
+            return ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference) ? n : { ...n, params: { ...n.params, ...module.reference('#' + numbers.get(ref)) } };
+        });
+        return rest;
+    }));
+}
+/** The copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library
+ * copy, with the same Library ID and the same standard form; a local definition is never merged by content.
+ * target 裡可以沿用的那份：只限 Library 副本、同 Library ID 且標準形相同；本地定義永不按內容合併。 */
+function sameLibraryCopy(target, source, id, registry) {
+    var _a, _b, _c;
+    const f = (_a = source.subgraphs) === null || _a === void 0 ? void 0 : _a.find(d => d.id === id);
+    if ((f === null || f === void 0 ? void 0 : f.libraryId) === undefined)
+        return undefined;
+    const form = standardForm(source, registry, id);
+    if (form === null)
+        return undefined;
+    return (_c = ((_b = target.subgraphs) !== null && _b !== void 0 ? _b : []).find(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)) === null || _c === void 0 ? void 0 : _c.id;
+}
 
 },
 "model":function(require,module,exports){
@@ -6337,6 +6500,8 @@ const model_1 = require("./model");
 const subgraph_operations_1 = require("./subgraph_operations");
 const node_names_1 = require("./node_names");
 const scope_references_1 = require("./scope_references");
+const groups_1 = require("./groups");
+const library_1 = require("./library");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
 const reference = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
 function parameters(graph, n, id) {
@@ -6406,6 +6571,20 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
         done.add(id);
     };
     pending.forEach(f => visit(f.id));
+    // A Library copy coming in is the legal "add a copy" (amendment 2 B1): an identity the ledger has never held, entered in its tidy
+    // final form so the end of the edit leaves it as recorded. 帶進來的 Library 副本＝合法的「加入副本」：帳本沒見過的身分，以整理好的最後樣子入帳，
+    // 修改結束時的整理不會再動它。
+    for (const f of pending) {
+        if (f.libraryId === undefined)
+            continue;
+        if (graph.library.state(f.id, f.libraryId) !== undefined)
+            throw (0, library_1.readOnly)('this identity was already used in this edit');
+        for (const e of f.graph.edges)
+            if (!e.id)
+                e.id = graph.nextEdgeId(f.graph);
+        (0, groups_1.tidyGroups)({ stages: {}, subgraphs: [f] });
+        graph.library.set(f.id, f.libraryId, { kind: 'content', data: f });
+    }
     if (pending.length)
         ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(...pending);
     return pending;
@@ -6422,10 +6601,13 @@ function independentSubgraph(network, nodeId, next) {
     const id = reference(graph, n), source = (_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id);
     if (!source)
         return null;
+    // The copy of a Library copy is local (§3.10): read the copy as it stands, then drop the Library ID. Library 副本的複本是本地的。
+    (0, library_1.requireCurrent)(graph.library, source);
     (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, 1);
     const newId = allocate(new Set(graph.document.subgraphs.map(f => f.id)), next);
     const f = (0, model_1.copy)(source);
     f.id = newId;
+    delete f.libraryId;
     f.title = (0, node_names_1.freeName)(source.title, new Set(graph.document.subgraphs.map(d => d.title)), 80);
     remapScopes(f, new Map([[source.id, newId]]));
     const params = parameters(graph, n, newId);
@@ -6517,6 +6699,7 @@ const config_1 = require("./config");
 const scope_references_1 = require("./scope_references");
 const values_1 = require("./values");
 const groups_1 = require("./groups");
+const library_1 = require("./library");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
 /** A new port identity: random and unique like node and edge IDs (Q44); the number after `in`/`out` is not an identity
  * (basic design §4 row 6). 新接口的身分：和節點、接線一樣隨機、不重複；序號不是身分。 */
@@ -6565,11 +6748,10 @@ function validateSubgraphData(f) {
         throw Error('Invalid Subgraph name');
     // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
     // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
-    // `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole, at every entry
-    // (open, paste, append), so no half-protected Library copy can enter a document (amendment 2 B7). libraryId 到 Library
-    // 那一輪才定義；之前帶著它的定義整份拒絕，開檔、貼上、加入都一樣，免得出現沒受保護的 Library 副本。
-    if ('libraryId' in f)
-        throw Object.assign(Error('Subgraph definitions from a Library are not supported in this version'), { code: 'subgraph.library' });
+    // A Library copy carries its Library ID, a UUID (Refactor.118); what it may become is the ledger's (library.ts).
+    // Library 副本帶著 Library ID（UUID）；它能怎麼變由帳本管。
+    if ('libraryId' in f && !(0, library_1.validLibraryId)(f.libraryId))
+        throw Error('Invalid Library ID');
     if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32))
         throw Error('Invalid Subgraph color');
     for (const ports of [f.inputs, f.outputs]) {
@@ -6889,7 +7071,24 @@ function removeSubgraph(graph, id) {
         throw Error('Subgraph definition no longer exists');
     if (instanceCounts(graph).get(id))
         throw Object.assign(Error('The Subgraph definition is still in use'), { code: 'subgraph.inUse' });
+    removed(graph, definitions.filter(f => f.id === id));
     graph.document.subgraphs = definitions.filter(f => f.id !== id);
+}
+/** A legal removal (amendment 2 B1): a Library copy passes the start check and its identity becomes removed; a definition made local
+ * earlier in this edit is removed under the identity it had. 合法移除：Library 副本過起點檢查、身分記成已移除；這筆修改裡剛轉為本地的，用它原本的身分記。 */
+function removed(graph, going) {
+    for (const f of going) {
+        if (f.libraryId !== undefined) {
+            (0, library_1.requireCurrent)(graph.library, f);
+            graph.library.set(f.id, f.libraryId, { kind: 'removed' });
+            continue;
+        }
+        if (!graph.libraryInUse)
+            continue;
+        for (const entry of graph.library.entries())
+            if (entry.id === f.id && entry.state.kind === 'local')
+                graph.library.set(f.id, entry.libraryId, { kind: 'removed' });
+    }
 }
 /** Collect, among the dependency closure of removed instances, only definitions the caller names as collectible: Library
  * copies that can be brought back whole (basic design §3.9, amendments A4/B2; the caller resolves them, the core never reads a
@@ -6943,7 +7142,9 @@ function collectSubgraphs(graph, roots, active, collectible) {
         if (!candidates.has(id) || f.graph === active)
             retained.add(id);
     const keep = closure(retained);
-    graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id) || !collectible.has(f.id));
+    const go = (f) => candidates.has(f.id) && !keep.has(f.id) && collectible.has(f.id);
+    removed(graph, (graph.document.subgraphs || []).filter(go));
+    graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !go(f));
 }
 
 },

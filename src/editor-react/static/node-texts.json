@@ -39,8 +39,9 @@
   "subgraph.addOutput": "Add output",
   "subgraph.cycle": "A subgraph cannot contain an instance of itself, directly or through another subgraph",
   "subgraph.inUse": "The subgraph still has instances",
-  "subgraph.library": "Subgraphs from a Library are not supported in this version",
   "subgraph.title": "A subgraph title uses letters, digits, spaces and underscores, and starts with a letter",
   "subgraph.portLimit": "A subgraph supports up to 16 ports per side",
-  "vector.componentOrder": "Component order"
+  "vector.componentOrder": "Component order",
+  "subgraph.readOnly": "A subgraph from a Library is read-only; make it local to edit it",
+  "subgraph.readOnlyClosure": "A read-only subgraph may only use read-only subgraphs"
 }

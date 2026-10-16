@@ -39,12 +39,12 @@ test('invalid bundles leave the active document unchanged even when a caller cat
  });
 });
 
-// `libraryId` is defined by the Library round; until then a definition carrying it is refused as a whole (amendment 2 B7).
-// libraryId 到 Library 那一輪才定義；之前帶著它的定義整份拒絕。
-test('a definition from a Library (libraryId) is refused as a whole, and nothing of its batch is written',()=>{
+// A Library ID is a UUID (Refactor.118); a definition with a malformed one is refused as a whole, with its batch.
+// Library ID 是 UUID；格式不對的定義整份拒絕，同批一起。
+test('a definition with a malformed Library ID is refused as a whole, and nothing of its batch is written',()=>{
  new GraphDocument(empty(),registry).change(m=>{
   const before=m.snapshot();
-  assert.throws(()=>m.appendSubgraphs([source('plain'),{...source('lib'),libraryId:'0f3c'}]),error=>/Library/.test(error.message)&&error.code==='subgraph.library');
+  assert.throws(()=>m.appendSubgraphs([source('plain'),{...source('lib'),libraryId:'0f3c'}]),error=>/Invalid Library ID/.test(error.message));
   assert.deepEqual(m.snapshot(),before);
  });
 });

@@ -10,6 +10,7 @@ import { requireStructure } from './structure';
 export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
+import { LibraryLedger, requireLibrary } from './library';
 import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph, newSubgraphCycle } from './subgraph_operations';
 import { appendSubgraphs, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
@@ -361,6 +362,9 @@ export class GraphDocument {
   private readonly networkHandles=new Map<string,Network>();
   readonly context:NodeContext;
   private active=true;
+  /** The document as the transaction began, and its Library ledger, made only when a legal operation needs it (library.ts).
+   * 交易開始時的文件，與只在合法操作用到時才建的 Library 帳本。 */
+  private start?:Graph;private ledger?:LibraryLedger;
   constructor(document:Graph,readonly registry:Registry,readonly fallback?:PortResolver,readonly editable=false){
     this.document=editable?document:clone(document,true);
     this.context=contextFor(this.document);
@@ -386,6 +390,10 @@ export class GraphDocument {
     this.assertEditable();removeDeclaration(this.document,id,(nodeType,params)=>this.registry.get(nodeType)?.referencedDeclaration?.({id:'',nodeType,params:params as ObjectValue}));
   }
   assertEditable(){if(!this.editable||!this.active)throw Error('Graph changes require an active transaction');}
+  /** This transaction's Library ledger (library.ts). 這筆交易的 Library 帳本。 */
+  get library():LibraryLedger {this.assertEditable();return this.ledger??=new LibraryLedger(this.start??this.document);}
+  /** Whether this transaction has a ledger yet (asking does not make one). 這筆交易是否已有帳本（問了不會建）。 */
+  get libraryInUse():boolean {return !!this.ledger;}
   close(){this.active=false;}
   nextEdgeId(data:NetworkData){
     this.assertEditable();return newEdgeId(new Set(data.edges.map(e=>e.id)));
@@ -395,6 +403,7 @@ export class GraphDocument {
    * host receipts and UI selections remain the application's responsibility. */
   change(edit:(candidate:GraphDocument)=>void):{before:Graph;after:Graph;changes:GraphChanges} {
     const before=this.snapshot(),candidate=new GraphDocument(clone(before),this.registry,this.fallback,true);
+    candidate.start=before;
     try{
       edit(candidate);if(!equal(before,candidate.document))complete(candidate.document);
       const after=candidate.snapshot();
@@ -408,6 +417,9 @@ export class GraphDocument {
       // compiler reports it). 經由實例回到自己的子圖展不開：新增的實例邊會成環的修改整筆拒絕，圖裡已有別的循環也一樣；開圖時已有的照樣能編、能修。
       const cycle=newSubgraphCycle(before,after,this.registry);
       if(cycle)throw Object.assign(Error('Subgraph reference cycle: '+cycle),{code:'subgraph.cycle',subgraphId:cycle});
+      // Library copies change only through the legal operations, checked against this edit's ledger (library.ts, amendment 2 B1).
+      // Library 副本只能經由合法操作改變，對這筆修改的帳本檢查。
+      requireLibrary(before,after,candidate.ledger,this.registry);
       return {before,after,changes:changesBetween(before,after,this.registry)};
     }finally{candidate.close();}
   }

@@ -636,7 +636,6 @@ export class Editor {
     // The core's subgraph refusals, by code (Refactor.111). 核心對子圖的拒絕，依代號（R.111）。
     const code = (error as { code?: string } | null)?.code;
     if (code === 'subgraph.cycle') { this.warn(tr('subgraph.cycleRefused', 'Not done: the subgraph would contain an instance of itself (directly or through another subgraph).')); return; }
-    if (code === 'subgraph.library') { this.warn(tr('subgraph.libraryRefused', 'Not done: a subgraph from a Library is not supported in this version.')); return; }
     if (code === 'subgraph.title') { this.warn(tr('subgraph.titleRefused', 'Not done: a subgraph title uses letters, digits, spaces and underscores, and starts with a letter.')); return; }
     if (code === 'subgraph.inUse') { this.warn(tr('subgraph.inUseRefused', 'Not done: the subgraph still has instances; delete them first.')); return; }
     const limit = capacityMessage(error) ?? structureMessage(error);
@@ -990,6 +989,12 @@ export class Editor {
   paste = (clip: Clip, at: XYPosition, label: Message = tr('edit.pasted', 'Pasted')) => {
     if (clip.source !== this.host.target) {
       this.warn(tr('edit.pasteOtherOp', 'Pasting nodes copied from another Grape OP is not available yet.'));
+      return false;
+    }
+    // A copy carrying a Library copy waits for the Library round's editor (D-3): the core takes it since Refactor.118, but this editor has
+    // no read-only view yet. 帶 Library 副本的複製等到 D-3：核心從 R.118 起接受，但這個編輯器還沒有唯讀的畫面。
+    if (clip.subgraphs?.some(f => f && typeof f === 'object' && 'libraryId' in f)) {
+      this.warn(tr('subgraph.libraryRefused', 'Not done: a subgraph from a Library is not supported in this version.'));
       return false;
     }
     // Pasted into the network being edited, with the definitions the copy carries (basic design §3.13, amendment A5; core clipboard.ts).
