@@ -12,7 +12,7 @@
 
 **【子圖：設計審查告一段落，第一輪範圍 B＋C】（2026-10-14）**：基本設計 `work/refactor/subgraph-basic-design-2026-10-14.md`＋附錄一（Codex R1–R9 後）＋附錄二（複審 S、附錄一審查 M、核對 N、附錄二審查 T 後；優先序 附錄二 > 附錄一 > 本文）。五輪往返的紀錄在 `Review/2026-10-14-fable/`（README 是入口）。人類定：`libraryId` 欄位到 D 才定義（B／C 遇到就拒絕）；第一輪 **B＋C 一起**（B 或 C 單做沒有可操作的東西），先做哪塊是技術順序由助手定；D（Library）另一輪。結論已寫回 design-interview Q75／Q75 續（標已定、指向基本設計）與 GLOSSARY「子圖與函式」。執行計畫 `work/refactor/subgraph-bc-plan-2026-10-14.md`（109 核心清潔 → 110 B → 111 C）。R.109–R.112 已交付（見最新）：B＋C 功能人類無意見；外觀與互動意見已做成 112。記錄更正：主文件 §3.8／§5 第 2 項說核心「自動本地化」是錯的，核心只有明確 `localizeSubgraph`（已刪）；自動本地化是 legacy 行為。
 
-**【交接 2026-10-17】D-1 審查鏈還沒結束**：R.118 → Codex 審（R118-1..4）→ R.118.1 → Codex 核對（R118.1-1..3）→ R.118.2（fb25977e）→ **等 Codex 核對 118.2**（請求 workspace `Review/2026-10-14-fable/Opus對Refactor118.2的核對請求.md`；README 是索引）。本地 6 個提交未推（292f8b48..fb25977e）：人類決定核對通過再推，推前照例說明分支與提交數並等同意。核對有新項目就照前幾輪：讀報告→評閱檔→修→測（舊核心要先失敗）→ STATUS/CURRENT/版號→交付 TOE→提交。
+**【交接 2026-10-17】D-1 審查鏈還沒結束**：R.118 → Codex 審（R118-1..4）→ R.118.1 → Codex 核對（R118.1-1..3）→ R.118.2（fb25977e）→ **等 Codex 核對 118.2**（請求 workspace `Review/2026-10-14-fable/Opus對Refactor118.2的核對請求.md`；README 是索引）。本地有未推的提交（從 292f8b48 起，`git log --oneline origin/refactor..HEAD` 查）：人類決定核對通過再推，推前照例說明分支與提交數並等同意。核對有新項目就照前幾輪：讀報告→評閱檔→修→測（舊核心要先失敗）→ STATUS/CURRENT/版號→交付 TOE→提交。
 
 **【下一步：資源庫 D-2 內建庫】**：D-1 核心已完成（Refactor.118，見最新）。D-2＝內建庫新格式 `src/library/subgraphs/`（一份子圖一檔，欄位照 workspace `work/refactor/library-fields-draft-2026-10-15.md`）、建置時核心逐份驗證並試編譯、算拉線接線表、用新格式重寫 Tint、拿掉舊格式 `builtin_subgraphs.json`（bc-plan §6）。D-3 編輯器介面在後；編輯器到 D-3 前仍拒絕帶 Library ID 的圖與貼上。
 
