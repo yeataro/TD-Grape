@@ -32,6 +32,13 @@ function allocate(used:Set<string>,next:AllocateSubgraphId):string {
   used.add(id);return id;
 }
 
+/** A Library copy in the form the end of an edit would leave it (edge IDs given, groups tidy), so the ledger records what stays.
+ * Library 副本整理成修改結束時的樣子（線有 ID、群組整理好），帳本記的就是會留下的內容。 */
+export function settle(graph:GraphDocument,f:SubgraphData):void {
+  for (const e of f.graph.edges) if (!e.id) e.id = graph.nextEdgeId(f.graph);
+  tidyGroups({stages:{},subgraphs:[f]} as unknown as Graph);
+}
+
 /** Receive authored definitions, not Library files. The adapter decides which
  * versions to reuse and supplies any ID mapping. All mutation stays here. */
 export function appendSubgraphs(graph:GraphDocument,definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):SubgraphData[] {
@@ -65,8 +72,7 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
   for (const f of pending) {
     if (f.libraryId === undefined) continue;
     if (graph.library.state(f.id,f.libraryId) !== undefined) throw readOnly('this identity was already used in this edit');
-    for (const e of f.graph.edges) if (!e.id) e.id = graph.nextEdgeId(f.graph);
-    tidyGroups({stages:{},subgraphs:[f]} as unknown as Graph);
+    settle(graph,f);
     graph.library.set(f.id,f.libraryId,{kind:'content',data:f});
   }
   if (pending.length) (graph.document.subgraphs ||= []).push(...pending);

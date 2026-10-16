@@ -264,6 +264,7 @@ exports.copyNodes = copyNodes;
 exports.readClip = readClip;
 exports.pasteClip = pasteClip;
 exports.clipCorner = clipCorner;
+const library_1 = require("./library");
 const model_1 = require("./model");
 const node_names_1 = require("./node_names");
 const structure_1 = require("./structure");
@@ -348,11 +349,11 @@ const placeOf = (node) => {
  * still in the document uses it as it is now, its explicit values fitted to the current interface; a definition the pasted instances need
  * that is gone comes back under a new identity together with everything it depends on in the copy (its dependencies are never
  * resolved to the current ones); from another graph the whole copied closure comes in under new identities. One batch keeps its
- * shared relations; locals are never merged by content. Every definition in the copy is validated first; one carrying a Library ID
- * refuses the paste (amendment 2 B7-5). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義
+ * shared relations; locals are never merged by content. Every definition in the copy is validated first; a Library copy keeps its
+ * Library ID and stays read-only, and one already here with the same ID and standard form is reused (A5 rule 3, B3–B4; Refactor.118). sameSource：複製來自這張圖本身（編輯器比 Grape OP）；newSubgraphId 給帶進來的定義命名。定義
  * （§3.13、A5 第 1–2 條、附錄二 B3）：同圖時，貼上的實例所指的定義還在就用現在這份，實例值對齊目前接口；實例需要、但已刪的定義以新身分
  * 回來，連同它在複製裡的所有依賴（依賴不改指現有的）；別張圖時整個閉包以新身分進來。同批保留共用關係；本地永不按內容合併。複製裡每份定義
- * 先驗證；帶 Library ID 的整筆拒絕（B7-5）。 */
+ * 先驗證；Library 副本保留 Library ID、仍然唯讀，這裡已有同 ID 同標準形的就沿用（A5 第 3 條、B3–B4；R.118）。 */
 function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', newSubgraphId = newId, sameSource = true) {
     var _a, _b;
     const network = candidate.networks.get(networkId);
@@ -374,11 +375,19 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
     // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
     // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
     // 定義還在的實例沿用它。
-    const imported = new Set();
+    // A Library copy already here with the same Library ID and the same standard form is reused, with what it holds (amendment 1 A5
+    // rule 3, amendment 2 B3–B4); anything else comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的 Library 副本就沿用
+    // （連同它用到的）；其他的帶進來，Library 副本仍然唯讀。
+    const imported = new Set(), reused = new Map();
     const bring = (id) => {
         const f = snapshot.get(id);
-        if (!f || imported.has(id))
+        if (!f || imported.has(id) || reused.has(id))
             return;
+        const same = f.libraryId === undefined ? undefined : (0, library_1.sameLibraryCopy)(candidate.document, clip, id, candidate.registry);
+        if (same !== undefined) {
+            reused.set(id, same);
+            return;
+        }
         imported.add(id);
         for (const node of f.graph.nodes) {
             const ref = referenceOf(node);
@@ -388,8 +397,8 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
     };
     for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys())
         bring(id);
-    const ids = new Map([...imported].map(id => [id, newSubgraphId()]));
-    if (ids.size)
+    const ids = new Map([...[...imported].map(id => [id, newSubgraphId()]), ...reused]);
+    if (imported.size)
         candidate.appendSubgraphs([...imported].map(id => snapshot.get(id)), ids);
     for (const declaration of clip.declarations) {
         if (candidate.document.declarations.some(d => d.id === declaration.id))
@@ -949,6 +958,7 @@ Object.defineProperty(exports, "contextFor", { enumerable: true, get: function (
 Object.defineProperty(exports, "prepareNodeWire", { enumerable: true, get: function () { return node_module_2.prepareNodeWire; } });
 const subgraphs_1 = require("./subgraphs");
 const library_1 = require("./library");
+const library_operations_1 = require("./library_operations");
 const subgraph_operations_1 = require("./subgraph_operations");
 const subgraph_copies_1 = require("./subgraph_copies");
 const declarations_1 = require("./declarations");
@@ -1498,6 +1508,10 @@ class GraphDocument {
         return (0, subgraph_copies_1.appendSubgraphs)(this, definitions, ids).map(f => this.subgraph(f.id));
     }
     subgraph(id) { return new subgraphs_1.Subgraph(this, id); }
+    /** Make Local (library_operations.ts): returns the ID holding the local content (the same, or the fork B′). 轉為本地：回傳放本地內容的 ID。 */
+    makeLocal(id, next) { return (0, library_operations_1.makeLocal)(this, id, next); }
+    /** Take a Library copy's new content (library_operations.ts). 讓 Library 副本換成新內容。 */
+    updateFromLibrary(id, content) { (0, library_operations_1.updateFromLibrary)(this, id, content); }
     /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
     addDeclaration(entry) { this.assertEditable(); return (0, declarations_1.addDeclaration)(this.document, entry); }
     changeDeclaration(id, patch) { this.assertEditable(); return (0, declarations_1.changeDeclaration)(this.document, id, patch); }
@@ -2044,6 +2058,112 @@ function sameLibraryCopy(target, source, id, registry) {
     if (form === null)
         return undefined;
     return (_c = ((_b = target.subgraphs) !== null && _b !== void 0 ? _b : []).find(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)) === null || _c === void 0 ? void 0 : _c.id;
+}
+
+},
+"library_operations":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.makeLocal = makeLocal;
+exports.updateFromLibrary = updateFromLibrary;
+/** The legal operations that change a Library copy beyond adding and removing it (Refactor.118; basic design §3.10–3.11,
+ * amendment 1 A2–A3, amendment 2 B1 revision 3): Make Local and an explicit update. Each starts from the ledger's current content,
+ * makes only its own change and records what it leaves (library.ts). 加入與移除以外，改變 Library 副本的合法操作：轉為本地、明確更新。
+ * 每個都從帳本目前的內容起跑、只做自己的變化、記下結果。 */
+const model_1 = require("./model");
+const library_1 = require("./library");
+const subgraph_copies_1 = require("./subgraph_copies");
+const node_names_1 = require("./node_names");
+const subgraphs_1 = require("./subgraphs");
+const subgraph_operations_1 = require("./subgraph_operations");
+const referenceOf = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
+function definition(graph, id) {
+    var _a;
+    const f = (_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(d => d.id === id);
+    if (!f)
+        throw Error('Subgraph definition no longer exists');
+    return f;
+}
+const networks = (graph) => { var _a; return [...Object.values(graph.document.stages), ...((_a = graph.document.subgraphs) !== null && _a !== void 0 ? _a : []).map(d => d.graph)]; };
+/** Make Local (§3.10, A3): with no read-only subgraph using it, the copy drops its Library ID in place; otherwise it forks — a local
+ * B′ (new ID, named by the one naming rule) takes the instances outside read-only subgraphs, and those inside keep the read-only B.
+ * Returns the ID that now holds the local content. 轉為本地：沒有唯讀子圖在用它就就地拿掉 Library ID；否則分叉——本地 B′（新 ID、照同一套
+ * 命名）接手唯讀子圖以外的實例，唯讀子圖裡的仍指唯讀的 B。回傳現在放本地內容的 ID。 */
+function makeLocal(graph, id, next) {
+    var _a, _b, _c;
+    graph.assertEditable();
+    const f = definition(graph, id), libraryId = f.libraryId;
+    if (libraryId === undefined)
+        throw Error('Not a Library copy');
+    (0, library_1.requireCurrent)(graph.library, f);
+    const readOnlyUsers = ((_a = graph.document.subgraphs) !== null && _a !== void 0 ? _a : []).some(d => d.libraryId !== undefined && d.graph.nodes.some(n => referenceOf(graph, n) === id));
+    if (!readOnlyUsers) {
+        delete f.libraryId;
+        graph.library.set(id, libraryId, { kind: 'local' });
+        return id;
+    }
+    const fork = (0, model_1.copy)(f);
+    delete fork.libraryId;
+    fork.id = next();
+    fork.title = (0, node_names_1.freeName)(f.title, new Set(((_b = graph.document.subgraphs) !== null && _b !== void 0 ? _b : []).map(d => d.title)), 80);
+    (0, subgraph_copies_1.appendSubgraphs)(graph, [fork]);
+    const outside = [...Object.values(graph.document.stages), ...((_c = graph.document.subgraphs) !== null && _c !== void 0 ? _c : []).filter(d => d.libraryId === undefined && d.id !== fork.id).map(d => d.graph)];
+    for (const data of outside)
+        for (const n of data.nodes)
+            if (referenceOf(graph, n) === id) {
+                const module = graph.registry.get(n.nodeType);
+                n.params = { ...(0, model_1.copy)(n.params), ...(0, model_1.copy)(module.reference(fork.id)) };
+            }
+    return fork.id;
+}
+/** An explicit update (§3.11, B1 contract 2): the copy takes the Library's content whole, keeping its in-graph ID and Library ID; every
+ * instance follows the new interface (values refit, wires to removed ports dropped — the same rules as an interface edit) and, when
+ * the title changes, instances still named by default follow it (B1-R2-1). A read-only subgraph holding an instance passes the start
+ * check first and records what it becomes. The content comes from the caller, its nested references already mapped to this graph.
+ * 明確更新：副本整份換成 Library 的內容，保留圖內 ID 與 Library ID；每個實例跟上新接口（實例值重套、接到被拿掉接口的線刪掉——和改接口同一套），
+ * title 改了的話仍是預設名的實例跟著改名。含有實例的唯讀子圖先過起點檢查、再記下結果。內容由呼叫端給，巢狀參照已對到這張圖。 */
+function updateFromLibrary(graph, id, content) {
+    var _a;
+    graph.assertEditable();
+    const f = definition(graph, id), libraryId = f.libraryId;
+    if (libraryId === undefined || content.libraryId !== libraryId)
+        throw Error('An update keeps the Library ID');
+    (0, library_1.requireCurrent)(graph.library, f);
+    const next = (0, subgraph_operations_1.withoutStoredUse)((0, model_1.copy)(content));
+    next.id = id;
+    (0, subgraph_operations_1.validateSubgraphData)(next);
+    (0, subgraph_copies_1.settle)(graph, next);
+    const holders = ((_a = graph.document.subgraphs) !== null && _a !== void 0 ? _a : []).filter(d => d.id !== id && d.graph.nodes.some(n => referenceOf(graph, n) === id));
+    for (const d of holders)
+        (0, library_1.requireCurrent)(graph.library, d);
+    const list = graph.document.subgraphs, at = list.findIndex(d => d.id === id);
+    list[at] = next;
+    const gone = (old, now) => new Set(old.filter(p => !now.some(q => q.id === p.id)).map(p => p.id));
+    const goneInputs = gone(f.inputs, next.inputs), goneOutputs = gone(f.outputs, next.outputs);
+    for (const data of networks(graph)) {
+        const instances = new Set(), taken = (0, node_names_1.namesIn)(data);
+        for (const n of data.nodes) {
+            if (referenceOf(graph, n) !== id)
+                continue;
+            instances.add(n.id);
+            if (n.inputValues)
+                n.inputValues = (0, subgraphs_1.fitInstanceValues)(n.inputValues, next.inputs);
+            if (next.title === f.title || n.name === undefined)
+                continue;
+            const number = (0, node_names_1.defaultInstanceNumber)(n.name, f.title);
+            if (number === null)
+                continue;
+            taken.delete(n.name);
+            n.name = (0, node_names_1.newInstanceName)(next.title, taken, number);
+            taken.add(n.name);
+        }
+        if (instances.size)
+            data.edges = data.edges.filter(e => !(instances.has(e.from[0]) && goneOutputs.has(e.from[1])) && !(instances.has(e.to[0]) && goneInputs.has(e.to[1])));
+    }
+    graph.library.set(id, libraryId, { kind: 'content', data: next });
+    for (const d of holders)
+        if (d.libraryId !== undefined)
+            graph.library.set(d.id, d.libraryId, { kind: 'content', data: d });
 }
 
 },
@@ -6494,6 +6614,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
 "subgraph_copies":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.settle = settle;
 exports.appendSubgraphs = appendSubgraphs;
 exports.independentSubgraph = independentSubgraph;
 const model_1 = require("./model");
@@ -6526,6 +6647,14 @@ function allocate(used, next) {
         throw Error('Invalid or duplicate Subgraph identity');
     used.add(id);
     return id;
+}
+/** A Library copy in the form the end of an edit would leave it (edge IDs given, groups tidy), so the ledger records what stays.
+ * Library 副本整理成修改結束時的樣子（線有 ID、群組整理好），帳本記的就是會留下的內容。 */
+function settle(graph, f) {
+    for (const e of f.graph.edges)
+        if (!e.id)
+            e.id = graph.nextEdgeId(f.graph);
+    (0, groups_1.tidyGroups)({ stages: {}, subgraphs: [f] });
 }
 /** Receive authored definitions, not Library files. The adapter decides which
  * versions to reuse and supplies any ID mapping. All mutation stays here. */
@@ -6579,10 +6708,7 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
             continue;
         if (graph.library.state(f.id, f.libraryId) !== undefined)
             throw (0, library_1.readOnly)('this identity was already used in this edit');
-        for (const e of f.graph.edges)
-            if (!e.id)
-                e.id = graph.nextEdgeId(f.graph);
-        (0, groups_1.tidyGroups)({ stages: {}, subgraphs: [f] });
+        settle(graph, f);
         graph.library.set(f.id, f.libraryId, { kind: 'content', data: f });
     }
     if (pending.length)

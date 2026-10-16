@@ -11,6 +11,7 @@ export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
 import { LibraryLedger, requireLibrary } from './library';
+import { makeLocal, updateFromLibrary } from './library_operations';
 import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph, newSubgraphCycle } from './subgraph_operations';
 import { appendSubgraphs, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
@@ -383,6 +384,10 @@ export class GraphDocument {
     return appendSubgraphs(this,definitions,ids).map(f=>this.subgraph(f.id));
   }
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
+  /** Make Local (library_operations.ts): returns the ID holding the local content (the same, or the fork B′). 轉為本地：回傳放本地內容的 ID。 */
+  makeLocal(id:string,next:AllocateSubgraphId):string {return makeLocal(this,id,next);}
+  /** Take a Library copy's new content (library_operations.ts). 讓 Library 副本換成新內容。 */
+  updateFromLibrary(id:string,content:SubgraphData):void {updateFromLibrary(this,id,content);}
   /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
   addDeclaration(entry:DeclarationEntry):Declaration {this.assertEditable();return addDeclaration(this.document,entry);}
   changeDeclaration(id:string,patch:DeclarationPatch):Declaration {this.assertEditable();return changeDeclaration(this.document,id,patch);}
