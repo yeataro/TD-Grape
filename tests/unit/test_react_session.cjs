@@ -1918,6 +1918,12 @@ test('subgraphs: Make Single User copies the definition for one instance; paste 
   const foreign = JSON.parse(JSON.stringify(clip)); foreign.subgraphs[0].id = 'elsewhere'; foreign.stages.pixel.nodes[0].params.subgraphId = 'elsewhere';
   assert.ok(session.paste(foreign, { x: 0, y: 0 }));
   assert.equal(session.graph().subgraphs.length, 3); assert.ok(!session.graph().subgraphs.some(f => f.id === 'elsewhere'));
+  // A copy carrying a Library copy, even with a well-formed ID the core accepts since Refactor.118, waits for the Library editor (D-3).
+  // 帶 Library 副本的複製，就算 ID 格式正確、核心從 R.118 起接受，編輯器仍要等 D-3。
+  const library = JSON.parse(JSON.stringify(foreign)); library.subgraphs[0].libraryId = '11111111-1111-4111-8111-111111111111';
+  const before = session.snapshot().version;
+  assert.equal(session.paste(library, { x: 0, y: 0 }), false);
+  assert.equal(session.snapshot().version, before); assert.match(zh(session.snapshot().message), /Library/);
   // Nesting: an instance placed inside another subgraph; the counts follow. 巢狀：在另一個子圖裡放實例；數量跟著。
   session.enterDefinition(own);
   session.placeSubgraph('gain', { x: 0, y: 0 });

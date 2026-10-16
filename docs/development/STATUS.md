@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.118 — 資源庫 D-1：Library 副本的核心 — 2026-10-16
+
+- 範圍：workspace `work/refactor/d1-library-core-scope-2026-10-16.md`（人類 10-16 開工）；設計：基本設計 §3.7–3.10＋附錄一 A2–A6＋附錄二 B1–B4 修訂 3（Codex 審過）。只動核心。
+- **Library ID 正式欄位**：`SubgraphData.libraryId`（UUID）。核心三個入口不再整份拒絕，改驗格式（`validLibraryId`）。編輯器仍拒絕：開圖（`core.ts` `open.reasonLibrarySubgraph`）與貼上（新加的檢查，沿用 `subgraph.libraryRefused`），到 D-3 才放行。
+- **唯讀關卡**（`library.ts`）：每筆 `change()` 一張帳本（只在合法操作用到時建），鍵＝圖內 ID＋Library ID，值＝內容／已轉本地／已移除；合法操作起點檢查、只做自己的變化、推進帳本；`change()` 末尾對帳（帳本∪before∪after），並查唯讀閉包（A3）。內容存獨立快照。錯誤代號 `subgraph.readOnly`、`subgraph.readOnlyClosure`（node-texts 補兩條，拿掉不再使用的 `subgraph.library`）。
+- **合法操作**：加入副本（`appendSubgraphs`，整理成最後樣子再入帳）；移除（子圖面板刪除、刪末引用回收）；設為唯一（複本不帶 ID；在唯讀子圖裡做會被擋）；轉為本地與明確更新（`library_operations.ts`：就地或分叉 B′；更新整份替換＋實例介面同步＋預設名跟著 title＋含實例的唯讀子圖先檢查再入帳）。
+- **標準形（B4）與貼上**：`standardForm`（閉包編號、保留 Library ID、不含圖內 ID 與推算欄位，直接比字串、不算雜湊）；貼上時同 Library ID 同標準形的沿用，否則以唯讀副本加入（A5 第 3 條、B3）。
+- 證據：`tests/unit/test_library_core.cjs` 24 項（附錄二 B1 矩陣 13 列＋Codex 補驗序列＋標準形與貼上）；core 220／220、editor 179／179（1 略過；新增編輯器貼上擋法一條）、check 全過；TD 五張圖產碼與 R.117 前基準相同；零成本（量過，workspace `work/refactor/r118-library-core/bench-change.cjs`，每次含重建文件物件）：沒有 Library 副本的圖，152／752／3002 節點改一個參數 中位數 前 1.30／5.94／22.8 ms、後 1.29／5.76／22.3 ms，差在雜訊內。
+- 限制：只有核心；Library 的讀取、多根、更新標記、所有畫面在 D-2／D-3。有 Library 副本時關卡每次比對副本內容的成本未量（推論：與副本大小成正比，只在有副本的圖發生）。
+
 ## Refactor.117.3 — 子圖自己的名稱存 title — 2026-10-16
 
 - 決定（人類 10-16，資源庫欄位問題 1）：「title 是這個子圖的名稱，不是子圖實例的名稱；子圖實例在圖內的名稱是 name。」原本子圖的 Title 存在 `subgraphs[].name`，和實例節點的 `name` 同名異義（搜 `name` 分不出）。10-14 外觀清單本就記「Title 存 `title`」，R.116 沒對到。不另設識別名。
