@@ -317,3 +317,38 @@ test('R118-4: a fork moves its own scoped references to itself; the read-only or
   assert.equal(def(step.after,'forked').outputs[0].type,scoped('forked'));
   assert.equal(def(step.after,'gain').outputs[0].type,scoped('gain'));
 });
+
+// ---- Codex check of R.118.1 (R118.1-1, R118.1-2) Codex 對 R.118.1 的核對 ----
+test('R118.1-1: when the whole batch can be reused, no order of the copy or of the graph adds a definition, also at 64 definitions',()=>{
+  for(const roots of [['B','A'],['A','B']]) for(const order of [['B0','B1'],['B1','B0']]) for(const sameSource of [false,true]){
+    const source=withRoots([gainCopy('B'),wrapperCopy('A','B')],roots),target=withRoots([...order.map(id=>gainCopy(id)),wrapperCopy('A0','B1')],[]);
+    const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')),sameSource);
+    assert.equal(after.subgraphs.length,3,roots+' / '+order+' / '+sameSource);
+    assert.deepEqual(plain(pastedRoots(after).sort()),['A0','B1']);
+  }
+  // At the 64-definition limit the same paste must still pass. 滿 64 份時同一筆貼上照樣要過。
+  const fillers=Array.from({length:61},(_,i)=>({...gainCopy('filler'+i),title:'Filler'+i}));
+  for(const roots of [['B','A'],['A','B']]){
+    const after=pasteInto(withRoots([gainCopy('B0'),gainCopy('B1'),wrapperCopy('A0','B1'),...fillers],[]),plain(c.GrapeGraph.copyNodes(doc(withRoots([gainCopy('B'),wrapperCopy('A','B')],roots)),['call0','call1'],'source')));
+    assert.equal(after.subgraphs.length,64);
+  }
+  // Two roots, neither above the other, sharing B: a later root may decide what an earlier one should have reused. 兩個互不為祖先的根共用 B。
+  for(const roots of [['A','C'],['C','A']]){
+    const source=withRoots([gainCopy('B'),wrapperCopy('A','B'),wrapperCopy('C','B',L3)],roots);
+    const target=withRoots([gainCopy('B0'),gainCopy('B1'),wrapperCopy('A0','B0'),wrapperCopy('A1','B1'),wrapperCopy('C0','B1',L3)],[]);
+    const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')));
+    assert.equal(after.subgraphs.length,5,'nothing added: '+roots);
+    assert.deepEqual(plain(pastedRoots(after).sort()),['A1','C0']);
+  }
+});
+
+test('R118.1-2: a resolved self-reference never equals an unresolved scope that reads fn_0',()=>{
+  const source=withRoots([gainCopy()],['gain']);def(source,'gain').outputs[0].type='float['+ScopeReferences.token('fn_gain',['mul','out'])+']';
+  const target=withRoots([gainCopy('other')],[]);def(target,'other').outputs[0].type='float['+ScopeReferences.token('fn_0',['mul','out'])+']';
+  assert.notEqual(c.GrapeGraph.standardForm(source,registry,'gain'),c.GrapeGraph.standardForm(target,registry,'other'));
+  const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0'],'source')));
+  assert.equal(after.subgraphs.length,2,'not reused: a new read-only copy comes in');
+  // A valid renumbering still compares equal. 合法的重新編號仍然相等。
+  const moved=withRoots([gainCopy('other')],[]);def(moved,'other').outputs[0].type='float['+ScopeReferences.token('fn_other',['mul','out'])+']';
+  assert.equal(c.GrapeGraph.standardForm(source,registry,'gain'),c.GrapeGraph.standardForm(moved,registry,'other'));
+});

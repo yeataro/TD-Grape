@@ -1,4 +1,4 @@
-import { libraryReuses } from './library';
+import { planLibraryReuse } from './library';
 import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value, type SubgraphData } from './model';
 import type { GraphDocument } from './graph';
 import { freeName, namesIn, takesName } from './node_names';
@@ -95,23 +95,19 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
   // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
   // 定義還在的實例沿用它。
-  // A Library copy already here with the same Library ID and the same standard form is reused together with its whole closure (amendment 1
-  // A5 rule 3, amendment 2 B3–B4). The batch stays one mapping: a definition of the copy never goes to two places and two never to one,
-  // so what was shared stays shared and what was separate stays separate (Codex R118-2); a reuse that would break that is not taken and
-  // the definition comes in, a Library copy still read-only. 這裡已有同 Library ID、同標準形的副本，連同整個閉包一起沿用；整批是一張對照：複製
-  // 裡的一份不會對到兩處、兩份也不會對到同一處——共用的維持共用、分開的維持分開；會破壞這點的沿用不採用，改成帶進來（Library 副本仍唯讀）。
-  const imported = new Set<string>(), reused = new Map<string, string>(), claimed = new Set<string>();
-  const fits = (mapping: Map<string, string>) => [...mapping].every(([from, to]) =>
-    !imported.has(from) && (reused.has(from) ? reused.get(from) === to : !claimed.has(to)));
-  const bring = (id: string) => {
+  // Among what is needed, a Library copy already here with the same Library ID and standard form is reused with its whole closure, the
+  // batch as one mapping chosen to bring in the fewest (library.ts planLibraryReuse; amendment 1 A5 rule 3, amendment 2 B3–B4; Codex
+  // R118-2, R118.1-1); the rest comes in, a Library copy still read-only. 需要的當中，這裡已有同 Library ID、同標準形的 Library 副本連同整個
+  // 閉包沿用，整批一張對照、選帶進來最少的；其餘帶進來，Library 副本仍唯讀。
+  const needed: string[] = [], seen = new Set<string>();
+  const need = (id: string) => {
     const f = snapshot.get(id);
-    if (!f || imported.has(id) || reused.has(id)) return;
-    const mapping = libraryReuses(candidate.document, clip, id, candidate.registry).find(fits);
-    if (mapping) { for (const [from, to] of mapping) { reused.set(from, to); claimed.add(to); } return; }
-    imported.add(id);
-    for (const node of f.graph.nodes) { const ref = referenceOf(node); if (ref) bring(ref); }
+    if (!f || seen.has(id)) return;
+    seen.add(id); needed.push(id);
+    for (const node of f.graph.nodes) { const ref = referenceOf(node); if (ref) need(ref); }
   };
-  for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys()) bring(id);
+  for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys()) need(id);
+  const { reused, imported } = planLibraryReuse(candidate.document, clip, needed, candidate.registry);
   const ids = new Map([...[...imported].map(id => [id, newSubgraphId()] as [string, string]), ...reused]);
   if (imported.size) candidate.appendSubgraphs([...imported].map(id => snapshot.get(id)!), ids);
   for (const declaration of clip.declarations) {

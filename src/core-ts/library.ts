@@ -103,10 +103,13 @@ export function standardForm(document: Graph, registry: Registry, rootId: string
       return ref === undefined || !module?.reference ? n : { ...n, params: { ...n.params, ...module.reference('#' + numbers.get(ref)) } };
     });
     // A scoped reference to a network in the closure takes that network's number too: only renumbering in-graph IDs must not make two
-    // copies differ (Codex R118-3). 指向閉包裡某張網路的 scoped 參照也換成那張網路的編號：只是圖內 ID 重配，不能讓兩份變得不同。
+    // copies differ (Codex R118-3). The number is written as text no stored token can be (stored tokens are hex), so a resolved
+    // reference never equals an unresolved one that happens to read fn_0 (Codex R118.1-2). 指向閉包裡某張網路的 scoped 參照也換成那張網路的
+    // 編號：只是圖內 ID 重配，不能讓兩份變得不同。編號寫成存檔裡不可能出現的文字（存的 token 是十六進位），所以解析得到的參照不會和剛好寫成 fn_0、
+    // 解析不到的那種相等。
     ScopeReferences.walk(rest, (ref, old) => {
       const n = ref.scope.startsWith('fn_') ? numbers.get(ref.scope.slice(3)) : undefined;
-      return n === undefined ? old : ScopeReferences.token('fn_' + n, ref.source);
+      return n === undefined ? old : '\u0000closure:' + n + ':' + ref.source.join('\u0000') + '\u0000';
     });
     return rest;
   }));
@@ -126,16 +129,66 @@ export function closureOrder(document: Graph, registry: Registry, rootId: string
   return visit(rootId) ? order : null;
 }
 
-/** Each copy already in `target` that `source`'s definition may reuse (amendment 1 A5 rule 3, amendment 2 B3–B4): only a Library copy
- * with the same Library ID and the same standard form — and with it its whole closure, position by position, since reusing a parent
- * fixes what its children are. Returned as source ID → target ID maps; the caller keeps a batch consistent (Codex R118-2). A local
- * definition is never merged by content. target 裡每一份可以沿用的：只限同 Library ID、同標準形的 Library 副本——連同整個閉包逐位對應，
- * 因為沿用父就定了子是誰。回傳來源 ID→目標 ID 的對照；整批一致由呼叫端負責。本地定義永不按內容合併。 */
-export function libraryReuses(target: Graph, source: Graph, id: string, registry: Registry): Map<string, string>[] {
-  const f = source.subgraphs?.find(d => d.id === id);
-  if (f?.libraryId === undefined) return [];
-  const form = standardForm(source, registry, id), from = closureOrder(source, registry, id);
-  if (form === null || !from) return [];
-  return (target.subgraphs ?? []).filter(d => d.libraryId === f.libraryId && standardForm(target, registry, d.id) === form)
-    .map(d => { const to = closureOrder(target, registry, d.id)!; return new Map(from.map((g, i) => [g.id, to[i]!.id])); });
+/** Which of `needed` (definitions of `source` about to come into `target`) reuse a copy already in `target`, and which come in (amendment
+ * 1 A5 rule 3, amendment 2 B3–B4). A Library copy may reuse one with the same Library ID and the same standard form, and with it its whole
+ * closure position by position, since reusing a parent fixes its children. The batch is one mapping: no definition of `source` goes to two
+ * places and no two go to one, so what was shared stays shared and what was separate stays separate (Codex R118-2). Among the mappings
+ * that hold, the one bringing in the fewest is chosen by a search, not the first that fits, so the order of the copy or of the graph
+ * never adds a definition that could have been reused (Codex R118.1-1); reuse is tried before bringing in, so the first answer found is
+ * the greedy one, and past `limit` steps the best so far is kept. Forms and closures are worked out once per call (Codex R118.1-3). A
+ * local definition is never merged by content.
+ * `needed` 裡（要從 source 帶進 target 的定義）哪些沿用 target 已有的、哪些帶進來。Library 副本可以沿用同 Library ID、同標準形的那份，連同整個
+ * 閉包逐位對應（沿用父就定了子）。整批是一張對照：一份不對到兩處、兩份不對到同一處，共用的維持共用、分開的維持分開。在成立的對照裡用搜尋
+ * 挑帶進來最少的，不是第一個合得上的，所以複製或圖裡的順序不會讓本來能沿用的被多加一份；先試沿用再試帶進來，第一個找到的就是貪婪解，超過
+ * limit 步就留目前最好的。標準形與閉包每次呼叫只算一次。本地定義永不按內容合併。 */
+export function planLibraryReuse(target: Graph, source: Graph, needed: readonly string[], registry: Registry, limit = 20000):
+    { reused: Map<string, string>; imported: Set<string> } {
+  const sources = new Map((source.subgraphs ?? []).map(f => [f.id, f])), inside = new Set(needed);
+  const sameLibrary = new Map<string, SubgraphData[]>();
+  for (const d of target.subgraphs ?? []) if (d.libraryId !== undefined) (sameLibrary.get(d.libraryId) ?? sameLibrary.set(d.libraryId, []).get(d.libraryId)!).push(d);
+  // Worked out only when asked, once: a source's form only if a copy with its Library ID is here, a target's only when tried.
+  // 用到才算、只算一次：這裡有同 Library ID 的副本才算來源的標準形，試到某個目標才算它的。
+  const forms = new Map<string, string | null>(), memo = (key: string, make: () => string | null) => forms.has(key) ? forms.get(key)! : (forms.set(key, make()), forms.get(key)!);
+  const pool = (id: string) => { const f = sources.get(id); return f?.libraryId === undefined ? [] : sameLibrary.get(f.libraryId) ?? []; };
+  const mappings = new Map<string, Map<string, string> | null>();
+  const mapping = (id: string, d: SubgraphData): Map<string, string> | null => {
+    const key = id + '\u0000' + d.id;
+    if (mappings.has(key)) return mappings.get(key)!;
+    const form = memo('s' + id, () => standardForm(source, registry, id));
+    let found: Map<string, string> | null = null;
+    if (form !== null && memo('t' + d.id, () => standardForm(target, registry, d.id)) === form) {
+      const from = closureOrder(source, registry, id)!, to = closureOrder(target, registry, d.id)!;
+      found = new Map(from.map((g, i) => [g.id, to[i]!.id]));
+    }
+    mappings.set(key, found); return found;
+  };
+  // Parents before children, so a reused parent has fixed its children before they are considered. 父在子前：沿用的父先定好子。
+  const order: string[] = [], done = new Set<string>();
+  const place = (id: string) => {
+    if (done.has(id) || !inside.has(id)) return; done.add(id);
+    const f = sources.get(id); if (f) for (const child of instancesOf(f, registry)) place(child);
+    order.push(id);
+  };
+  needed.forEach(place); order.reverse();
+  const reused = new Map<string, string>(), used = new Set<string>(), imported = new Set<string>();
+  let best: { reused: Map<string, string>; imported: Set<string> } | undefined, steps = 0;
+  const search = (i: number): void => {
+    if (best && imported.size >= best.imported.size) return;
+    if (i === order.length) { best = { reused: new Map(reused), imported: new Set(imported) }; return; }
+    if (best && ++steps > limit) return;
+    const id = order[i]!;
+    if (reused.has(id)) { search(i + 1); return; }
+    for (const d of pool(id)) {
+      const pairs = mapping(id, d);
+      if (!pairs || ![...pairs].every(([from, to]) => !imported.has(from) && (reused.has(from) ? reused.get(from) === to : !used.has(to)))) continue;
+      const added = [...pairs].filter(([from]) => !reused.has(from));
+      for (const [from, to] of added) { reused.set(from, to); used.add(to); }
+      search(i + 1);
+      for (const [from, to] of added) { reused.delete(from); used.delete(to); }
+      if (best?.imported.size === 0) return;
+    }
+    imported.add(id); search(i + 1); imported.delete(id);
+  };
+  search(0);
+  return best!;
 }
