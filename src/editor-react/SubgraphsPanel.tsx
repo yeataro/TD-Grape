@@ -23,12 +23,12 @@ import { groupColor } from './SourceCard';
 export const subgraphChoice = (id: string) => 'subgraph:' + id;
 
 function NameField({ definition }: { definition: SubgraphData }) {
-  const session = useSession(), [draft, setDraft] = useState(definition.name), typing = useTypedName(setDraft);
-  useEffect(() => setDraft(definition.name), [definition.name]);
-  const commit = () => { if (draft.trim() && draft !== definition.name) session.renameSubgraph(definition.id, draft); else setDraft(definition.name); };
+  const session = useSession(), [draft, setDraft] = useState(definition.title), typing = useTypedName(setDraft);
+  useEffect(() => setDraft(definition.title), [definition.title]);
+  const commit = () => { if (draft.trim() && draft !== definition.title) session.renameSubgraph(definition.id, draft); else setDraft(definition.title); };
   return <input className="source-name" aria-label={say(tr('subgraphs.name', 'Name'))} value={draft} maxLength={core.NAME_LIMIT}
     {...typing} onBlur={commit}
-    onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(definition.name); event.currentTarget.blur(); } }} />;
+    onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(definition.title); event.currentTarget.blur(); } }} />;
 }
 
 /** The definition drawn as its instance would be (visual notes 14): title, inputs, outputs; a read-only preview, no handles.
@@ -37,7 +37,7 @@ function DefinitionPreview({ definition }: { definition: SubgraphData }) {
   const row = (port: InterfacePort, side: 'input' | 'output') => <div key={port.id} className={`port-row ${side}-row`} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
     <span className="preview-dot" aria-hidden="true" />{port.label ?? ''} <small>{port.type}</small></div>;
   return <article className="grape-node subgraph-preview" style={{ '--group-color': definition.color ?? 'var(--group-subgraph)' } as CSSProperties}>
-    <div className="node-title"><Icon name="subgraphLocal" /><strong>{definition.name}</strong><small>{definition.outputs[0]?.type ?? ''}</small></div>
+    <div className="node-title"><Icon name="subgraphLocal" /><strong>{definition.title}</strong><small>{definition.outputs[0]?.type ?? ''}</small></div>
     <div className="node-body">{definition.inputs.map(port => row(port, 'input'))}{definition.outputs.map(port => row(port, 'output'))}</div>
   </article>;
 }
@@ -101,8 +101,8 @@ function SubgraphsList({ definitions, counts, unusable, current }: { definitions
   useLanguage();
   const session = useSession(), [confirming, setConfirming] = useState<SubgraphData | null>(null);
   return <section className="sources subgraphs">
-    {confirming && <ConfirmDialog title={tr('subgraphs.removeTitle', 'Delete {name}?', { name: confirming.name })}
-      message={tr('subgraphs.removeConfirm', 'The subgraph {name} has no instances. Deleting it removes it from this graph.', { name: confirming.name })}
+    {confirming && <ConfirmDialog title={tr('subgraphs.removeTitle', 'Delete {name}?', { name: confirming.title })}
+      message={tr('subgraphs.removeConfirm', 'The subgraph {name} has no instances. Deleting it removes it from this graph.', { name: confirming.title })}
       confirmLabel={tr('subgraphs.remove', 'Delete')} onCancel={() => setConfirming(null)}
       onConfirm={() => { session.removeSubgraph(confirming.id); setConfirming(null); }} />}
     <p className="hint">{say(tr('subgraphs.hint', 'The subgraphs of this graph. Double-click a card or an instance to open one; drag a card onto the canvas to add an instance; make one from selected nodes with Selection to subgraph.'))}</p>

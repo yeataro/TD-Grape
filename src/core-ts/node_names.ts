@@ -115,7 +115,7 @@ export function nameMissing(graph: Graph, registry: Registry): NamedNode[] {
     for (const node of data.nodes) {
       if (node.name !== undefined || !takesName(registry, node.nodeType)) continue;
       // A subgraph instance is named after its definition's title (visual notes 27). 子圖實例照定義的 Title 命名。
-      const ref = registry.get(node.nodeType)!.referencedGraph?.(node), title = ref === undefined ? undefined : graph.subgraphs?.find(f => f.id === ref)?.name;
+      const ref = registry.get(node.nodeType)!.referencedGraph?.(node), title = ref === undefined ? undefined : graph.subgraphs?.find(f => f.id === ref)?.title;
       const name = title !== undefined ? newInstanceName(title, taken) : newNodeName(String(registry.get(node.nodeType)!.catalog.definition.label), taken);
       node.name = name; taken.add(name);
       named.push({ network, node: node.id, name, note: tr('upgrade.named', 'Given the name {name}', { name: shownName(name) }) });

@@ -11,7 +11,7 @@ const all=g=>new Set(g.subgraphs.map(f=>f.id));
 function removeNodes(g,data,ids,collectible=all(g)){const model=new GraphDocument(g,registry,undefined,true);try{const network=[...model.networks.values()].find(n=>n.data===data);network.removeAll(data.nodes.filter(n=>ids.has(n.id)).map(n=>network.node(n.id)),collectible);}finally{model.close();}}
 const instance=(id,fn)=>({id,nodeType:m.CALL,params:{subgraphId:fn}});
 const scope=nodes=>({nodes,edges:[]});
-const definition=(id,nodes=[])=>({id,name:id,graph:scope(nodes),inputs:[],outputs:[]});
+const definition=(id,nodes=[])=>({id,title:id,graph:scope(nodes),inputs:[],outputs:[]});
 const document=(nodes,subgraphs,vertex=[])=>({stages:{pixel:scope(nodes),vertex:scope(vertex)},subgraphs});
 test('deleting the last instance keeps a local definition: it stays in the document with zero uses',()=>{
  const g=document([instance('last','mapping'),{id:'out'}],[definition('mapping')]);

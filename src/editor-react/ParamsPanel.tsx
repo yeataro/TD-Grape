@@ -165,14 +165,14 @@ function InterfaceSettings({ direction, ports }: { direction: Direction; ports: 
  * its uses. Description, Category and Credits come with the Library round. 定義的欄位（外觀意見 6，本輪有的部分）：Title、識別碼（本地：
  * 灰字「圖內 id」）、使用數。Description、Category、Credits 在 Library 那一輪。 */
 function SubgraphFields({ definition, uses }: { definition: SubgraphData; uses: { direct: number; expanded: number } }) {
-  const session = useSession(), [value, setValue] = useState(definition.name), typing = useTypedName(setValue);
-  useEffect(() => setValue(definition.name), [definition.name]);
-  const commit = () => { if (value.trim() && value !== definition.name) session.renameSubgraph(definition.id, value); else setValue(definition.name); };
+  const session = useSession(), [value, setValue] = useState(definition.title), typing = useTypedName(setValue);
+  useEffect(() => setValue(definition.title), [definition.title]);
+  const commit = () => { if (value.trim() && value !== definition.title) session.renameSubgraph(definition.id, value); else setValue(definition.title); };
   return <div className="params-grid params-settings subgraph-fields">
     <label className="control-field"><span>{say(tr('params.subgraphTitle', 'Title'))}</span>
       <input value={value} maxLength={core.NAME_LIMIT} spellCheck={false} aria-label={say(tr('params.subgraphTitle', 'Title'))}
         {...typing} onBlur={commit}
-        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.name); } }} /></label>
+        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } else if (event.key === 'Escape') { event.preventDefault(); setValue(definition.title); } }} /></label>
     <div className="control-field"><span>{say(tr('params.subgraphIdentifier', 'Identifier'))}</span>
       <code className="subgraph-identifier" title={say(tr('params.subgraphLocalId', 'In-graph id of a local subgraph'))}>{definition.id}<small> {say(tr('params.subgraphLocalIdTag', 'in-graph id'))}</small></code>
       {/* Locate the definition in the Subgraphs panel (visual notes 20). 在子圖面板定位這份定義（外觀意見 20）。 */}
@@ -195,7 +195,7 @@ function SubgraphSettings({ definition, uses }: { definition: SubgraphData; uses
           一般文字（同代表共用來源的節點顯示來源）；Title 在下面的欄位改，不在這裡。 */}
       <Icon name="subgraphLocal" />
       <strong>{say(tr('params.subgraph', 'Subgraph'))}</strong>
-      <span className="params-source">{definition.name}</span>
+      <span className="params-source">{definition.title}</span>
       {floating?.controls}
     </div>
     {!floating?.collapsed && <SubgraphFields definition={definition} uses={uses} />}

@@ -714,6 +714,7 @@
   "upgrade.named": "Given the name {name}",
   "upgrade.report": "Updated {count} node(s) to their current form: {list}",
   "upgrade.subgraphInstance": "Subgraph nodes are now called instances",
+  "upgrade.subgraphTitle": "Subgraph {title}: its title is now stored as a title",
   "upgrade.title": "This graph had {count} node(s) in an older form. They were updated, and the graph is sent to TD like any edit.",
   "upgrade.vUVOut": "vUV now has U, UV and UVW outputs; its wires now leave from the UVW output",
   "upgrade.vUVSt": "vUV.st became vUV; its wires now leave from the UV output",

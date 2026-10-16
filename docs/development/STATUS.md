@@ -2,6 +2,13 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.117.3 — 子圖自己的名稱存 title — 2026-10-16
+
+- 決定（人類 10-16，資源庫欄位問題 1）：「title 是這個子圖的名稱，不是子圖實例的名稱；子圖實例在圖內的名稱是 name。」原本子圖的 Title 存在 `subgraphs[].name`，和實例節點的 `name` 同名異義（搜 `name` 分不出）。10-14 外觀清單本就記「Title 存 `title`」，R.116 沒對到。不另設識別名。
+- 改：`SubgraphData.name` → `title`、`SubgraphOptions.name` → `title`；核心（命名、驗證、產碼檢查、設為唯一、介面標籤、改名）、編輯器（路徑列、子圖面板卡片、子圖設定、從選取建立、開圖拒絕訊息、新增時的預覽）一起改。實例節點的 `name` 不動。
+- 舊圖：`upgradeGraph` 加定義層的步驟 `subgraph-title`（`name`→`title`，已有 title 的不動），標【發布前清理】；列進替換報告（節點欄空、說明寫哪個子圖）。CURRENT 發布前清理清單補一條。限制：改名前複製到剪貼簿的子圖貼上會被拒（剪貼簿是暫存，未加轉換）。
+- 證據：checkpoint `checkpoint/pre-R117.3-title`；core 196／196（新增升級測試：舊名換成 title、已有 title 不動、產碼相同）、editor 179／179（1 略過）、check 全過；TD 五張圖產碼與 R.117 前基準相同（TOP1 經 `subgraph-title`）；瀏覽器（Grape_TOP_test）：Ctrl+Shift+G 建子圖→卡片 Subgraph_1，TD 存 `title`、無 `name`，實例 `Subgraph_1_1`；改名 My Blur→實例 `My_Blur_1`；Undo 兩次後內容同測試前（只有 savedBy 換成本版）。
+
 ## Refactor.117.2 — 接了線的數值不能展開（外觀清單第 22 條） — 2026-10-16
 
 - 紀錄原寫「參數面板裡接了線的輸入，展開按鈕還能按」（觸控上看到、待電腦驗）。實測：參數面板對接線的輸入只顯示來源與「斷開」，沒有展開按鈕，重現不了；真正的漏洞在節點卡——展開按鈕在 inert 群組裡，但**點開頭文字**（例如「RGB」）仍會切換展開，接了線的那組變高（Grape_TOP_test 的 Replace，15% 縮放下卡片 25→41）。

@@ -247,7 +247,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, instances, loaded } = open(t, strictHost());
   // A definition from a Library is outside this version (amendment 2 B7; Refactor.110). 來自 Library 的定義這一版不支援。
-  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', title: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(instances.map(c => c.action), ['state', 'apply']); assert.equal(instances[1].body.revision, 4);
@@ -332,7 +332,7 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   // A definition from a Library is outside this version and is named (amendment 2 B7; Refactor.110). Every registered node is in the
   // slice since Refactor.110; the refusal of a known node outside it stays in unsupportedReasons for a module added later.
   // 來自 Library 的定義這一版不支援、訊息點名；R.110 起所有登記的節點都在範圍內，範圍外已知節點的拒絕留在 unsupportedReasons 給之後的模組。
-  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'lib', title: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*Library 的子圖「Lib」/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
@@ -770,7 +770,7 @@ test('a graph with an unknown node and a bad wire opens; ghosts survive edits an
 
 test('a Library subgraph definition still refuses the document: as a ghost it would silently leave TD', t => {
   const { loaded } = open(t), state = loaded();
-  withDoc(state.state, graph => { graph.subgraphs = [{ id: 'lib', name: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
+  withDoc(state.state, graph => { graph.subgraphs = [{ id: 'lib', title: 'Lib', libraryId: '0f3c', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(new HostClient(target, '', async () => new Response('{}')), bootstrap, state), error => error instanceof UnsupportedGraphError);
 });
 
@@ -1800,7 +1800,7 @@ test('trial: any node with names to choose, made from a wire, takes the names of
 // 邊界節點的備用接孔、子圖裡還不能放實例。
 test('subgraphs: entering shows the definition network, the path and ×N; up returns; Undo past the definition cuts the path', t => {
   const { session } = open(t);
-  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', title: 'Gain' }); const net = c.networks.get('pixel');
     net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
   const instance = session.snapshot().projection.nodes.find(n => n.id === 'call1');
   assert.equal(instance.data.subgraph, 'gain'); assert.equal(instance.data.uses, 2); assert.equal(instance.data.colorGroup, 'subgraph');
@@ -1809,7 +1809,7 @@ test('subgraphs: entering shows the definition network, the path and ×N; up ret
   const inside = session.snapshot();
   assert.equal(inside.network, 'subgraph:gain'); assert.deepEqual(clone(inside.trail), ['gain']); assert.equal(inside.version, version + 1);
   assert.deepEqual(clone(inside.projection.nodes.map(n => n.id).sort()), ['input', 'output']);
-  assert.equal(session.currentSubgraph().name, 'Gain'); assert.equal(session.selectionSnapshot().size, 0, 'entering clears the selection');
+  assert.equal(session.currentSubgraph().title, 'Gain'); assert.equal(session.selectionSnapshot().size, 0, 'entering clears the selection');
   // An edit inside goes to the subgraph's network. 在裡面的修改進子圖的網路。
   session.transact('add', net => net.insert({ id: 'f', nodeType: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
   assert.ok(session.graph().subgraphs[0].graph.nodes.some(n => n.id === 'f')); assert.ok(!session.graph().stages.pixel.nodes.some(n => n.id === 'f'));
@@ -1825,7 +1825,7 @@ test('subgraphs: entering shows the definition network, the path and ×N; up ret
 
 test('subgraphs: the interface is edited from inside; a wire on a boundary spare port adds a port; a subgraph cannot instance itself', t => {
   const { session } = open(t);
-  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); c.networks.get('pixel').instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); });
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', title: 'Gain' }); c.networks.get('pixel').instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); });
   session.enterSubgraph('call1');
   session.addPort('inputs');
   let f = session.currentSubgraph();
@@ -1864,7 +1864,7 @@ test('subgraphs: the interface is edited from inside; a wire on a boundary spare
   // The definition cannot be deleted while it has instances; renaming goes through the one path. 還有實例就不能刪定義；改名走同一條路。
   assert.equal(session.instanceCounts().get('gain'), 1);
   const before = clone(session.graph()); session.removeSubgraph('gain'); assert.deepEqual(clone(session.graph()), before);
-  session.renameSubgraph('gain', ' Tint '); assert.equal(session.definitions()[0].name, 'Tint');
+  session.renameSubgraph('gain', ' Tint '); assert.equal(session.definitions()[0].title, 'Tint');
 });
 
 // C level (basic design §3.2–3.3, §3.10, §3.13, amendment A5; Refactor.111): selection to subgraph, Make Single User, copy and paste with
@@ -1884,7 +1884,7 @@ test('subgraphs: selection to subgraph moves the nodes, keeps a shared source ou
   const id = session.selectionToSubgraph(['a', 'sum', 'ref']);
   assert.ok(id);
   const f = session.graph().subgraphs.find(x => x.id === id);
-  assert.equal(f.name, 'Subgraph_1');
+  assert.equal(f.title, 'Subgraph_1');
   assert.deepEqual(clone(f.graph.nodes.map(n => n.id).sort()), ['a', 'input', 'output', 'sum']);
   assert.deepEqual(clone(f.inputs.map(p => [p.label, p.type])), [['kGain', 'float']], 'the input is named after the shared source');
   assert.deepEqual(clone(GrapeGraph.groups.groupsOf(f.graph).map(g => [g.name, g.nodes])), [['Pair', ['a', 'sum']]]);
@@ -1901,11 +1901,11 @@ test('subgraphs: selection to subgraph moves the nodes, keeps a shared source ou
 
 test('subgraphs: Make Single User copies the definition for one instance; paste from the same graph keeps the definition, a foreign one comes in new; nesting works', t => {
   const { session } = open(t);
-  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); const net = c.networks.get('pixel');
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', title: 'Gain' }); const net = c.networks.get('pixel');
     net.instantiateSubgraph('gain', 'call1', { x: 0, y: 0 }); net.instantiateSubgraph('gain', 'call2', { x: 0, y: 100 }); });
   session.makeUnique('call2');
   const own = session.graph().stages.pixel.nodes.find(n => n.id === 'call2').params.subgraphId;
-  assert.notEqual(own, 'gain'); assert.equal(session.graph().subgraphs.find(f => f.id === own).name, 'Gain_1');
+  assert.notEqual(own, 'gain'); assert.equal(session.graph().subgraphs.find(f => f.id === own).title, 'Gain_1');
   assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === 'call1').params.subgraphId, 'gain');
   // Same graph: the pasted instance keeps the definition (the count grows). 同圖：貼上的實例沿用定義（數量變多）。
   const clip = session.copyNodes(['call1']);
@@ -1933,8 +1933,8 @@ test('subgraphs: Make Single User copies the definition for one instance; paste 
 // longer holds cuts it, and the view lands on everything. 文件改變後路徑由上往下驗；第一個不成立的層切斷，視野落在全部。
 test('subgraphs: Undo that removes an ancestor or the instance a level was entered through cuts the path there; Redo leaves it', t => {
   const { session } = open(t);
-  session.transactGraph('child', c => { c.createSubgraph({ id: 'B', name: 'B' }); });
-  session.transactGraph('parent', c => { c.createSubgraph({ id: 'A', name: 'A' });
+  session.transactGraph('child', c => { c.createSubgraph({ id: 'B', title: 'B' }); });
+  session.transactGraph('parent', c => { c.createSubgraph({ id: 'A', title: 'A' });
     c.networks.get('subgraph:A').instantiateSubgraph('B', 'innerB', { x: 0, y: 0 }); c.networks.get('pixel').instantiateSubgraph('A', 'instanceA', { x: 0, y: 0 }); });
   session.enterSubgraph('instanceA'); session.enterSubgraph('innerB');
   assert.deepEqual(clone(session.snapshot().trail), ['A', 'B']);
@@ -1961,11 +1961,11 @@ test('subgraphs: a GLSL line or variable leads into the subgraph that wrote it; 
   const { session } = open(t);
   const { glslMapOf, placeKey, variablePlaces } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
   session.transactGraph('make', c => {
-    const f = c.createSubgraph({ id: 'A', name: 'Alpha' }), inner = c.networks.get('subgraph:A'), stage = c.networks.get('pixel');
+    const f = c.createSubgraph({ id: 'A', title: 'Alpha' }), inner = c.networks.get('subgraph:A'), stage = c.networks.get('pixel');
     inner.create('twin', 'sgrape.builtin.float', { value: 0.5 });
     inner.connect(inner.node('twin').outputs[0], inner.node('output').port('input', f.data.outputs[0].id), GrapeGraph.values.policy);
     stage.create('twin', 'sgrape.builtin.float', { value: 0.25 });
-    c.createSubgraph({ id: 'B', name: 'Beta' }); c.networks.get('subgraph:B').instantiateSubgraph('A', 'viaB', { x: 0, y: 0 });
+    c.createSubgraph({ id: 'B', title: 'Beta' }); c.networks.get('subgraph:B').instantiateSubgraph('A', 'viaB', { x: 0, y: 0 });
     stage.instantiateSubgraph('A', 'instanceA'); stage.instantiateSubgraph('B', 'instanceB', { x: 0, y: 200 });
     stage.connect(stage.node('instanceA').outputs[0], stage.node('pixel_out').inputs[0], GrapeGraph.values.policy);
   });
@@ -2001,10 +2001,10 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
   const { session } = open(t);
   const { glslMapOf, glslRows, ownerKey, variablePlaces } = load(path.join(root, 'src/editor-react/glsl_lines.ts'));
   session.transactGraph('make', c => {
-    const b = c.createSubgraph({ id: 'B', name: 'Beta' }), inner = c.networks.get('subgraph:B');
+    const b = c.createSubgraph({ id: 'B', title: 'Beta' }), inner = c.networks.get('subgraph:B');
     inner.create('deep', 'sgrape.builtin.float', { value: 0.5 });
     inner.connect(inner.node('deep').outputs[0], inner.node('output').port('input', b.data.outputs[0].id), GrapeGraph.values.policy);
-    c.createSubgraph({ id: 'A', name: 'Alpha' });
+    c.createSubgraph({ id: 'A', title: 'Alpha' });
     const a = c.networks.get('subgraph:A'); a.instantiateSubgraph('B', 'toB', { x: 0, y: 0 });
     a.connect(a.node('toB').outputs[0], a.node('output').port('input', c.subgraph('A').data.outputs[0].id), GrapeGraph.values.policy);
     const stage = c.networks.get('pixel'); stage.instantiateSubgraph('A', 'instanceA');
@@ -2041,15 +2041,15 @@ test('subgraphs: a definition-level failure keeps its place and Go there enters 
 // 不合規則的 Title 被拒、說明、什麼都不變。
 test('subgraphs: a placed instance is named after its title, follows a rename, and a bad title is refused', t => {
   const { session } = open(t);
-  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', title: 'Gain' }); });
   session.placeSubgraph('gain', { x: 0, y: 0 }); session.placeSubgraph('gain', { x: 0, y: 100 });
   const instances = () => clone(session.graph().stages.pixel.nodes.filter(n => n.params.subgraphId === 'gain').map(n => n.name).sort());
   assert.deepEqual(instances(), ['Gain_1', 'Gain_2']);
   session.renameSubgraph('gain', 'Soft  Glow ');
-  assert.equal(session.graph().subgraphs[0].name, 'Soft Glow', 'trimmed, one space between words');
+  assert.equal(session.graph().subgraphs[0].title, 'Soft Glow', 'trimmed, one space between words');
   assert.deepEqual(instances(), ['Soft_Glow_1', 'Soft_Glow_2']);
   session.renameSubgraph('gain', '2 Glow');
-  assert.equal(session.graph().subgraphs[0].name, 'Soft Glow');
+  assert.equal(session.graph().subgraphs[0].title, 'Soft Glow');
   assert.match(zh(session.snapshot().message), /Title/);
   session.history(false); assert.deepEqual(instances(), ['Gain_1', 'Gain_2'], 'one Undo puts title and instances back');
 });
@@ -2058,7 +2058,7 @@ test('subgraphs: a placed instance is named after its title, follows a rename, a
 // enter. 定位定義：工作區與子圖面板跟著的要求；不改選取、不進入。
 test('subgraphs: locating a definition is a request that changes neither the selection nor the network', t => {
   const { session } = open(t);
-  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', name: 'Gain' }); });
+  session.transactGraph('make', c => { c.createSubgraph({ id: 'gain', title: 'Gain' }); });
   session.placeSubgraph('gain', { x: 0, y: 0 });
   const instance = session.graph().stages.pixel.nodes.find(n => n.params.subgraphId === 'gain').id;
   session.selectNode(instance);

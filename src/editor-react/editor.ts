@@ -86,7 +86,7 @@ function nameFor(net: Network, nodeType: string, params: object = {}): { name?: 
   if (!core.takesName(core.registry, nodeType)) return {};
   // A subgraph instance is named after its definition's title: Gain_1, Gain_2 (visual notes 27, human 2026-10-14). 子圖實例照定義的 Title 命名。
   const ref = core.registry.get(nodeType)!.referencedGraph?.({ id: '', nodeType, params } as never);
-  const title = ref === undefined ? undefined : net.graph.document.subgraphs?.find(f => f.id === ref)?.name;
+  const title = ref === undefined ? undefined : net.graph.document.subgraphs?.find(f => f.id === ref)?.title;
   if (title !== undefined) return { name: core.newInstanceName(title, core.namesIn(net.data)) };
   return { name: core.newNodeName(String(core.registry.get(nodeType)!.catalog.definition.label), core.namesIn(net.data)) };
 }
@@ -545,7 +545,7 @@ export class Editor {
   renameSubgraph = (id: string, name: string) => {
     // As typed, trimmed, one space between words; the core checks the rest (visual notes 27). 照打的、去頭尾、字間一個空白；其餘核心檢查。
     const text = core.typedName(name).trim().replace(/ {2,}/g, ' ');
-    if (!text || text === this.document.document.subgraphs?.find(f => f.id === id)?.name) return;
+    if (!text || text === this.document.document.subgraphs?.find(f => f.id === id)?.title) return;
     this.transactGraph(tr('subgraph.renamed', 'Subgraph renamed'), document => document.subgraph(id).rename(text));
   };
   /** Delete a definition with no instances, from the subgraph panel (basic design §3.9). 從子圖面板刪掉沒有實例的定義（§3.9）。 */
@@ -581,9 +581,9 @@ export class Editor {
     const chosen = this.subgraphCandidates(ids);
     if (!chosen.length) { this.warn(tr('subgraph.nothingToGroup', 'Select nodes that can go into a subgraph first.')); return null; }
     const id = newSubgraphId(), instanceId = newId(), declarations = this.document.document.declarations, version = this.state.version;
-    const name = core.freeName('Subgraph_1', new Set(this.definitions().map(f => f.name)), 80);
-    this.transact(tr('subgraph.made', 'Subgraph {name} made from the selection', { name }), net => {
-      const instance = net.subgraphFromSelection(new Set(chosen), { id, instanceId, name,
+    const title = core.freeName('Subgraph_1', new Set(this.definitions().map(f => f.title)), 80);
+    this.transact(tr('subgraph.made', 'Subgraph {name} made from the selection', { name: title }), net => {
+      const instance = net.subgraphFromSelection(new Set(chosen), { id, instanceId, title,
         inputName: (source, _port, fallback) => { const ref = core.registry.get(source.nodeType)?.referencedDeclaration?.(source); return (ref && declarations.find(d => d.id === ref)?.name) || fallback; } });
       instance.update({ ...nameFor(net, instance.data!.nodeType, instance.data!.params) });
     });
@@ -1316,7 +1316,7 @@ export class Editor {
   /** A place for people: the definitions' names along the path, then the node's name when there is one. 給人看的位置：路徑上的定義
    * 名稱，有節點時再接節點名稱。 */
   private placeName({ node, trail }: ErrorPlace) {
-    const names = trail.map(id => this.document.document.subgraphs?.find(f => f.id === id)?.name ?? id);
+    const names = trail.map(id => this.document.document.subgraphs?.find(f => f.id === id)?.title ?? id);
     const owner = node === undefined ? undefined : this.document.networks.get(trail.length ? 'subgraph:' + trail[trail.length - 1] : 'pixel')?.nodeData(node);
     return [...names, ...(node === undefined ? [] : [owner?.name ?? node])].join(' › ');
   }

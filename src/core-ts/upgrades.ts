@@ -85,6 +85,16 @@ export function upgradeGraph(value: Graph, rules: readonly NodeUpgrade[] = nodeU
   // Networks are named as everywhere else: the stage, or 'subgraph:'+id (graph.ts networkEntries). 網路名稱與他處一致。
   const networks: [string, NetworkData][] = [...Object.entries(graph.stages), ...(graph.subgraphs ?? []).map(s => ['subgraph:' + s.id, s.graph] as [string, NetworkData])];
   const changes: UpgradeChange[] = [];
+  // 【發布前清理】Refactor.117.3 (human 2026-10-16): a subgraph's own name is its `title`; `name` is what a subgraph instance is
+  // called in the graph. Development graphs stored the title as `name`. 子圖自己的名稱是 title；name 是子圖實例在圖裡的名稱。開發中的圖把
+  // Title 存在 name。
+  for (const definition of graph.subgraphs ?? []) {
+    const stored = definition as unknown as { name?: unknown; title?: unknown };
+    if (typeof stored.name !== 'string' || stored.title !== undefined) continue;
+    stored.title = stored.name; delete stored.name;
+    changes.push({ network: 'subgraph:' + definition.id, node: '', rule: 'subgraph-title', wires: 0,
+      note: tr('upgrade.subgraphTitle', 'Subgraph {title}: its title is now stored as a title', { title: definition.title }) });
+  }
   for (let pass = 0; ; pass++) {
     if (pass > rules.length) throw Error('Node upgrade rules do not settle');
     let found = 0;

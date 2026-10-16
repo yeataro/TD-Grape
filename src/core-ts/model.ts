@@ -20,7 +20,7 @@ export interface InterfacePort {id:string;label?:string;type:string;default?:Val
 /** A definition the graph owns (§2). No `scope`/`origin` (Refactor.109): every definition in a graph is local until the
  * Library round defines `libraryId`; a definition carrying `libraryId` is refused until then. `color` is the definition's
  * colour (§3.14). 圖裡的定義：沒有 scope／origin；libraryId 到 Library 那一輪才定義，之前遇到整份拒絕；color 是定義的顏色。 */
-export interface SubgraphData {id:string;name:string;color?:string;descriptionKey?:string;
+export interface SubgraphData {id:string;title:string;color?:string;descriptionKey?:string;
   /** Only on a saved definition (library, export, clipboard), recomputed on load; never in a graph, where they are
    * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
   stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;

@@ -44,7 +44,7 @@ export function subgraphPresentation(f:SubgraphData,kind:'instance'|'input'|'out
   // A port shows its label; with none, nothing but the type (§3.3: the id is never shown). 接孔顯示標籤；沒有就只剩型別。
   const names = (ports:typeof f.inputs) => Object.fromEntries(ports.map(p => [p.id,p.label ?? '']));
   return {
-    ...(kind === 'instance' ? {label:f.name,descriptionKey:f.descriptionKey || 'help.subgraph_instance'} : {}),
+    ...(kind === 'instance' ? {label:f.title,descriptionKey:f.descriptionKey || 'help.subgraph_instance'} : {}),
     portLabels:kind === 'instance' ? {inputs:names(f.inputs),outputs:names(f.outputs)} :
       kind === 'input' ? {outputs:names(f.inputs)} : {inputs:names(f.outputs)}
   };

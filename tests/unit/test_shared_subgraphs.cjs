@@ -43,7 +43,7 @@ test('adding and reordering ports preserves identity; failures do not publish pa
  assert.deepEqual(plain(base.snapshot()),plain(before));
  // Every definition in a graph is editable in this version (no read-only copies, Refactor.109). 這一版圖裡每份定義都可改。
  const renamed=doc(sharedGraph()).change(m=>m.subgraph('wrapper').rename('Wrapped'));
- assert.equal(renamed.after.subgraphs[1].name,'Wrapped');
+ assert.equal(renamed.after.subgraphs[1].title,'Wrapped');
 });
 
 test('nested compilation keeps graph ownership, bindings and diagnostics scoped to authored nodes',()=>{
@@ -110,7 +110,7 @@ test('an unused definition never blocks code: deep unused chains compile, an unu
  // A chain of unused definitions, each calling the next twice: expanding it would pass the 2048-node limit. 沒用到的鏈，每層實例下一層兩次。
  const deep=sharedGraph();
  for(let i=0;i<14;i++){
-  const f={id:'chain'+i,name:'Chain '+i,inputs:[port('value')],outputs:[port('result')],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}};
+  const f={id:'chain'+i,title:'Chain '+i,inputs:[port('value')],outputs:[port('result')],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}};
   if(i<13){f.graph.nodes.push(node('a','subgraph_instance',{subgraphId:'chain'+(i+1)}),node('b','subgraph_instance',{subgraphId:'chain'+(i+1)}));
    f.graph.edges.push({id:'e1',from:['in','value'],to:['a','value']},{id:'e2',from:['a','result'],to:['b','value']},{id:'e3',from:['b','result'],to:['out','result']});}
   else f.graph.edges.push({id:'e1',from:['in','value'],to:['out','result']});
@@ -118,7 +118,7 @@ test('an unused definition never blocks code: deep unused chains compile, an unu
  }
  assert.equal(compiler.supports(deep),true);assert.doesNotThrow(()=>compiler.compile(deep));
  // An unused definition this host cannot use (an interface type it does not know). 這個 host 用不了的未用定義（不認得的接口型別）。
- const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',name:'Odd'});odd.subgraphs[2].inputs[0].type='mat4';
+ const odd=sharedGraph();odd.subgraphs.push({...plain(odd.subgraphs[0]),id:'odd',title:'Odd'});odd.subgraphs[2].inputs[0].type='mat4';
  assert.equal(compiler.supports(odd),true);assert.doesNotThrow(()=>compiler.compile(odd));
  assert.deepEqual([...compiler.unusableSubgraphs(odd)],['odd']);
  // Called, its instance is a ghost: left out, the graph still compiles (Q37 1-1). 被實例時，實例是 Ghost：跳過、整張圖照產。
@@ -134,8 +134,8 @@ test('the stage table remembers each definition once and never keeps a result cu
  const {subgraphStages,subgraphStageTable}=c.GrapeGraph;
  // A holds an instance of B, B holds an instance of A, and A holds a pixel-only node: from B, the answer is pixel only. A→B→A，A 有只能在 pixel 的節點。
  const g=sharedGraph();
- g.subgraphs=[{id:'A',name:'A',inputs:[],outputs:[],graph:{nodes:[node('b','subgraph_instance',{subgraphId:'B'}),node('t','texture_sample')],edges:[]}},
-  {id:'B',name:'B',inputs:[],outputs:[],graph:{nodes:[node('a','subgraph_instance',{subgraphId:'A'})],edges:[]}}];
+ g.subgraphs=[{id:'A',title:'A',inputs:[],outputs:[],graph:{nodes:[node('b','subgraph_instance',{subgraphId:'B'}),node('t','texture_sample')],edges:[]}},
+  {id:'B',title:'B',inputs:[],outputs:[],graph:{nodes:[node('a','subgraph_instance',{subgraphId:'A'})],edges:[]}}];
  const table=subgraphStageTable(g,registry);
  assert.deepEqual(plain(table('A')),['pixel']);
  assert.deepEqual(plain(table('B')),plain(subgraphStages(g,'B',registry)));
@@ -146,7 +146,7 @@ test('the stage table remembers each definition once and never keeps a result cu
 test('the panel diagnosis stays linear with an old cycle and reports the definitions on it',()=>{
  const compiler=c.GrapeTopCompiler,{subgraphGroups}=c.GrapeGraph;
  const g=sharedGraph();g.stages.pixel={nodes:[node('output','pixel_out')],edges:[]};g.subgraphs=[];
- const def=i=>({id:'d'+i,name:'D'+i,inputs:[],outputs:[],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}});
+ const def=i=>({id:'d'+i,title:'D'+i,inputs:[],outputs:[],graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[]}});
  for(let i=0;i<=20;i++){const f=def(i);
   if(i===0)f.graph.nodes.push(node('self','subgraph_instance',{subgraphId:'d0'}));
   else f.graph.nodes.push(node('a','subgraph_instance',{subgraphId:'d'+(i-1)}),node('b','subgraph_instance',{subgraphId:'d'+(i-1)}));
@@ -204,11 +204,11 @@ test('an instance is named after its title and follows a rename unless named by 
  const name=id=>step.after.stages.pixel.nodes.find(n=>n.id===id).name;
  assert.equal(name('first'),'Blur_1');assert.equal(name('again'),'Blur_3','Blur_2 is taken by another node');assert.equal(name('mine'),'Mine');
  assert.equal(step.after.subgraphs[1].graph.nodes.find(n=>n.id==='inner').name,'Blur_1','instances inside other definitions follow too');
- assert.equal(step.after.subgraphs[0].name,'Blur');
+ assert.equal(step.after.subgraphs[0].title,'Blur');
  assert.throws(()=>doc(g).change(m=>m.subgraph('gain').rename('2Blur')),e=>e.code==='subgraph.title');
  // An old graph's title outside the rule opens as it is; its instances were named with the fallback and follow a valid rename.
  // 舊圖的 Title 不合規則照開；它的實例用退路命名，改成合法 Title 時跟著改。
- const old=sharedGraph();old.subgraphs[0].name='增益';delete old.stages.pixel.nodes.find(n=>n.id==='first').name;
+ const old=sharedGraph();old.subgraphs[0].title='增益';delete old.stages.pixel.nodes.find(n=>n.id==='first').name;
  const read=upgradeGraph(old,nodeUpgrades,registry).graph;
  assert.equal(read.stages.pixel.nodes.find(n=>n.id==='first').name,'Subgraph_1','opening names it by the fallback');
  const fixed=doc(read).change(m=>m.subgraph('gain').rename('Gain'));
@@ -220,7 +220,7 @@ test('an instance is named after its title and follows a rename unless named by 
 // 只是結尾帶數字的手動名不動、改名一定會結束；產生與辨認同一條規則，長 Title 與第 10 個實例照樣跟著改。
 test('hand names ending in digits stay, renaming always ends, and long titles keep their instances in step',()=>{
  const {newInstanceName}=c.GrapeGraph;
- const withInstances=(title,names)=>{const g=sharedGraph();g.subgraphs[0].name=title;g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='first');
+ const withInstances=(title,names)=>{const g=sharedGraph();g.subgraphs[0].title=title;g.stages.pixel.nodes=g.stages.pixel.nodes.filter(n=>n.id!=='first');
   names.forEach((name,i)=>{const n=node('c'+i,'subgraph_instance',{subgraphId:'gain'});n.name=name;g.stages.pixel.nodes.push(n);});return g;};
  const after=(g,title)=>doc(g).change(m=>m.subgraph('gain').rename(title)).after.stages.pixel.nodes.filter(n=>/^c\d+$/.test(n.id)).map(n=>n.name);
  assert.deepEqual(plain(after(withInstances('Gain',['Gain_0','Gain_01','Gain_001','Gain_Mine','Gain_2']),'Blur')),['Gain_0','Gain_01','Gain_001','Gain_Mine','Blur_2']);

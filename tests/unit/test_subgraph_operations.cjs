@@ -7,7 +7,7 @@ const empty=()=>({format:'grape-graph',version:1,target:'top',declarations:[],su
 test('create, instantiate and edit a new definition share one graph transaction and stable scope handles',()=>{
  const g=empty();let stale;
  const step=new GraphDocument(g,registry).change(m=>{
-  const f=m.createSubgraph({id:'new_graph',name:'Subgraph 1',stage:'pixel'});
+  const f=m.createSubgraph({id:'new_graph',title:'Subgraph 1',stage:'pixel'});
   const network=m.networks.get('pixel');network.instantiateSubgraph(f.id,'instance');
   stale=m.networks.get('subgraph:new_graph');assert.equal(m.networks.get(stale.id),stale);
   assert.equal(stale.node('input').outputs[0].type,'vec4');
@@ -27,7 +27,7 @@ test('a subgraph from a selection preserves conversion locations and deduplicate
  d.nodes=[node('source','float',{value:.5}),node('a','add',{type:'vec4'}),node('b','add',{type:'float'}),node('out','pixel_out'),node('extra','add',{type:'vec4'})];
  d.edges=[{from:['source','out'],to:['a','a']},{from:['source','out'],to:['a','b']},{from:['source','out'],to:['b','a']},{from:['a','out'],to:['out','color']},{from:['a','out'],to:['extra','a']},{from:['b','out'],to:['extra','b']}];
  d.nodes[1].inputValues={a:[.1,.2,.3,.4]};
- const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'group',instanceId:'instance',name:'Group',stage:'pixel'}));
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'group',instanceId:'instance',title:'Group',stage:'pixel'}));
  const f=step.after.subgraphs[0],outside=step.after.stages.pixel;
  assert.deepEqual(f.inputs.map(p=>p.type),['vec4','float']);assert.deepEqual(f.inputs[0].default,[.1,.2,.3,.4]);
  assert.equal(f.outputs.length,2);assert.equal(outside.edges.filter(e=>e.from[0]==='source').length,2);
@@ -44,7 +44,7 @@ test('a subgraph from a selection preserves nested references, scopes and data w
  const g=sharedGraph();g.stages.pixel.nodes.push(node('input','float',{value:3}));
  g.structDefinitions=[{id:'shape',fields:[{type:'float['+ScopeReferences.token('pixel',['input','out'])+']'}]}];
  const historical=plain(g.structDefinitions);g.catalogSnapshot={structDefinitions:historical};
- const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['input','first']),{id:'outer',instanceId:'outer_call',name:'Outer',stage:'pixel'}));
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['input','first']),{id:'outer',instanceId:'outer_call',title:'Outer',stage:'pixel'}));
  const f=step.after.subgraphs.find(f=>f.id==='outer');
  assert.equal(f.graph.nodes.filter(n=>n.id==='input').length,1);assert.ok(f.graph.nodes.some(n=>n.id==='input_1'));
  assert.ok(step.after.subgraphs.some(f=>f.id==='gain'));assert.match(step.after.structDefinitions[0].fields[0].type,new RegExp(ScopeReferences.token('fn_outer',['input','out'])));
@@ -74,7 +74,7 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
  const g=empty();g.stages.pixel.nodes=[node('value','float',{value:1}),node('retired','float',{value:0})];
  new GraphDocument(g,registry).change(m=>{
   const parent=m.networks.get('pixel'),old=parent.node('value');parent.remove(parent.node('retired'));
-  const options={id:'child',instanceId:'retired',name:'Child',stage:'pixel'};
+  const options={id:'child',instanceId:'retired',title:'Child',stage:'pixel'};
   assert.throws(()=>parent.subgraphFromSelection(new Set(['value']),options),/Retired node ID/);
   assert.equal(m.document.subgraphs.length,0);
   parent.subgraphFromSelection(new Set(['value']),{...options,instanceId:'instance'});
@@ -87,9 +87,9 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
 test('capacity, invalid selections and missing type descriptions fail without publishing partial definitions',()=>{
  const g=empty();g.stages.pixel.nodes=[node('a','float',{value:1}),node('out','pixel_out')];
  const model=new GraphDocument(g,registry),before=model.snapshot();
- assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',instanceId:'instance',name:'Bad',stage:'pixel'})),/cannot be made into a subgraph/);
- assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['missing']),{id:'bad',instanceId:'instance',name:'Bad',stage:'pixel'})),/selection/);
- assert.throws(()=>model.change(m=>{for(let i=0;i<65;i++)m.createSubgraph({id:'f'+i,name:'F',stage:'pixel'});}),/64/);
+ assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',instanceId:'instance',title:'Bad',stage:'pixel'})),/cannot be made into a subgraph/);
+ assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['missing']),{id:'bad',instanceId:'instance',title:'Bad',stage:'pixel'})),/selection/);
+ assert.throws(()=>model.change(m=>{for(let i=0;i<65;i++)m.createSubgraph({id:'f'+i,title:'F',stage:'pixel'});}),/64/);
  assert.deepEqual(model.snapshot(),before);
 });
 
@@ -98,7 +98,7 @@ test('structural creation follows module capabilities rather than built-in ident
   ...(m.reference?{reference:id=>({child:id}),referencedGraph:n=>n.params.child,supports:()=>false}: {})});
  const custom=createRegistry(modules),g=empty();
  const step=new GraphDocument(g,custom).change(m=>{
-  m.createSubgraph({id:'custom',name:'Custom',stage:'pixel'});const n=m.networks.get('pixel').instantiateSubgraph('custom','instance');
+  m.createSubgraph({id:'custom',title:'Custom',stage:'pixel'});const n=m.networks.get('pixel').instantiateSubgraph('custom','instance');
   assert.equal(n.data.nodeType,'test.subgraph_instance');assert.deepEqual(n.data.params,{child:'custom'});
   m.networks.get('pixel').remove(n);
  });
@@ -118,7 +118,7 @@ test('scope references preserve canonical tokens and skip snapshots, source meta
 // 子圖能用在哪裡由內容推算，圖裡不存。
 test('a subgraph keeps no stages or targets; definitions brought in lose them',()=>{
  const g=empty();
- const step=new GraphDocument(g,registry).change(m=>{m.createSubgraph({id:'made',name:'Made'});});
+ const step=new GraphDocument(g,registry).change(m=>{m.createSubgraph({id:'made',title:'Made'});});
  assert.equal('stages' in step.after.subgraphs[0],false);assert.equal('targets' in step.after.subgraphs[0],false);
  const definition={...plain(step.after.subgraphs[0]),id:'brought',stages:['pixel'],targets:['top']};
  const next=new GraphDocument(step.after,registry).change(m=>m.appendSubgraphs([definition]));
@@ -150,9 +150,9 @@ test('an instance whose subgraph content cannot run in this stage is a misplaced
 const bootstrap=JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8'));
 const {edge}=require('../fixtures/shared_subgraphs.cjs');
 const G=require('../../src/generated/grape_core.js'),policy=G.values.policy;
-const sampler=()=>({id:'tex',name:'Tex',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'rgba',label:'rgba',type:'vec4',default:[0,0,0,1]}],
+const sampler=()=>({id:'tex',title:'Tex',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'rgba',label:'rgba',type:'vec4',default:[0,0,0,1]}],
  graph:{nodes:[node('in','subgraph_input'),node('sample','texture_sample'),node('out','subgraph_output')],edges:[edge('in','sample','img','sampler'),edge('sample','out','out','rgba')]}});
-const through=()=>({id:'pass',name:'Pass',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'tex',label:'texture',type:'sampler2D'}],
+const through=()=>({id:'pass',title:'Pass',inputs:[{id:'img',label:'image',type:'sampler2D'}],outputs:[{id:'tex',label:'texture',type:'sampler2D'}],
  graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output')],edges:[edge('in','out','img','tex')]}});
 function withInstance(definition,wired){
  const doc=new GraphDocument(plain(bootstrap.defaultDocument.graph),registry);
@@ -240,7 +240,7 @@ test('a subgraph from a selection takes the groups whose members all move, and l
  const g=empty(),d=g.stages.pixel;
  d.nodes=[node('a','float',{value:1}),node('b','float',{value:2}),node('c','float',{value:3}),node('out','pixel_out')];
  d.ui={groups:[{id:'g1',name:'Whole',nodes:['a','b']},{id:'g2',name:'Part',nodes:['b','c']}]};
- const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'sub',instanceId:'instance',name:'Sub',stage:'pixel'}));
+ const step=new GraphDocument(g,registry).change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['a','b']),{id:'sub',instanceId:'instance',title:'Sub',stage:'pixel'}));
  assert.deepEqual(plain(G.groups.groupsOf(step.after.subgraphs[0].graph)).map(x=>[x.name,x.nodes]),[['Whole',['a','b']]]);
  assert.deepEqual(plain(G.groups.groupsOf(step.after.stages.pixel)).map(x=>[x.name,x.nodes]),[['Part',['c']]]);
 });

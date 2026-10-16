@@ -71,7 +71,7 @@ export function independentSubgraph(network:Network,nodeId:string,next:AllocateS
   if(!source)return null;
   ensureSubgraphCapacity(graph,1);
   const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
-  const f=copy(source);f.id=newId;f.name=freeName(source.name,new Set(graph.document.subgraphs!.map(d=>d.name)),80);
+  const f=copy(source);f.id=newId;f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
   remapScopes(f,new Map([[source.id,newId]]));
   const params=parameters(graph,n,newId);
   const owned=appendSubgraphs(graph,[f])[0]!;

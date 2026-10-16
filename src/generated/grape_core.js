@@ -2170,7 +2170,7 @@ function nameMissing(graph, registry) {
             if (node.name !== undefined || !(0, exports.takesName)(registry, node.nodeType))
                 continue;
             // A subgraph instance is named after its definition's title (visual notes 27). 子圖實例照定義的 Title 命名。
-            const ref = (_c = (_b = registry.get(node.nodeType)).referencedGraph) === null || _c === void 0 ? void 0 : _c.call(_b, node), title = ref === undefined ? undefined : (_e = (_d = graph.subgraphs) === null || _d === void 0 ? void 0 : _d.find(f => f.id === ref)) === null || _e === void 0 ? void 0 : _e.name;
+            const ref = (_c = (_b = registry.get(node.nodeType)).referencedGraph) === null || _c === void 0 ? void 0 : _c.call(_b, node), title = ref === undefined ? undefined : (_e = (_d = graph.subgraphs) === null || _d === void 0 ? void 0 : _d.find(f => f.id === ref)) === null || _e === void 0 ? void 0 : _e.title;
             const name = title !== undefined ? newInstanceName(title, taken) : newNodeName(String(registry.get(node.nodeType).catalog.definition.label), taken);
             node.name = name;
             taken.add(name);
@@ -6131,7 +6131,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         for (const f of g.subgraphs) {
             if (!identity.test(f.id) || definitions.has(f.id))
                 throw Error('Invalid or duplicate Subgraph ID');
-            if (typeof f.name !== 'string' || !f.name.length || f.name.length > 80)
+            if (typeof f.title !== 'string' || !f.title.length || f.title.length > 80)
                 throw Error('Invalid Subgraph definition');
             definitions.set(f.id, f);
         }
@@ -6426,7 +6426,7 @@ function independentSubgraph(network, nodeId, next) {
     const newId = allocate(new Set(graph.document.subgraphs.map(f => f.id)), next);
     const f = (0, model_1.copy)(source);
     f.id = newId;
-    f.name = (0, node_names_1.freeName)(source.name, new Set(graph.document.subgraphs.map(d => d.name)), 80);
+    f.title = (0, node_names_1.freeName)(source.title, new Set(graph.document.subgraphs.map(d => d.title)), 80);
     remapScopes(f, new Map([[source.id, newId]]));
     const params = parameters(graph, n, newId);
     const owned = appendSubgraphs(graph, [f])[0];
@@ -6485,7 +6485,7 @@ function subgraphPresentation(f, kind) {
     // A port shows its label; with none, nothing but the type (§3.3: the id is never shown). 接孔顯示標籤；沒有就只剩型別。
     const names = (ports) => Object.fromEntries(ports.map(p => { var _a; return [p.id, (_a = p.label) !== null && _a !== void 0 ? _a : '']; }));
     return {
-        ...(kind === 'instance' ? { label: f.name, descriptionKey: f.descriptionKey || 'help.subgraph_instance' } : {}),
+        ...(kind === 'instance' ? { label: f.title, descriptionKey: f.descriptionKey || 'help.subgraph_instance' } : {}),
         portLabels: kind === 'instance' ? { inputs: names(f.inputs), outputs: names(f.outputs) } :
             kind === 'input' ? { outputs: names(f.inputs) } : { inputs: names(f.outputs) }
     };
@@ -6561,7 +6561,7 @@ function ensureSubgraphCapacity(graph, additional = 0) {
 function validateSubgraphData(f) {
     if (!validId(f.id))
         throw Error('Invalid Subgraph identity');
-    if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
+    if (!f.title.trim() || f.title.length > 80 || /[\x00-\x1f\x7f]/.test(f.title))
         throw Error('Invalid Subgraph name');
     // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
     // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
@@ -6608,7 +6608,7 @@ function createSubgraph(graph, options) {
     taken.add(inId);
     const outId = newPortId(taken);
     return insertSubgraph(graph, {
-        id: options.id, name: options.name,
+        id: options.id, title: options.title,
         inputs: [portEntry(inId, 'vec4', 'in1', [1, 1, 1, 1])],
         outputs: [portEntry(outId, 'vec4', 'out1', [0, 0, 0, 1])],
         graph: { nodes: [{ ...authored(input, 'input', { x: 48, y: 144 }), name: 'Input' }, { ...authored(output, 'output', { x: 624, y: 144 }), name: 'Output' }],
@@ -6725,7 +6725,7 @@ function subgraphFromSelection(network, selection, options) {
     // group stays outside with what is left of it — the tidy at the end of the change drops the moved members). 成員全被選的群組原樣跟著
     // 進去（A8：完整群組與內文一起進；部分群組留在外面、剩下的成員還在——修改結束時的整理會拿掉搬走的成員）。
     const groups = (0, groups_1.completeGroups)((0, groups_1.groupsOf)(data), selected);
-    const f = { id: options.id, name: options.name, inputs, outputs,
+    const f = { id: options.id, title: options.title, inputs, outputs,
         graph: { nodes, edges, ...(options.ui || groups.length ? { ui: { ...(0, model_1.copy)(options.ui || {}), ...(groups.length ? { groups: (0, model_1.copy)(groups) } : {}) } } : {}) } };
     validate(graph, f);
     const instanceModule = structural(graph, 'instance');
@@ -7094,8 +7094,8 @@ class Subgraph {
             throw Error('Subgraph definition no longer exists');
         if (!(0, node_names_1.validSubgraphTitle)(title))
             throw Object.assign(Error('A subgraph title uses letters, digits, spaces and underscores, and starts with a letter'), { code: 'subgraph.title' });
-        const old = f.name;
-        f.name = title;
+        const old = f.title;
+        f.title = title;
         const networks = [...Object.values(this.graph.document.stages), ...(this.graph.document.subgraphs || []).map(d => d.graph)];
         for (const data of networks) {
             const taken = (0, node_names_1.namesIn)(data);
@@ -7721,13 +7721,25 @@ function upgradeNetwork(network, name, rule) {
 // before names were given get them once, said like any upgrade). 有 registry 時，也替該有名字卻沒有的節點補名（R.76，人類：
 // 給名字之前做的圖補一次，和其他升級一樣會說）。
 function upgradeGraph(value, rules = exports.nodeUpgrades, registry) {
-    var _a;
+    var _a, _b;
     if ((0, model_1.formatProblem)(value))
         return { graph: value, changes: [] };
     const graph = (0, model_1.copy)(value);
     // Networks are named as everywhere else: the stage, or 'subgraph:'+id (graph.ts networkEntries). 網路名稱與他處一致。
     const networks = [...Object.entries(graph.stages), ...((_a = graph.subgraphs) !== null && _a !== void 0 ? _a : []).map(s => ['subgraph:' + s.id, s.graph])];
     const changes = [];
+    // 【發布前清理】Refactor.117.3 (human 2026-10-16): a subgraph's own name is its `title`; `name` is what a subgraph instance is
+    // called in the graph. Development graphs stored the title as `name`. 子圖自己的名稱是 title；name 是子圖實例在圖裡的名稱。開發中的圖把
+    // Title 存在 name。
+    for (const definition of (_b = graph.subgraphs) !== null && _b !== void 0 ? _b : []) {
+        const stored = definition;
+        if (typeof stored.name !== 'string' || stored.title !== undefined)
+            continue;
+        stored.title = stored.name;
+        delete stored.name;
+        changes.push({ network: 'subgraph:' + definition.id, node: '', rule: 'subgraph-title', wires: 0,
+            note: (0, text_1.tr)('upgrade.subgraphTitle', 'Subgraph {title}: its title is now stored as a title', { title: definition.title }) });
+    }
     for (let pass = 0;; pass++) {
         if (pass > rules.length)
             throw Error('Node upgrade rules do not settle');

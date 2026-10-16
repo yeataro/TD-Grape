@@ -142,7 +142,7 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
   // refuses it on every way in; this names it when a document is opened. 帶 Library ID 的定義在 Library 那一輪之前整份拒絕（附錄二 B7）：
   // 核心在每條進入的路上都拒絕；開文件時在這裡點名。
   for (const f of graph.subgraphs ?? []) if (f && typeof f === 'object' && 'libraryId' in f)
-    reasons.push(tr('open.reasonLibrarySubgraph', 'subgraph “{name}” from a Library (not supported in this version)', { name: String(f.name) }));
+    reasons.push(tr('open.reasonLibrarySubgraph', 'subgraph “{name}” from a Library (not supported in this version)', { name: String(f.title) }));
   for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(tr('open.reasonStage', '{stage} stage', { stage }));
   const pixel = graph.stages.pixel;
   if (!pixel) return [...reasons, tr('open.reasonNoPixel', 'no pixel stage')];

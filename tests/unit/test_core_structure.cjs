@@ -40,7 +40,7 @@ test('a second Color Output is refused', () => {
 
 test('a Color Output inside a subgraph is refused', () => {
   const graph = clone(bootstrap.defaultDocument.graph);
-  graph.subgraphs = [{ id: 'g', name: 'g', graph: { nodes: [], edges: [] } }];
+  graph.subgraphs = [{ id: 'g', title: 'g', graph: { nodes: [], edges: [] } }];
   const doc = open(graph);
   refused(doc, c => c.networks.get('subgraph:g').insert(outputNode('inner')), /subgraph:g\) 1, expected 0/);
 });
@@ -69,7 +69,7 @@ test('the core never offers or allows deleting a stage output; other nodes are u
 // 子圖邊界節點：每個子圖各剛好一個、stage 裡不准有、不能刪、不在新增選單；沒帶邊界的定義拒絕進來；已經缺的仍能開、能修。
 const IN = 'sgrape.builtin.subgraph_input', OUT_B = 'sgrape.builtin.subgraph_output';
 const boundary = (id, type) => ({ id, nodeType: type, params: {}, ui: { x: 0, y: 0 } });
-const withSubgraph = () => new G.GraphDocument(open().change(c => { c.createSubgraph({ id: 'sg', name: 'Sub' }); }).after, G.registry);
+const withSubgraph = () => new G.GraphDocument(open().change(c => { c.createSubgraph({ id: 'sg', title: 'Sub' }); }).after, G.registry);
 const inside = c => c.networks.get('subgraph:sg');
 
 test('a new subgraph has one Input and one Output; deleting either or adding a second is refused', () => {
@@ -87,7 +87,7 @@ test('a boundary in a stage is refused (its module needs an owning subgraph) and
   assert.deepEqual(clone(doc.snapshot()), before);
   const stray = clone(before); stray.stages.pixel.nodes.push(boundary('b', OUT_B));
   assert.deepEqual(clone(G.structureProblems(stray, G.registry)), [{ key: 'subgraphOutputs', network: 'pixel', value: 1, expected: 0 }]);
-  refused(withSubgraph(), c => c.appendSubgraphs([{ id: 'bare', name: 'Bare', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]), /subgraphInputs \(subgraph:bare\) 0, expected 1/);
+  refused(withSubgraph(), c => c.appendSubgraphs([{ id: 'bare', title: 'Bare', inputs: [], outputs: [], graph: { nodes: [], edges: [] } }]), /subgraphInputs \(subgraph:bare\) 0, expected 1/);
 });
 
 test('a subgraph already missing a boundary still opens and can be repaired', () => {

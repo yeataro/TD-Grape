@@ -37,7 +37,7 @@ export class Subgraph {
     this.graph.assertEditable();const f=this.data;
     if(!f)throw Error('Subgraph definition no longer exists');
     if(!validSubgraphTitle(title))throw Object.assign(Error('A subgraph title uses letters, digits, spaces and underscores, and starts with a letter'),{code:'subgraph.title'});
-    const old=f.name;f.name=title;
+    const old=f.title;f.title=title;
     const networks=[...Object.values(this.graph.document.stages),...(this.graph.document.subgraphs||[]).map(d=>d.graph)];
     for(const data of networks){
       const taken=namesIn(data);

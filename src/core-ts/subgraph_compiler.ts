@@ -119,7 +119,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     const definitions=new Map<string,SubgraphData>();
     for (const f of g.subgraphs!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
-      if (typeof f.name!=='string'||!f.name.length||f.name.length>80) throw Error('Invalid Subgraph definition');
+      if (typeof f.title!=='string'||!f.title.length||f.title.length>80) throw Error('Invalid Subgraph definition');
       definitions.set(f.id,f);
     }
     const stagesOf=stageLookup(g),active=new Set<string>(),done=new Set<string>();

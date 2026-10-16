@@ -10,7 +10,7 @@ import { completeGroups, groupsOf } from './groups';
 import type { Registry } from './node_module';
 import type { Graph } from './model';
 
-export interface SubgraphOptions {id:string;name:string}
+export interface SubgraphOptions {id:string;title:string}
 export interface SelectionSubgraphOptions extends SubgraphOptions {
   instanceId:string;
   /** Transitional descriptions only for types/nodes without a migrated module. */
@@ -57,7 +57,7 @@ export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
 }
 export function validateSubgraphData(f:SubgraphData):void {
   if (!validId(f.id)) throw Error('Invalid Subgraph identity');
-  if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
+  if (!f.title.trim() || f.title.length > 80 || /[\x00-\x1f\x7f]/.test(f.title))
     throw Error('Invalid Subgraph name');
   // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
   // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
@@ -97,7 +97,7 @@ export function createSubgraph(graph:GraphDocument,options:SubgraphOptions):Subg
   const input = structural(graph,'input'),output = structural(graph,'output');
   const taken = new Set<string>(),inId = newPortId(taken);taken.add(inId);const outId = newPortId(taken);
   return insertSubgraph(graph,{
-    id:options.id,name:options.name,
+    id:options.id,title:options.title,
     inputs:[portEntry(inId,'vec4','in1',[1,1,1,1])],
     outputs:[portEntry(outId,'vec4','out1',[0,0,0,1])],
     graph:{nodes:[{...authored(input,'input',{x:48,y:144}),name:'Input'},{...authored(output,'output',{x:624,y:144}),name:'Output'}],
@@ -195,7 +195,7 @@ export function subgraphFromSelection(network:Network,selection:ReadonlySet<stri
   // group stays outside with what is left of it — the tidy at the end of the change drops the moved members). 成員全被選的群組原樣跟著
   // 進去（A8：完整群組與內文一起進；部分群組留在外面、剩下的成員還在——修改結束時的整理會拿掉搬走的成員）。
   const groups = completeGroups(groupsOf(data),selected);
-  const f:SubgraphData = {id:options.id,name:options.name,inputs,outputs,
+  const f:SubgraphData = {id:options.id,title:options.title,inputs,outputs,
     graph:{nodes,edges,...(options.ui || groups.length ? {ui:{...copy(options.ui || {}),...(groups.length ? {groups:copy(groups) as unknown as Value} : {})}} : {})}};
   validate(graph,f);
   const instanceModule = structural(graph,'instance');

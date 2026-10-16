@@ -5,12 +5,12 @@ const edge=(a,b,out='out',input='a')=>({id:'e:'+b+'.'+input,from:[a,out],to:[b,i
 // readability. 接口：產品裡 id 是產生式、label 是自由文字；測試為了可讀直接用名字當 id。
 const port=(id,type='float',value=1)=>({id,label:id,type,default:value});
 function sharedGraph(){
- const gain={id:'gain',name:'Gain',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
+ const gain={id:'gain',title:'Gain',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
   nodes:[node('in','subgraph_input'),node('mul','multiply',{type:'float'}),node('out','subgraph_output')],
   edges:[edge('in','mul','value','a'),edge('mul','out','out','result')]
  }};
  gain.graph.nodes[1].inputValues={b:3};
- const wrapper={id:'wrapper',name:'Wrapper',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
+ const wrapper={id:'wrapper',title:'Wrapper',stages:['pixel'],inputs:[port('value')],outputs:[port('result')],graph:{
   nodes:[node('in','subgraph_input'),node('inner','subgraph_instance',{subgraphId:'gain'}),node('out','subgraph_output')],
   edges:[edge('in','inner','value','value'),edge('inner','out','result','result')]
  }};

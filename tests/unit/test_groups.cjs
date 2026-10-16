@@ -114,7 +114,7 @@ test('tidying compares values, not the order fields were written in; every subgr
   const reordered={...network(['a','b']),ui:{groups:[{nodes:['a','b'],name:'One',id:'g1'}]}};
   assert.equal(groups.tidy(reordered).fixed,false);
   const inside={...network(['a']),ui:{groups:[{id:'g1',name:'Gone',nodes:['missing']}]}};
-  const document={stages:{pixel:network([])},subgraphs:[{id:'s',name:'S',graph:inside}]};
+  const document={stages:{pixel:network([])},subgraphs:[{id:'s',title:'S',graph:inside}]};
   assert.equal(groups.tidyGroups(document),1);
   assert.equal(inside.ui?.groups?.length??0,0,'a group whose members are gone leaves, inside a subgraph too');
 });

@@ -200,7 +200,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   const stages = session?.stageNames() ?? [], trail = state?.trail ?? [];
   // The path's names and the current subgraph's instance count, once per version of the graph (Refactor.110). 路徑上的名字與目前子圖的
   // 實例數，圖每一版讀一次（R.110）。
-  const names = useMemo(() => new Map((session?.definitions() ?? []).map(f => [f.id, f.name])), [session, state?.version]);
+  const names = useMemo(() => new Map((session?.definitions() ?? []).map(f => [f.id, f.title])), [session, state?.version]);
   const uses = useMemo(() => trail.length && session ? session.useCounts().get(trail[trail.length - 1]!) ?? { direct: 0, expanded: 0 } : null, [session, state?.version, trail]);
   // Left to right as shown; `order` is when the group folds (1 first); `own`: a box of its own beside the toolbar (Refactor.83.7,
   // human 2026-10-11: GLSL is not an editing tool). 由左到右照顯示；order＝這組第幾個收（1 先收）；own：功能列旁自己一個框

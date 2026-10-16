@@ -47,7 +47,7 @@ test('a current graph comes back as it is, the same object, with nothing to repo
 test('wires follow at the end that touches the node: inputs too; subgraphs are upgraded as well',()=>{
   const rules=[{id:'rename-in',nodeType:'sgrape.builtin.rgba',inputs:{alpha:'a'},note:{code:'t',source:'t'}}];
   // e3 arrives at rgba's alpha in the main graph; f1 at r2's alpha in the subgraph. e3 接到主圖 rgba 的 alpha；f1 接到子圖 r2 的 alpha。
-  const g=oldGraph();g.subgraphs=[{id:'fn1',name:'f',scope:'local',inputs:[],outputs:[],graph:{nodes:[{id:'r2',nodeType:'sgrape.builtin.rgba',params:{},ui:{}},
+  const g=oldGraph();g.subgraphs=[{id:'fn1',title:'f',scope:'local',inputs:[],outputs:[],graph:{nodes:[{id:'r2',nodeType:'sgrape.builtin.rgba',params:{},ui:{}},
     {id:'s2',nodeType:'sgrape.builtin.scalar',params:{type:'float',value:1},ui:{}}],edges:[{id:'f1',from:['s2','out'],to:['r2','alpha']}]}}];
   const {graph,changes}=G.upgradeGraph(g,rules);
   assert.deepEqual(plain(graph.stages.pixel.edges.find(e=>e.id==='e3').to),['rgba','a']);
@@ -124,5 +124,18 @@ test('subgraph calls saved before Refactor.117 open as instances, nested ones to
   assert.deepEqual(plain(graph),plain(current));
   assert.ok(changes.length>1&&changes.every(c=>c.rule==='subgraph-instance'));
   assert.ok(changes.some(c=>c.network.startsWith('subgraph:')),'a nested one is upgraded too');
+  assert.equal(compiler.compile(graph).pixel,compiler.compile(current).pixel);
+});
+
+// 【發布前清理】Refactor.117.3 (human 2026-10-16): a subgraph's own name is its `title`; development graphs stored it as `name`.
+// A definition already carrying a title is left alone. 子圖自己的名稱存 title；開發中的圖存成 name。已經有 title 的不動。
+test('a subgraph stored with its title as name opens with a title; one already titled is left as it is',()=>{
+  const {sharedGraph}=require('../fixtures/shared_subgraphs.cjs');
+  const current=sharedGraph(),old=JSON.parse(JSON.stringify(current));
+  for(const f of old.subgraphs){f.name=f.title;delete f.title;}
+  const {graph,changes}=G.upgradeGraph(old,G.nodeUpgrades);
+  assert.deepEqual(plain(graph),plain(current));
+  assert.deepEqual(plain(changes.map(c=>c.rule+'@'+c.network)).sort(),current.subgraphs.map(f=>'subgraph-title@subgraph:'+f.id).sort());
+  assert.equal(G.upgradeGraph(current,G.nodeUpgrades).changes.length,0,'nothing to do on a current graph');
   assert.equal(compiler.compile(graph).pixel,compiler.compile(current).pixel);
 });

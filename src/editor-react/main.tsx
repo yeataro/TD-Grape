@@ -556,7 +556,7 @@ function Workspace({ session, waiting, prefs, layout, file, target: where, text,
     return {
       describe: (id: string) => {
         const f = definition(id);
-        if (f) return { label: f.name, color: 'subgraph' };
+        if (f) return { label: f.title, color: 'subgraph' };
         const choice = find(id);
         return choice && session ? { label: choice.label, color: session.newNodeColor(choice.spec) ?? 'function' } : null;
       },

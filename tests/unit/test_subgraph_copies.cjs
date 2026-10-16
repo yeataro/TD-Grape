@@ -51,20 +51,20 @@ test('a definition from a Library (libraryId) is refused as a whole, and nothing
 
 test('Make Single User copies only one instance, named by the one naming rule; nested definitions and other instances stay shared',()=>{
  const g=empty(),child=source('child'),parent=definition('parent',[instance('nested','child')]);
- parent.name='A'.repeat(80);
+ parent.title='A'.repeat(80);
  g.subgraphs=[child,parent];g.stages.pixel.nodes=[instance('a','parent'),instance('b','parent')];
  const step=new GraphDocument(g,registry).change(m=>{
   const network=m.networks.get('pixel'),f=network.independentSubgraph(network.node('a'),next('solo'));
-  assert.equal(f.id,'solo');assert.equal(f.data.name.length,80);assert.match(f.data.name,/_1$/);
+  assert.equal(f.id,'solo');assert.equal(f.data.title.length,80);assert.match(f.data.title,/_1$/);
  });
  assert.deepEqual(step.after.subgraphs.slice(0,2),g.subgraphs);
  assert.deepEqual(step.after.stages.pixel.nodes.map(n=>n.params.subgraphId),['solo','parent']);
  assert.equal(step.after.subgraphs[2].graph.nodes[1].params.subgraphId,'child');
  // A short name takes the next free number, like a node (node_names.ts); no " Copy". 短名稱和節點一樣取下一個沒人用的編號，不加 Copy。
- const short=empty();short.subgraphs=[definition('wrap'),{...definition('taken'),name:'Wrap_1'}];short.subgraphs[0].name='Wrap';
+ const short=empty();short.subgraphs=[definition('wrap'),{...definition('taken'),title:'Wrap_1'}];short.subgraphs[0].title='Wrap';
  short.stages.pixel.nodes=[instance('a','wrap')];
  const named=new GraphDocument(short,registry).change(m=>{const n=m.networks.get('pixel');n.independentSubgraph(n.node('a'),next('solo'));});
- assert.equal(named.after.subgraphs[2].name,'Wrap_2');
+ assert.equal(named.after.subgraphs[2].title,'Wrap_2');
 });
 
 test('ID allocation or module failure is atomic; a closed transaction cannot add definitions',()=>{

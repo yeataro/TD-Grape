@@ -74,8 +74,8 @@ test('a place that is not a number counts as 0',()=>{
 test('a copy carries the definitions its instances use, with their closure; pasted into the same graph the instances keep their definition, elsewhere a new one',()=>{
   const doc=graph();
   const made=new G.GraphDocument(doc.change(c=>{
-    c.createSubgraph({id:'inner',name:'Inner'});
-    const outer=c.createSubgraph({id:'outer',name:'Outer'});
+    c.createSubgraph({id:'inner',title:'Inner'});
+    const outer=c.createSubgraph({id:'outer',title:'Outer'});
     c.networks.get('subgraph:outer').instantiateSubgraph('inner','nested',{x:0,y:0});
     c.networks.get('pixel').instantiateSubgraph('outer','instance',{x:10,y:10});
     void outer;
@@ -112,7 +112,7 @@ const callsIn=network=>network.nodes.filter(n=>n.nodeType==='sgrape.builtin.subg
 let reviewCounter=0;const reviewSub=()=>'r'+(++reviewCounter);
 
 test('TECH-1: a restored definition brings its dependencies from the copy; pasted instances whose definition is here keep it',()=>{
-  const raw=sharedGraph(),wrapper2={...plain(raw.subgraphs[1]),id:'wrapper2',name:'Wrapper2'};
+  const raw=sharedGraph(),wrapper2={...plain(raw.subgraphs[1]),id:'wrapper2',title:'Wrapper2'};
   raw.subgraphs.push(wrapper2);raw.stages.pixel.nodes.push(fixtureNode('third','subgraph_instance',{subgraphId:'wrapper2'}));
   const original=new G.GraphDocument(raw,registry),clip=plain(G.copyNodes(original,['first','second','third'],OP));
   const changed=new G.GraphDocument(original.change(c=>{

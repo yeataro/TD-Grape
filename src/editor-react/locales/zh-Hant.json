@@ -714,6 +714,7 @@
   "upgrade.named": "取名為 {name}",
   "upgrade.report": "已把 {count} 個節點更新成目前的寫法：{list}",
   "upgrade.subgraphInstance": "子圖節點現在叫做實例",
+  "upgrade.subgraphTitle": "子圖 {title}：名稱改存在 title",
   "upgrade.title": "這張圖有 {count} 個節點是舊的寫法，已經更新；圖會照一般編輯送到 TD。",
   "upgrade.vUVOut": "vUV 現在有 U、UV、UVW 三個輸出；它的線改從 UVW 輸出接出",
   "upgrade.vUVSt": "vUV.st 已併入 vUV；它的線改從 UV 輸出接出",
