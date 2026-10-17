@@ -193,7 +193,11 @@ export function codegenKey(g:Graph):string {
 
 export function createCompiler(registry:Registry,config:CoreConfig=CORE_CONFIG){
   const flat=createFlatCompiler(registry,{nodes:config.nodesPerNetwork,edges:config.edgesPerNetwork,bytes:config.documentBytes});
-  const subgraphs=createSubgraphCompiler(registry,r=>createFlatCompiler(r,{nodes:config.expandedNodes,edges:config.expandedEdges,bytes:config.documentBytes}),config);
+  // The expanded graph is built here for code generation, never sent to the host: it keeps the expanded node and edge limits but not
+  // the document's byte limit, which the subgraph compiler has checked on the graph itself (Codex R120-2: a note copied into every
+  // instance made a 33 KB graph read as 610 KB). 展開圖只為產碼而建、不送宿主：保留展開後的節點與接線上限，不套文件位元組上限——子圖產碼器
+  // 已對圖本身檢查過（每個實例複製一份註記，33 KB 的圖被當成 610 KB）。
+  const subgraphs=createSubgraphCompiler(registry,r=>createFlatCompiler(r,{nodes:config.expandedNodes,edges:config.expandedEdges,bytes:Infinity}),config);
   return Object.freeze({protocol,key:codegenKey,
     supports:(g:Graph)=>g.subgraphs?.length?subgraphs.supports(g):flat.supports(g),
     // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).

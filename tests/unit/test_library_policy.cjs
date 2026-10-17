@@ -40,6 +40,8 @@ test('C3: the copy kept by default may go local too when it uses one of its own 
     const defs=[parent('B1','B2',L1),leaf('B2')];if(reverse)defs.reverse();
     const before=graph(defs,['B1']),was=plain(before),r=repair(before);
     assert.deepEqual(plain(r.localized).sort(),['B1','B2']);assert.deepEqual(plain([...r.merged]),[]);
+    assert.deepEqual(plain(r.document.subgraphs.map(f=>f.id)).sort(),['B1','B2'],'both stay, nothing merged away');
+    assert.deepEqual(plain(r.differing),[]);assert.deepEqual(plain(r.updated),[],'no Library: no version work');
     assert.ok(r.document.subgraphs.every(f=>f.libraryId===undefined&&f.provenance[0].libraryId===L1));
     assert.equal(def(r.document,'B1').graph.nodes.find(n=>n.id==='inner').params.subgraphId,'B2','in-graph IDs and references stay');
     assert.deepEqual(before,was);
@@ -53,6 +55,8 @@ test('C3: with no instances at all the kept copy is the smallest in-graph ID, wh
     assert.equal(def(r.document,'B1').libraryId,L1);assert.deepEqual(before,was);
     assert.deepEqual(plain([...r.merged]),merged?[['B2','B1']]:[]);
     assert.deepEqual(plain(r.localized),merged?[]:['B2']);
+    assert.equal(r.document.subgraphs.length,merged?1:2,'the document matches what is reported');
+    if(!merged)assert.equal(def(r.document,'B2').libraryId,undefined,'B2 really lost its Library ID');
   }
 });
 
@@ -156,3 +160,34 @@ test('a chain whose top differs: only the top differs; whose leaf differs: every
   }
 });
 function doc_(g){return new GraphDocument(g,registry);}
+
+// ---- Codex review of R.120 (R120-1, R120-2) Codex 對 R.120 的審查 ----
+test('R120-1: an equal parent does not vouch for a child whose own closure names a network outside it by scope',()=>{
+  // A uses B and C; B's output type names C's network by scope: inside A's closure, outside B's. A 用 B 與 C；B 的輸出型別以 scoped 參照指向 C。
+  const make=prefix=>{
+    const a=parent(prefix+'A',prefix+'B',lib('1')),b=leaf(prefix+'B',lib('2')),cc=leaf(prefix+'C',lib('3'));
+    a.title='Parent';b.title='Child';cc.title='Sibling';a.graph.nodes.push(node('sibling','subgraph_instance',{subgraphId:cc.id}));
+    b.outputs[0].type='float['+c.GrapeGraph.ScopeReferences.token('fn_'+cc.id,['mul','out'])+']';
+    return graph([a,b,cc],[a.id]);
+  };
+  const left=make('g'),right=make('lib');
+  assert.equal(c.GrapeGraph.standardForm(left,registry,'gA'),c.GrapeGraph.standardForm(right,registry,'libA'));
+  assert.notEqual(c.GrapeGraph.standardForm(left,registry,'gB'),c.GrapeGraph.standardForm(right,registry,'libB'));
+  // Parents first or children first, the answer is the standard form's. 先問父或先問子，答案都和標準形一樣。
+  for(const reverse of [false,true]){
+    const doc=plain(left);if(reverse)doc.subgraphs.reverse();
+    const r=c.GrapeGraph.repairLibraryCopies(doc,registry,right,()=>'new',{versions:'local'},at);
+    assert.deepEqual(plain(r.differing),['gB']);
+    assert.equal(def(r.document,'gB').libraryId,undefined);assert.equal(def(r.document,'gA').libraryId,undefined,'its read-only user goes local too');
+    assert.equal(def(r.document,'gC').libraryId,lib('3'));
+  }
+});
+
+test('R120-2: a graph well inside the byte limit compiles even when its subgraph notes, copied per instance, would not fit',()=>{
+  const g=graph([leaf('gain',null)],Array.from({length:20},()=> 'gain'));
+  g.subgraphs[0].graph.nodes.find(n=>n.id==='mul').comment='中'.repeat(10000);
+  assert.deepEqual(plain(c.GrapeGraph.overLimit(g,registry)),[],'the graph itself passes the gate');
+  assert.ok(c.GrapeGraph.documentBytes(g)<40000);
+  const compiled=c.GrapeTopCompiler.compile(g,c.GrapeGraph.createEditorContract(registry,'top').glslCode);
+  assert.ok(compiled.pixel.length>0);
+});

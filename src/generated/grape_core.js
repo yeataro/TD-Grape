@@ -2146,6 +2146,23 @@ function libraryMatcher(source, target, registry) {
         side.own.set(f.id, own);
         return own;
     };
+    // Whether a definition and everything it uses name no network but their own by scope (a scoped reference to itself is fine).
+    // 一份定義和它用到的每一份，scoped 參照是否都只指自己的網路。
+    const tidy = sides.map(() => new Map());
+    const clean = (side, id) => {
+        const memo = tidy[sides.indexOf(side)];
+        if (memo.has(id))
+            return memo.get(id);
+        memo.set(id, false);
+        const f = side.byId.get(id);
+        let own = !!f;
+        if (f)
+            scope_references_1.ScopeReferences.walk(f, (ref, old) => { if (ref.scope !== 'fn_' + f.id)
+                own = false; return old; }, false);
+        const result = own && (0, exports.instancesOf)(f, registry).every(child => clean(side, child));
+        memo.set(id, result);
+        return result;
+    };
     const known = new Map(), vouched = new Map();
     const like = (s, t) => {
         const key = s.id + '\u0000' + t.id;
@@ -2178,8 +2195,13 @@ function libraryMatcher(source, target, registry) {
                 like(s, t);
                 return false;
             }
+            // A confirmed parent vouches only for members whose own closures name no other network by scope: a scoped reference outside a
+            // member's closure keeps its raw ID in that member's own standard form, so the parent's equality says nothing about it (Codex
+            // R120-1). Others are confirmed on their own when asked. 確認過的父只替「自己閉包裡沒有指向別的網路的 scoped 參照」的成員作保：
+            // 成員閉包外的 scoped 參照在它自己的標準形裡保留原 ID，父相同不代表它相同。其餘的被問到時各自確認。
             const from = closureOrder(source, registry, sourceId), to = closureOrder(target, registry, targetId);
-            from.forEach((g, i) => vouched.set(g.id, to[i].id));
+            from.forEach((g, i) => { if (clean(sides[0], g.id) && clean(sides[1], to[i].id))
+                vouched.set(g.id, to[i].id); });
             return true;
         },
     };
@@ -8364,7 +8386,11 @@ function codegenKey(g) {
 }
 function createCompiler(registry, config = config_1.CORE_CONFIG) {
     const flat = createFlatCompiler(registry, { nodes: config.nodesPerNetwork, edges: config.edgesPerNetwork, bytes: config.documentBytes });
-    const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, { nodes: config.expandedNodes, edges: config.expandedEdges, bytes: config.documentBytes }), config);
+    // The expanded graph is built here for code generation, never sent to the host: it keeps the expanded node and edge limits but not
+    // the document's byte limit, which the subgraph compiler has checked on the graph itself (Codex R120-2: a note copied into every
+    // instance made a 33 KB graph read as 610 KB). 展開圖只為產碼而建、不送宿主：保留展開後的節點與接線上限，不套文件位元組上限——子圖產碼器
+    // 已對圖本身檢查過（每個實例複製一份註記，33 KB 的圖被當成 610 KB）。
+    const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, { nodes: config.expandedNodes, edges: config.expandedEdges, bytes: Infinity }), config);
     return Object.freeze({ protocol: exports.protocol, key: codegenKey,
         supports: (g) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
         // The core's own identifier rules unless given (Refactor.76: every node now has a name, so a name always meets them).

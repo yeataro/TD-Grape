@@ -178,6 +178,19 @@ export function libraryMatcher(source: Graph, target: Graph, registry: Registry)
     const own = complete ? canonical(rest) : null;
     side.own.set(f.id, own); return own;
   };
+  // Whether a definition and everything it uses name no network but their own by scope (a scoped reference to itself is fine).
+  // 一份定義和它用到的每一份，scoped 參照是否都只指自己的網路。
+  const tidy = sides.map(() => new Map<string, boolean>());
+  const clean = (side: typeof sides[number], id: string): boolean => {
+    const memo = tidy[sides.indexOf(side)]!;
+    if (memo.has(id)) return memo.get(id)!;
+    memo.set(id, false);
+    const f = side.byId.get(id);
+    let own = !!f;
+    if (f) ScopeReferences.walk(f, (ref, old) => { if (ref.scope !== 'fn_' + f.id) own = false; return old; }, false);
+    const result = own && instancesOf(f!, registry).every(child => clean(side, child));
+    memo.set(id, result); return result;
+  };
   const known = new Map<string, boolean>(), vouched = new Map<string, string>();
   const like = (s: SubgraphData, t: SubgraphData): boolean => {
     const key = s.id + '\u0000' + t.id;
@@ -202,8 +215,12 @@ export function libraryMatcher(source: Graph, target: Graph, registry: Registry)
       if (!s || !t || known.get(s.id + '\u0000' + t.id) === false) return false;
       const form = standardForm(source, registry, sourceId);
       if (form === null || form !== standardForm(target, registry, targetId)) { like(s, t); return false; }
+      // A confirmed parent vouches only for members whose own closures name no other network by scope: a scoped reference outside a
+      // member's closure keeps its raw ID in that member's own standard form, so the parent's equality says nothing about it (Codex
+      // R120-1). Others are confirmed on their own when asked. 確認過的父只替「自己閉包裡沒有指向別的網路的 scoped 參照」的成員作保：
+      // 成員閉包外的 scoped 參照在它自己的標準形裡保留原 ID，父相同不代表它相同。其餘的被問到時各自確認。
       const from = closureOrder(source, registry, sourceId)!, to = closureOrder(target, registry, targetId)!;
-      from.forEach((g, i) => vouched.set(g.id, to[i]!.id));
+      from.forEach((g, i) => { if (clean(sides[0]!, g.id) && clean(sides[1]!, to[i]!.id)) vouched.set(g.id, to[i]!.id); });
       return true;
     },
   };
