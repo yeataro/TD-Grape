@@ -32,6 +32,7 @@
 | `docs/development/DEVELOPMENT.md` | 開發流程、TD 內嵌程式更新、保存 TOE |
 | `docs/development/TESTING.md` | 測試說明（151KB，重構前，按需查） |
 | `docs/development/TD_NATIVE_CONSOLE.md` | TD 原生 Console 擷取 |
+| `docs/timeline/README.md` | 開發時間軸（評估期到現在的階段、實作者、第三方審查起點）；細節仍看 STATUS |
 | `docs/GLOSSARY.md` | 產品用語表 |
 | `../GLOSSARY.md` | 重構討論用語表（與上一份不同） |
 | `docs/architecture/GRAPH_FORMAT.md` | **圖格式 grape-graph 1**（Q44）：結構、讀圖規則、舊→新對照表 |
