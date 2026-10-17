@@ -94,17 +94,36 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, documentBytes: capacity_1.documentBytes, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates };
 
 },
 "capacity":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CapacityError = void 0;
+exports.utf8Bytes = utf8Bytes;
+exports.documentBytes = documentBytes;
 exports.measure = measure;
 exports.overLimit = overLimit;
 exports.requireCapacity = requireCapacity;
 const config_1 = require("./config");
+/** Room kept for `savedBy`, which the editor writes when it sends the graph (host_sync.ts); the core measures without it.
+ * 留給 savedBy 的位置（編輯器送出時才寫上）；核心量的時候不含它。 */
+const SAVED_BY_ROOM = 128;
+/** UTF-8 bytes of a text, counted without encoding it. 文字的 UTF-8 位元組數，不必真的編碼。 */
+function utf8Bytes(text) {
+    let n = 0;
+    for (let i = 0; i < text.length; i++) {
+        const u = text.charCodeAt(i);
+        n += u < 0x80 ? 1 : u < 0x800 ? 2 : u >= 0xd800 && u < 0xdc00 ? (i++, 4) : 3;
+    }
+    return n;
+}
+/** The bytes the host will receive for this graph (its text as sent, `savedBy` included). 宿主會收到的位元組數（送出的文字，含 savedBy）。 */
+function documentBytes(g) {
+    const { savedBy: _, ...rest } = g;
+    return utf8Bytes(JSON.stringify(rest)) + SAVED_BY_ROOM;
+}
 function networks(g) {
     return [...Object.entries(g.stages || {}).map(([id, data]) => [id, data]),
         ...(g.subgraphs || []).map(f => ['subgraph:' + f.id, f.graph])];
@@ -130,7 +149,7 @@ function measure(g, registry, config = config_1.CORE_CONFIG) {
         expanded.set(key, total);
         return total;
     };
-    const result = [{ key: 'subgraphDefinitions', value: definitions.size, limit: config.subgraphDefinitions }];
+    const result = [{ key: 'documentBytes', value: documentBytes(g), limit: config.documentBytes }];
     for (const [id, data] of networks(g)) {
         result.push({ key: 'nodesPerNetwork', network: id, value: data.nodes.length, limit: config.nodesPerNetwork });
         result.push({ key: 'edgesPerNetwork', network: id, value: data.edges.length, limit: config.edgesPerNetwork });
@@ -154,8 +173,13 @@ exports.CapacityError = CapacityError;
 /** Refuses growth beyond a limit; shrinking an over-limit graph is always allowed. */
 function requireCapacity(before, after, registry, config = config_1.CORE_CONFIG) {
     const id = (m) => { var _a; return m.key + '|' + ((_a = m.network) !== null && _a !== void 0 ? _a : ''); };
+    // The graph before is measured only when the one after is over a limit, so an ordinary edit serializes once. 只有修改後超過上限
+    // 才量修改前的圖，一般的修改只序列化一次。
+    const over = measure(after, registry, config).filter(m => m.value > m.limit);
+    if (!over.length)
+        return;
     const previous = new Map(measure(before, registry, config).map(m => [id(m), m.value]));
-    const grown = measure(after, registry, config).filter(m => { var _a; return m.value > m.limit && m.value > ((_a = previous.get(id(m))) !== null && _a !== void 0 ? _a : 0); });
+    const grown = over.filter(m => { var _a; return m.value > ((_a = previous.get(id(m))) !== null && _a !== void 0 ? _a : 0); });
     if (grown.length)
         throw new CapacityError(grown);
 }
@@ -547,7 +571,8 @@ exports.CORE_CONFIG = Object.freeze({
     // time per edit (about 3.3 ms per MB, measured 2026-10-09; see next_family.py). See convention 5.
     // 圖文字的 UTF-8 位元組數。是宿主（我們在 TD 裡的程式）的上限，不是 TD 的；同樣沒有實測依據。
     documentBytes: 512000,
-    subgraphDefinitions: 64, // legacy-era choice
+    // No count of subgraph definitions (amendment 3 C9, design-interview Q77): the legacy 64 had no basis and only turned an extra copy
+    // into a refused paste; a graph's size is held by documentBytes. 不限子圖定義份數：舊的 64 沒有依據，只把多一份變成貼上被拒；圖的大小由 documentBytes 管。
     // Legacy-era choice (legacy sgrape_core.py:2104), no measured basis; checked when a subgraph is created, its
     // interface edited and an instance resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析實例時檢查。
     subgraphPortsPerSide: 16,
@@ -1501,7 +1526,6 @@ class GraphDocument {
     createSubgraph(options) { return this.subgraph((0, subgraph_operations_1.createSubgraph)(this, options).id); }
     /** Remove a definition with no instances (subgraph_operations.ts). 刪掉沒有實例的定義。 */
     removeSubgraph(id) { (0, subgraph_operations_1.removeSubgraph)(this, id); }
-    ensureSubgraphCapacity(additional = 0) { (0, subgraph_operations_1.ensureSubgraphCapacity)(this, additional); }
     appendSubgraphs(definitions, ids = new Map()) {
         return (0, subgraph_copies_1.appendSubgraphs)(this, definitions, ids).map(f => this.subgraph(f.id));
     }
@@ -1914,6 +1938,7 @@ exports.localize = localize;
 exports.requireCurrent = requireCurrent;
 exports.requireLibrary = requireLibrary;
 exports.standardForm = standardForm;
+exports.libraryMatcher = libraryMatcher;
 exports.closureOrder = closureOrder;
 /** Library copies in a graph (basic design §3.7–3.10, amendment 1 A2–A6, amendment 2 B1–B4 revision 3; Refactor.118).
  * A definition carrying `libraryId` is a read-only copy: an ordinary edit may not change it, only the legal operations (add a copy,
@@ -2085,6 +2110,80 @@ function standardForm(document, registry, rootId) {
         return rest;
     }));
 }
+/** Whether Library copies of two documents have the same standard form, worked out once per pair and remembered, for documents that
+ * each hold at most one copy per Library ID (amendment 3 C2). Under C2 a closure is named by Library IDs, so two copies match when
+ * their own content matches with references written as Library IDs and every child pair matches: a long chain costs one walk, not one
+ * closure per level (Codex A3-4, R.120). That test is kept on the lenient side — scoped references are compared without the network
+ * they name — so it never says different where the standard forms are equal; `same` then confirms a match with the standard form once,
+ * and a confirmed parent vouches for its whole closure. 兩份文件的 Library 副本是否同標準形：每一對只算一次並記住，前提是各自每個
+ * Library ID 至多一份（C2）。這時閉包可以用 Library ID 指名，所以「自己的內容（參照寫成 Library ID）相同、每一對子也相同」就相同：長鏈走
+ * 一次，不是每層一個閉包。這個判斷刻意偏寬（scoped 參照不比它指的網路），所以標準形相同時它不會說不同；same 再用標準形確認一次，確認過的父
+ * 整個閉包都算數。 */
+function libraryMatcher(source, target, registry) {
+    const ids = (g) => { var _a; return new Map(((_a = g.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f])); };
+    const sides = [{ g: source, byId: ids(source), own: new Map() }, { g: target, byId: ids(target), own: new Map() }];
+    const mark = (parts) => '\u0000' + JSON.stringify(parts) + '\u0000';
+    const ownOf = (side, f) => {
+        if (side.own.has(f.id))
+            return side.own.get(f.id);
+        const { id: _id, stages: _stages, targets: _targets, provenance: _provenance, ...rest } = (0, model_1.copy)(f);
+        escapeStrings(rest);
+        let complete = true;
+        rest.graph.nodes = rest.graph.nodes.map((n) => {
+            var _a;
+            const module = registry.get(n.nodeType), ref = (_a = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, n);
+            if (ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference))
+                return n;
+            const child = side.byId.get(ref);
+            if ((child === null || child === void 0 ? void 0 : child.libraryId) === undefined) {
+                complete = false;
+                return n;
+            }
+            return { ...n, params: { ...n.params, ...module.reference(mark(['library', child.libraryId])) } };
+        });
+        scope_references_1.ScopeReferences.walk(rest, () => mark(['scope']));
+        const own = complete ? canonical(rest) : null;
+        side.own.set(f.id, own);
+        return own;
+    };
+    const known = new Map(), vouched = new Map();
+    const like = (s, t) => {
+        const key = s.id + '\u0000' + t.id;
+        if (known.has(key))
+            return known.get(key);
+        known.set(key, false);
+        // Every child pair is settled even when this one already differs, so one walk leaves an answer for the whole closure.
+        // 這一對已經不同時，子的每一對照樣算完，走一次就留下整個閉包的答案。
+        const children = (0, exports.instancesOf)(s, registry), theirs = (0, exports.instancesOf)(t, registry);
+        let result = children.length === theirs.length;
+        children.forEach((c, i) => { var _a; const a = sides[0].byId.get(c), b = sides[1].byId.get((_a = theirs[i]) !== null && _a !== void 0 ? _a : ''); if (!a || !b || !like(a, b))
+            result = false; });
+        const own = ownOf(sides[0], s);
+        result && (result = s.libraryId !== undefined && s.libraryId === t.libraryId && own !== null && own === ownOf(sides[1], t));
+        known.set(key, result);
+        return result;
+    };
+    return {
+        /** Same standard form, exactly. The common case (equal) costs one standard form and vouches for the closure; a difference then
+         * walks the pairs once, so the levels below answer from memory. 標準形相同（精確）。常見的相同只算一次標準形並替閉包作保；不同時才把每一對
+         * 走一次，下面各層就從記憶回答。 */
+        same(sourceId, targetId) {
+            if (vouched.get(sourceId) === targetId)
+                return true;
+            const s = sides[0].byId.get(sourceId), t = sides[1].byId.get(targetId);
+            if (!s || !t || known.get(s.id + '\u0000' + t.id) === false)
+                return false;
+            const form = standardForm(source, registry, sourceId);
+            if (form === null || form !== standardForm(target, registry, targetId)) {
+                like(s, t);
+                return false;
+            }
+            const from = closureOrder(source, registry, sourceId), to = closureOrder(target, registry, targetId);
+            from.forEach((g, i) => vouched.set(g.id, to[i].id));
+            return true;
+        },
+    };
+}
 /** A definition's closure in the standard form's fixed walk (root first, then each dependency as first met); null when incomplete.
  * Two closures with equal standard forms line up position by position. 標準形固定走訪下的閉包（根在先，依序首次遇到的依賴）；不完整就是 null。
  * 標準形相同的兩個閉包可以逐位對齊。 */
@@ -2255,16 +2354,37 @@ function redirect(registry, networks, value, ids) {
 /** `start` with every read-only definition (among `defs`) that uses one of them, however deep: a read-only subgraph may only use
  * read-only ones (A3), so they go local together (C5). start 加上 defs 中所有（不論多深）用到它們的唯讀定義：唯讀只能用唯讀，所以一起轉本地。 */
 function withReadOnlyAncestors(defs, registry, start) {
-    const set = new Set(start);
-    for (let grew = true; grew;) {
-        grew = false;
-        for (const f of defs)
-            if (!set.has(f.id) && f.libraryId !== undefined && (0, library_1.instancesOf)(f, registry).some(ref => set.has(ref))) {
+    var _a, _b;
+    const users = new Map();
+    for (const f of defs)
+        if (f.libraryId !== undefined)
+            for (const ref of (0, library_1.instancesOf)(f, registry))
+                ((_a = users.get(ref)) !== null && _a !== void 0 ? _a : users.set(ref, []).get(ref)).push(f);
+    const set = new Set(start), queue = [...set];
+    for (let id = queue.pop(); id !== undefined; id = queue.pop())
+        for (const f of (_b = users.get(id)) !== null && _b !== void 0 ? _b : [])
+            if (!set.has(f.id)) {
                 set.add(f.id);
-                grew = true;
+                queue.push(f.id);
             }
-    }
     return set;
+}
+/** Definitions in an order where every parent comes before its children (C5: users are made local first). 每個父都排在子前面。 */
+function parentsFirst(defs, registry) {
+    const byId = new Map(defs.map(f => [f.id, f])), seen = new Set(), order = [];
+    const visit = (f) => {
+        if (seen.has(f.id))
+            return;
+        seen.add(f.id);
+        for (const ref of (0, library_1.instancesOf)(f, registry)) {
+            const child = byId.get(ref);
+            if (child)
+                visit(child);
+        }
+        order.push(f);
+    };
+    defs.forEach(visit);
+    return order.reverse();
 }
 /** How many instances point straight at each definition (amendment 1's direct count). 每份定義被幾個實例直接指到。 */
 function directInstances(document, registry) {
@@ -2355,27 +2475,18 @@ function planLibraryEntry(target, source, needed, registry, choice = {}, at = (0
     // Parents before children: an equal parent fixes its whole closure position by position (equal standard forms align), so its
     // children need no form of their own — a reused chain costs one closure, not one per level. 父在子前：相同的父逐位定下整個閉包
     // （標準形相同就對得齊），子不必再算——沿用一條鏈只算一次閉包，不是每層一次。
-    const order = [], seen = new Set(), inside = new Set(ids);
-    const place = (id) => {
-        if (seen.has(id) || !inside.has(id))
-            return;
-        seen.add(id);
-        for (const child of (0, library_1.instancesOf)(byId.get(id), registry))
-            place(child);
-        order.push(id);
-    };
-    ids.forEach(place);
-    order.reverse();
-    for (const id of order) {
+    const match = (0, library_1.libraryMatcher)(batch, target, registry);
+    for (const f of parentsFirst(ids.map(id => byId.get(id)), registry)) {
+        const id = f.id;
         if (reused.has(id))
             continue;
-        const f = byId.get(id), mine = f.libraryId === undefined ? undefined : here.get(f.libraryId);
+        const mine = f.libraryId === undefined ? undefined : here.get(f.libraryId);
         if (!mine) {
             imported.push(id);
             continue;
         }
-        const form = (0, library_1.standardForm)(batch, registry, id);
-        if (form === null || form !== (0, library_1.standardForm)(target, registry, mine.id)) {
+        // Compared once per pair and remembered (library.ts libraryMatcher), so a chain costs one walk. 每一對只比一次並記住，一條鏈只走一次。
+        if (!match.same(id, mine.id)) {
             conflicts.push(id);
             continue;
         }
@@ -2440,7 +2551,7 @@ function applyLibraryEntry(graph, plan, next) {
  * 用到它們的唯讀定義全部轉本地。library 是呼叫端為這張圖解析好的資源庫定義（A7 已處理，每個 Library ID 一份，巢狀參照指彼此）；沒有就是
  * 找不到資源庫，只做第 1 步。第 2 步經過 change()，結果過同樣的關卡。純函式：回傳要打開的圖，呼叫端呈現、確認後發布。 */
 function repairLibraryCopies(document, registry, library, next, choice = {}, at = (0, library_1.now)()) {
-    var _a, _b;
+    var _a, _b, _c;
     const shelf = new Map();
     for (const f of (_a = library === null || library === void 0 ? void 0 : library.subgraphs) !== null && _a !== void 0 ? _a : [])
         if (f.libraryId !== undefined) {
@@ -2453,8 +2564,23 @@ function repairLibraryCopies(document, registry, library, next, choice = {}, at 
     const step1 = repairDuplicates(document, registry, { separate: choice.duplicates === 'separate', at,
         prefer: (f, form) => form !== null && shelf.has(f.libraryId) && form === formOf(f.libraryId) });
     const base = step1.document;
-    const differing = ((_b = base.subgraphs) !== null && _b !== void 0 ? _b : []).filter(f => f.libraryId !== undefined && shelf.has(f.libraryId) &&
-        formOf(f.libraryId) !== null && (0, library_1.standardForm)(base, registry, f.id) !== formOf(f.libraryId)).map(f => f.id);
+    // Parents first, each pair compared once and remembered: a long chain, all the same or all different, costs one walk (R.120).
+    // A Library definition with an incomplete closure is not compared. 父在子前、每一對只比一次並記住：長鏈不論全同或全不同都只走一次。
+    // 閉包不完整的資源庫定義不比。
+    const match = library ? (0, library_1.libraryMatcher)(base, library, registry) : undefined;
+    const shelfById = new Map(((_b = library === null || library === void 0 ? void 0 : library.subgraphs) !== null && _b !== void 0 ? _b : []).map(f => [f.id, f])), whole = new Map();
+    const complete = (id) => {
+        if (whole.has(id))
+            return whole.get(id);
+        whole.set(id, false);
+        const f = shelfById.get(id), ok = !!f && (0, library_1.instancesOf)(f, registry).every(complete);
+        whole.set(id, ok);
+        return ok;
+    };
+    const differing = parentsFirst((_c = base.subgraphs) !== null && _c !== void 0 ? _c : [], registry).filter(f => {
+        const mine = f.libraryId === undefined ? undefined : shelf.get(f.libraryId);
+        return !!mine && complete(mine.id) && !match.same(f.id, mine.id);
+    }).map(f => f.id);
     const result = { document: base, merged: step1.merged, localized: [...step1.localized], differing, updated: [] };
     if (!differing.length)
         return result;
@@ -2463,24 +2589,21 @@ function repairLibraryCopies(document, registry, library, next, choice = {}, at 
         if (choice.versions === 'local') {
             // Every read-only user first, so each Make Local is in place and nothing forks (C5). 先轉所有唯讀使用者，每次轉本地都就地、不分叉。
             const going = withReadOnlyAncestors((_a = m.document.subgraphs) !== null && _a !== void 0 ? _a : [], registry, differing);
-            while (going.size) {
-                const free = [...going].find(id => { var _a; return !((_a = m.document.subgraphs) !== null && _a !== void 0 ? _a : []).some(d => going.has(d.id) && d.id !== id && d.libraryId !== undefined && (0, library_1.instancesOf)(d, registry).includes(id)); });
-                if (free === undefined)
-                    throw Error('Subgraph reference cycle');
-                going.delete(free);
-                if (m.document.subgraphs.find(d => d.id === free).libraryId === undefined)
+            for (const f of parentsFirst(((_b = m.document.subgraphs) !== null && _b !== void 0 ? _b : []).filter(d => going.has(d.id)), registry)) {
+                if (f.libraryId === undefined)
                     continue;
-                (0, library_operations_1.makeLocal)(m, free, next, at);
-                result.localized.push(free);
+                (0, library_operations_1.makeLocal)(m, f.id, next, at);
+                result.localized.push(f.id);
             }
             return;
         }
         // Update all: the Library's closures of the differing copies come in as an entry that takes the incoming content (C4 'incoming').
         // 全部更新：不同的那幾份在資源庫裡的閉包，照「改用帶進來的」進圖。
-        const wanted = new Set();
+        const wanted = new Set(), want = (id) => { if (wanted.has(id))
+            return; wanted.add(id); for (const ref of (0, library_1.instancesOf)(shelfById.get(id), registry))
+            want(ref); };
         for (const id of differing)
-            for (const f of (_b = (0, library_1.closureOrder)(library, registry, shelf.get(m.document.subgraphs.find(d => d.id === id).libraryId).id)) !== null && _b !== void 0 ? _b : [])
-                wanted.add(f.id);
+            want(shelf.get(m.document.subgraphs.find(d => d.id === id).libraryId).id);
         const plan = planLibraryEntry(m.document, library, [...wanted], registry, { conflicts: 'incoming' }, at);
         applyLibraryEntry(m, plan, next);
         result.updated = [...plan.updates.keys()];
@@ -6595,6 +6718,7 @@ exports.createSubgraphCompiler = createSubgraphCompiler;
  * Node modules own interfaces; no imported library or DOM state is consulted. */
 const model_1 = require("./model");
 const config_1 = require("./config");
+const capacity_1 = require("./capacity");
 const node_module_1 = require("./node_module");
 const subgraph_interface_1 = require("./subgraph_interface");
 const subgraph_stages_1 = require("./subgraph_stages");
@@ -6626,7 +6750,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
     function supports(g) {
         var _a;
         if ((0, model_1.formatProblem)(g) || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' ||
-            ((_a = g.structDefinitions) === null || _a === void 0 ? void 0 : _a.length) || !Array.isArray(g.subgraphs) || g.subgraphs.length > config.subgraphDefinitions)
+            ((_a = g.structDefinitions) === null || _a === void 0 ? void 0 : _a.length) || !Array.isArray(g.subgraphs))
             return false;
         // Declarations follow the same rule as the flat compiler (top_compiler.ts): a known kind must carry a type it supports,
         // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
@@ -6731,7 +6855,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
     function compile(g, identifiers) {
         if (!supports(g))
             throw Error('Graph is outside the selected frontend compiler capability');
-        if (JSON.stringify(g).length > config.documentBytes)
+        if ((0, capacity_1.documentBytes)(g) > config.documentBytes)
             throw Error('Graph is too large');
         const definitions = new Map();
         for (const f of g.subgraphs) {
@@ -6783,7 +6907,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 origins.set(n.id, origin);
             };
             function expand(data, path, owner, boundary) {
-                var _a, _b, _c;
+                var _a, _b, _c, _d, _e;
                 const context = (0, node_module_1.contextFor)(g, owner), maps = new Map(), names = new Set(), ghosts = new Set();
                 let inputCount = 0, outputCount = 0;
                 for (const node of data.nodes) {
@@ -6842,9 +6966,24 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                             for (const key of Object.keys(node.inputValues || {}))
                                 if (!ports.inputs[key])
                                     throw Error('Invalid Subgraph input values');
+                            if (probe) {
+                                // Checking one definition on its own: an instance inside stands for its interface only — relays of the port types, outputs
+                                // at their defaults — since that definition is checked on its own too. Expanding it here would expand every chain once per
+                                // level (A3-4: 900 levels took 10 s). The code itself comes from the full expansion below, unchanged.
+                                // 單獨檢查一份定義時，裡面的實例只代表它的接口（接口型別的中繼，輸出用預設值）——那份定義自己也會單獨檢查。在這裡展開會讓
+                                // 一條鏈每層展開一次（900 層 10 秒）。產碼仍來自下面的完整展開，不變。
+                                for (const direction of ['inputs', 'outputs'])
+                                    for (const p of fn[direction]) {
+                                        const id = allocate(), value = direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default;
+                                        add({ id, nodeType: relay.catalog.definition.nodeType, params: { type: p.type }, ...(value === undefined ? {} : { inputValues: { value: (0, model_1.copy)(value) } }) }, origin);
+                                        mapped[direction][p.id] = [id, direction === 'inputs' ? 'value' : 'out'];
+                                    }
+                                maps.set(node.id, mapped);
+                                continue;
+                            }
                             for (const direction of ['inputs', 'outputs'])
                                 for (const p of fn[direction]) {
-                                    const id = allocate(), value = direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default;
+                                    const id = allocate(), value = direction === 'inputs' ? (_e = (_d = node.inputValues) === null || _d === void 0 ? void 0 : _d[p.id]) !== null && _e !== void 0 ? _e : p.default : p.default;
                                     add({ id, nodeType: relay.catalog.definition.nodeType, params: { type: p.type },
                                         ...(value === undefined ? {} : { inputValues: { value: (0, model_1.copy)(value) } }),
                                         ...(node.ui ? { ui: (0, model_1.copy)(node.ui) } : {}), ...(node.comment ? { comment: node.comment } : {}) }, origin);
@@ -6984,7 +7123,6 @@ function settle(graph, f) {
 function appendSubgraphs(graph, definitions, ids = new Map()) {
     var _a;
     graph.assertEditable();
-    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, definitions.length);
     const pending = definitions.map(f => (0, subgraph_operations_1.withoutStoredUse)((0, model_1.copy)(f))), used = new Set((graph.document.subgraphs || []).map(f => f.id));
     const originalIds = new Set();
     for (const f of pending) {
@@ -7053,7 +7191,6 @@ function independentSubgraph(network, nodeId, next, at = (0, library_1.now)()) {
     // The copy of a Library copy is local (§3.10) and records where it came from (C6): read the copy as it stands, then drop the Library
     // ID. Library 副本的複本是本地的，記下出處。
     (0, library_1.requireCurrent)(graph.library, source);
-    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, 1);
     const newId = allocate(new Set(graph.document.subgraphs.map(f => f.id)), next);
     const f = (0, model_1.copy)(source);
     f.id = newId;
@@ -7130,7 +7267,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.newPortId = newPortId;
 exports.validPort = validPort;
 exports.portEntry = portEntry;
-exports.ensureSubgraphCapacity = ensureSubgraphCapacity;
 exports.validateSubgraphData = validateSubgraphData;
 exports.withoutStoredUse = withoutStoredUse;
 exports.insertSubgraph = insertSubgraph;
@@ -7184,13 +7320,6 @@ function authored(module, id, ui, params = {}) {
     const d = module.catalog.definition;
     return { id, nodeType: d.nodeType, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
 }
-function ensureSubgraphCapacity(graph, additional = 0) {
-    var _a;
-    if (!Number.isInteger(additional) || additional < 0)
-        throw Error('Invalid definition count');
-    if ((((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > config_1.CORE_CONFIG.subgraphDefinitions)
-        throw Object.assign(Error('At most ' + config_1.CORE_CONFIG.subgraphDefinitions + ' subgraphs are supported'), { code: 'subgraph.limit' });
-}
 function validateSubgraphData(f) {
     if (!validId(f.id))
         throw Error('Invalid Subgraph identity');
@@ -7229,7 +7358,6 @@ function validProvenance(list) {
 function validate(graph, f) {
     var _a;
     graph.assertEditable();
-    ensureSubgraphCapacity(graph, 1);
     if ((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id))
         throw Error('Invalid or duplicate Subgraph identity');
     validateSubgraphData(f);
@@ -7962,6 +8090,7 @@ exports.protocol = exports.CompilationError = void 0;
 exports.codegenKey = codegenKey;
 exports.createCompiler = createCompiler;
 const config_1 = require("./config");
+const capacity_1 = require("./capacity");
 const subgraph_compiler_1 = require("./subgraph_compiler");
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 const graph_1 = require("./graph");
@@ -8021,7 +8150,7 @@ function createFlatCompiler(registry, limits) {
             const { catalogSnapshot, ...document } = g;
             const model = new graph_1.GraphDocument(document, registry), network = model.networks.get('pixel');
             const data = model.document.stages.pixel;
-            if (data.nodes.length > limits.nodes || data.edges.length > limits.edges || JSON.stringify(g).length > limits.bytes)
+            if (data.nodes.length > limits.nodes || data.edges.length > limits.edges || (0, capacity_1.documentBytes)(g) > limits.bytes)
                 throw Error('Graph is too large');
             const nodes = new Map(), ports = Object.create(null);
             const ghosts = (0, ghosts_1.ghostsOf)(network, values_1.policy);

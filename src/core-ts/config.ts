@@ -31,7 +31,6 @@ export interface CoreConfig {
   readonly expandedEdges:number;
   /** Serialized graph size. */
   readonly documentBytes:number;
-  readonly subgraphDefinitions:number;
   /** Inputs, and separately outputs, of one subgraph. */
   readonly subgraphPortsPerSide:number;
 }
@@ -50,7 +49,8 @@ export const CORE_CONFIG:CoreConfig = Object.freeze({
   // time per edit (about 3.3 ms per MB, measured 2026-10-09; see next_family.py). See convention 5.
   // 圖文字的 UTF-8 位元組數。是宿主（我們在 TD 裡的程式）的上限，不是 TD 的；同樣沒有實測依據。
   documentBytes:512000,
-  subgraphDefinitions:64, // legacy-era choice
+  // No count of subgraph definitions (amendment 3 C9, design-interview Q77): the legacy 64 had no basis and only turned an extra copy
+  // into a refused paste; a graph's size is held by documentBytes. 不限子圖定義份數：舊的 64 沒有依據，只把多一份變成貼上被拒；圖的大小由 documentBytes 管。
   // Legacy-era choice (legacy sgrape_core.py:2104), no measured basis; checked when a subgraph is created, its
   // interface edited and an instance resolved (Refactor.61, Q47 supplement 8). 舊產品時代的數字、沒有實測依據；建立、改介面、解析實例時檢查。
   subgraphPortsPerSide:16,

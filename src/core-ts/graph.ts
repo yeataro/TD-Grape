@@ -12,7 +12,7 @@ export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
 import { LibraryLedger, requireLibrary } from './library';
 import { makeLocal, updateFromLibrary } from './library_operations';
-import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph, newSubgraphCycle } from './subgraph_operations';
+import { createSubgraph, subgraphFromSelection, instantiateSubgraph, collectSubgraphs, type SubgraphOptions, type SelectionSubgraphOptions, removeSubgraph, newSubgraphCycle } from './subgraph_operations';
 import { appendSubgraphs, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 import { addDeclaration, changeDeclaration, removeDeclaration, type DeclarationEntry, type DeclarationPatch } from './declarations';
 import type { Declaration } from './model';
@@ -379,7 +379,6 @@ export class GraphDocument {
   createSubgraph(options:SubgraphOptions):Subgraph {return this.subgraph(createSubgraph(this,options).id);}
   /** Remove a definition with no instances (subgraph_operations.ts). 刪掉沒有實例的定義。 */
   removeSubgraph(id:string):void {removeSubgraph(this,id);}
-  ensureSubgraphCapacity(additional=0):void {ensureSubgraphCapacity(this,additional);}
   appendSubgraphs(definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):Subgraph[] {
     return appendSubgraphs(this,definitions,ids).map(f=>this.subgraph(f.id));
   }

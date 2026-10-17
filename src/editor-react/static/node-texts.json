@@ -1,7 +1,6 @@
 {
   "booleanOperation.operator": "Operation",
   "compare.operator": "Comparison",
-  "subgraph.limit": "A Shader supports up to 64 subgraphs",
   "inputs.preset.absFrame": "Absolute Frame · process frame",
   "inputs.preset.absTime": "Absolute Time · process seconds",
   "inputs.preset.deltaTime": "Delta Time",

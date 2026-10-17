@@ -7,7 +7,7 @@
 import { copy, type Graph, type SubgraphData, type NetworkData, type Node } from './model';
 import type { Registry } from './node_module';
 import { GraphDocument } from './graph';
-import { standardForm, closureOrder, instancesOf, localize, now } from './library';
+import { standardForm, closureOrder, instancesOf, localize, now, libraryMatcher } from './library';
 import { ScopeReferences } from './scope_references';
 import { appendSubgraphs, type AllocateSubgraphId } from './subgraph_copies';
 import { makeLocal, updateFromLibrary } from './library_operations';
@@ -32,12 +32,23 @@ function redirect(registry: Registry, networks: NetworkData[], value: unknown, i
 /** `start` with every read-only definition (among `defs`) that uses one of them, however deep: a read-only subgraph may only use
  * read-only ones (A3), so they go local together (C5). start 加上 defs 中所有（不論多深）用到它們的唯讀定義：唯讀只能用唯讀，所以一起轉本地。 */
 function withReadOnlyAncestors(defs: readonly SubgraphData[], registry: Registry, start: Iterable<string>): Set<string> {
-  const set = new Set(start);
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const f of defs) if (!set.has(f.id) && f.libraryId !== undefined && instancesOf(f, registry).some(ref => set.has(ref))) { set.add(f.id); grew = true; }
-  }
+  const users = new Map<string, SubgraphData[]>();
+  for (const f of defs) if (f.libraryId !== undefined) for (const ref of instancesOf(f, registry)) (users.get(ref) ?? users.set(ref, []).get(ref)!).push(f);
+  const set = new Set(start), queue = [...set];
+  for (let id = queue.pop(); id !== undefined; id = queue.pop()) for (const f of users.get(id) ?? []) if (!set.has(f.id)) { set.add(f.id); queue.push(f.id); }
   return set;
+}
+
+/** Definitions in an order where every parent comes before its children (C5: users are made local first). 每個父都排在子前面。 */
+function parentsFirst(defs: readonly SubgraphData[], registry: Registry): SubgraphData[] {
+  const byId = new Map(defs.map(f => [f.id, f])), seen = new Set<string>(), order: SubgraphData[] = [];
+  const visit = (f: SubgraphData) => {
+    if (seen.has(f.id)) return; seen.add(f.id);
+    for (const ref of instancesOf(f, registry)) { const child = byId.get(ref); if (child) visit(child); }
+    order.push(f);
+  };
+  defs.forEach(visit);
+  return order.reverse();
 }
 
 /** How many instances point straight at each definition (amendment 1's direct count). 每份定義被幾個實例直接指到。 */
@@ -134,19 +145,14 @@ export function planLibraryEntry(target: Graph, source: Graph, needed: readonly 
   // Parents before children: an equal parent fixes its whole closure position by position (equal standard forms align), so its
   // children need no form of their own — a reused chain costs one closure, not one per level. 父在子前：相同的父逐位定下整個閉包
   // （標準形相同就對得齊），子不必再算——沿用一條鏈只算一次閉包，不是每層一次。
-  const order: string[] = [], seen = new Set<string>(), inside = new Set(ids);
-  const place = (id: string) => {
-    if (seen.has(id) || !inside.has(id)) return; seen.add(id);
-    for (const child of instancesOf(byId.get(id)!, registry)) place(child);
-    order.push(id);
-  };
-  ids.forEach(place); order.reverse();
-  for (const id of order) {
+  const match = libraryMatcher(batch, target, registry);
+  for (const f of parentsFirst(ids.map(id => byId.get(id)!), registry)) {
+    const id = f.id;
     if (reused.has(id)) continue;
-    const f = byId.get(id)!, mine = f.libraryId === undefined ? undefined : here.get(f.libraryId);
+    const mine = f.libraryId === undefined ? undefined : here.get(f.libraryId);
     if (!mine) { imported.push(id); continue; }
-    const form = standardForm(batch, registry, id);
-    if (form === null || form !== standardForm(target, registry, mine.id)) { conflicts.push(id); continue; }
+    // Compared once per pair and remembered (library.ts libraryMatcher), so a chain costs one walk. 每一對只比一次並記住，一條鏈只走一次。
+    if (!match.same(id, mine.id)) { conflicts.push(id); continue; }
     const from = closureOrder(batch, registry, id)!, to = closureOrder(target, registry, mine.id)!;
     from.forEach((g, i) => reused.set(g.id, to[i]!.id));
   }
@@ -218,27 +224,37 @@ export function repairLibraryCopies(document: Graph, registry: Registry, library
   const step1 = repairDuplicates(document, registry, { separate: choice.duplicates === 'separate', at,
     prefer: (f, form) => form !== null && shelf.has(f.libraryId!) && form === formOf(f.libraryId!) });
   const base = step1.document;
-  const differing = (base.subgraphs ?? []).filter(f => f.libraryId !== undefined && shelf.has(f.libraryId) &&
-    formOf(f.libraryId) !== null && standardForm(base, registry, f.id) !== formOf(f.libraryId)).map(f => f.id);
+  // Parents first, each pair compared once and remembered: a long chain, all the same or all different, costs one walk (R.120).
+  // A Library definition with an incomplete closure is not compared. 父在子前、每一對只比一次並記住：長鏈不論全同或全不同都只走一次。
+  // 閉包不完整的資源庫定義不比。
+  const match = library ? libraryMatcher(base, library, registry) : undefined;
+  const shelfById = new Map((library?.subgraphs ?? []).map(f => [f.id, f])), whole = new Map<string, boolean>();
+  const complete = (id: string): boolean => {
+    if (whole.has(id)) return whole.get(id)!;
+    whole.set(id, false);
+    const f = shelfById.get(id), ok = !!f && instancesOf(f, registry).every(complete);
+    whole.set(id, ok); return ok;
+  };
+  const differing = parentsFirst(base.subgraphs ?? [], registry).filter(f => {
+    const mine = f.libraryId === undefined ? undefined : shelf.get(f.libraryId);
+    return !!mine && complete(mine.id) && !match!.same(f.id, mine.id);
+  }).map(f => f.id);
   const result: OpenRepair = { document: base, merged: step1.merged, localized: [...step1.localized], differing, updated: [] };
   if (!differing.length) return result;
   const step = new GraphDocument(base, registry).change(m => {
     if (choice.versions === 'local') {
       // Every read-only user first, so each Make Local is in place and nothing forks (C5). 先轉所有唯讀使用者，每次轉本地都就地、不分叉。
       const going = withReadOnlyAncestors(m.document.subgraphs ?? [], registry, differing);
-      while (going.size) {
-        const free = [...going].find(id => !(m.document.subgraphs ?? []).some(d => going.has(d.id) && d.id !== id && d.libraryId !== undefined && instancesOf(d, registry).includes(id)));
-        if (free === undefined) throw Error('Subgraph reference cycle');
-        going.delete(free);
-        if (m.document.subgraphs!.find(d => d.id === free)!.libraryId === undefined) continue;
-        makeLocal(m, free, next, at); result.localized.push(free);
+      for (const f of parentsFirst((m.document.subgraphs ?? []).filter(d => going.has(d.id)), registry)) {
+        if (f.libraryId === undefined) continue;
+        makeLocal(m, f.id, next, at); result.localized.push(f.id);
       }
       return;
     }
     // Update all: the Library's closures of the differing copies come in as an entry that takes the incoming content (C4 'incoming').
     // 全部更新：不同的那幾份在資源庫裡的閉包，照「改用帶進來的」進圖。
-    const wanted = new Set<string>();
-    for (const id of differing) for (const f of closureOrder(library!, registry, shelf.get(m.document.subgraphs!.find(d => d.id === id)!.libraryId!)!.id) ?? []) wanted.add(f.id);
+    const wanted = new Set<string>(), want = (id: string) => { if (wanted.has(id)) return; wanted.add(id); for (const ref of instancesOf(shelfById.get(id)!, registry)) want(ref); };
+    for (const id of differing) want(shelf.get(m.document.subgraphs!.find(d => d.id === id)!.libraryId!)!.id);
     const plan = planLibraryEntry(m.document, library!, [...wanted], registry, { conflicts: 'incoming' }, at);
     applyLibraryEntry(m, plan, next);
     result.updated = [...plan.updates.keys()];

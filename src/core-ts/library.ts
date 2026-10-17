@@ -149,6 +149,66 @@ export function standardForm(document: Graph, registry: Registry, rootId: string
   }));
 }
 
+/** Whether Library copies of two documents have the same standard form, worked out once per pair and remembered, for documents that
+ * each hold at most one copy per Library ID (amendment 3 C2). Under C2 a closure is named by Library IDs, so two copies match when
+ * their own content matches with references written as Library IDs and every child pair matches: a long chain costs one walk, not one
+ * closure per level (Codex A3-4, R.120). That test is kept on the lenient side — scoped references are compared without the network
+ * they name — so it never says different where the standard forms are equal; `same` then confirms a match with the standard form once,
+ * and a confirmed parent vouches for its whole closure. 兩份文件的 Library 副本是否同標準形：每一對只算一次並記住，前提是各自每個
+ * Library ID 至多一份（C2）。這時閉包可以用 Library ID 指名，所以「自己的內容（參照寫成 Library ID）相同、每一對子也相同」就相同：長鏈走
+ * 一次，不是每層一個閉包。這個判斷刻意偏寬（scoped 參照不比它指的網路），所以標準形相同時它不會說不同；same 再用標準形確認一次，確認過的父
+ * 整個閉包都算數。 */
+export function libraryMatcher(source: Graph, target: Graph, registry: Registry) {
+  const ids = (g: Graph) => new Map((g.subgraphs ?? []).map(f => [f.id, f]));
+  const sides = [{ g: source, byId: ids(source), own: new Map<string, string | null>() }, { g: target, byId: ids(target), own: new Map<string, string | null>() }];
+  const mark = (parts: unknown[]) => '\u0000' + JSON.stringify(parts) + '\u0000';
+  const ownOf = (side: typeof sides[number], f: SubgraphData): string | null => {
+    if (side.own.has(f.id)) return side.own.get(f.id)!;
+    const { id: _id, stages: _stages, targets: _targets, provenance: _provenance, ...rest } = copy(f);
+    escapeStrings(rest);
+    let complete = true;
+    rest.graph.nodes = rest.graph.nodes.map((n: Node) => {
+      const module = registry.get(n.nodeType), ref = module?.referencedGraph?.(n);
+      if (ref === undefined || !module?.reference) return n;
+      const child = side.byId.get(ref);
+      if (child?.libraryId === undefined) { complete = false; return n; }
+      return { ...n, params: { ...n.params, ...module.reference(mark(['library', child.libraryId])) } };
+    });
+    ScopeReferences.walk(rest, () => mark(['scope']));
+    const own = complete ? canonical(rest) : null;
+    side.own.set(f.id, own); return own;
+  };
+  const known = new Map<string, boolean>(), vouched = new Map<string, string>();
+  const like = (s: SubgraphData, t: SubgraphData): boolean => {
+    const key = s.id + '\u0000' + t.id;
+    if (known.has(key)) return known.get(key)!;
+    known.set(key, false);
+    // Every child pair is settled even when this one already differs, so one walk leaves an answer for the whole closure.
+    // 這一對已經不同時，子的每一對照樣算完，走一次就留下整個閉包的答案。
+    const children = instancesOf(s, registry), theirs = instancesOf(t, registry);
+    let result = children.length === theirs.length;
+    children.forEach((c, i) => { const a = sides[0]!.byId.get(c), b = sides[1]!.byId.get(theirs[i] ?? ''); if (!a || !b || !like(a, b)) result = false; });
+    const own = ownOf(sides[0]!, s);
+    result &&= s.libraryId !== undefined && s.libraryId === t.libraryId && own !== null && own === ownOf(sides[1]!, t);
+    known.set(key, result); return result;
+  };
+  return {
+    /** Same standard form, exactly. The common case (equal) costs one standard form and vouches for the closure; a difference then
+     * walks the pairs once, so the levels below answer from memory. 標準形相同（精確）。常見的相同只算一次標準形並替閉包作保；不同時才把每一對
+     * 走一次，下面各層就從記憶回答。 */
+    same(sourceId: string, targetId: string): boolean {
+      if (vouched.get(sourceId) === targetId) return true;
+      const s = sides[0]!.byId.get(sourceId), t = sides[1]!.byId.get(targetId);
+      if (!s || !t || known.get(s.id + '\u0000' + t.id) === false) return false;
+      const form = standardForm(source, registry, sourceId);
+      if (form === null || form !== standardForm(target, registry, targetId)) { like(s, t); return false; }
+      const from = closureOrder(source, registry, sourceId)!, to = closureOrder(target, registry, targetId)!;
+      from.forEach((g, i) => vouched.set(g.id, to[i]!.id));
+      return true;
+    },
+  };
+}
+
 /** A definition's closure in the standard form's fixed walk (root first, then each dependency as first met); null when incomplete.
  * Two closures with equal standard forms line up position by position. 標準形固定走訪下的閉包（根在先，依序首次遇到的依賴）；不完整就是 null。
  * 標準形相同的兩個閉包可以逐位對齊。 */

@@ -1,6 +1,6 @@
 import { copy, type Node, type SubgraphData, type ObjectValue } from './model';
 import type { GraphDocument, Network } from './graph';
-import { ensureSubgraphCapacity, validateSubgraphData, withoutStoredUse } from './subgraph_operations';
+import { validateSubgraphData, withoutStoredUse } from './subgraph_operations';
 import { freeName } from './node_names';
 import { ScopeReferences } from './scope_references';
 import { tidyGroups } from './groups';
@@ -42,7 +42,7 @@ export function settle(graph:GraphDocument,f:SubgraphData):void {
 /** Receive authored definitions, not Library files. The adapter decides which
  * versions to reuse and supplies any ID mapping. All mutation stays here. */
 export function appendSubgraphs(graph:GraphDocument,definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):SubgraphData[] {
-  graph.assertEditable();ensureSubgraphCapacity(graph,definitions.length);
+  graph.assertEditable();
   const pending = definitions.map(f => withoutStoredUse(copy(f))),used = new Set((graph.document.subgraphs || []).map(f => f.id));
   const originalIds = new Set<string>();
   for (const f of pending) {
@@ -91,7 +91,6 @@ export function independentSubgraph(network:Network,nodeId:string,next:AllocateS
   // The copy of a Library copy is local (§3.10) and records where it came from (C6): read the copy as it stands, then drop the Library
   // ID. Library 副本的複本是本地的，記下出處。
   requireCurrent(graph.library,source);
-  ensureSubgraphCapacity(graph,1);
   const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
   const f=copy(source);f.id=newId;localize(f,at);f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
   remapScopes(f,new Map([[source.id,newId]]));

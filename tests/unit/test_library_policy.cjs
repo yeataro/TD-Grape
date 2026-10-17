@@ -130,3 +130,29 @@ test('R119-1 boundary at open: parents taken from the Library keep names, values
     assert.equal(JSON.stringify(target),before);assert.equal(JSON.stringify(library),libraryBefore);
   }
 });
+
+// ---- Long chains (R.120): pairs compared once and remembered give the same answers as the standard form. 長鏈：每一對只比一次並記住，答案和標準形一樣 ----
+const uuidAt=i=>`${(0x10000000+i).toString(16).slice(-8)}-0000-4000-8000-000000000000`;
+function chainOf(prefix,n,{leaf=3,topTitle}={}){
+  const defs=[{...leaf_(prefix+'0'),libraryId:uuidAt(0),title:'L0'}];defs[0].graph.nodes[1].inputValues={b:leaf};
+  for(let i=1;i<n;i++){const f=parent(prefix+i,prefix+(i-1),uuidAt(i));f.title=i===n-1&&topTitle?topTitle:'L'+i;defs.push(f);}
+  return defs;
+}
+function leaf_(id){return leaf(id,null);}
+test('a chain whose top differs: only the top differs; whose leaf differs: every level does — at open and on paste, as the standard form says',()=>{
+  const n=12;
+  for(const [change,expected] of [[{topTitle:'Renamed'},['t11']],[{leaf:5},Array.from({length:n},(_,i)=>'t'+i)]]){
+    const doc=graph(chainOf('t',n),['t'+(n-1)]),lib=graph(chainOf('lib',n,change));
+    const r=c.GrapeGraph.repairLibraryCopies(doc,registry,lib,()=>'new',{versions:'update'},at);
+    assert.deepEqual(plain(r.differing).sort(),expected.slice().sort());
+    for(const id of doc.subgraphs.map(f=>f.id)){
+      const L=def(doc,id).libraryId,mine=lib.subgraphs.find(f=>f.libraryId===L);
+      assert.equal(r.differing.includes(id),c.GrapeGraph.standardForm(doc,registry,id)!==c.GrapeGraph.standardForm(lib,registry,mine.id),id);
+    }
+    const source=graph(chainOf('s',n,change),['s'+(n-1)]),target=graph(chainOf('t',n),[]);
+    const plan=c.GrapeGraph.planLibraryEntry(target,plain(c.GrapeGraph.copyNodes(doc_(source),['call0'],'other')),source.subgraphs.map(f=>f.id),registry,{},at);
+    assert.deepEqual(plain(plan.conflicts).sort(),expected.map(id=>'s'+id.slice(1)).sort());
+    assert.equal(plan.reused.size,n-expected.length);
+  }
+});
+function doc_(g){return new GraphDocument(g,registry);}

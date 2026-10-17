@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.120 — 容量：拿掉 64 份上限、發布前量位元組、長鏈不再平方成長 — 2026-10-17
+
+依附錄三 C9（design-interview Q77 第 5 點）；人類 10-17：不需要新的設計決策，「開工」。範圍：workspace `work/refactor/r120-capacity/r120-scope-2026-10-17.md`。
+
+- **拿掉 64 份子圖定義上限**及所有依賴：`config.ts`、`capacity.ts`（量測換成 documentBytes）、`subgraph_compiler.ts` supports、`ensureSubgraphCapacity` 與三個呼叫點、`subgraph.limit` 文字、編輯器上限名稱（`limit.documentBytes`）、舊的 65 份測試。65 份定義照樣建立、複製、貼上、產碼（新測試）。
+- **發布前量 UTF-8 bytes**（Codex A3-3）：`capacity.ts` `documentBytes`＝宿主收到的文字（`savedBy` 留 128 bytes），和其他上限同一個關卡、只擋變大；修改後沒超過就不量修改前的圖。兩個產碼器的大小檢查也改用它（原本數字元）。Codex 的兩個反例（ASCII 520 KB、中文 540 KB 的貼上）現在都在發布前被擋。剛好 512,000 通過、多 1 byte 拒絕；已超過的圖照樣打開、可以縮小、不能變大（新測試）。
+- **深鏈產碼**（Codex A3-4）：每份走得到的定義單獨檢查時，裡面的實例只代表它的接口（接口型別的中繼），不再展開；產碼仍來自完整展開。900 層：10.7 s → 107 ms，展開次數 406,351 → 1,801（量過，Codex 探針 `work/refactor/amendment3-codex-review/capacity-probe.cjs`）。巢狀定義裡的產碼錯誤，現在回報在出錯的那份定義上（以前可能回報在外層定義的路徑下）。
+- **長鏈的標準形**（R.119 列給本輪）：`library.ts` `libraryMatcher`：C2 下先用一次完整標準形，相同就替整個閉包作保；不同才把每一對（自己這層的內容、參照寫成 Library ID、每一對子）走一次並記住。進圖與開圖版本掃描都用它；開圖轉本地的順序、唯讀使用者、要帶進來的閉包改成一次算好。量過（中位數，`work/refactor/r120-capacity/perf-chains.cjs`）：31 層進圖整條衝突 40.9 → 9.6 ms、開圖全部相同 34.9 → 2.3 ms、開圖全部不同更新 77.3 → 14.3 ms、進圖全部沿用 6.7 → 7.2 ms；200 層 14～95 ms。
+- 證據：checkpoint `checkpoint/pre-R120`；core 248／248、editor 179／179（1 略過）、check 全過；TD 五張圖產碼與基準相同；改過的檔案無控制字元。沒有 Library 副本的圖 `change()`（量過，兩次交錯）：152／752／3002 節點 1.27／5.79／23.7 → 1.31／6.24／25.6 ms，多出的就是位元組量測（單獨量：3002 節點序列化 0.56＋計數 0.33 ms）。
+- **限制**：開圖「全部更新／全部轉本地」在幾百層的鏈上仍高於線性（600 層約 0.36～0.48 s：每次轉本地、每次更新各掃一次全部定義）；512 KB 上限下約 500 層就到頂，先記下不改。
+
 ## Refactor.119.2 — Library 版本政策的邊界測試 — 2026-10-17
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor119.1修正的核對.md`（R119-1／2 結案，建議 R.120 動手前先補的測試）。人類 10-17：「四類算119.2」。產品程式不變。

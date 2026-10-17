@@ -6,12 +6,28 @@ import { CORE_CONFIG, type CoreConfig } from './config';
  * GraphDocument checks this once, at the end of every change: an edit that makes the graph
  * exceed a limit, or exceed it further, is refused as a whole. Opening never refuses: a graph
  * already over a limit stays visible and editable, and only growth is blocked (the user's work
- * is kept, it just cannot generate code). The document's byte size is the host's limit and is
- * checked where the document is serialized for delivery.
+ * is kept, it just cannot generate code). The document's byte size is checked here too, on the text that is sent, before anything is
+ * published, recorded or sent (amendment 3 C9, Codex A3-3: the host refused it only after the edit was in).
  * 圖的大小對照核心設定。GraphDocument 只在每次修改結束時檢查一次：讓圖超過上限、或超得更多的修改整筆拒絕。
- * 開圖不擋：已超過的圖照樣能看能改，只擋「變大」；作品保留、只是暫時無法產碼。文件位元組屬宿主，於送出序列化時檢查。
+ * 開圖不擋：已超過的圖照樣能看能改，只擋「變大」；作品保留、只是暫時無法產碼。文件位元組也在這裡、以送出的文字檢查，在發布、記錄、
+ * 送出之前（原本要到宿主才擋，修改已經進去了）。
  */
-export type CapacityKey = 'nodesPerNetwork' | 'edgesPerNetwork' | 'expandedNodes' | 'subgraphDefinitions';
+export type CapacityKey = 'nodesPerNetwork' | 'edgesPerNetwork' | 'expandedNodes' | 'documentBytes';
+
+/** Room kept for `savedBy`, which the editor writes when it sends the graph (host_sync.ts); the core measures without it.
+ * 留給 savedBy 的位置（編輯器送出時才寫上）；核心量的時候不含它。 */
+const SAVED_BY_ROOM = 128;
+/** UTF-8 bytes of a text, counted without encoding it. 文字的 UTF-8 位元組數，不必真的編碼。 */
+export function utf8Bytes(text:string):number {
+  let n=0;
+  for(let i=0;i<text.length;i++){const u=text.charCodeAt(i);n+=u<0x80?1:u<0x800?2:u>=0xd800&&u<0xdc00?(i++,4):3;}
+  return n;
+}
+/** The bytes the host will receive for this graph (its text as sent, `savedBy` included). 宿主會收到的位元組數（送出的文字，含 savedBy）。 */
+export function documentBytes(g:Graph):number {
+  const {savedBy:_,...rest}=g;
+  return utf8Bytes(JSON.stringify(rest))+SAVED_BY_ROOM;
+}
 export type Measure = { key:CapacityKey; network?:string; value:number; limit:number };
 
 function networks(g:Graph):[string,NetworkData][] {
@@ -35,7 +51,7 @@ export function measure(g:Graph,registry:Registry,config:CoreConfig=CORE_CONFIG)
     }
     visiting.delete(key);expanded.set(key,total);return total;
   };
-  const result:Measure[]=[{key:'subgraphDefinitions',value:definitions.size,limit:config.subgraphDefinitions}];
+  const result:Measure[]=[{key:'documentBytes',value:documentBytes(g),limit:config.documentBytes}];
   for(const [id,data] of networks(g)){
     result.push({key:'nodesPerNetwork',network:id,value:data.nodes.length,limit:config.nodesPerNetwork});
     result.push({key:'edgesPerNetwork',network:id,value:data.edges.length,limit:config.edgesPerNetwork});
@@ -60,7 +76,11 @@ export class CapacityError extends Error {
 /** Refuses growth beyond a limit; shrinking an over-limit graph is always allowed. */
 export function requireCapacity(before:Graph,after:Graph,registry:Registry,config:CoreConfig=CORE_CONFIG):void {
   const id=(m:Measure)=>m.key+'|'+(m.network??'');
+  // The graph before is measured only when the one after is over a limit, so an ordinary edit serializes once. 只有修改後超過上限
+  // 才量修改前的圖，一般的修改只序列化一次。
+  const over=measure(after,registry,config).filter(m=>m.value>m.limit);
+  if(!over.length)return;
   const previous=new Map(measure(before,registry,config).map(m=>[id(m),m.value]));
-  const grown=measure(after,registry,config).filter(m=>m.value>m.limit&&m.value>(previous.get(id(m))??0));
+  const grown=over.filter(m=>m.value>(previous.get(id(m))??0));
   if(grown.length)throw new CapacityError(grown);
 }

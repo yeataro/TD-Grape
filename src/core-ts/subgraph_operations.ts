@@ -51,11 +51,6 @@ function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue=
   const d = module.catalog.definition;
   return {id,nodeType:d.nodeType!,params:{...copy(d.defaults),...params},ui};
 }
-export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
-  if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');
-  if ((graph.document.subgraphs?.length || 0) + additional > CORE_CONFIG.subgraphDefinitions)
-    throw Object.assign(Error('At most '+CORE_CONFIG.subgraphDefinitions+' subgraphs are supported'),{code:'subgraph.limit'});
-}
 export function validateSubgraphData(f:SubgraphData):void {
   if (!validId(f.id)) throw Error('Invalid Subgraph identity');
   if (!f.title.trim() || f.title.length > 80 || /[\x00-\x1f\x7f]/.test(f.title))
@@ -85,7 +80,7 @@ function validProvenance(list:unknown):boolean {
     p.kind === 'library' && validLibraryId(p.libraryId) && text(p.title,80) && text(p.at,40));
 }
 function validate(graph:GraphDocument,f:SubgraphData):void {
-  graph.assertEditable();ensureSubgraphCapacity(graph,1);
+  graph.assertEditable();
   if (graph.document.subgraphs?.some(d => d.id === f.id))
     throw Error('Invalid or duplicate Subgraph identity');
   validateSubgraphData(f);

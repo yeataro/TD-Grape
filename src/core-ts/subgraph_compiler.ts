@@ -2,6 +2,7 @@
  * Node modules own interfaces; no imported library or DOM state is consulted. */
 import { copy, formatProblem, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
 import { CORE_CONFIG, type CoreConfig } from './config';
+import { documentBytes } from './capacity';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { validInterface, requireSubgraph } from './subgraph_interface';
 import { subgraphStageTable, subgraphGroups } from './subgraph_stages';
@@ -44,7 +45,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
   const moduleOf = (node:Node) => registry.get(node.nodeType);
   function supports(g:Graph):boolean {
     if (formatProblem(g) || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
-        g.structDefinitions?.length || !Array.isArray(g.subgraphs) || g.subgraphs.length>config.subgraphDefinitions) return false;
+        g.structDefinitions?.length || !Array.isArray(g.subgraphs)) return false;
     // Declarations follow the same rule as the flat compiler (top_compiler.ts): a known kind must carry a type it supports,
     // an unknown kind is kept and never read (Q44). Texture inputs pass through subgraph interfaces as opaque ports (A8 §5 item 8).
     // 宣告規則同平面編譯器：認得的 kind 型別要合、不認得的保留不讀；貼圖輸入以 opaque 接口穿過子圖。
@@ -115,7 +116,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
 
   function compile(g:Graph,identifiers?:{reservedNames:readonly string[]}):Compiled {
     if (!supports(g)) throw Error('Graph is outside the selected frontend compiler capability');
-    if (JSON.stringify(g).length>config.documentBytes) throw Error('Graph is too large');
+    if (documentBytes(g)>config.documentBytes) throw Error('Graph is too large');
     const definitions=new Map<string,SubgraphData>();
     for (const f of g.subgraphs!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
@@ -190,6 +191,19 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               const fn=definitions.get(ref);if(!fn)throw Error('Missing Subgraph: '+ref);
               const mapped:Endpoints={inputs:{},outputs:{}},inside:Endpoints={inputs:{},outputs:{}};
               for(const key of Object.keys(node.inputValues||{}))if(!ports.inputs[key])throw Error('Invalid Subgraph input values');
+              if(probe){
+                // Checking one definition on its own: an instance inside stands for its interface only — relays of the port types, outputs
+                // at their defaults — since that definition is checked on its own too. Expanding it here would expand every chain once per
+                // level (A3-4: 900 levels took 10 s). The code itself comes from the full expansion below, unchanged.
+                // 單獨檢查一份定義時，裡面的實例只代表它的接口（接口型別的中繼，輸出用預設值）——那份定義自己也會單獨檢查。在這裡展開會讓
+                // 一條鏈每層展開一次（900 層 10 秒）。產碼仍來自下面的完整展開，不變。
+                for(const direction of ['inputs','outputs'] as const)for(const p of fn[direction]){
+                  const id=allocate(),value=direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default;
+                  add({id,nodeType:relay.catalog.definition.nodeType!,params:{type:p.type},...(value===undefined?{}:{inputValues:{value:copy(value)}})},origin);
+                  mapped[direction][p.id]=[id,direction==='inputs'?'value':'out'];
+                }
+                maps.set(node.id,mapped);continue;
+              }
               for(const direction of ['inputs','outputs'] as const)for(const p of fn[direction]){
                 const id=allocate(),value=direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default;
                 add({id,nodeType:relay.catalog.definition.nodeType!,params:{type:p.type},

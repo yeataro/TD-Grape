@@ -84,12 +84,11 @@ test('moving nodes into a child cannot revive their old parent handles or reuse 
  });
 });
 
-test('capacity, invalid selections and missing type descriptions fail without publishing partial definitions',()=>{
+test('invalid selections and missing type descriptions fail without publishing partial definitions',()=>{
  const g=empty();g.stages.pixel.nodes=[node('a','float',{value:1}),node('out','pixel_out')];
  const model=new GraphDocument(g,registry),before=model.snapshot();
  assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['out']),{id:'bad',instanceId:'instance',title:'Bad',stage:'pixel'})),/cannot be made into a subgraph/);
  assert.throws(()=>model.change(m=>m.networks.get('pixel').subgraphFromSelection(new Set(['missing']),{id:'bad',instanceId:'instance',title:'Bad',stage:'pixel'})),/selection/);
- assert.throws(()=>model.change(m=>{for(let i=0;i<65;i++)m.createSubgraph({id:'f'+i,title:'F',stage:'pixel'});}),/64/);
  assert.deepEqual(model.snapshot(),before);
 });
 

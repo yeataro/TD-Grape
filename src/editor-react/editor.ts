@@ -149,7 +149,7 @@ function unwire(net: Network, node: string, port: string) {
 // 核心以資料回報上限；用語由這一層決定。
 const limitName: Record<Measure['key'], Message> = {
   nodesPerNetwork: tr('limit.nodesPerNetwork', 'nodes per network'), edgesPerNetwork: tr('limit.edgesPerNetwork', 'wires per network'),
-  expandedNodes: tr('limit.expandedNodes', 'nodes after subgraph expansion'), subgraphDefinitions: tr('limit.subgraphDefinitions', 'subgraphs') };
+  expandedNodes: tr('limit.expandedNodes', 'nodes after subgraph expansion'), documentBytes: tr('limit.documentBytes', 'bytes of graph text') };
 const limitText = (measures: readonly Measure[]) => measures.map(m =>
   tr('limit.measure', '{name} {value}/{limit}', { name: limitName[m.key], value: m.value, limit: m.limit }));
 // Identified by name and data, not instanceof: the core may come from another script realm.

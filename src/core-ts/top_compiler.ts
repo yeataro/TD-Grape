@@ -1,4 +1,5 @@
 import {CORE_CONFIG,type CoreConfig} from './config';
+import {documentBytes} from './capacity';
 import { createSubgraphCompiler } from './subgraph_compiler';
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 import {GraphDocument,GraphError,type Port,type Edge} from './graph';
@@ -46,7 +47,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     // Catalog provenance is checked by the delivery adapter, not graph traversal.
     const {catalogSnapshot,...document}=g as Graph&{catalogSnapshot?:unknown};
     const model=new GraphDocument(document,registry),network=model.networks.get('pixel')!;
-    const data=model.document.stages.pixel!;if(data.nodes.length>limits.nodes||data.edges.length>limits.edges||JSON.stringify(g).length>limits.bytes)throw Error('Graph is too large');
+    const data=model.document.stages.pixel!;if(data.nodes.length>limits.nodes||data.edges.length>limits.edges||documentBytes(g)>limits.bytes)throw Error('Graph is too large');
     const nodes=new Map<string,Node>(),ports:Record<string,{in:Record<string,string>;out:Record<string,string>}>=Object.create(null);
     const ghosts=ghostsOf(network,policy);
     const declarations=new Map<string,Declaration>(),names=new Set<string>();

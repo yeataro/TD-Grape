@@ -35,7 +35,6 @@ test('invalid bundles leave the active document unchanged even when a caller cat
   const recursive=source();recursive.graph.nodes.push(instance('recursive',recursive.id));
   assert.throws(()=>m.appendSubgraphs([recursive]),/cycle/);assert.deepEqual(m.snapshot(),before);
   assert.throws(()=>m.appendSubgraphs([source(),source()]),/Duplicate/);assert.deepEqual(m.snapshot(),before);
-  assert.throws(()=>m.appendSubgraphs(Array.from({length:65},(_,i)=>source('f'+i))),/64/);assert.deepEqual(m.snapshot(),before);
  });
 });
 
