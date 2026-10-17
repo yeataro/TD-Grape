@@ -1,0 +1,136 @@
+{
+  "format": "grape-subgraph",
+  "version": 1,
+  "subgraph": {
+    "libraryId": "0a01571d-cc58-448f-ab73-c963eb055a5e",
+    "title": "Tint",
+    "category": "color",
+    "description": "The simplest Library subgraph: multiplies the input color by another color. Grape flavour by default. The first Library subgraph, made to verify development.",
+    "texts": {
+      "zh-Hant": {
+        "description": "簡單至極的資源庫子圖：把輸入的顏色乘上另一個顏色，預設是葡萄口味。開發驗證用的第一個資源庫子圖。"
+      }
+    },
+    "inputs": [
+      {
+        "id": "pf514808cac17b8b102e564b7",
+        "label": "Color",
+        "type": "vec4",
+        "default": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "id": "p7302ed86426b96348d315378",
+        "label": "Tint",
+        "type": "vec4",
+        "default": [
+          0.7,
+          0.3,
+          1,
+          1
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "id": "pefedba82a54dfc90bf4963eb",
+        "label": "Color",
+        "type": "vec4",
+        "default": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "input",
+          "nodeType": "sgrape.builtin.subgraph_input",
+          "params": {},
+          "ui": {
+            "x": 48,
+            "y": 144
+          },
+          "name": "Input"
+        },
+        {
+          "id": "output",
+          "nodeType": "sgrape.builtin.subgraph_output",
+          "params": {},
+          "ui": {
+            "x": 624,
+            "y": 144
+          },
+          "name": "Output"
+        },
+        {
+          "id": "multiply",
+          "nodeType": "sgrape.builtin.multiply",
+          "params": {
+            "type": "vec4",
+            "operandTypes": {
+              "a": "vec4",
+              "b": "vec4"
+            }
+          },
+          "name": "Apply_Tint",
+          "ui": {
+            "x": 336,
+            "y": 144
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1d6323a40798d12f51ae30969c740794",
+          "from": [
+            "input",
+            "pf514808cac17b8b102e564b7"
+          ],
+          "to": [
+            "multiply",
+            "a"
+          ]
+        },
+        {
+          "id": "e7213217f5677f970afe1a717f6fe321e",
+          "from": [
+            "input",
+            "p7302ed86426b96348d315378"
+          ],
+          "to": [
+            "multiply",
+            "b"
+          ]
+        },
+        {
+          "id": "e0132acb0476b6761502ca82cd5a06d85",
+          "from": [
+            "multiply",
+            "out"
+          ],
+          "to": [
+            "output",
+            "pefedba82a54dfc90bf4963eb"
+          ]
+        }
+      ]
+    },
+    "stages": [
+      "vertex",
+      "pixel"
+    ],
+    "targets": [
+      "top",
+      "mat"
+    ]
+  },
+  "dependencies": []
+}

@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.121 — 資源庫 D-2：內建資源庫 — 2026-10-18
+
+範圍：workspace `work/refactor/d2-builtin-library-scope-2026-10-18.md`（人類 10-18 的原話與選擇都在裡面）。人類：「看起來是純應用驗證活」；Tint 的 Library ID「按使用者合法流程做」；選 (a)——這一輪沒有編輯器使用者，編輯器仍擋 Library 資料到 D-3（「a吧但記好。我不想被壓縮後的你誤會這是在搞啥」）。
+
+- **檔案格式**（欄位照 `work/refactor/library-fields-draft-2026-10-15.md` 頂段結論）：`library_files.ts`——`readLibraryFile`（驗格式與版本、Library ID、巢狀參照必須在檔內、沒有沒人用的依賴、沒有循環、每份照圖的定義驗、存著的 stages／targets 要和內容算出的一樣）、`saveLibraryFile`（定義連同閉包存成檔；已有 Library ID 保留、沒有的由呼叫端的產生器配；巢狀參照寫 Library ID、檔裡沒有圖內 ID；使用者給的說明類欄位放在子圖本身；scoped 參照暫時拒絕，因為 Library ID 不是 scope 名稱）、`bringInLibraryFile`（照 C4 進圖規則帶進圖）、`libraryIdFrom`（16 個亂數位元組 → 第 4 版 UUID，亂數由呼叫端給）。`SubgraphData` 多 `category`、`credits`、`texts`（格式驗證；算內容）。
+- **建置**：`tools/build_core.cjs` 讀 `src/library/subgraphs/` 每個檔 → 帶進空圖（C4）→ 試產碼 → 在那張圖上算拉線接線列（`wire_drop.ts` `wireDropRow`，內建列也改用它）→ 打進 `editor-bootstrap.json` 的 `library`。任何一份失敗建置就停（放一份 stages 不對的檔驗過）。
+- **Tint**：`tools/make_tint.cjs` 用核心操作做出（建立子圖、改接口、放乘法節點 Apply_Tint、接線），再用 `saveLibraryFile` 寫出，Library ID 由 `crypto.getRandomValues` 配給（`0a01571d-cc58-448f-ab73-c963eb055a5e`）。內容照舊產品 `function_library()`：Color × Tint，Tint 預設 [0.7, 0.3, 1, 1]，分類 color；說明照人類的話寫中英兩種。腳本不覆蓋已有的檔（接口與接線 ID 每次都新，重跑等於新版本），`--replace` 才重做並沿用同一個 Library ID。
+- **拿掉舊格式** `src/library/builtin_subgraphs.json`（沒有任何程式在讀）、`source_files.json` 那一行，GLOSSARY、LEGACY-PYTHON、generated README 的說明改寫。
+- 證據：checkpoint `checkpoint/pre-R121`；新測試 `tests/unit/test_library_files.cjs`（8 項：Tint 讀檔、讀存往返相同、照使用者拉入並產碼與第二次沿用、巢狀存讀、壞檔拒絕 9 種、scoped 參照拒絕、UUID、建置打包）；core 258／258、editor 179／179（1 略過）、check 全過；TD 五張圖產碼與基準相同；一次編輯成本不變（2016 節點：`change()` 10.5 → 10.6 ms）。
+- **這一輪的真實使用者**（人類選 (a) 的條件）：建置驗證、C4 拉入路徑（建置的試產碼走它）、`saveLibraryFile`（Tint 產生腳本用它）。編輯器在 D-3 才讀 `library`。
+
 ## Refactor.120.1 — Codex 審查 R.120 的修正 — 2026-10-18
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor120的審查.md`（Standards 0；R120-1／2 P2、R120-3 P3）。評閱：同資料夾 `Opus對Refactor120審查的評閱.md`，全部接受。

@@ -9,4 +9,4 @@ Do not edit by hand. `build:core` writes them from `src/core-ts/` and `src/libra
 | `grape_core.js` | The core bundle (`GrapeGraph`, `GrapeTopCompiler`). The Manager checks its hash against `editor-bootstrap.json`. |
 | `editor-bootstrap.json` | Node definitions, type contract, default graph, `catalogHash`. |
 
-`editor-library.json` (a copy of `src/library/builtin_subgraphs.json`) is no longer produced: nothing read it after cleanup 2 (2026-10-08, design-interview Q48). The source data stays for the subgraph round.
+`editor-library.json` is no longer produced (cleanup 2, 2026-10-08, design-interview Q48). The built-in Library now comes from `src/library/subgraphs/` and is written into `editor-bootstrap.json` under `library` (Refactor.121).

@@ -22,7 +22,6 @@
   "source_catalog.json": "src/library/source_catalog.json",
   "material_presets.json": "src/library/material_presets.json",
   "grape_core.js": "src/generated/grape_core.js",
-  "builtin_subgraphs.json": "src/library/builtin_subgraphs.json",
   "grape_op_controls.py": "src/td/runtime/grape_op_controls.py",
   "grape_op_identity.py": "src/td/runtime/grape_op_identity.py"
 }

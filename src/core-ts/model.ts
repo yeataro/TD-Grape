@@ -25,7 +25,17 @@ export interface InterfacePort {id:string;label?:string;type:string;default?:Val
  * kind. `library` is written when a definition loses its Library ID and stays; never compared, never makes a definition read-only
  * or updatable. 本地定義的出處，只給人看：一個清單，每種最多一筆。library 在拿掉 Library ID 時記、一直保留；不比對、不代表唯讀或會更新。 */
 export interface Provenance {kind:'library';libraryId:string;title:string;at:string}
+/** Who made a definition (library fields, human 2026-10-15); every field may be left out. 誰做的；每欄可省。 */
+export interface Credits {author?:string;organization?:string;email?:string;url?:string}
+/** Translations a definition carries itself, per language: only its description and comment; the title is never translated
+ * (human 2026-10-16). 定義自己帶的翻譯：只有說明與 comment；title 不翻。 */
+export type DefinitionTexts = Record<string,{description?:string;comment?:string}>;
+/** The graph targets a definition can be checked against. 定義能對照的圖 target。 */
+export const GRAPH_TARGETS: readonly string[] = ['top','mat'];
 export interface SubgraphData {id:string;title:string;libraryId?:string;provenance?:Provenance[];color?:string;descriptionKey?:string;
+  /** Library fields (D-2, `work/refactor/library-fields-draft-2026-10-15.md`): the add menu's category, the credits and the translations;
+   * content like any other field. 資源庫欄位：新增清單的分類、作者資訊、翻譯；和其他欄位一樣算內容。 */
+  category?:string;credits?:Credits;texts?:DefinitionTexts;
   /** Only on a saved definition (library, export, clipboard), recomputed on load; never in a graph, where they are
    * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
   stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;

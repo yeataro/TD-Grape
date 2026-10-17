@@ -61,6 +61,7 @@ export function validateSubgraphData(f:SubgraphData):void {
   // Library 副本帶著 Library ID（UUID）；它能怎麼變由帳本管。
   if ('libraryId' in f && !validLibraryId(f.libraryId)) throw Error('Invalid Library ID');
   if ('provenance' in f && !validProvenance(f.provenance)) throw Error('Invalid Subgraph provenance');
+  if (!validLibraryFields(f)) throw Error('Invalid Subgraph category, credits or texts');
   if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32)) throw Error('Invalid Subgraph color');
   for (const ports of [f.inputs,f.outputs]) {
     if (!Array.isArray(ports) || ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length || !ports.every(validPort))
@@ -71,6 +72,17 @@ export function validateSubgraphData(f:SubgraphData):void {
       [...ids].some(id => !validId(id))) throw Error('Invalid Subgraph network');
   for (const e of f.graph.edges) if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
     throw Error('Invalid Subgraph edge endpoint');
+}
+/** The library fields (D-2): a category code, credits as short text, translations of description and comment per language code.
+ * 資源庫欄位：分類代號、作者資訊（短文字）、各語言的說明與 comment 翻譯。 */
+function validLibraryFields(f:SubgraphData):boolean {
+  const text = (v:unknown,max:number) => typeof v === 'string' && v.length <= max;
+  const plain = (v:unknown):v is Record<string,unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  if ('category' in f && !(typeof f.category === 'string' && /^[a-z][a-z0-9]{0,31}$/.test(f.category))) return false;
+  if ('credits' in f && !(plain(f.credits) && Object.entries(f.credits).every(([k,v]) => ['author','organization','email','url'].includes(k) && text(v,200) && !/[\x00-\x1f\x7f]/.test(v as string)))) return false;
+  if ('texts' in f && !(plain(f.texts) && Object.entries(f.texts).every(([lang,t]) => /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(lang) &&
+      plain(t) && Object.entries(t).every(([k,v]) => ['description','comment'].includes(k) && text(v,4000))))) return false;
+  return true;
 }
 /** The provenance list (amendment 3 C6): at most one entry of each kind; only `library` exists so far. 出處清單：每種最多一筆；目前只有 library。 */
 function validProvenance(list:unknown):boolean {

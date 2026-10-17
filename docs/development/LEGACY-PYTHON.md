@@ -81,6 +81,6 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 
 2026-10-08 已刪（Q48 清理第 5 條）：舊 Python 核心 `src/core/` 全部（11 個 `.py` 與 `frontend_capabilities.json`）、`src/library/node_catalog.json`、`src/generated/editor-library.json`、`src/td/embedded_sources.json`；只測舊核心的 Python 單元測試約 80 檔與其 fixture、舊 TD 測試約 70 檔、舊開發工具 9 支。`test:core` 的新舊產碼對照改讀凍結快照 `tests/fixtures/top_compiler_legacy.json`（暫留的鷹架，出口：308 個節點補完）；4 個 integration 測試的對照改由參數指定 legacy 工作樹。
 
-**留下的資料**（之後那一輪會用到）：`src/library/builtin_subgraphs.json`（內建子圖庫，子圖那一輪）、`material_presets.json`（MAT 預設，MAT 那一輪）、`source_catalog.json`（TS 核心在用）。
+**留下的資料**（之後那一輪會用到）：~~`src/library/builtin_subgraphs.json`~~（內建子圖庫；Refactor.121 換成 `src/library/subgraphs/` 的新格式後拿掉）、`material_presets.json`（MAT 預設，MAT 那一輪）、`source_catalog.json`（TS 核心在用）。
 
 **現在 repo 裡的 Python 只剩**：`src/td/runtime/` 的新 TD 宿主程式、`src/remote_panel/`、開發工具（`tools/dev/` 的 runner／bootstrap／paths 等、`tools/jobs/install_native_manager.py`、`tools/td/grape_editor_dev.py`）及其測試；`family_callbacks.py`（TDFam 回呼）。舊範本專用的 `shader_controls.py` 已於 Refactor.32 刪除。

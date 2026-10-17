@@ -35,16 +35,19 @@ export function wireDropTable(registry:Registry,types:readonly string[],target='
     for(const entry of module.entries?.()??[{key:'',label:definition.label,params:{}}]){
       const base:Node={id:NEW,nodeType:definition.nodeType!,params:{...copy(definition.defaults),...copy(entry.params)}};
       if(!module.supports(base,context))continue;
-      const configurations=configurationsOf(module,base,types,context);
-      const row={output:{} as Record<string,WireFit>,input:{} as Record<string,WireFit>};
-      for(const type of types)for(const side of ['output','input'] as const){
-        const fit=best(module,configurations,type,side,context);
-        if(fit)row[side][type]=fit;
-      }
-      table[definition.nodeType+':'+entry.key]=row;
+      table[definition.nodeType+':'+entry.key]=wireDropRow(module,base,types,context);
     }
   }
   return table;
+}
+
+/** One row for a node only a document knows — a Library subgraph's instance, worked out on the graph it was brought into (D-2): the
+ * same rules as the built-in rows, with that document's context. 只有作品知道的節點的一列——資源庫子圖的實例，在它被帶進的那張圖上算：
+ * 和內建列同一套規則，用那份作品的 context。 */
+export function wireDropRow(module:NodeModule,node:Node,types:readonly string[],context:NodeContext):{output:Record<string,WireFit>;input:Record<string,WireFit>} {
+  const configurations=configurationsOf(module,node,types,context),row={output:{} as Record<string,WireFit>,input:{} as Record<string,WireFit>};
+  for(const type of types)for(const side of ['output','input'] as const){const fit=best(module,configurations,type,side,context);if(fit)row[side][type]=fit;}
+  return row;
 }
 
 type Option={node:Node;configure?:Configuration;order:number};

@@ -59,11 +59,14 @@ import {validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesI
 import {copyNodes,readClip,pasteClip,clipCorner} from './clipboard';
 import {standardForm,closureOrder,validLibraryId} from './library';
 import {planLibraryEntry,repairLibraryCopies,repairDuplicates} from './library_policy';
+import {readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile} from './library_files';
+import {wireDropRow} from './wire_drop';
+import {contextFor} from './node_module';
 import * as groups from './groups';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates,readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,wireDropRow,contextFor};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -103,6 +106,27 @@ const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[{i
 // Compiled with the editor's identifier rules, as the editor compiles it (names are checked against them).
 // 用編輯器的識別字規則編譯，和編輯器一樣（名稱要照它檢查）。
 const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph,context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top').glslCode)};
+// The built-in Library (D-2, Refactor.121; bc-plan §6): every file in src/library/subgraphs/ is read and checked by the core, brought into
+// an empty graph the way a person pulls it in (amendment 3 C4), compiled there, and its wire-drop row is worked out on that graph. Any
+// failure stops the build. The editor reads these only from D-3; until then the build and the tests are their readers (human 10-18 (a)).
+// 內建資源庫：src/library/subgraphs/ 的每個檔由核心讀檔驗證，照使用者拉入的方式（C4）帶進空圖、在那裡產碼，並在那張圖上算拉線接線表的一列。
+// 任何一個失敗，建置就停。編輯器要到 D-3 才讀；在那之前讀它們的是建置與測試（人類 10-18 選 (a)）。
+const libraryDir=path.join(root,'src/library/subgraphs');
+const builtInLibrary={files:[],wireDrop:{}};
+for(const name of (fs.existsSync(libraryDir)?fs.readdirSync(libraryDir).filter(f=>f.endsWith('.json')).sort():[])){
+  try{
+    const G=context.GrapeGraph,file=JSON.parse(fs.readFileSync(path.join(libraryDir,name),'utf8')),read=G.readLibraryFile(file,G.registry);
+    let made=0,id;
+    const after=new G.GraphDocument(JSON.parse(JSON.stringify(defaultGraph)),G.registry).change(m=>{
+      id=G.bringInLibraryFile(m,read,()=>'library'+ ++made,{},'2000-01-01T00:00:00.000Z');
+      m.networks.get('pixel').instantiateSubgraph(id,'probe',{x:0,y:0});
+    }).after;
+    context.GrapeTopCompiler.compile(after,G.createEditorContract(G.registry,'top').glslCode);
+    const probe=after.stages.pixel.nodes.find(n=>n.id==='probe');
+    builtInLibrary.wireDrop['library:'+file.subgraph.libraryId]=G.wireDropRow(G.registry.get(probe.nodeType),probe,[...G.values.types,...G.values.opaque],G.contextFor(after));
+    builtInLibrary.files.push(file);
+  }catch(error){console.error('Built-in Library file '+name+': '+(error&&error.message||error));process.exit(1);}
+}
 // Native source labels are cold host metadata, independent of Python graph compilation.
 const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
 const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));
@@ -117,7 +141,9 @@ const outputs=new Map([
     typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract},
     // TD reads the preset expressions from here (Q61): one copy at run time, in the editor bundle.
     // TD 從這裡讀預設 Uniform 的 expression：執行時只有網頁資產裡這一份。
-    uniformPresets:presetTable},null,2)+'\n']
+    uniformPresets:presetTable,
+    // The built-in Library: its files as written, and a wire-drop row per subgraph (D-2). 內建資源庫：檔案原樣，以及每份子圖的拉線接線列。
+    library:builtInLibrary},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.
 for(const [file,output] of outputs){
