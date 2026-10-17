@@ -1983,8 +1983,9 @@ exports.LibraryLedger = LibraryLedger;
 /** The time written into a provenance entry. 寫進出處的時間。 */
 const now = () => new Date().toISOString();
 exports.now = now;
-/** A copy loses its Library ID and keeps where it came from (amendment 3 C6): one `library` entry, replacing an older one.
- * 副本拿掉 Library ID，記下出處：一筆 library，取代舊的那筆。 */
+/** A copy loses its Library ID and keeps where it came from (amendment 3 C6): one `library` entry, replacing an older one — the latest
+ * Library it came from, an editing reference, not a lineage (human 2026-10-18). 副本拿掉 Library ID，記下出處：一筆 library，取代舊的那筆
+ * ——最近一次的來源，是編輯參考，不是族譜（人類 10-18）。 */
 function localize(f, at) {
     var _a;
     const libraryId = f.libraryId;

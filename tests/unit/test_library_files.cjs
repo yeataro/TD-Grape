@@ -147,3 +147,27 @@ test('the build check passes Tint with the row the bootstrap holds, and refuses 
   const missing=plain(file);missing.subgraph.graph.nodes.push(node('lost','subgraph_instance',{subgraphId:uuid(8)}));
   assert.throws(()=>verify(missing),/missing from the file/);
 });
+
+// ---- Codex check of R.121.1: the closure usability gate, and the latest provenance (Refactor.121.2) Codex 核對 R.121.1 ----
+test('the build check refuses a file whose subgraph reads and compiles but uses a definition this host cannot use',()=>{
+  // A vertex-only node inside the nested definition: in a TOP pixel host the child is a ghost, compile still passes. 巢狀定義裡放只能用在
+  // vertex 的節點：在 TOP 的 pixel 宿主裡那份是 Ghost，產碼照樣通過。
+  const base=G.registry.get('sgrape.builtin.multiply');
+  const vertexOnly={...base,catalog:{...base.catalog,definition:{...base.catalog.definition,key:'test_vertex',nodeType:'test.vertex',stages:['vertex']}}};
+  const registry=G.createRegistry([...G.registry.modules,vertexOnly]),compiler=G.createCompiler(registry);
+  const g=sharedGraph();g.subgraphs[0].graph.nodes.find(x=>x.id==='mul').nodeType='test.vertex';
+  let n=0;const file=plain(G.saveLibraryFile(g,registry,'wrapper',()=>uuid(++n)));
+  assert.ok(G.readLibraryFile(file,registry),'the file itself reads');
+  assert.throws(()=>G.verifyLibraryFile(file,registry,bootstrap.defaultDocument.graph,compiler,G.createEditorContract(registry,'top').glslCode),/cannot be used/);
+});
+
+test('provenance keeps the latest Library a definition came from — an editing reference, not a lineage (human 10-18)',()=>{
+  const at='2026-10-18T00:00:00.000Z',localOf=(read,newId)=>{let id;
+    const brought=new G.GraphDocument(empty(),G.registry).change(m=>{id=G.bringInLibraryFile(m,read,ids);}).after;
+    return {doc:new G.GraphDocument(brought,G.registry).change(m=>{m.makeLocal(id,()=>{throw Error('in place');},at);}).after,id};};
+  const first=localOf(G.readLibraryFile(tint(),G.registry));
+  const republished=G.saveLibraryFile(first.doc,G.registry,first.id,()=>uuid(5));
+  const second=localOf(G.readLibraryFile(plain(republished),G.registry));
+  const origin=second.doc.subgraphs.find(f=>f.id===second.id).provenance;
+  assert.equal(origin.length,1);assert.equal(origin[0].libraryId,uuid(5),'the republished one, not Tint');
+});
