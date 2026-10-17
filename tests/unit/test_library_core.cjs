@@ -242,22 +242,31 @@ test('the standard form ignores in-graph IDs but keeps shared versus separate de
   assert.notEqual(c.GrapeGraph.standardForm(shared,registry,'two'),c.GrapeGraph.standardForm(apart,registry,'two'));
 });
 
-test('a pasted Library copy is reused when the same one is here, and comes in read-only otherwise',()=>{
+test('a pasted Library copy is reused when the same one is here; with none it comes in read-only; with other content the choice decides (C4)',()=>{
   let made=0;const newId=()=>'n'+ ++made,newGroupId=()=>'g'+made,newSub=()=>'sub'+ ++made;
   const clip=plain(c.GrapeGraph.copyNodes(doc(library()),['first'],'otherOp'));
   assert.ok(clip.subgraphs.some(f=>f.libraryId===L1),'the copy carries the Library ID');
+  const paste=(target,choice)=>doc(target).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,false,choice)).after;
   // The same gain is here: reused, nothing added. 這裡有同一份 gain：沿用，不加。
-  const same=doc(library()).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,false));
-  assert.equal(same.after.subgraphs.length,2);
-  assert.equal(same.after.stages.pixel.nodes.at(-1).params.subgraphId,'gain');
-  // Here gain differs, or is local: a new read-only copy comes in. 這裡的 gain 不同或是本地的：加入一份新的唯讀副本。
+  const same=paste(library());
+  assert.equal(same.subgraphs.length,2);
+  assert.equal(same.stages.pixel.nodes.at(-1).params.subgraphId,'gain');
+  // No copy with this Library ID here (the local gain does not count): a new read-only copy. 這裡沒有這個 Library ID（本地的 gain 不算）：加入唯讀副本。
+  const none=paste(sharedGraph()),added=none.subgraphs.filter(f=>f.libraryId===L1);
+  assert.equal(added.length,1);assert.notEqual(added[0].id,'gain');
+  assert.throws(()=>doc(none).change(m=>m.subgraph(added[0].id).rename('Nope')),readOnly);
+  // Here gain has other content. Default, keep the graph's version: the incoming one comes in local with its provenance, nothing here
+  // changes. 這裡的 gain 內容不同。預設保留圖裡版本：帶進來的轉本地進來、記出處，圖裡不動。
   const differs=library();def(differs,'gain').title='Changed';
-  for(const target of [differs,sharedGraph()]){
-    const step=doc(target).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},newId,newGroupId,'pixel',newSub,false));
-    const added=step.after.subgraphs.filter(f=>f.libraryId===L1&&f.title==='Gain');
-    assert.equal(added.length,1);assert.notEqual(added[0].id,'gain');
-    assert.throws(()=>doc(step.after).change(m=>m.subgraph(added[0].id).rename('Nope')),readOnly);
-  }
+  const kept=paste(differs),local=kept.subgraphs.find(f=>!['gain','wrapper'].includes(f.id));
+  assert.equal(kept.subgraphs.length,3);assert.equal(local.libraryId,undefined);
+  assert.equal(local.provenance[0].kind,'library');assert.equal(local.provenance[0].libraryId,L1);assert.equal(local.provenance[0].title,'Gain');
+  assert.deepEqual(plain(def(kept,'gain')),plain(def(differs,'gain')),'the graph keeps its version');
+  assert.equal(kept.stages.pixel.nodes.at(-1).params.subgraphId,local.id);
+  // Take the incoming one: the graph's copy is updated in place, nothing added. 改用帶進來的：圖裡那份就地更新，不加。
+  const taken=paste(differs,{conflicts:'incoming'});
+  assert.equal(taken.subgraphs.length,2);assert.equal(def(taken,'gain').title,'Gain');assert.equal(def(taken,'gain').libraryId,L1);
+  assert.equal(taken.stages.pixel.nodes.at(-1).params.subgraphId,'gain');
 });
 
 // ---- Codex review of R.118 (R118-1..4) Codex 對 R.118 的審查 ----
@@ -277,27 +286,33 @@ test('R118-1: a copy made local may not end with another Library ID, even after 
   assert.equal(def(doc(start).change(m=>{m.makeLocal('x',next);m.subgraph('x').rename('Mine');}).after,'x').title,'Mine','the ordinary case still passes');
 });
 
-test('R118-2: a paste keeps separate dependencies separate, and pasting the same copy again adds nothing',()=>{
-  // wrapper uses gain and gainB, equal in content but two definitions. wrapper 用 gain 與 gainB：內容相同，但是兩份。
+test('copies sharing a Library ID inside a pasted batch merge by default, or stay apart as local copies (C4 rule 3, C3 step 1)',()=>{
+  // wrapper uses gain and gainB, equal in content but two definitions (only a hand-made or foreign file has this now). wrapper 用 gain
+  // 與 gainB：內容相同但是兩份（現在只有手改或外來的檔案會這樣）。
   const w=wrapperCopy();w.graph.nodes.push(node('extra','subgraph_instance',{subgraphId:'gainB'}));
   const source=withRoots([gainCopy(),gainCopy('gainB'),w],['wrapper']),clip=plain(c.GrapeGraph.copyNodes(doc(source),['call0'],'source'));
-  const after=pasteInto(withRoots([gainCopy('existing')],[]),clip),root=pastedRoots(after)[0];
-  const deps=refsOf(def(after,root));
-  assert.notEqual(deps[0],deps[1],'still two dependencies');
-  assert.equal(c.GrapeGraph.standardForm(source,registry,'wrapper'),c.GrapeGraph.standardForm(after,registry,root));
-  const again=pasteInto(after,clip,false,10);
-  assert.equal(again.subgraphs.length,after.subgraphs.length,'the second paste reuses everything');
+  const merged=pasteInto(withRoots([gainCopy('existing')],[]),clip),root=pastedRoots(merged)[0];
+  assert.equal(merged.subgraphs.length,2,'existing gain + the incoming wrapper');
+  assert.deepEqual(plain(refsOf(def(merged,root))),['existing','existing'],'both instances use the one gain');
+  assert.equal(pasteInto(merged,clip,false,10).subgraphs.length,2,'a second paste adds nothing');
+  let n=0,d=0;
+  const apart=doc(withRoots([gainCopy('existing')],[])).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},()=>'p'+ ++n,()=>'group','pixel',()=>'fresh'+ ++d,false,{duplicates:'separate'})).after;
+  const top=def(apart,pastedRoots(apart)[0]),[first,second]=refsOf(top);
+  assert.equal(top.libraryId,undefined,'the read-only user of a copy kept apart goes local too (A3)');
+  assert.equal(first,'existing');assert.equal(def(apart,second).libraryId,undefined);assert.equal(def(apart,second).provenance[0].libraryId,L1);
 });
 
-test('R118-2: a paste keeps a shared dependency shared when reusing a parent fixes it, from another graph or restoring in this one',()=>{
+test('a paste meets the one copy here: a shared dependency stays shared; a graph still holding duplicates is refused until repaired',()=>{
   for(const sameSource of [false,true]){
     const source=withRoots([gainCopy(),wrapperCopy(),wrapperCopy('localC','gain',null)],['wrapper','localC']);
-    const target=withRoots([gainCopy('decoy'),gainCopy('usedByA'),wrapperCopy('existingA','usedByA')],[]);
+    const target=withRoots([gainCopy('usedByA'),wrapperCopy('existingA','usedByA')],[]);
     const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')),sameSource);
     const [a,cdef]=pastedRoots(after);
     assert.equal(a,'existingA','the read-only parent is reused');
-    assert.deepEqual(plain(refsOf(def(after,cdef))),plain(refsOf(def(after,a))),'the local C uses the same gain as A');
+    assert.deepEqual(plain(refsOf(def(after,cdef))),['usedByA'],'the local C uses the same gain as A');
   }
+  const clip=plain(c.GrapeGraph.copyNodes(doc(withRoots([gainCopy()],['gain'])),['call0'],'source'));
+  assert.throws(()=>pasteInto(withRoots([gainCopy('g1'),gainCopy('g2')],[]),clip),e=>e.code==='subgraph.libraryDuplicate');
 });
 
 test('R118-3: renumbering in-graph IDs inside scoped types keeps the standard form; a second paste adds nothing',()=>{
@@ -319,27 +334,20 @@ test('R118-4: a fork moves its own scoped references to itself; the read-only or
 });
 
 // ---- Codex check of R.118.1 (R118.1-1, R118.1-2) Codex 對 R.118.1 的核對 ----
-test('R118.1-1: when the whole batch can be reused, no order of the copy or of the graph adds a definition, also at 64 definitions',()=>{
-  for(const roots of [['B','A'],['A','B']]) for(const order of [['B0','B1'],['B1','B0']]) for(const sameSource of [false,true]){
-    const source=withRoots([gainCopy('B'),wrapperCopy('A','B')],roots),target=withRoots([...order.map(id=>gainCopy(id)),wrapperCopy('A0','B1')],[]);
+test('R118.1-1 under C2: with one copy per Library ID the pairing is fixed; no order adds a definition, also at 64',()=>{
+  const fillers=Array.from({length:61},(_,i)=>({...gainCopy('filler'+i),title:'Filler'+i,libraryId:undefined}));
+  for(const roots of [['B','A'],['A','B']]) for(const sameSource of [false,true]) for(const extra of [[],fillers]){
+    const source=withRoots([gainCopy('B'),wrapperCopy('A','B')],roots);
+    const target=withRoots([...(roots[0]==='A'?[gainCopy('B0'),wrapperCopy('A0','B0')]:[wrapperCopy('A0','B0'),gainCopy('B0')]),...extra],[]);
     const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')),sameSource);
-    assert.equal(after.subgraphs.length,3,roots+' / '+order+' / '+sameSource);
-    assert.deepEqual(plain(pastedRoots(after).sort()),['A0','B1']);
+    assert.equal(after.subgraphs.length,2+extra.length);
+    assert.deepEqual(plain(pastedRoots(after).sort()),['A0','B0']);
   }
-  // At the 64-definition limit the same paste must still pass. 滿 64 份時同一筆貼上照樣要過。
-  const fillers=Array.from({length:61},(_,i)=>({...gainCopy('filler'+i),title:'Filler'+i}));
-  for(const roots of [['B','A'],['A','B']]){
-    const after=pasteInto(withRoots([gainCopy('B0'),gainCopy('B1'),wrapperCopy('A0','B1'),...fillers],[]),plain(c.GrapeGraph.copyNodes(doc(withRoots([gainCopy('B'),wrapperCopy('A','B')],roots)),['call0','call1'],'source')));
-    assert.equal(after.subgraphs.length,64);
-  }
-  // Two roots, neither above the other, sharing B: a later root may decide what an earlier one should have reused. 兩個互不為祖先的根共用 B。
-  for(const roots of [['A','C'],['C','A']]){
-    const source=withRoots([gainCopy('B'),wrapperCopy('A','B'),wrapperCopy('C','B',L3)],roots);
-    const target=withRoots([gainCopy('B0'),gainCopy('B1'),wrapperCopy('A0','B0'),wrapperCopy('A1','B1'),wrapperCopy('C0','B1',L3)],[]);
-    const after=pasteInto(target,plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source')));
-    assert.equal(after.subgraphs.length,5,'nothing added: '+roots);
-    assert.deepEqual(plain(pastedRoots(after).sort()),['A1','C0']);
-  }
+  // Codex's eight separate equal copies (R118.2-1) now merge inside the batch and meet the one here. Codex 的八份分開的相同副本：批內合併後對上這裡那一份。
+  const many=Array.from({length:8},(_,i)=>gainCopy('I'+i));
+  const after=pasteInto(withRoots([gainCopy('T0')],[]),plain(c.GrapeGraph.copyNodes(doc(withRoots(many,many.map(f=>f.id))),many.map((_,i)=>'call'+i),'source')));
+  assert.equal(after.subgraphs.length,1);
+  assert.deepEqual(plain([...new Set(pastedRoots(after))]),['T0']);
 });
 
 test('R118.1-2: a resolved self-reference never equals an unresolved scope that reads fn_0',()=>{
@@ -351,4 +359,126 @@ test('R118.1-2: a resolved self-reference never equals an unresolved scope that 
   // A valid renumbering still compares equal. 合法的重新編號仍然相等。
   const moved=withRoots([gainCopy('other')],[]);def(moved,'other').outputs[0].type='float['+ScopeReferences.token('fn_other',['mul','out'])+']';
   assert.equal(c.GrapeGraph.standardForm(source,registry,'gain'),c.GrapeGraph.standardForm(moved,registry,'other'));
+});
+
+// ---- Codex check of R.118.2 and the Library version policy (amendment 3, Refactor.119) Codex 對 R.118.2 的核對與 Library 版本政策 ----
+const at='2026-10-17T00:00:00.000Z';
+test('R118.2-2: stored text that reads like a normalization marker never equals a resolved reference',()=>{
+  const self='float['+ScopeReferences.token('fn_gain',['mul','out'])+']';
+  for(const literal of ['float[\u0000closure:0:mul\u0000out\u0000]','float[\u0000["closure",0,"mul","out"]\u0000]']){
+    const source=withRoots([gainCopy()],['gain']);def(source,'gain').outputs[0].type=self;
+    const target=plain(withRoots([gainCopy('other')],[]));def(target,'other').outputs[0].type=literal;
+    assert.notEqual(c.GrapeGraph.standardForm(source,registry,'gain'),c.GrapeGraph.standardForm(target,registry,'other'),JSON.stringify(literal));
+    const after=pasteInto(target,plain(c.GrapeGraph.readClip(JSON.stringify(c.GrapeGraph.copyNodes(doc(source),['call0'],'source')))));
+    assert.equal(after.subgraphs.length,2,'not reused');
+  }
+});
+
+test('C2: an edit may not add a second copy of a Library ID; a graph opened with duplicates stays editable',()=>{
+  assert.throws(()=>doc(library()).change(m=>m.appendSubgraphs([gainCopy('again')])),e=>e.code==='subgraph.libraryDuplicate');
+  const opened=withRoots([gainCopy('g1'),gainCopy('g2')],['g1','g2']);
+  const step=doc(opened).change(m=>m.updateFromLibrary('g1',{...gainCopy('g1'),title:'Updated'}));
+  assert.equal(def(step.after,'g1').title,'Updated');
+});
+
+test('C6: losing a Library ID records the provenance — Make Local in place or by fork, and Make Single User; never compared',()=>{
+  const inPlace=doc(library()).change(m=>m.makeLocal('wrapper',next,at)).after;
+  assert.deepEqual(plain(def(inPlace,'wrapper').provenance),[{kind:'library',libraryId:L2,title:'Wrapper',at}]);
+  let fork;const forked=doc(library()).change(m=>{fork=m.makeLocal('gain',next,at);}).after;
+  assert.deepEqual(plain(def(forked,fork).provenance),[{kind:'library',libraryId:L1,title:'Gain',at}]);
+  assert.equal(def(forked,'gain').provenance,undefined,'the read-only original has none');
+  let solo;const single=doc(library()).change(m=>{const p=m.networks.get('pixel');solo=p.independentSubgraph(p.node('first'),()=>'solo',at).id;}).after;
+  assert.equal(def(single,solo).provenance[0].libraryId,L1);
+  const marked=library();def(marked,'gain').provenance=[{kind:'library',libraryId:L3,title:'Old',at}];
+  assert.equal(c.GrapeGraph.standardForm(marked,registry,'wrapper'),c.GrapeGraph.standardForm(library(),registry,'wrapper'),'provenance is not content');
+  for(const bad of [[{kind:'copied'}],[{kind:'library',libraryId:L1,title:'A',at},{kind:'library',libraryId:L1,title:'A',at}],[{kind:'library',libraryId:'nope',title:'A',at}]]){
+    const f={...plain(sharedGraph().subgraphs[0]),id:'z',provenance:bad};
+    assert.throws(()=>doc(sharedGraph()).change(m=>m.appendSubgraphs([f])),/provenance/);
+  }
+});
+
+// Kernel v1 / v2 differ in one value; Sharpen, Blur and Glow each wrap a Kernel. Kernel 兩版差一個值；Sharpen、Blur、Glow 各包一個 Kernel。
+const LK='44444444-4444-4444-8444-444444444444',LS='55555555-5555-4555-8555-555555555555',LB='66666666-6666-4666-8666-666666666666',LG='77777777-7777-4777-8777-777777777777';
+function kernel(id,v){const f={...gainCopy(id),libraryId:LK,title:'Kernel'};f.graph.nodes[1].inputValues={b:v};return f;}
+const shell=(id,inner,libraryId,title)=>({...wrapperCopy(id,inner,libraryId),title});
+test('C4 with Kernel versions: keep leaves Sharpen alone and the batch shares one local Kernel; incoming updates Kernel for all',()=>{
+  const target=()=>withRoots([kernel('K1',3),shell('Sharpen','K1',LS,'Sharpen')],['Sharpen']);
+  const source=withRoots([kernel('K',5),shell('Blur','K',LB,'Blur'),shell('Glow','K',LG,'Glow')],['Blur','Glow']);
+  const clip=plain(c.GrapeGraph.copyNodes(doc(source),['call0','call1'],'source'));
+  const was=plain(clip);
+  const kept=pasteInto(target(),clip),[blur,glow]=pastedRoots(kept);
+  assert.deepEqual(plain(clip),was,'the clip itself is never changed');
+  assert.deepEqual(plain(def(kept,'K1')),plain(def(target(),'K1')));assert.deepEqual(plain(def(kept,'Sharpen')),plain(def(target(),'Sharpen')));
+  assert.equal(def(kept,blur).libraryId,undefined);assert.equal(def(kept,glow).libraryId,undefined,'their read-only users go local too');
+  const [kb]=refsOf(def(kept,blur)),[kg]=refsOf(def(kept,glow));
+  assert.equal(kb,kg,'Blur and Glow still share one Kernel');assert.notEqual(kb,'K1');assert.equal(def(kept,kb).libraryId,undefined);
+  let n=0,d=0;
+  const taken=doc(target()).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},()=>'p'+ ++n,()=>'group','pixel',()=>'fresh'+ ++d,false,{conflicts:'incoming'})).after;
+  assert.equal(taken.subgraphs.length,4,'K1, Sharpen, Blur, Glow');
+  assert.equal(def(taken,'K1').graph.nodes[1].inputValues.b,5);assert.equal(def(taken,'K1').libraryId,LK);
+  for(const root of pastedRoots(taken)){assert.notEqual(def(taken,root).libraryId,undefined);assert.deepEqual(plain(refsOf(def(taken,root))),['K1']);}
+});
+
+const repair=(g,shelfGraph,choice)=>{let k=0;return c.GrapeGraph.repairLibraryCopies(g,registry,shelfGraph,()=>'new'+ ++k,choice,at);};
+test('C3 step 1: duplicates are settled flat — the copy with most direct instances stays, the same content merges or goes local',()=>{
+  const g=withRoots([gainCopy('a2'),gainCopy('a1')],['a1','a2','a1']);
+  const merged=repair(g,undefined,{});
+  assert.deepEqual(plain(merged.document.subgraphs.map(f=>f.id)),['a1']);
+  assert.deepEqual(plain(merged.document.stages.pixel.nodes.filter(n=>n.id.startsWith('call')).map(n=>n.params.subgraphId)),['a1','a1','a1']);
+  const apart=repair(g,undefined,{duplicates:'separate'});
+  assert.equal(def(apart.document,'a1').libraryId,L1);assert.equal(def(apart.document,'a2').libraryId,undefined);
+  assert.deepEqual(plain(def(apart.document,'a2').provenance),[{kind:'library',libraryId:L1,title:'Gain',at}]);
+  // Equal counts: the smallest in-graph ID, whatever the list order. 同票：取圖內 ID 最小的，不看清單順序。
+  for(const order of [['b','c'],['c','b']]) assert.deepEqual(plain(repair(withRoots(order.map(id=>gainCopy(id)),['b','c']),undefined,{}).document.subgraphs.map(f=>f.id)),['b']);
+  assert.deepEqual(plain(g),plain(withRoots([gainCopy('a2'),gainCopy('a1')],['a1','a2','a1'])),'the given graph is untouched');
+});
+
+test('C3 step 1 (Codex R2-1, R2-2): a copy kept apart takes its read-only users along; a parent made equal by a merge is not merged again',()=>{
+  // A→B2, B1 equal: keeping B apart makes B2 local and A with it, although A matches its Library. A→B2，B1 相同：B 分開時 B2 轉本地，A 跟著轉。
+  const g=withRoots([gainCopy('B1'),gainCopy('B2'),wrapperCopy('A','B2')],['B1','A']);
+  const out=repair(g,undefined,{duplicates:'separate'}).document;
+  assert.equal(def(out,'B1').libraryId,L1);assert.equal(def(out,'B2').libraryId,undefined);assert.equal(def(out,'A').libraryId,undefined);
+  // P1→B1,B2 and P2→B1,B1: different on the original, so P is settled as different content even though merging B makes them equal.
+  // P1→B1、B2 與 P2→B1、B1：原稿上不同，所以照「內容不同」處理，即使合併 B 後兩者相同。
+  const p=(id,a,b)=>{const f=wrapperCopy(id,a);f.graph.nodes.push(node('extra','subgraph_instance',{subgraphId:b}));return f;};
+  for(const list of [[gainCopy('B1'),gainCopy('B2'),p('P1','B1','B2'),p('P2','B1','B1')],[p('P2','B1','B1'),p('P1','B1','B2'),gainCopy('B2'),gainCopy('B1')]]){
+    const r=repair(withRoots(list,['P1','P2','P2']),undefined,{}).document;
+    assert.deepEqual(plain(r.subgraphs.map(f=>f.id).sort()),['B1','P1','P2']);
+    assert.equal(def(r,'P2').libraryId,L2,'P2 has more direct instances and stays');assert.equal(def(r,'P1').libraryId,undefined);
+    assert.deepEqual(plain(refsOf(def(r,'P1'))),['B1','B1']);
+  }
+});
+
+// The Library as the caller resolves it: gain v2 (b=5) and a wrapper using it. 呼叫端解析好的資源庫：gain 第 2 版與用它的 wrapper。
+function shelf(extra=[]){const g=emptyGraph();const lg=gainCopy('libGain');lg.graph.nodes[1].inputValues={b:5};g.subgraphs=[lg,wrapperCopy('libWrapper','libGain'),...extra];return g;}
+test('C3 step 2: copies differing from the Library are all updated, or all made local with their read-only users',()=>{
+  const g=()=>withRoots([gainCopy(),wrapperCopy()],['wrapper','gain']);
+  const up=repair(g(),shelf(),{versions:'update'});
+  assert.deepEqual(plain(up.differing.sort()),['gain','wrapper']);
+  assert.equal(def(up.document,'gain').graph.nodes[1].inputValues.b,5);assert.equal(def(up.document,'gain').libraryId,L1);
+  assert.deepEqual(plain(refsOf(def(up.document,'wrapper'))),['gain'],'in-graph IDs stay');
+  assert.equal(up.document.subgraphs.length,2);
+  const local=repair(g(),shelf(),{versions:'local'});
+  assert.ok(local.document.subgraphs.every(f=>f.libraryId===undefined&&f.provenance[0].kind==='library'));
+  assert.equal(def(local.document,'gain').graph.nodes[1].inputValues.b,3,'the graph keeps its content');
+  assert.equal(local.document.subgraphs.length,2,'in place, no fork');
+  // The same as the Library: nothing to do. 和資源庫相同：沒事。
+  const same=repair(withRoots([{...gainCopy(),graph:shelf().subgraphs[0].graph}],['gain']),shelf(),{versions:'local'});
+  assert.deepEqual(plain(same.differing),[]);assert.equal(def(same.document,'gain').libraryId,L1);
+});
+
+test('C3: the Library not found only settles duplicates; a lost ancestor goes local with its child; an update brings in a new dependency',()=>{
+  const lost=withRoots([gainCopy(),wrapperCopy()],['wrapper']);
+  const none=repair(lost,undefined,{versions:'local'});assert.ok(none.document.subgraphs.every(f=>f.libraryId!==undefined));
+  // Only gain is in this Library; wrapper's own source is lost. 這個資源庫只有 gain；wrapper 的來源找不到。
+  const onlyGain=emptyGraph();onlyGain.subgraphs=[shelf().subgraphs[0]];
+  const local=repair(lost,onlyGain,{versions:'local'}).document;
+  assert.equal(def(local,'gain').libraryId,undefined);assert.equal(def(local,'wrapper').libraryId,undefined,'the lost read-only user goes too (A3)');
+  const updated=repair(lost,onlyGain,{versions:'update'}).document;
+  assert.equal(def(updated,'wrapper').libraryId,L2,'updating needs nothing local');assert.equal(def(updated,'gain').graph.nodes[1].inputValues.b,5);
+  // The Library's wrapper now uses a new dependency: it comes in read-only. 資源庫的 wrapper 多用了一個新依賴：唯讀進來。
+  const extra={...gainCopy('libExtra'),libraryId:L3,title:'Extra'},lib=shelf([extra]);lib.subgraphs[1].graph.nodes.push(node('more','subgraph_instance',{subgraphId:'libExtra'}));
+  const grown=repair(lost,lib,{versions:'update'}).document;
+  const added=grown.subgraphs.find(f=>f.libraryId===L3);
+  assert.ok(added);assert.deepEqual(plain(refsOf(def(grown,'wrapper'))),['gain',added.id]);
 });

@@ -65,6 +65,7 @@ export function validateSubgraphData(f:SubgraphData):void {
   // A Library copy carries its Library ID, a UUID (Refactor.118); what it may become is the ledger's (library.ts).
   // Library 副本帶著 Library ID（UUID）；它能怎麼變由帳本管。
   if ('libraryId' in f && !validLibraryId(f.libraryId)) throw Error('Invalid Library ID');
+  if ('provenance' in f && !validProvenance(f.provenance)) throw Error('Invalid Subgraph provenance');
   if (f.color !== undefined && (typeof f.color !== 'string' || f.color.length > 32)) throw Error('Invalid Subgraph color');
   for (const ports of [f.inputs,f.outputs]) {
     if (!Array.isArray(ports) || ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length || !ports.every(validPort))
@@ -75,6 +76,13 @@ export function validateSubgraphData(f:SubgraphData):void {
       [...ids].some(id => !validId(id))) throw Error('Invalid Subgraph network');
   for (const e of f.graph.edges) if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
     throw Error('Invalid Subgraph edge endpoint');
+}
+/** The provenance list (amendment 3 C6): at most one entry of each kind; only `library` exists so far. 出處清單：每種最多一筆；目前只有 library。 */
+function validProvenance(list:unknown):boolean {
+  if (!Array.isArray(list) || list.length > 1) return false;
+  const text = (v:unknown,max:number) => typeof v === 'string' && v.length <= max && !/[\x00-\x1f\x7f]/.test(v);
+  return list.every(p => !!p && typeof p === 'object' && Object.keys(p).sort().join() === 'at,kind,libraryId,title' &&
+    p.kind === 'library' && validLibraryId(p.libraryId) && text(p.title,80) && text(p.at,40));
 }
 function validate(graph:GraphDocument,f:SubgraphData):void {
   graph.assertEditable();ensureSubgraphCapacity(graph,1);

@@ -2,6 +2,20 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.119 — Library 版本政策（核心）— 2026-10-17
+
+依子圖基本設計附錄三（workspace `work/refactor/subgraph-basic-design-2026-10-14-amendment-3.md`，修訂 3，Codex 核對通過、人類 10-17 確認生效；design-interview Q77）。起因：Codex〈Refactor.118.2 修正的核對〉R118.2-1～3（評閱 `Review/2026-10-14-fable/Opus對Refactor118.2核對的評閱.md`）與其後的策略評估。範圍：workspace `work/refactor/r119-library-policy-scope-2026-10-17.md`。只做核心；選擇畫面在 D-3，編輯器到那時前仍擋 Library 資料。
+
+- **更正 R.118.1／118.2 的承諾**：「順序不影響新增、滿 64 份不誤拒」撤回（附錄三 C1，人類：「我能夠都放棄」）；R.118.2 說「第一個解就是原貪婪解」「存檔不可能出現標記」不正確（Codex R118.2-1／-2）。
+- **一個 Library ID 一份（C2）**：`library.ts` 關卡拒絕讓某個 Library ID 份數變多的修改（`subgraph.libraryDuplicate`）；開圖前就有的重複不擋。
+- **進圖（C4）**：`library_policy.ts` `planLibraryEntry`／`applyLibraryEntry` 取代 `planLibraryReuse` 的搜尋。先整理這批自己的重複（預設合併，`duplicates:'separate'` 時多的轉本地），再依 Library ID 對上這裡唯一那份：同標準形沿用（父在子前，相同的父逐位定下整個閉包），沒有就唯讀進來，內容不同照選擇——預設 `keep`：帶進來的連同批內唯讀使用者轉本地進來、圖裡不動；`incoming`：圖裡那份就地更新。`pasteClip` 多一個選擇參數。目標圖仍有重複時拒絕（要先修補）。程式裡不再有回溯與步數上限。
+- **開圖修補（C3）**：`repairLibraryCopies`（純函式，呼叫端給解析好的資源庫內容）。第 1 步在最上層平著整理重複，原稿一次判定（偏好和資源庫相同的、再看直接實例數、再看圖內 ID），合併或轉本地，連同唯讀使用者；第 2 步整張圖二選一：全部更新（經 C4 `incoming`）或全部轉本地（先轉使用者，不分叉）。第 2 步走 `change()`，過同樣的關卡。找不到資源庫只做第 1 步。編輯器接上在 D-3。
+- **出處（C6）**：`SubgraphData.provenance`，每種最多一筆；拿掉 Library ID 時記 `{kind:'library', libraryId, title, at}`——轉為本地（就地或分叉）、版本政策轉本地、對 Library 副本設為唯一都記。不進標準形；格式驗證。
+- **R118.2-2**：標準形先轉義存檔文字裡的控制字元，標記改成 `\u0000`＋JSON＋`\u0000`；Codex 的碰撞例在 118.2 核心上判為相等（沿用、1 份），本輪判為不等（2 份）。腳本 workspace `work/refactor/r119-library-policy/r1182-2-on-old-core.cjs`。
+- **途中修掉的錯**：進圖方案在這批沒有重複時直接改到呼叫端的剪貼簿物件（同一份剪貼簿第二次貼就錯）；改成一律在複本上做，測試加了「剪貼簿不被改」。
+- 證據：checkpoint `checkpoint/pre-R119`；core 235／235（library 39）、editor 179／179（1 略過）、check 全過；零成本（沒有 Library 副本的圖的 `change()`，量過）：152／752／3002 節點 118.2 1.28／5.84／22.5 ms，本輪 1.31／5.81／22.7 ms（兩次交錯量測的中位數範圍內）；進圖（符合 C2 的輸入，整筆貼上，量過）：32 根沿用 13.9→14.4 ms、31 層鏈沿用 5.3→5.8 ms、31 層鏈每層衝突 35.1→37.7 ms、32 葉衝突 8.0→7.6 ms（腳本 workspace `work/refactor/r119-library-policy/perf-entry.cjs`）；TD 五張圖產碼與基準相同。
+- **未做／限制**：選擇畫面、開圖流程接上（D-3）；A7 異內容衝突呈現（未定）；64 份上限、深鏈產碼、發布前 UTF-8 bytes 檢查（R.120）。**R.120 要一併處理**：衝突鏈每層各算一次閉包標準形，成本隨鏈長平方成長（31 層 37 ms），拿掉 64 後會放大；應改成由下往上記住每份的結果。
+
 ## Refactor.118.2 — Codex 核對 R.118.1 的修正 — 2026-10-16
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor118.1修正的核對.md`（R118-1、R118-4 結案；R118.1-1 P2、R118.1-2／3 P3）。評閱：同資料夾 `Opus對Refactor118.1核對的評閱.md`，三項全部接受。

@@ -4,7 +4,7 @@
  * 每個都從帳本目前的內容起跑、只做自己的變化、記下結果。 */
 import { copy, type SubgraphData, type Node, type NetworkData } from './model';
 import type { GraphDocument } from './graph';
-import { requireCurrent } from './library';
+import { requireCurrent, localize, now } from './library';
 import { appendSubgraphs, settle, type AllocateSubgraphId } from './subgraph_copies';
 import { freeName, defaultInstanceNumber, newInstanceName, namesIn } from './node_names';
 import { fitInstanceValues } from './subgraphs';
@@ -20,18 +20,18 @@ const networks = (graph: GraphDocument): NetworkData[] => [...Object.values(grap
 
 /** Make Local (§3.10, A3): with no read-only subgraph using it, the copy drops its Library ID in place; otherwise it forks — a local
  * B′ (new ID, named by the one naming rule) takes the instances outside read-only subgraphs, and those inside keep the read-only B.
- * Returns the ID that now holds the local content. 轉為本地：沒有唯讀子圖在用它就就地拿掉 Library ID；否則分叉——本地 B′（新 ID、照同一套
- * 命名）接手唯讀子圖以外的實例，唯讀子圖裡的仍指唯讀的 B。回傳現在放本地內容的 ID。 */
-export function makeLocal(graph: GraphDocument, id: string, next: AllocateSubgraphId): string {
+ * Either way the local one records where it came from (amendment 3 C6). Returns the ID that now holds the local content. 轉為本地：沒有唯讀子圖在用它就就地拿掉 Library ID；否則分叉——本地 B′（新 ID、照同一套
+ * 命名）接手唯讀子圖以外的實例，唯讀子圖裡的仍指唯讀的 B。兩種都記下出處。回傳現在放本地內容的 ID。 */
+export function makeLocal(graph: GraphDocument, id: string, next: AllocateSubgraphId, at = now()): string {
   graph.assertEditable();
   const f = definition(graph, id), libraryId = f.libraryId;
   if (libraryId === undefined) throw Error('Not a Library copy');
   requireCurrent(graph.library, f);
   const readOnlyUsers = (graph.document.subgraphs ?? []).some(d => d.libraryId !== undefined && d.graph.nodes.some(n => referenceOf(graph, n) === id));
-  if (!readOnlyUsers) { delete f.libraryId; graph.library.set(id, libraryId, { kind: 'local' }); return id; }
+  if (!readOnlyUsers) { localize(f, at); graph.library.set(id, libraryId, { kind: 'local' }); return id; }
   // The fork comes in through the ID map, so its own scoped references follow it, as in Make Single User (Codex R118-4).
   // 分叉經由 ID 對照加入，自己的 scoped 參照跟著它走，同設為唯一。
-  const fork = copy(f); delete fork.libraryId;
+  const fork = copy(f); localize(fork, at);
   fork.title = freeName(f.title, new Set((graph.document.subgraphs ?? []).map(d => d.title)), 80);
   const forkId = next();
   appendSubgraphs(graph, [fork], new Map([[id, forkId]]));

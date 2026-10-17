@@ -1,4 +1,4 @@
-import { planLibraryReuse } from './library';
+import { planLibraryEntry, applyLibraryEntry, type EntryChoice } from './library_policy';
 import { copy, formatProblem, GRAPH_FORMAT, GRAPH_VERSION, type Graph, type Node as NodeData, type Edge as EdgeData, type Value, type SubgraphData } from './model';
 import type { GraphDocument } from './graph';
 import { freeName, namesIn, takesName } from './node_names';
@@ -78,7 +78,7 @@ const placeOf = (node: NodeData) => {
  * 回來，連同它在複製裡的所有依賴（依賴不改指現有的）；別張圖時整個閉包以新身分進來。同批保留共用關係；本地永不按內容合併。複製裡每份定義
  * 先驗證；Library 副本保留 Library ID、仍然唯讀，這裡已有同 ID 同標準形的就沿用（A5 第 3 條、B3–B4；R.118）。 */
 export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number; y: number }, newId: () => string, newGroupId: () => string,
-  networkId = 'pixel', newSubgraphId: () => string = newId, sameSource = true): string[] {
+  networkId = 'pixel', newSubgraphId: () => string = newId, sameSource = true, library: EntryChoice = {}): string[] {
   const network = candidate.networks.get(networkId);
   if (!network) throw Error('No network to paste into');
   // Every definition the copy carries is checked first, as written, also those that will not be brought in (TECH-4, amendment 2
@@ -95,10 +95,10 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
   // point at that are gone now, with everything they depend on in the copy, all under one map. A pasted instance whose definition is still
   // here keeps it. 帶進來的：別張圖的整個閉包；同一張圖的，是貼上的實例所指、現在已不在的定義，加上它們在複製裡的所有依賴，共用一張對照。
   // 定義還在的實例沿用它。
-  // Among what is needed, a Library copy already here with the same Library ID and standard form is reused with its whole closure, the
-  // batch as one mapping chosen to bring in the fewest (library.ts planLibraryReuse; amendment 1 A5 rule 3, amendment 2 B3–B4; Codex
-  // R118-2, R118.1-1); the rest comes in, a Library copy still read-only. 需要的當中，這裡已有同 Library ID、同標準形的 Library 副本連同整個
-  // 閉包沿用，整批一張對照、選帶進來最少的；其餘帶進來，Library 副本仍唯讀。
+  // Among what is needed, Library copies follow the entry rule (library_policy.ts, amendment 3 C4): the batch's own duplicates settled,
+  // then each meets the one copy with its Library ID here — same content reused, none comes in read-only, other content as `library`
+  // chooses (default: keep the graph's version, the incoming ones come in local). 需要的當中，Library 副本照進圖規則：先處理這批自己的
+  // 重複，再對上這裡唯一同 Library ID 的那份——同內容沿用、沒有就唯讀進來、內容不同照 library 的選擇（預設保留圖裡版本，帶進來的轉本地）。
   const needed: string[] = [], seen = new Set<string>();
   const need = (id: string) => {
     const f = snapshot.get(id);
@@ -107,9 +107,7 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
     for (const node of f.graph.nodes) { const ref = referenceOf(node); if (ref) need(ref); }
   };
   for (const id of sameSource ? instances.filter(ref => !current.has(ref)) : snapshot.keys()) need(id);
-  const { reused, imported } = planLibraryReuse(candidate.document, clip, needed, candidate.registry);
-  const ids = new Map([...[...imported].map(id => [id, newSubgraphId()] as [string, string]), ...reused]);
-  if (imported.size) candidate.appendSubgraphs([...imported].map(id => snapshot.get(id)!), ids);
+  const ids = applyLibraryEntry(candidate, planLibraryEntry(candidate.document, clip, needed, candidate.registry, library), newSubgraphId);
   for (const declaration of clip.declarations) {
     if (candidate.document.declarations.some(d => d.id === declaration.id)) continue;
     try { candidate.addDeclaration(copy(declaration)); } catch { /* its nodes stay ghosts 它的節點維持 Ghost */ }

@@ -43,5 +43,6 @@
   "subgraph.portLimit": "A subgraph supports up to 16 ports per side",
   "vector.componentOrder": "Component order",
   "subgraph.readOnly": "A subgraph from a Library is read-only; make it local to edit it",
-  "subgraph.readOnlyClosure": "A read-only subgraph may only use read-only subgraphs"
+  "subgraph.readOnlyClosure": "A read-only subgraph may only use read-only subgraphs",
+  "subgraph.libraryDuplicate": "A Library subgraph may be in a graph only once"
 }

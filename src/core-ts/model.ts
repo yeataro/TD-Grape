@@ -21,7 +21,11 @@ export interface InterfacePort {id:string;label?:string;type:string;default?:Val
  * copy (library.ts); without it the definition is local. `title` is the subgraph's own name (an instance's is its node `name`); `color`
  * is the definition's colour (§3.14). 圖裡的定義：沒有 scope／origin；帶 libraryId（UUID）就是唯讀的 Library 副本，沒有就是本地；title 是
  * 子圖自己的名稱（實例的名稱是節點的 name）；color 是定義的顏色。 */
-export interface SubgraphData {id:string;title:string;libraryId?:string;color?:string;descriptionKey?:string;
+/** Where a local definition came from, for people only (amendment 3 C6, human 2026-10-17 (b)): one list, at most one entry of each
+ * kind. `library` is written when a definition loses its Library ID and stays; never compared, never makes a definition read-only
+ * or updatable. 本地定義的出處，只給人看：一個清單，每種最多一筆。library 在拿掉 Library ID 時記、一直保留；不比對、不代表唯讀或會更新。 */
+export interface Provenance {kind:'library';libraryId:string;title:string;at:string}
+export interface SubgraphData {id:string;title:string;libraryId?:string;provenance?:Provenance[];color?:string;descriptionKey?:string;
   /** Only on a saved definition (library, export, clipboard), recomputed on load; never in a graph, where they are
    * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
   stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;

@@ -40,6 +40,18 @@ export class LibraryLedger {
   get size(): number { return this.states.size; }
 }
 
+/** The time written into a provenance entry. 寫進出處的時間。 */
+export const now = () => new Date().toISOString();
+
+/** A copy loses its Library ID and keeps where it came from (amendment 3 C6): one `library` entry, replacing an older one.
+ * 副本拿掉 Library ID，記下出處：一筆 library，取代舊的那筆。 */
+export function localize(f: SubgraphData, at: string): void {
+  const libraryId = f.libraryId;
+  if (libraryId === undefined) return;
+  delete f.libraryId;
+  f.provenance = [...(f.provenance ?? []).filter(p => p.kind !== 'library'), { kind: 'library', libraryId, title: f.title, at }];
+}
+
 export const readOnly = (what: string) => Object.assign(Error('A subgraph from a Library is read-only (' + what + '); make it local to edit it'), { code: 'subgraph.readOnly' });
 
 /** The start check of every legal operation (B1 contract 1): the definition as it stands in the candidate must equal the ledger's
@@ -50,7 +62,8 @@ export function requireCurrent(ledger: LibraryLedger, f: SubgraphData): void {
   if (!state || state.kind !== 'content' || !equal(f, state.data)) throw readOnly('it was changed in this edit');
 }
 
-const instancesOf = (f: SubgraphData, registry: Registry) =>
+/** The definitions a definition's instances point at. 一份定義裡的實例指向哪些定義。 */
+export const instancesOf = (f: SubgraphData, registry: Registry) =>
   f.graph.nodes.flatMap(n => { const ref = registry.get(n.nodeType)?.referencedGraph?.(n); return ref === undefined ? [] : [ref]; });
 
 /** The gate (B1, end of change()): every read-only identity in the ledger, before or after must end as the ledger says; and a
@@ -73,6 +86,13 @@ export function requireLibrary(before: Graph, after: Graph, ledger: LibraryLedge
     if (state.kind === 'local') { if (found?.libraryId !== undefined) throw readOnly('it was made local'); continue; }
     if (found) throw readOnly('it was removed');
   }
+  // One Library ID, at most one shared definition (amendment 3 C2): an edit may not add a copy of one already here. A graph opened
+  // with duplicates is repaired as it opens (library_policy.ts), not refused here. 一個 Library ID 至多一份共用定義：修改不能多加一份
+  // 已有的；開圖前就有的重複在開圖時修補，不在這裡擋。
+  const count = (list: SubgraphData[]) => list.reduce((m, f) => m.set(f.libraryId!, (m.get(f.libraryId!) ?? 0) + 1), new Map<string, number>());
+  const had = count(was);
+  for (const [libraryId, n] of count(now)) if (n > 1 && n > (had.get(libraryId) ?? 0))
+    throw Object.assign(Error('A Library subgraph may be in a graph only once'), { code: 'subgraph.libraryDuplicate' });
   for (const f of now) for (const ref of instancesOf(f, registry))
     if (after_.get(ref)?.libraryId === undefined)
       throw Object.assign(Error('A read-only subgraph may only use read-only subgraphs'), { code: 'subgraph.readOnlyClosure' });
@@ -87,6 +107,17 @@ function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** Every string value escaped in place so it holds no bare \u0000 (keys stay). 每個字串值就地轉義，不留單獨的 \u0000（鍵不動）。 */
+function escapeStrings(value: unknown): void {
+  if (!value || typeof value !== 'object') return;
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    const item = record[key];
+    if (typeof item === 'string') record[key] = item.replace(/[\u0000\u0001]/g, c => c === '\u0001' ? '\u0001\u0001' : '\u0001\u0002');
+    else escapeStrings(item);
+  }
+}
+
 /** The standard form of a definition with its closure (amendment 2 B4): the closure numbered in a fixed walk (root 0, then each
  * dependency as first met), instance references replaced by those numbers, each definition keeping its Library ID, without in-graph
  * IDs and derived fields. null when the closure is incomplete. Compared as text where both sides are at hand (no hash).
@@ -97,19 +128,22 @@ export function standardForm(document: Graph, registry: Registry, rootId: string
   if (!order) return null;
   const numbers = new Map(order.map((f, i) => [f.id, i]));
   return canonical(order.map(f => {
-    const { id: _id, stages: _stages, targets: _targets, ...rest } = copy(f);
+    const { id: _id, stages: _stages, targets: _targets, provenance: _provenance, ...rest } = copy(f);
+    // Stored text first has its control characters escaped (\u0001 → \u0001\u0001, \u0000 → \u0001\u0002), so no stored text holds a bare
+    // \u0000 and cannot imitate the markers below, whatever the field (Codex R118.2-2). 存的文字先轉義控制字元，就不會有單獨的 \u0000，
+    // 不管在哪個欄位都仿不出下面的標記。
+    escapeStrings(rest);
     rest.graph.nodes = rest.graph.nodes.map((n: Node) => {
       const module = registry.get(n.nodeType), ref = module?.referencedGraph?.(n);
       return ref === undefined || !module?.reference ? n : { ...n, params: { ...n.params, ...module.reference('#' + numbers.get(ref)) } };
     });
     // A scoped reference to a network in the closure takes that network's number too: only renumbering in-graph IDs must not make two
-    // copies differ (Codex R118-3). The number is written as text no stored token can be (stored tokens are hex), so a resolved
-    // reference never equals an unresolved one that happens to read fn_0 (Codex R118.1-2). 指向閉包裡某張網路的 scoped 參照也換成那張網路的
-    // 編號：只是圖內 ID 重配，不能讓兩份變得不同。編號寫成存檔裡不可能出現的文字（存的 token 是十六進位），所以解析得到的參照不會和剛好寫成 fn_0、
-    // 解析不到的那種相等。
+    // copies differ (Codex R118-3). The marker is \u0000 + JSON + \u0000, which escaped stored text never reads, so a resolved reference
+    // never equals unresolved text (Codex R118.1-2, R118.2-2). 指向閉包裡某張網路的 scoped 參照也換成那張網路的編號：只是圖內 ID 重配，
+    // 不能讓兩份變得不同。標記是 \u0000＋JSON＋\u0000，轉義過的存檔文字不可能讀成它，所以解析得到的參照不會和任何原文相等。
     ScopeReferences.walk(rest, (ref, old) => {
       const n = ref.scope.startsWith('fn_') ? numbers.get(ref.scope.slice(3)) : undefined;
-      return n === undefined ? old : '\u0000closure:' + n + ':' + ref.source.join('\u0000') + '\u0000';
+      return n === undefined ? old : '\u0000' + JSON.stringify(['closure', n, ...ref.source]) + '\u0000';
     });
     return rest;
   }));
@@ -127,68 +161,4 @@ export function closureOrder(document: Graph, registry: Registry, rootId: string
     return instancesOf(f, registry).every(visit);
   };
   return visit(rootId) ? order : null;
-}
-
-/** Which of `needed` (definitions of `source` about to come into `target`) reuse a copy already in `target`, and which come in (amendment
- * 1 A5 rule 3, amendment 2 B3–B4). A Library copy may reuse one with the same Library ID and the same standard form, and with it its whole
- * closure position by position, since reusing a parent fixes its children. The batch is one mapping: no definition of `source` goes to two
- * places and no two go to one, so what was shared stays shared and what was separate stays separate (Codex R118-2). Among the mappings
- * that hold, the one bringing in the fewest is chosen by a search, not the first that fits, so the order of the copy or of the graph
- * never adds a definition that could have been reused (Codex R118.1-1); reuse is tried before bringing in, so the first answer found is
- * the greedy one, and past `limit` steps the best so far is kept. Forms and closures are worked out once per call (Codex R118.1-3). A
- * local definition is never merged by content.
- * `needed` 裡（要從 source 帶進 target 的定義）哪些沿用 target 已有的、哪些帶進來。Library 副本可以沿用同 Library ID、同標準形的那份，連同整個
- * 閉包逐位對應（沿用父就定了子）。整批是一張對照：一份不對到兩處、兩份不對到同一處，共用的維持共用、分開的維持分開。在成立的對照裡用搜尋
- * 挑帶進來最少的，不是第一個合得上的，所以複製或圖裡的順序不會讓本來能沿用的被多加一份；先試沿用再試帶進來，第一個找到的就是貪婪解，超過
- * limit 步就留目前最好的。標準形與閉包每次呼叫只算一次。本地定義永不按內容合併。 */
-export function planLibraryReuse(target: Graph, source: Graph, needed: readonly string[], registry: Registry, limit = 20000):
-    { reused: Map<string, string>; imported: Set<string> } {
-  const sources = new Map((source.subgraphs ?? []).map(f => [f.id, f])), inside = new Set(needed);
-  const sameLibrary = new Map<string, SubgraphData[]>();
-  for (const d of target.subgraphs ?? []) if (d.libraryId !== undefined) (sameLibrary.get(d.libraryId) ?? sameLibrary.set(d.libraryId, []).get(d.libraryId)!).push(d);
-  // Worked out only when asked, once: a source's form only if a copy with its Library ID is here, a target's only when tried.
-  // 用到才算、只算一次：這裡有同 Library ID 的副本才算來源的標準形，試到某個目標才算它的。
-  const forms = new Map<string, string | null>(), memo = (key: string, make: () => string | null) => forms.has(key) ? forms.get(key)! : (forms.set(key, make()), forms.get(key)!);
-  const pool = (id: string) => { const f = sources.get(id); return f?.libraryId === undefined ? [] : sameLibrary.get(f.libraryId) ?? []; };
-  const mappings = new Map<string, Map<string, string> | null>();
-  const mapping = (id: string, d: SubgraphData): Map<string, string> | null => {
-    const key = id + '\u0000' + d.id;
-    if (mappings.has(key)) return mappings.get(key)!;
-    const form = memo('s' + id, () => standardForm(source, registry, id));
-    let found: Map<string, string> | null = null;
-    if (form !== null && memo('t' + d.id, () => standardForm(target, registry, d.id)) === form) {
-      const from = closureOrder(source, registry, id)!, to = closureOrder(target, registry, d.id)!;
-      found = new Map(from.map((g, i) => [g.id, to[i]!.id]));
-    }
-    mappings.set(key, found); return found;
-  };
-  // Parents before children, so a reused parent has fixed its children before they are considered. 父在子前：沿用的父先定好子。
-  const order: string[] = [], done = new Set<string>();
-  const place = (id: string) => {
-    if (done.has(id) || !inside.has(id)) return; done.add(id);
-    const f = sources.get(id); if (f) for (const child of instancesOf(f, registry)) place(child);
-    order.push(id);
-  };
-  needed.forEach(place); order.reverse();
-  const reused = new Map<string, string>(), used = new Set<string>(), imported = new Set<string>();
-  let best: { reused: Map<string, string>; imported: Set<string> } | undefined, steps = 0;
-  const search = (i: number): void => {
-    if (best && imported.size >= best.imported.size) return;
-    if (i === order.length) { best = { reused: new Map(reused), imported: new Set(imported) }; return; }
-    if (best && ++steps > limit) return;
-    const id = order[i]!;
-    if (reused.has(id)) { search(i + 1); return; }
-    for (const d of pool(id)) {
-      const pairs = mapping(id, d);
-      if (!pairs || ![...pairs].every(([from, to]) => !imported.has(from) && (reused.has(from) ? reused.get(from) === to : !used.has(to)))) continue;
-      const added = [...pairs].filter(([from]) => !reused.has(from));
-      for (const [from, to] of added) { reused.set(from, to); used.add(to); }
-      search(i + 1);
-      for (const [from, to] of added) { reused.delete(from); used.delete(to); }
-      if (best?.imported.size === 0) return;
-    }
-    imported.add(id); search(i + 1); imported.delete(id);
-  };
-  search(0);
-  return best!;
 }

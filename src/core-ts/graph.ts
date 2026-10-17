@@ -156,9 +156,9 @@ export class Network {
   instantiateSubgraph(definitionId:string,id:string,ui:ObjectValue={}):Node {
     return this.node(instantiateSubgraph(this,definitionId,id,ui).id);
   }
-  independentSubgraph(node:Node,next:AllocateSubgraphId):Subgraph|null {
+  independentSubgraph(node:Node,next:AllocateSubgraphId,at?:string):Subgraph|null {
     if(node.network!==this)throw Error('Node belongs to another network');
-    const f=independentSubgraph(this,node.id,next);return f?this.graph.subgraph(f.id):null;
+    const f=independentSubgraph(this,node.id,next,at);return f?this.graph.subgraph(f.id):null;
   }
   get context():NodeContext {return contextFor(this.graph.document,this.graph.document.subgraphs?.find(f=>f.graph===this.data));}
   node(id:string):Node {let n=this.nodeHandles.get(id);if(!n){n=new Node(this,id);this.nodeHandles.set(id,n);}return n;}
@@ -385,7 +385,7 @@ export class GraphDocument {
   }
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
   /** Make Local (library_operations.ts): returns the ID holding the local content (the same, or the fork B′). 轉為本地：回傳放本地內容的 ID。 */
-  makeLocal(id:string,next:AllocateSubgraphId):string {return makeLocal(this,id,next);}
+  makeLocal(id:string,next:AllocateSubgraphId,at?:string):string {return makeLocal(this,id,next,at);}
   /** Take a Library copy's new content (library_operations.ts). 讓 Library 副本換成新內容。 */
   updateFromLibrary(id:string,content:SubgraphData):void {updateFromLibrary(this,id,content);}
   /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */

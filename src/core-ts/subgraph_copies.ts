@@ -4,7 +4,7 @@ import { ensureSubgraphCapacity, validateSubgraphData, withoutStoredUse } from '
 import { freeName } from './node_names';
 import { ScopeReferences } from './scope_references';
 import { tidyGroups } from './groups';
-import { readOnly, requireCurrent } from './library';
+import { readOnly, requireCurrent, localize, now } from './library';
 import type { Graph } from './model';
 
 export type AllocateSubgraphId = () => string;
@@ -82,17 +82,18 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
 /** Make Single User (basic design §3.10): copy only this instance's definition for this one instance. Nested children remain
  * shared; the graph already owns their complete content. The copy is named by the one naming rule (node_names.ts), not
  * "… Copy". 設為唯一：只為這個實例複製一份定義；巢狀仍共用；名稱走同一套撞名規則，不加「Copy」。 */
-export function independentSubgraph(network:Network,nodeId:string,next:AllocateSubgraphId):SubgraphData|null {
+export function independentSubgraph(network:Network,nodeId:string,next:AllocateSubgraphId,at=now()):SubgraphData|null {
   network.assertEditable();
   const graph=network.graph,n=network.nodeData(nodeId);
   if(!n)throw Error('Subgraph instance no longer exists');
   const id=reference(graph,n),source=graph.document.subgraphs?.find(f=>f.id===id);
   if(!source)return null;
-  // The copy of a Library copy is local (§3.10): read the copy as it stands, then drop the Library ID. Library 副本的複本是本地的。
+  // The copy of a Library copy is local (§3.10) and records where it came from (C6): read the copy as it stands, then drop the Library
+  // ID. Library 副本的複本是本地的，記下出處。
   requireCurrent(graph.library,source);
   ensureSubgraphCapacity(graph,1);
   const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
-  const f=copy(source);f.id=newId;delete f.libraryId;f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
+  const f=copy(source);f.id=newId;localize(f,at);f.title=freeName(source.title,new Set(graph.document.subgraphs!.map(d=>d.title)),80);
   remapScopes(f,new Map([[source.id,newId]]));
   const params=parameters(graph,n,newId);
   const owned=appendSubgraphs(graph,[f])[0]!;
