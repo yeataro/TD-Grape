@@ -1,5 +1,5 @@
 import type { Graph } from './model';
-import type { Registry } from './node_module';
+import { contextFor, nodeStages, type Registry } from './node_module';
 
 /** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
  * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
@@ -33,11 +33,13 @@ export function subgraphGroups(graph: Graph, registry: Registry): { stagesOf: (i
   const own = new Map<string, string[]>(), instances = new Map<string, string[]>();
   for (const [id, subgraph] of byId) {
     let stages = [...SUBGRAPH_STAGES];
-    const children: string[] = [];
+    const children: string[] = [], context = contextFor(graph, subgraph);
     for (const node of subgraph.graph?.nodes ?? []) {
       const module = registry.get(node.nodeType);
       if (!module) continue;
-      const limit = module.catalog.definition.stages;
+      // What a usable node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); one this target cannot use
+      // is a ghost and keeps its type's, as before. 能用的節點，內容可能讓 Stage 更窄；這個 target 用不了的是 Ghost，照類型的、同以前。
+      const limit = module.stages && module.supports(node, context) ? nodeStages(module, node) : module.catalog.definition.stages;
       if (limit) stages = stages.filter(stage => limit.includes(stage));
       const child = module.referencedGraph?.(node);
       if (child !== undefined && byId.has(child)) children.push(child);

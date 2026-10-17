@@ -85,8 +85,11 @@ export function project(document: GraphDocument, previous: Projection, contract:
   const ghosts = core.ghostsOf(network, core.values.policy);
   const conversions = new Map<string, Record<string, string>>();
   for (const edge of network.edges) {
+    // A ghost wire first: its end may be a node whose ports cannot be worked out, so its types are never asked (Codex R08 B,
+    // Refactor.122). 先看是不是 Ghost 線：它的一端可能是算不出接孔的節點，所以不問它的型別。
+    if (ghosts.edges.has(edge.id)) continue;
     const from = edge.from?.type, to = edge.to?.type;
-    if (!from || !to || from === to || ghosts.edges.has(edge.id)) continue;
+    if (!from || !to || from === to) continue;
     conversions.set(edge.data!.to[0], { ...conversions.get(edge.data!.to[0]), [edge.data!.to[1]]: from });
   }
   const sameList = (a: readonly string[] | undefined, b: readonly string[] | undefined) => (a ?? []).length === (b ?? []).length && (a ?? []).every((key, i) => key === b![i]);

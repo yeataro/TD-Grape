@@ -199,7 +199,13 @@ export class Network {
       if(!n||typeof n.id!=='string'||!n.id||ids.has(n.id)||this.removedNodes.has(n.id))throw Error('Invalid, duplicate or retired node ID');ids.add(n.id);
       if(typeof n.nodeType!=='string'||!n.nodeType||!n.params||typeof n.params!=='object'||Array.isArray(n.params))throw Error('Invalid fragment node');
       const module=this.graph.registry.get(n.nodeType);
-      if(module?.supports(n,this.context)){module.validate(n,this.context);resolvePorts(module,n,this.context);}
+      if(module?.supports(n,this.context)){
+        module.validate(n,this.context);
+        // Kept, its ports are worked out on use: one that cannot be is a ghost, as on opening (connectivity.ts; Codex R08 A, Refactor.122:
+        // a reference whose declaration name is taken again). 保留模式下接孔留到用時再算：算不出來就是 Ghost，同開圖。
+        if(options.unavailable==='preserve'){try{resolvePorts(module,n,this.context);}catch{/* a ghost 是 Ghost */}}
+        else resolvePorts(module,n,this.context);
+      }
       else if(options.unavailable!=='preserve')throw Error('Node module or configuration is unavailable');
     }
     const edgeIds=new Set(this.data.edges.map(e=>e.id));
@@ -229,18 +235,21 @@ export class Network {
   }
   plan(policy:ConnectionPolicy,intent:Intent,overrides:ReadonlyMap<string,Ports>=new Map()) {
     const prepared=new Map<string,NodeData>(),removed:EdgeData[]=[];
+    // A node whose ports cannot be worked out is a ghost (connectivity.ts) and has none here, so it never stops other wires (Codex R08 C,
+    // Refactor.122); a wire to or from it finds no port. 接孔算不出來的節點是 Ghost，這裡當它沒有接孔，所以擋不住別的線；接到它或從它接出的線找不到接孔。
+    const portsOf=(n:Node)=>{try{return n.interface.types();}catch{return undefined;}};
     if(intent.kind==='wire'){
       const target=this.node(intent.to.node),module=target.definition,data=target.data;
-      const sourceType=overrides.get(intent.from.node)?.outputs[intent.from.port]||this.node(intent.from.node).interface.outputs[intent.from.port]?.type;
-      if(data&&sourceType&&module?.supports(data,this.context)&&module.wire){
+      const sourceType=overrides.get(intent.from.node)?.outputs[intent.from.port]||portsOf(this.node(intent.from.node))?.outputs[intent.from.port];
+      if(data&&sourceType&&module?.supports(data,this.context)&&module.wire&&portsOf(target)){
         const edit=prepareNodeWire(module,data,intent.to.port,sourceType,this.context);
         prepared.set(target.id,edit.node);
         removed.push(...this.data.edges.filter(e=>e.to[0]===target.id&&edit.replaceInputs.includes(e.to[1])));
       }
     }
-    const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!;
-      return {id:n.id,definition:data.nodeType,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():n.interface.types()),
-        ...(module?.supports(data,this.context)&&module.signatures?{variants:module.signatures(data,this.context)}:{})};});
+    const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!,own=portsOf(n);
+      return {id:n.id,definition:data.nodeType,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():own??new NodePorts([]).types()),
+        ...(own&&module?.supports(data,this.context)&&module.signatures?{variants:module.signatures(data,this.context)}:{})};});
     // Only the wires in effect constrain (Refactor.103.1). 只有接通的線算數（R.103.1）。
     const result=plan({nodes,edges:this.data.edges.filter(e=>!removed.includes(e))},policy,intent,connectedWires(this,policy));
     return result.ok?{...result,prepared,displaced:[...removed,...result.displaced]}:{...result,prepared};

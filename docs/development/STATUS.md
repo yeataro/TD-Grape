@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.122 — D-3 前的修補：開圖失敗上畫面、取消切換、Ghost 入口、內建值 Stage、開圖轉本地耗時 — 2026-10-18
+
+人類 10-18：「先修補。要決策我等醒來再說。」範圍文件：workspace `work/refactor/r122-pre-d3/r122-scope-2026-10-18.md`（含舊行為對照）。依據：Codex 責任邊界審查 13 項現況核對 workspace `work/refactor/boundary-review-status-2026-10-18/README.md`（12 項仍成立；人類同意 R10、R13、R08 放 D-3 前，其餘 9 項 D-3 後），以及 CURRENT 的 D-3 前項目 ② 與 900 層開圖耗時。
+
+- **R10 開圖失敗停在 Opening**：開一個 Grape OP 抽成 `src/editor-react/open_grape_op.ts` 的 `openGrapeOp()`：向 TD 要狀態與建立編輯工作階段共用一個答案（開好了／找不到／被拒附原因與可否換預設圖／已離開），不丟例外；`main.tsx` 只顯示結果。以前工作階段建立時的拒絕（建置不一致、這個入口打不開的圖、較新版本）被吞掉，畫面停在「正在開啟」，失敗分支裡給打不開的圖的「換成預設圖」也永遠出不來。照舊產品（legacy `app.js:1613` 把原因放狀態列）。被拒時照樣顯示是哪個 TD 回話。
+- **R13 取消切換後仍切過去**：「套用後切換」在 TD 回覆後再看一次選擇，套用期間按了取消或改選別的就以那個為準（照 legacy `app.js:740`）。
+- **R08 Ghost 判定沒在所有入口生效**：A 貼上時接孔算不出來的節點照存成 Ghost（`Network.insertFragment` 保留模式），所以「宣告名稱被重新佔用」的引用照 `pasteClip` 既定規則變 Ghost，一起複製的節點也進來；B 畫線時先略過 Ghost 線再問線端型別（`projection.ts`）；C 規劃接線時接孔算不出來的節點當作沒有接孔，擋不住無關的接線（`Network.plan`）。
+- **CURRENT ② TD 內建值各項目的 Stage**：節點模組可選 `stages(node)`，TD 內建值回傳那一項的 Stage；子圖 Stage、頂層 Ghost 判定、TOP 編譯器的支援檢查都經 `nodeStages` 讀。只在節點本身能用之後才採用（TOP 裡的 MAT 專用項目仍是 unknown、在子圖裡不設限制，同以前）。**TOP 圖目前沒有可見效果**：TOP 用得到的項目都允許 Pixel（查過）；MAT／Vertex 進來時才會用到。
+- **900 層開圖耗時**（量過，Codex `work/refactor/r120-review/perf-compact-open.cjs`，同機 Node，熱身一次三次取中位數）：全部轉本地 617 → 163 ms、全部更新 313 → 282 ms、相同 37 → 37 ms。剖析（`work/refactor/r122-pre-d3/profile-open.cjs`）顯示轉本地的前三名在交易收尾的 `changesBetween`：每個節點都線性搜尋所屬子圖、實例的定義與改到的定義（900×900），不在 makeLocal。改成比對期間用查表（`changes.ts` 的 `contextsOf`）；新舊核心對 32 組前後文件的 `changesBetween` 結果逐項相同（`changes-equivalence.cjs`）。這段每筆交易收尾都跑，一次改到很多定義的修改都受益。**更新剩下的成本**分散：約四分之一是 `updateFromLibrary` 每更新一份就掃一次所有網路（要整批索引，且要在定義內容逐份換掉時保持正確），其餘是標準形比對與複製；本輪沒做，留給審查與人類決定。
+- 證據：core 268／268、editor 181／182（1 略過）、check 全過；新測試在修改前的程式上都失敗（R08 A／B／C、②；R10 是新函式，舊的錯在沒有測試的 React effect 裡）。瀏覽器（127.0.0.1，TD DevMode）：頁面開著時暫時改核心讓建置識別碼不同、TD 重載後在頁面裡切換 Grape OP，畫面顯示「這個 Grape OP 無法在這裡打開：前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。」，狀態列同句、標題列仍顯示 TD 專案檔；還原後重載，開圖與頁內切換正常，主控台無錯誤。
+- 限制：R13 沒有單元測試也沒在瀏覽器重現（要有未送出的修改且 TD 回覆夠慢）；R08 B 由 EditorSession 測試涵蓋，沒有在 TD 裡放壞圖實看。
+
 ## Refactor.121.2 — 閉包可用性測試、出處記最近一次 — 2026-10-18
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor121.1修正的核對.md`（R121-1～4 結案；建議補測；C6 對重新出版的語意需定）。評閱：同資料夾 `Opus對Refactor121.1核對的評閱.md`。產品行為不變。

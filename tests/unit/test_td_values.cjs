@@ -67,3 +67,23 @@ test('the node switches entries and offers only what this target can use',()=>{
   assert.ok(offered.includes('vUV')&&!offered.includes('vUVSt')&&!offered.includes('tdNormal')&&!offered.includes('sTD2DInputs'));
   assert.throws(()=>doc.change(c=>c.networks.get('pixel').node('td').edit('entry',{value:'tdNormal'})));
 });
+
+// Each TD built-in value has its own stages (tdPos only in Vertex): a node and a subgraph holding it follow the entry, not the node
+// type (CURRENT D-3 item 2, Codex R.121 review; Refactor.122). TOP graphs never meet it: every entry a TOP can use allows Pixel.
+// 每個 TD 內建值有自己的 Stage（tdPos 只在 Vertex）：節點與裝著它的子圖照那一項，不照節點類型。TOP 圖碰不到：TOP 用得到的項目都允許 Pixel。
+test('a TD built-in value follows its own entry\'s stages, at the top level and inside a subgraph',()=>{
+  assert.ok(G.tdValues.filter(e=>e.targets.includes('top')).every(e=>e.stages.includes('pixel')),'every TOP entry allows Pixel');
+  const value=(id,entry)=>({id,nodeType:'sgrape.builtin.td_value',params:{entry},ui:{x:0,y:0}});
+  const g={format:'grape-graph',version:1,target:'mat',declarations:[],
+    subgraphs:[{id:'pos',title:'Pos',inputs:[],outputs:[],graph:{nodes:[value('p','tdPos')],edges:[]}}],
+    stages:{vertex:{nodes:[value('v','tdPos')],edges:[]},pixel:{nodes:[value('f','tdPos'),value('ok','glFragCoord')],edges:[]}}};
+  assert.deepEqual(plain(G.subgraphStages(g,'pos',registry)),['vertex'],'a subgraph holding tdPos is a Vertex subgraph');
+  const doc=new G.GraphDocument(g,registry),ghosts=net=>G.ghostsOf(doc.networks.get(net),G.values.policy).nodes;
+  assert.equal(ghosts('pixel').get('f'),'misplaced','tdPos at the top of Pixel is misplaced');
+  assert.equal(ghosts('pixel').has('ok'),false,'a Pixel entry in Pixel is fine');
+  assert.equal(ghosts('vertex').has('v'),false,'tdPos in Vertex is fine');
+  // An entry this target cannot use is a ghost inside the subgraph and, like any ghost, sets no limit (subgraph_stages.ts).
+  // 這個 target 用不了的項目在子圖裡是 Ghost，和其他 Ghost 一樣不設限制。
+  const top={...plain(bootstrap.defaultDocument.graph),subgraphs:[{id:'normal',title:'Normal',inputs:[],outputs:[],graph:{nodes:[value('n','tdNormal')],edges:[]}}]};
+  assert.deepEqual(plain(G.subgraphStages(top,'normal',registry)),['vertex','pixel']);
+});

@@ -57,6 +57,19 @@ test('a declaration deleted since the copy comes back; pasting twice names on',(
   assert.deepEqual(plain(back.stages.pixel.nodes.filter(n=>n.nodeType==='sgrape.builtin.add').map(n=>n.name)),['Add_1','Add_2','Add_3'],'Add_1 stays (only references go with a declaration); each paste takes the next name');
 });
 
+// Codex boundary review R08 A (Refactor.122): the rule above, the other half — the name is taken again, so the reference comes in as
+// a ghost, as on opening; the nodes copied with it come in too. 名字又被用了：引用以 Ghost 進來（同開圖），一起複製的節點也進來。
+test('a reference whose declaration name is taken again since the copy pastes as a ghost, with the rest of the copy',()=>{
+  const doc=graph(),clip=G.copyNodes(doc,['ref','sum'],OP);
+  const retaken=new G.GraphDocument(doc.change(c=>{c.removeDeclaration('k1');c.addDeclaration({id:'k2',kind:'constant',name:'kOffset',type:'float',value:1});}).after,registry);
+  let ids;const after=retaken.change(c=>{ids=G.pasteClip(c,clip,{x:0,y:0},newId,newGroupId);}).after;
+  assert.equal(ids.length,2,'both copied nodes are pasted');
+  assert.ok(!after.declarations.some(d=>d.id==='k1'),'the old declaration does not come back: its name is in use');
+  const pasted=new G.GraphDocument(after,registry),ghosts=G.ghostsOf(pasted.networks.get('pixel'),G.values.policy);
+  assert.equal(ghosts.nodes.get(ids[0]),'missing','the reference is a ghost of a missing declaration');
+  assert.equal(ghosts.nodes.has(ids[1]),false,'the Add beside it is an ordinary node');
+});
+
 test('duplicate is a paste of a fresh copy from its corner',()=>{
   const doc=graph(),clip=G.copyNodes(doc,['sum'],OP);
   assert.deepEqual(plain(G.clipCorner(clip)),{x:300,y:240});

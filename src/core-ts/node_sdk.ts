@@ -193,6 +193,8 @@ export function tdValueNode(catalog:CatalogRow):NodeModule {
     // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
     componentNames:n=>uvEntries.has(String(n.params.entry))?'uv':'xyzw',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),
+    // Each entry has its own stages (tdPos only in Vertex; Refactor.122). 每一項有自己的 Stage。
+    stages:n=>{const entry=entryOf(n);return entry?entry.stages.filter(s=>catalog.definition.stages.includes(s)):catalog.definition.stages;},
     ports:n=>tdValuePort(entryOf(n)!),validate:()=>{},
     presentation:(n,c)=>{const entry=entryOf(n);return {label:entry?.name,
       ...(entry?.outputs?{portLabels:{outputs:Object.fromEntries(entry.outputs.map(o=>[o.key,o.label]))},components:{outputs:componentsOf(entry)!}}:{}),

@@ -16,6 +16,10 @@ export interface NodeContext {
   declarations?():readonly Declaration[];
   subgraph?(id:string):SubgraphData|undefined;
 }
+/** The stages a node can be used in: its module's own answer for this node, else its type's (Refactor.122). The one reading for
+ * placement (connectivity.ts), subgraph stages and the compiler. 節點能用的 Stage：模組對這個節點的答案，沒有就照類型；擺放判斷、子圖 Stage、
+ * 產碼都讀這裡。 */
+export const nodeStages=(module:NodeModule,node:Node):readonly string[]|undefined=>module.stages?.(node)??module.catalog.definition.stages;
 export function contextFor(graph:Graph,owner?:SubgraphData):NodeContext {
   return {target:graph.target,owner,declaration:id=>graph.declarations.find(d=>d.id===id),declarations:()=>graph.declarations,
     subgraph:id=>graph.subgraphs?.find(f=>f.id===id)};
@@ -83,6 +87,10 @@ export interface NodePresentation {
 export interface NodeModule {
   readonly catalog:CatalogRow;
   readonly role:'value'|'output'|'subgraph-input'|'subgraph-output';
+  /** The stages this node can be used in when what it holds narrows its type's (a TD built-in value's entry: tdPos only in Vertex;
+   * Refactor.122). Left out: the catalog's. Read through nodeStages. 節點持有的內容讓 Stage 比類型的窄時（TD 內建值的那一項），它能用的 Stage；
+   * 沒寫＝照 catalog。經 nodeStages 讀。 */
+  stages?(node:Node):readonly string[];
   /** Structural modules are instantiated from a graph definition, not the palette. */
   readonly structural?:boolean;
   /** Add-menu entries (design-interview Q37 1-5); the menu reads only these, never node names. Left

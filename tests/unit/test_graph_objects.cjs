@@ -146,3 +146,16 @@ test('a raw draft deletion cannot make the next connection reuse the deleted id'
   const next=open(removed.after).change(g=>{const n=g.networks.get('pixel');assert.notEqual(n.connect(n.node('source').outputs[0],n.node('operation').inputs[0],policy).id,'edge_80');});
   assert.equal(next.after.stages.pixel.edges.length,1);
 });
+
+// Codex boundary review R08 C (Refactor.122): a stored node whose ports cannot be worked out is a ghost (connectivity.ts), and planning
+// treats it as having no ports, so it never stops two other nodes from being wired. 接孔算不出來的節點是 Ghost；規劃把它當成沒有接孔，
+// 所以它擋不住另外兩個節點接線。
+test('a ghost whose ports cannot be worked out does not stop wiring between other nodes',()=>{
+  const d=document();d.stages.pixel.nodes.push(node('bad','convert',{fromType:'vec2',toType:'vec3'}),node('a','float',{value:1}),node('b','abs',{type:'float'}));
+  const doc=open(d);
+  assert.equal(context.GrapeGraph.ghostsOf(doc.networks.get('pixel'),policy).nodes.get('bad'),'unknown','vec2 to vec3 is not a conversion this build has');
+  assert.equal(doc.networks.get('pixel').plan(policy,{kind:'wire',from:{node:'a',port:'out'},to:{node:'b',port:'value'}}).ok,true);
+  const wired=doc.change(g=>{const n=g.networks.get('pixel');n.connect(n.node('a').outputs[0],n.node('b').inputs[0],policy);});
+  assert.ok(wired.after.stages.pixel.edges.some(e=>e.from[0]==='a'&&e.to[0]==='b'));
+  assert.equal(doc.networks.get('pixel').plan(policy,{kind:'wire',from:{node:'a',port:'out'},to:{node:'bad',port:'value'}}).ok,false,'a wire into the ghost is still refused');
+});

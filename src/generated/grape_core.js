@@ -212,17 +212,36 @@ function metadata(g) {
     return { ...rest, subgraphs: (subgraphs || []).map(raw => { const { graph, ...definition } = raw; return definition; }) };
 }
 const networkMetadata = (data) => { const { nodes, edges, ...rest } = data || {}; return rest; };
-function portTypes(g, node, registry, networkId) {
-    var _a;
+/** One node context per network of a document that does not change while it is compared, its lookups by table (Refactor.122).
+ * Asking contextFor per node scanned every definition for the owner and again for each instance's definition: a change touching many
+ * definitions (Make Local on opening, 900 levels) was quadratic. The first of a repeated ID wins, as with find.
+ * 比對期間不會變的文件，每個網路一份節點 context，查找用表（R.122）：每個節點都問 contextFor，找所屬定義、找每個實例的定義都要掃過全部定義，
+ * 一次改到很多定義的修改（開圖轉本地，900 層）就成了平方。ID 重複時取第一個，同 find。 */
+function contextsOf(g) {
+    const definitions = new Map(), made = new Map();
+    for (const f of g.subgraphs || [])
+        if (!definitions.has(f.id))
+            definitions.set(f.id, f);
+    return network => {
+        let context = made.get(network);
+        if (!context) {
+            const owner = network.startsWith('subgraph:') ? definitions.get(network.slice('subgraph:'.length)) : undefined;
+            context = { ...(0, node_module_1.contextFor)(g, owner), subgraph: id => definitions.get(id) };
+            made.set(network, context);
+        }
+        return context;
+    };
+}
+function portTypes(node, registry, context) {
     if (!node)
         return { inputs: {}, outputs: {} };
-    const module = registry.get(node.nodeType), context = (0, node_module_1.contextFor)(g, (_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => 'subgraph:' + f.id === networkId));
+    const module = registry.get(node.nodeType);
     if (!(module === null || module === void 0 ? void 0 : module.supports(node, context)))
         return undefined;
     try {
         return (0, node_module_1.resolvePorts)(module, node, context).types();
     }
-    catch (_b) {
+    catch (_a) {
         return undefined;
     }
 }
@@ -230,12 +249,18 @@ function portTypes(g, node, registry, networkId) {
  * publication diff is shared by views; candidate planning may compare its own
  * inputs. Unknown/dynamic legacy contexts explicitly request fallback. */
 function changesBetween(before, after, registry) {
-    var _a, _b;
+    var _a;
     const global = keys(metadata(before), metadata(after)).filter(k => k !== 'subgraphs'), old = networks(before), next = networks(after), changes = [];
     const defs = (g) => new Map((g.subgraphs || []).map(({ graph, ...f }) => [f.id, f]));
     const oldDefs = defs(before), newDefs = defs(after), definitions = [...new Set([...oldDefs.keys(), ...newDefs.keys()])].filter(id => !equal(oldDefs.get(id), newDefs.get(id)));
-    const affected = (n, network) => { var _a; if (!n)
-        return false; const m = registry.get(n.nodeType); return definitions.includes(((_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n)) || '') || !!(m === null || m === void 0 ? void 0 : m.structural) && definitions.some(id => network === 'subgraph:' + id); };
+    const changedDefinitions = new Set(definitions), beforeContext = contextsOf(before), afterContext = contextsOf(after);
+    const affected = (n, network) => {
+        var _a;
+        if (!n)
+            return false;
+        const m = registry.get(n.nodeType), child = (_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n);
+        return child !== undefined && changedDefinitions.has(child) || !!(m === null || m === void 0 ? void 0 : m.structural) && network.startsWith('subgraph:') && changedDefinitions.has(network.slice('subgraph:'.length));
+    };
     for (const id of new Set([...old.keys(), ...next.keys()])) {
         const a = old.get(id), b = next.get(id);
         if (equal(a, b) && !global.length && ![...((a === null || a === void 0 ? void 0 : a.nodes) || []), ...((b === null || b === void 0 ? void 0 : b.nodes) || [])].some(n => affected(n, id)))
@@ -246,8 +271,8 @@ function changesBetween(before, after, registry) {
             const x = previous.get(nodeId), y = current.get(nodeId);
             // Legacy modules may depend on other nodes/definitions; until migrated,
             // an affected mixed network keeps its conservative projection path.
-            for (const [g, n] of [[before, x], [after, y]])
-                if (n && !((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.supports(n, (0, node_module_1.contextFor)(g, (_b = g.subgraphs) === null || _b === void 0 ? void 0 : _b.find(f => 'subgraph:' + f.id === id)))))
+            for (const [context, n] of [[beforeContext(id), x], [afterContext(id), y]])
+                if (n && !((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.supports(n, context)))
                     change.complete = false;
             if (!x)
                 change.added.push(nodeId);
@@ -256,7 +281,7 @@ function changesBetween(before, after, registry) {
             if (equal(x, y) && !global.length && !affected(x, id) && !affected(y, id))
                 continue;
             change.nodes.push({ id: nodeId, fields: [...keys(x, y), ...(affected(x, id) || affected(y, id) ? ['interface'] : [])], params: keys(x === null || x === void 0 ? void 0 : x.params, y === null || y === void 0 ? void 0 : y.params), inputs: keys(x === null || x === void 0 ? void 0 : x.inputValues, y === null || y === void 0 ? void 0 : y.inputValues), ui: keys(x === null || x === void 0 ? void 0 : x.ui, y === null || y === void 0 ? void 0 : y.ui) });
-            const from = portTypes(before, x, registry, id), to = portTypes(after, y, registry, id);
+            const from = portTypes(x, registry, beforeContext(id)), to = portTypes(y, registry, afterContext(id));
             if (!from || !to) {
                 change.complete = false;
                 continue;
@@ -586,10 +611,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.unusableNodes = unusableNodes;
 exports.connectedWires = connectedWires;
 const subgraph_stages_1 = require("./subgraph_stages");
+const node_module_1 = require("./node_module");
 /** The nodes this build cannot use, and why (Q37 1-1; Q45: a reference to a declaration that no longer exists). 這一版用不了的節點與
  * 原因（Q37 1-1；Q45：引用的宣告已不存在）。 */
 function unusableNodes(network) {
-    var _a;
+    var _a, _b;
     const nodes = new Map();
     // Subgraph networks have no stage of their own; their nodes follow the stage of their instance.
     const stage = network.id.startsWith('subgraph:') ? undefined : network.id;
@@ -612,12 +638,17 @@ function unusableNodes(network) {
             nodes.set(node.id, 'missing');
         else if (!module.supports(data, network.context))
             nodes.set(node.id, 'unknown');
+        // What the node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); asked once the node is usable at
+        // all here, so a MAT-only entry in a TOP stays 'unknown'. 節點的內容可能讓 Stage 比類型窄（TD 內建值的那一項）；在節點本身能用之後才問，
+        // 所以 TOP 裡的 MAT 專用項目仍是 unknown。
+        else if (stage && !((_b = (0, node_module_1.nodeStages)(module, data)) !== null && _b !== void 0 ? _b : [stage]).includes(stage))
+            nodes.set(node.id, 'misplaced');
         else {
             // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
             try {
                 void node.interface;
             }
-            catch (_b) {
+            catch (_c) {
                 nodes.set(node.id, 'unknown');
             }
         }
@@ -1247,7 +1278,16 @@ class Network {
             const module = this.graph.registry.get(n.nodeType);
             if (module === null || module === void 0 ? void 0 : module.supports(n, this.context)) {
                 module.validate(n, this.context);
-                (0, node_module_1.resolvePorts)(module, n, this.context);
+                // Kept, its ports are worked out on use: one that cannot be is a ghost, as on opening (connectivity.ts; Codex R08 A, Refactor.122:
+                // a reference whose declaration name is taken again). 保留模式下接孔留到用時再算：算不出來就是 Ghost，同開圖。
+                if (options.unavailable === 'preserve') {
+                    try {
+                        (0, node_module_1.resolvePorts)(module, n, this.context);
+                    }
+                    catch ( /* a ghost 是 Ghost */_a) { /* a ghost 是 Ghost */ }
+                }
+                else
+                    (0, node_module_1.resolvePorts)(module, n, this.context);
             }
             else if (options.unavailable !== 'preserve')
                 throw Error('Node module or configuration is unavailable');
@@ -1291,19 +1331,27 @@ class Network {
     plan(policy, intent, overrides = new Map()) {
         var _a, _b;
         const prepared = new Map(), removed = [];
+        // A node whose ports cannot be worked out is a ghost (connectivity.ts) and has none here, so it never stops other wires (Codex R08 C,
+        // Refactor.122); a wire to or from it finds no port. 接孔算不出來的節點是 Ghost，這裡當它沒有接孔，所以擋不住別的線；接到它或從它接出的線找不到接孔。
+        const portsOf = (n) => { try {
+            return n.interface.types();
+        }
+        catch (_a) {
+            return undefined;
+        } };
         if (intent.kind === 'wire') {
             const target = this.node(intent.to.node), module = target.definition, data = target.data;
-            const sourceType = ((_a = overrides.get(intent.from.node)) === null || _a === void 0 ? void 0 : _a.outputs[intent.from.port]) || ((_b = this.node(intent.from.node).interface.outputs[intent.from.port]) === null || _b === void 0 ? void 0 : _b.type);
-            if (data && sourceType && (module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.wire) {
+            const sourceType = ((_a = overrides.get(intent.from.node)) === null || _a === void 0 ? void 0 : _a.outputs[intent.from.port]) || ((_b = portsOf(this.node(intent.from.node))) === null || _b === void 0 ? void 0 : _b.outputs[intent.from.port]);
+            if (data && sourceType && (module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.wire && portsOf(target)) {
                 const edit = (0, node_module_1.prepareNodeWire)(module, data, intent.to.port, sourceType, this.context);
                 prepared.set(target.id, edit.node);
                 removed.push(...this.data.edges.filter(e => e.to[0] === target.id && edit.replaceInputs.includes(e.to[1])));
             }
         }
         const nodes = this.nodes.map(n => {
-            const module = n.definition, data = n.data;
-            return { id: n.id, definition: data.nodeType, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : n.interface.types()),
-                ...((module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.signatures ? { variants: module.signatures(data, this.context) } : {}) };
+            const module = n.definition, data = n.data, own = portsOf(n);
+            return { id: n.id, definition: data.nodeType, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : own !== null && own !== void 0 ? own : new ports_1.NodePorts([]).types()),
+                ...(own && (module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.signatures ? { variants: module.signatures(data, this.context) } : {}) };
         });
         // Only the wires in effect constrain (Refactor.103.1). 只有接通的線算數（R.103.1）。
         const result = (0, wire_planning_1.plan)({ nodes, edges: this.data.edges.filter(e => !removed.includes(e)) }, policy, intent, (0, connectivity_1.connectedWires)(this, policy));
@@ -2882,6 +2930,7 @@ function formatProblem(value) {
 "node_module":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.nodeStages = void 0;
 exports.contextFor = contextFor;
 exports.createRegistry = createRegistry;
 exports.configureNode = configureNode;
@@ -2891,6 +2940,11 @@ exports.prepareNodeUnwire = prepareNodeUnwire;
 exports.resolvePorts = resolvePorts;
 const model_1 = require("./model");
 const ports_1 = require("./ports");
+/** The stages a node can be used in: its module's own answer for this node, else its type's (Refactor.122). The one reading for
+ * placement (connectivity.ts), subgraph stages and the compiler. 節點能用的 Stage：模組對這個節點的答案，沒有就照類型；擺放判斷、子圖 Stage、
+ * 產碼都讀這裡。 */
+const nodeStages = (module, node) => { var _a, _b; return (_b = (_a = module.stages) === null || _a === void 0 ? void 0 : _a.call(module, node)) !== null && _b !== void 0 ? _b : module.catalog.definition.stages; };
+exports.nodeStages = nodeStages;
 function contextFor(graph, owner) {
     return { target: graph.target, owner, declaration: id => graph.declarations.find(d => d.id === id), declarations: () => graph.declarations,
         subgraph: id => { var _a; return (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id); } };
@@ -3428,6 +3482,8 @@ function tdValueNode(catalog) {
         // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
         componentNames: n => uvEntries.has(String(n.params.entry)) ? 'uv' : 'xyzw',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
+        // Each entry has its own stages (tdPos only in Vertex; Refactor.122). 每一項有自己的 Stage。
+        stages: n => { const entry = entryOf(n); return entry ? entry.stages.filter(s => catalog.definition.stages.includes(s)) : catalog.definition.stages; },
         ports: n => tdValuePort(entryOf(n)), validate: () => { },
         presentation: (n, c) => {
             const entry = entryOf(n);
@@ -7987,6 +8043,7 @@ exports.SUBGRAPH_STAGES = void 0;
 exports.subgraphStages = subgraphStages;
 exports.subgraphStageTable = subgraphStageTable;
 exports.subgraphGroups = subgraphGroups;
+const node_module_1 = require("./node_module");
 /** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
  * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
  * clipboard) writes the result and is recomputed on load. Nodes this build does not know add no limit: they are ghosts
@@ -8017,12 +8074,14 @@ function subgraphGroups(graph, registry) {
     const own = new Map(), instances = new Map();
     for (const [id, subgraph] of byId) {
         let stages = [...exports.SUBGRAPH_STAGES];
-        const children = [];
+        const children = [], context = (0, node_module_1.contextFor)(graph, subgraph);
         for (const node of (_c = (_b = subgraph.graph) === null || _b === void 0 ? void 0 : _b.nodes) !== null && _c !== void 0 ? _c : []) {
             const module = registry.get(node.nodeType);
             if (!module)
                 continue;
-            const limit = module.catalog.definition.stages;
+            // What a usable node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); one this target cannot use
+            // is a ghost and keeps its type's, as before. 能用的節點，內容可能讓 Stage 更窄；這個 target 用不了的是 Ghost，照類型的、同以前。
+            const limit = module.stages && module.supports(node, context) ? (0, node_module_1.nodeStages)(module, node) : module.catalog.definition.stages;
             if (limit)
                 stages = stages.filter(stage => limit.includes(stage));
             const child = (_d = module.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(module, node);
@@ -8340,6 +8399,7 @@ const subgraph_compiler_1 = require("./subgraph_compiler");
 const graph_1 = require("./graph");
 const model_1 = require("./model");
 const values_1 = require("./values");
+const node_module_1 = require("./node_module");
 const comments_1 = require("./comments");
 const ghosts_1 = require("./ghosts");
 const declarations_1 = require("./declarations");
@@ -8375,8 +8435,9 @@ function createFlatCompiler(registry, limits) {
         // take a symbol. Ghost 節點不產碼：不擋這條路，也不佔名稱。
         const context = { declaration: (id) => g.declarations.find(d => d.id === id) };
         const ghost = (n) => {
+            var _a;
             const d = registry.get(n.nodeType);
-            return !d || !!d.catalog.definition.stages && !d.catalog.definition.stages.includes('pixel') || !d.supports(n, context);
+            return !d || !((_a = (0, node_module_1.nodeStages)(d, n)) !== null && _a !== void 0 ? _a : ['pixel']).includes('pixel') || !d.supports(n, context);
         };
         const live = ((_e = g.stages.pixel) === null || _e === void 0 ? void 0 : _e.nodes.filter(n => !ghost(n))) || [];
         const symbols = live.filter(n => { var _a; return ((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role) !== 'output'; }).map(n => n.name || n.id);

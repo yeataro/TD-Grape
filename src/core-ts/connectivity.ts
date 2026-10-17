@@ -1,6 +1,7 @@
 import type { Network, ConnectionPolicy } from './graph';
 import type { Edge as EdgeData } from './model';
 import { subgraphStageTable } from './subgraph_stages';
+import { nodeStages } from './node_module';
 
 /** Which wires are in effect (Refactor.103.1, human 2026-10-12). A stored wire only says where it goes; whether it is connected is read
  * from the graph with this build's rules: both ends are nodes this build can use, both ports are there, and the types fit. A port's
@@ -32,6 +33,10 @@ export function unusableNodes(network: Network): Map<string, GhostKind> {
     else if (referred !== undefined && !stage) nodes.set(node.id, 'misplaced');
     else if (referred !== undefined && !network.context.declaration(referred)) nodes.set(node.id, 'missing');
     else if (!module.supports(data, network.context)) nodes.set(node.id, 'unknown');
+    // What the node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); asked once the node is usable at
+    // all here, so a MAT-only entry in a TOP stays 'unknown'. 節點的內容可能讓 Stage 比類型窄（TD 內建值的那一項）；在節點本身能用之後才問，
+    // 所以 TOP 裡的 MAT 專用項目仍是 unknown。
+    else if (stage && !(nodeStages(module, data) ?? [stage]).includes(stage)) nodes.set(node.id, 'misplaced');
     else {
       // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
       try { void node.interface; } catch { nodes.set(node.id, 'unknown'); }

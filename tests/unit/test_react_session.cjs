@@ -22,6 +22,7 @@ function load(file) {
 const { Editor: EditorSession, spareHandle } = load(path.join(root, 'src/editor-react/editor.ts'));
 const { resetToDefault } = load(path.join(root, 'src/editor-react/host_sync.ts'));
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
+const { openGrapeOp } = load(path.join(root, 'src/editor-react/open_grape_op.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
 // Messages are data worded at display time (Q34); tests read them the way a zh-Hant page shows them.
@@ -340,6 +341,32 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   const newer = loaded(); withDoc(newer.state, graph => { graph.version = 2; });
   assert.throws(() => new EditorSession(session.host, bootstrap, newer), error => !(error instanceof UnsupportedGraphError) && /較新版的 Grape/.test(zh(errorText(error))));
   assert.equal(instances.length, 0);
+});
+
+// Codex boundary review R10 (Refactor.122): a refusal while the session is built reaches the page like a failed request, with its
+// reason; before, it was lost and the page stayed on "Opening…". 建立工作階段時的拒絕和請求失敗一樣帶著原因到畫面上；以前會被吞掉、停在「正在開啟」。
+test('opening a Grape OP answers once for asking TD and building the session, refusals included', async t => {
+  const { loaded } = open(t), answer = edit => async () => { const state = loaded(); edit(state); return new Response(JSON.stringify(state)); };
+  const opening = async (fetch, stillWanted = () => true) => {
+    let made = 0;
+    const host = new HostClient(target, '', fetch, 20000);
+    const result = await openGrapeOp(host, bootstrap, '9.9.9 Test', stillWanted, state => { made++; return new EditorSession(host, bootstrap, state, 60000, 60000, undefined, '9.9.9 Test'); });
+    if (result.kind === 'opened') result.session.dispose();
+    return { result, made };
+  };
+  const other = await opening(answer(state => { state.frontendCompiler.catalogHash = 'other'; }));
+  assert.equal(other.result.kind, 'refused'); assert.match(zh(other.result.message), /版本不一致/); assert.equal(other.result.reset, undefined);
+  assert.ok(other.result.loaded, 'who answered stays known');
+  const old = await opening(answer(state => withDoc(state.state, graph => { delete graph.format; graph.schemaVersion = 1; })));
+  assert.equal(old.result.kind, 'refused'); assert.match(zh(old.result.message), /不是新格式/); assert.equal(typeof old.result.reset, 'function', 'a graph this entry cannot open offers the default');
+  const newer = await opening(answer(state => withDoc(state.state, graph => { graph.version = 2; })));
+  assert.equal(newer.result.kind, 'refused'); assert.match(zh(newer.result.message), /較新版的 Grape/); assert.equal(newer.result.reset, undefined, 'never for a newer version');
+  const missing = await opening(async () => new Response(JSON.stringify({ error: 'no such Grape OP' }), { status: 404 }));
+  assert.equal(missing.result.kind, 'missing');
+  const left = await opening(answer(() => {}), () => false);
+  assert.equal(left.result.kind, 'left'); assert.equal(left.made, 0, 'nothing is built once the page moved on');
+  const ok = await opening(answer(() => {}));
+  assert.equal(ok.result.kind, 'opened'); assert.equal(ok.made, 1);
 });
 
 test('explicit geometry notification is limited to internal handle changes; size is RF-owned', () => {
@@ -766,6 +793,21 @@ test('a graph with an unknown node and a bad wire opens; ghosts survive edits an
   assert.deepEqual(stored.nodes.find(node => node.id === 'future'), future, 'the ghost is stored byte for byte');
   assert.ok(stored.edges.some(edge => edge.id === 'eFuture'));
   assert.ok(instances.length >= 2);
+});
+
+// Codex boundary review R08 B (Refactor.122): a known node whose ports cannot be worked out (a stored Convert vec2 → vec3) with a wire
+// into it opens as a ghost; the drawing skips its wire before asking the wire's port types. 已知節點接孔算不出來、又有線接進去：照樣開成
+// Ghost；畫線時先略過 Ghost 線，再問線端型別。
+test('a known node whose ports cannot be worked out opens as a ghost with its wire, and other nodes still wire', t => {
+  const graph = fixture();
+  graph.stages.pixel.nodes.push(makeNode('wide', 'vector'), { id: 'bad', nodeType: 'sgrape.builtin.convert', params: { fromType: 'vec2', toType: 'vec3' }, ui: { x: 0, y: 0 } });
+  graph.stages.pixel.edges.push({ id: 'eBad', from: ['wide', 'out'], to: ['bad', 'value'] });
+  const { session } = open(t, undefined, undefined, undefined, undefined, graph);
+  const view = session.snapshot().projection;
+  assert.equal(view.nodes.find(node => node.id === 'bad').data.ghost, 'unknown');
+  assert.equal(view.edges.find(edge => edge.id === 'eBad').type, 'ghost');
+  session.transact(tr('edit.connected', 'Connected'), net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  assert.ok(session.graph().stages.pixel.edges.some(edge => edge.from[0] === 'a' && edge.to[0] === 'sum'));
 });
 
 test('a Library subgraph definition still refuses the document: as a ghost it would silently leave TD', t => {

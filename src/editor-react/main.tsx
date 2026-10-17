@@ -13,11 +13,11 @@ import './theme/light.css';
 import './theme/sizes.css';
 import { appearanceSubscribe, currentTheme } from './appearance';
 import './style.css';
-import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
-import { GRAPE_ID, HostClient, HostError, type StateResponse } from './host';
+import { typeColor, type Bootstrap } from './core';
+import { GRAPE_ID, HostClient } from './host';
 import { Editor as EditorSession, type EditorState, type WireEnd, type NewWire } from './editor';
 import { useEditorFields, useEditorSlice } from './editor_slice';
-import { resetToDefault } from './host_sync';
+import { openGrapeOp } from './open_grape_op';
 import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
 import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
 import { SelectionAround } from './SelectionFrame';
@@ -790,16 +790,20 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…'), loading: true });
     const client = new HostClient(target, token);
     client.seen = setTd;
-    client.call<StateResponse>('state').then(loaded => {
-      if (!live) return;
-      setOpened(loaded.td ?? null);
-      opened = new EditorSession(client, bootstrap, loaded, undefined, undefined, undefined, version);
-      setSession(opened); setPath(loaded.target);
-    }, error => {
-      if (!live) return;
-      if (error instanceof HostError && error.status === 404) { setWaiting(wrong); return; }
-      setWaiting({ message: tr('picker.cannotOpen', 'This Grape OP cannot be opened here: {reason}', { reason: errorText(error) }),
-        reset: error instanceof UnsupportedGraphError ? async () => { await resetToDefault(client, bootstrap, version); setReload(n => n + 1); } : undefined });
+    // One answer for asking TD and building the session (open_grape_op.ts; Codex R10). 向 TD 要狀態與建立工作階段同一個答案。
+    void openGrapeOp(client, bootstrap, version, () => live).then(result => {
+      if (result.kind === 'left') return;
+      if (!live) { if (result.kind === 'opened') result.session.dispose(); return; }
+      if (result.kind === 'missing') { setWaiting(wrong); return; }
+      if (result.kind === 'refused') {
+        if (result.loaded) setOpened(result.loaded.td ?? null);
+        const reset = result.reset;
+        setWaiting({ message: result.message, reset: reset && (async () => { await reset(); setReload(n => n + 1); }) });
+        return;
+      }
+      setOpened(result.loaded.td ?? null);
+      opened = result.session;
+      setSession(opened); setPath(result.loaded.target);
     });
     return () => { live = false; opened?.dispose(); };
   }, [target, token, bootstrap, version, reload]);
@@ -820,7 +824,10 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph(), source: sourceNow(td) })); go(pending); }
     catch (error) { session?.notice(error); }
   };
-  const applyAndGo = async () => { await session!.flush(); if (!session!.snapshot().dirty) go(pending); };
+  // The choice is checked again once TD has answered: Cancel (or another choice) while it applied wins, as in the old product
+  // (legacy app.js:740; Codex R13, Refactor.122). TD 回覆後再看一次選擇：套用期間按了取消（或改選別的）就以那個為準，照舊產品。
+  const pendingNow = useRef(pending); pendingNow.current = pending;
+  const applyAndGo = async () => { const choice = pending; await session!.flush(); if (pendingNow.current === choice && !session!.snapshot().dirty) go(choice); };
   return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
     {layout.titleBar && !layout.focused && <TitleBar session={session} version={version} />}
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).

@@ -6,7 +6,7 @@ import {GraphDocument,GraphError,type Port,type Edge} from './graph';
 import {object,formatProblem,type Node,type Graph,type Declaration} from './model';
 import {type,literal,policy,opaque} from './values';
 import {types} from './numeric';
-import type {Registry} from './node_module';
+import {nodeStages,type Registry} from './node_module';
 import {appendNodeComments} from './comments';
 import {ghostsOf} from './ghosts';
 import {declarationKinds} from './declarations';
@@ -34,7 +34,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     // take a symbol. Ghost 節點不產碼：不擋這條路，也不佔名稱。
     const context={declaration:(id:string)=>g.declarations.find(d=>d.id===id)};
     const ghost=(n:Node)=>{const d=registry.get(n.nodeType);
-      return !d||!!d.catalog.definition.stages&&!d.catalog.definition.stages.includes('pixel')||!d.supports(n,context as never);};
+      return !d||!(nodeStages(d,n)??['pixel']).includes('pixel')||!d.supports(n,context as never);};
     const live=g.stages.pixel?.nodes.filter(n=>!ghost(n))||[];
     const symbols=live.filter(n=>registry.get(n.nodeType)?.role!=='output').map(n=>n.name||n.id);
     if(new Set(symbols).size!==symbols.length)return false;
