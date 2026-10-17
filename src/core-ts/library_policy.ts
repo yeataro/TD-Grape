@@ -173,11 +173,14 @@ export function applyLibraryEntry(graph: GraphDocument, plan: EntryPlan, next: A
   for (const [from, to] of plan.alias) { const at = ids.get(to); if (at !== undefined) ids.set(from, at); }
   const byId = new Map((plan.source.subgraphs ?? []).map(f => [f.id, f]));
   if (plan.imported.length) appendSubgraphs(graph, plan.imported.map(id => byId.get(id)!), ids);
+  // Everything this entry brings in whole already holds the new version's instances: an update syncs only what was here before
+  // (Codex R119-1). 這次整份帶進來的定義，實例本來就是新版的：更新只同步原本就在這裡的。
+  const batch = new Set([...plan.imported.map(id => ids.get(id)!), ...plan.updates.keys()]);
   for (const [to, from] of plan.updates) {
     const content = copy(byId.get(from)!);
     redirect(graph.registry, [content.graph], content, ids);
     content.id = to;
-    updateFromLibrary(graph, to, content);
+    updateFromLibrary(graph, to, content, batch);
   }
   return ids;
 }

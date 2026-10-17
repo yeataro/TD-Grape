@@ -123,8 +123,10 @@ export function pasteClip(candidate: GraphDocument, clip: Clip, at: { x: number;
     const module = candidate.registry.get(node.nodeType), ref = module?.referencedGraph?.(node);
     const kept = ref !== undefined && sameSource && current.has(ref), mapped = ref !== undefined && !kept ? ids.get(ref) : undefined;
     if (module?.reference && mapped) fresh.params = { ...fresh.params, ...copy(module.reference(mapped)) };
-    // An instance copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
-    if (kept && fresh.inputValues) fresh.inputValues = fitInstanceValues(fresh.inputValues, current.get(ref!)!.inputs);
+    // An instance copied before its definition's interface changed takes the current interface (TECH-2) — the definition as it stands
+    // after this paste, which an 'incoming' entry may have just updated (Codex R119-2). 定義的接口在複製後改過：照目前的接口——這次貼上之後的
+    // 那份，進圖選「改用帶進來的」時可能剛更新過。
+    if (kept && fresh.inputValues) fresh.inputValues = fitInstanceValues(fresh.inputValues, candidate.document.subgraphs!.find(f => f.id === ref)!.inputs);
     return fresh;
   });
   const edges: EdgeData[] = clip.stages.pixel!.edges.filter(edge => nodeIds.has(edge.from[0]) && nodeIds.has(edge.to[0]))

@@ -420,9 +420,11 @@ function pasteClip(candidate, clip, at, newId, newGroupId, networkId = 'pixel', 
         const kept = ref !== undefined && sameSource && current.has(ref), mapped = ref !== undefined && !kept ? ids.get(ref) : undefined;
         if ((module === null || module === void 0 ? void 0 : module.reference) && mapped)
             fresh.params = { ...fresh.params, ...(0, model_1.copy)(module.reference(mapped)) };
-        // An instance copied before its definition's interface changed takes the current interface (TECH-2). 定義的接口在複製後改過：照目前的接口。
+        // An instance copied before its definition's interface changed takes the current interface (TECH-2) — the definition as it stands
+        // after this paste, which an 'incoming' entry may have just updated (Codex R119-2). 定義的接口在複製後改過：照目前的接口——這次貼上之後的
+        // 那份，進圖選「改用帶進來的」時可能剛更新過。
         if (kept && fresh.inputValues)
-            fresh.inputValues = (0, subgraphs_1.fitInstanceValues)(fresh.inputValues, current.get(ref).inputs);
+            fresh.inputValues = (0, subgraphs_1.fitInstanceValues)(fresh.inputValues, candidate.document.subgraphs.find(f => f.id === ref).inputs);
         return fresh;
     });
     const edges = clip.stages.pixel.edges.filter(edge => nodeIds.has(edge.from[0]) && nodeIds.has(edge.to[0]))
@@ -2126,7 +2128,6 @@ function definition(graph, id) {
         throw Error('Subgraph definition no longer exists');
     return f;
 }
-const networks = (graph) => { var _a; return [...Object.values(graph.document.stages), ...((_a = graph.document.subgraphs) !== null && _a !== void 0 ? _a : []).map(d => d.graph)]; };
 /** Make Local (§3.10, A3): with no read-only subgraph using it, the copy drops its Library ID in place; otherwise it forks — a local
  * B′ (new ID, named by the one naming rule) takes the instances outside read-only subgraphs, and those inside keep the read-only B.
  * Either way the local one records where it came from (amendment 3 C6). Returns the ID that now holds the local content. 轉為本地：沒有唯讀子圖在用它就就地拿掉 Library ID；否則分叉——本地 B′（新 ID、照同一套
@@ -2164,10 +2165,13 @@ function makeLocal(graph, id, next, at = (0, library_1.now)()) {
  * instance follows the new interface (values refit, wires to removed ports dropped — the same rules as an interface edit) and, when
  * the title changes, instances still named by default follow it (B1-R2-1). A read-only subgraph holding an instance passes the start
  * check first and records what it becomes. The content comes from the caller, its nested references already mapped to this graph.
+ * `batch` names definitions whose content comes whole from the same source in this edit (an entry, amendment 3 C4): they already hold
+ * the new version's instances, so they are not synced again (Codex R119-1).
  * 明確更新：副本整份換成 Library 的內容，保留圖內 ID 與 Library ID；每個實例跟上新接口（實例值重套、接到被拿掉接口的線刪掉——和改接口同一套），
- * title 改了的話仍是預設名的實例跟著改名。含有實例的唯讀子圖先過起點檢查、再記下結果。內容由呼叫端給，巢狀參照已對到這張圖。 */
-function updateFromLibrary(graph, id, content) {
-    var _a;
+ * title 改了的話仍是預設名的實例跟著改名。含有實例的唯讀子圖先過起點檢查、再記下結果。內容由呼叫端給，巢狀參照已對到這張圖。batch 是這次整份
+ * 取自同一來源的定義（進圖）：它們的實例本來就是新版的，不再同步一次。 */
+function updateFromLibrary(graph, id, content, batch = new Set()) {
+    var _a, _b;
     graph.assertEditable();
     const f = definition(graph, id), libraryId = f.libraryId;
     if (libraryId === undefined || content.libraryId !== libraryId)
@@ -2184,7 +2188,7 @@ function updateFromLibrary(graph, id, content) {
     list[at] = next;
     const gone = (old, now) => new Set(old.filter(p => !now.some(q => q.id === p.id)).map(p => p.id));
     const goneInputs = gone(f.inputs, next.inputs), goneOutputs = gone(f.outputs, next.outputs);
-    for (const data of networks(graph)) {
+    for (const data of [...Object.values(graph.document.stages), ...((_b = graph.document.subgraphs) !== null && _b !== void 0 ? _b : []).filter(d => !batch.has(d.id)).map(d => d.graph)]) {
         const instances = new Set(), taken = (0, node_names_1.namesIn)(data);
         for (const n of data.nodes) {
             if (referenceOf(graph, n) !== id)
@@ -2416,11 +2420,14 @@ function applyLibraryEntry(graph, plan, next) {
     const byId = new Map(((_a = plan.source.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f]));
     if (plan.imported.length)
         (0, subgraph_copies_1.appendSubgraphs)(graph, plan.imported.map(id => byId.get(id)), ids);
+    // Everything this entry brings in whole already holds the new version's instances: an update syncs only what was here before
+    // (Codex R119-1). 這次整份帶進來的定義，實例本來就是新版的：更新只同步原本就在這裡的。
+    const batch = new Set([...plan.imported.map(id => ids.get(id)), ...plan.updates.keys()]);
     for (const [to, from] of plan.updates) {
         const content = (0, model_1.copy)(byId.get(from));
         redirect(graph.registry, [content.graph], content, ids);
         content.id = to;
-        (0, library_operations_1.updateFromLibrary)(graph, to, content);
+        (0, library_operations_1.updateFromLibrary)(graph, to, content, batch);
     }
     return ids;
 }

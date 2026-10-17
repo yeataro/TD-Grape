@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.119.1 — Codex 審查 R.119 的修正 — 2026-10-17
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor119的審查.md`（Standards 0；Spec R119-1／2 P2）。評閱：同資料夾 `Opus對Refactor119審查的評閱.md`，全部接受。
+
+- **R119-1**：整批改用帶進來的版本時（C3 全部更新、C4 `incoming`），子的更新會把這批整份帶進來的父（既有或新加入的）裡仍像舊預設名的實例改名，父因此和來源不同，再開圖仍說不同。`updateFromLibrary` 多一個 `batch` 參數，`applyLibraryEntry` 傳入這次整份帶進來的定義，只同步原本就在的持有者；原本就在、仍是預設名的實例照樣改名。
+- **R119-2**：同圖貼上時，一個根沿用圖內 ID、另一個根恢復而讓共用的子被 `incoming` 更新，沿用的根卻用貼上前的舊接口整理輸入值，明填的值被清掉（9 → 預設 1）。改成讀貼上之後候選文件裡的那份定義；「定義是否還在」仍照貼上前判斷（B3）。
+- **測試缺口**（Codex 列）：補 C3 兩步連續（A1→B1、A2→B2 先整理重複再更新，兩種清單順序；分開時第 1 步轉本地的不會又被合併）；「also at 64」改成真的 64 份。
+- 證據：R119-1（進圖、開圖）與 R119-2 三項新測試在 03db19d7 核心上失敗、本輪通過；Codex 探針 `work/refactor/r119-review/entry-probes.cjs`、`open-updates.cjs` 重跑通過；core 239／239、editor 179／179（1 略過）、check 全過；改過的檔案無控制字元。
+- **TOE 未交付**：收尾時 TD 沒有開著（MCP 拒絕連線），TOE 仍是 R.119 交付的那份；TD 開了再 Deliver、掃描、提交。
+- 列給 R.120：開圖掃描版本對每份副本各算閉包，全部已相同的長鏈也會重複計算（Codex 提醒），和衝突鏈一起改成由下往上。
+
 ## Refactor.119 — Library 版本政策（核心）— 2026-10-17
 
 依子圖基本設計附錄三（workspace `work/refactor/subgraph-basic-design-2026-10-14-amendment-3.md`，修訂 3，Codex 核對通過、人類 10-17 確認生效；design-interview Q77）。起因：Codex〈Refactor.118.2 修正的核對〉R118.2-1～3（評閱 `Review/2026-10-14-fable/Opus對Refactor118.2核對的評閱.md`）與其後的策略評估。範圍：workspace `work/refactor/r119-library-policy-scope-2026-10-17.md`。只做核心；選擇畫面在 D-3，編輯器到那時前仍擋 Library 資料。

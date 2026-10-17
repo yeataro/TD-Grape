@@ -2,7 +2,7 @@
  * amendment 1 A2–A3, amendment 2 B1 revision 3): Make Local and an explicit update. Each starts from the ledger's current content,
  * makes only its own change and records what it leaves (library.ts). 加入與移除以外，改變 Library 副本的合法操作：轉為本地、明確更新。
  * 每個都從帳本目前的內容起跑、只做自己的變化、記下結果。 */
-import { copy, type SubgraphData, type Node, type NetworkData } from './model';
+import { copy, type SubgraphData, type Node } from './model';
 import type { GraphDocument } from './graph';
 import { requireCurrent, localize, now } from './library';
 import { appendSubgraphs, settle, type AllocateSubgraphId } from './subgraph_copies';
@@ -16,7 +16,6 @@ function definition(graph: GraphDocument, id: string): SubgraphData {
   if (!f) throw Error('Subgraph definition no longer exists');
   return f;
 }
-const networks = (graph: GraphDocument): NetworkData[] => [...Object.values(graph.document.stages), ...(graph.document.subgraphs ?? []).map(d => d.graph)];
 
 /** Make Local (§3.10, A3): with no read-only subgraph using it, the copy drops its Library ID in place; otherwise it forks — a local
  * B′ (new ID, named by the one naming rule) takes the instances outside read-only subgraphs, and those inside keep the read-only B.
@@ -47,9 +46,12 @@ export function makeLocal(graph: GraphDocument, id: string, next: AllocateSubgra
  * instance follows the new interface (values refit, wires to removed ports dropped — the same rules as an interface edit) and, when
  * the title changes, instances still named by default follow it (B1-R2-1). A read-only subgraph holding an instance passes the start
  * check first and records what it becomes. The content comes from the caller, its nested references already mapped to this graph.
+ * `batch` names definitions whose content comes whole from the same source in this edit (an entry, amendment 3 C4): they already hold
+ * the new version's instances, so they are not synced again (Codex R119-1).
  * 明確更新：副本整份換成 Library 的內容，保留圖內 ID 與 Library ID；每個實例跟上新接口（實例值重套、接到被拿掉接口的線刪掉——和改接口同一套），
- * title 改了的話仍是預設名的實例跟著改名。含有實例的唯讀子圖先過起點檢查、再記下結果。內容由呼叫端給，巢狀參照已對到這張圖。 */
-export function updateFromLibrary(graph: GraphDocument, id: string, content: SubgraphData): void {
+ * title 改了的話仍是預設名的實例跟著改名。含有實例的唯讀子圖先過起點檢查、再記下結果。內容由呼叫端給，巢狀參照已對到這張圖。batch 是這次整份
+ * 取自同一來源的定義（進圖）：它們的實例本來就是新版的，不再同步一次。 */
+export function updateFromLibrary(graph: GraphDocument, id: string, content: SubgraphData, batch: ReadonlySet<string> = new Set()): void {
   graph.assertEditable();
   const f = definition(graph, id), libraryId = f.libraryId;
   if (libraryId === undefined || content.libraryId !== libraryId) throw Error('An update keeps the Library ID');
@@ -62,7 +64,7 @@ export function updateFromLibrary(graph: GraphDocument, id: string, content: Sub
   list[at] = next;
   const gone = (old: SubgraphData['inputs'], now: SubgraphData['inputs']) => new Set(old.filter(p => !now.some(q => q.id === p.id)).map(p => p.id));
   const goneInputs = gone(f.inputs, next.inputs), goneOutputs = gone(f.outputs, next.outputs);
-  for (const data of networks(graph)) {
+  for (const data of [...Object.values(graph.document.stages), ...(graph.document.subgraphs ?? []).filter(d => !batch.has(d.id)).map(d => d.graph)]) {
     const instances = new Set<string>(), taken = namesIn(data);
     for (const n of data.nodes) {
       if (referenceOf(graph, n) !== id) continue;

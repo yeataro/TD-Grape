@@ -334,8 +334,8 @@ test('R118-4: a fork moves its own scoped references to itself; the read-only or
 });
 
 // ---- Codex check of R.118.1 (R118.1-1, R118.1-2) Codex 對 R.118.1 的核對 ----
-test('R118.1-1 under C2: with one copy per Library ID the pairing is fixed; no order adds a definition, also at 64',()=>{
-  const fillers=Array.from({length:61},(_,i)=>({...gainCopy('filler'+i),title:'Filler'+i,libraryId:undefined}));
+test('R118.1-1 under C2: with one copy per Library ID the pairing is fixed; no order adds a definition, also at exactly 64',()=>{
+  const fillers=Array.from({length:62},(_,i)=>({...gainCopy('filler'+i),title:'Filler'+i,libraryId:undefined}));
   for(const roots of [['B','A'],['A','B']]) for(const sameSource of [false,true]) for(const extra of [[],fillers]){
     const source=withRoots([gainCopy('B'),wrapperCopy('A','B')],roots);
     const target=withRoots([...(roots[0]==='A'?[gainCopy('B0'),wrapperCopy('A0','B0')]:[wrapperCopy('A0','B0'),gainCopy('B0')]),...extra],[]);
@@ -481,4 +481,55 @@ test('C3: the Library not found only settles duplicates; a lost ancestor goes lo
   const grown=repair(lost,lib,{versions:'update'}).document;
   const added=grown.subgraphs.find(f=>f.libraryId===L3);
   assert.ok(added);assert.deepEqual(plain(refsOf(def(grown,'wrapper'))),['gain',added.id]);
+});
+
+// ---- Codex review of R.119 (R119-1, R119-2) Codex 對 R.119 的審查 ----
+// gain becomes "Blur" in the source, whose wrapper names its gain instance Gain_1 on purpose. 來源的 gain 改名 Blur，wrapper 刻意把實例叫 Gain_1。
+function renamedSource(){const g=library();def(g,'gain').title='Blur';def(g,'wrapper').graph.nodes.find(n=>n.id==='inner').name='Gain_1';return g;}
+const innerName=f=>f.graph.nodes.find(n=>n.id==='inner').name;
+test('R119-1: taking the incoming version keeps the incoming parents whole — an existing parent and a new one keep their own instance names',()=>{
+  const source=renamedSource(),clip=plain(c.GrapeGraph.copyNodes(doc(source),['second'],'other'));
+  let n=0,d=0;const paste=t=>doc(t).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},()=>'p'+ ++n,()=>'group','pixel',()=>'fresh'+ ++d,false,{conflicts:'incoming'})).after;
+  const existing=paste(library());
+  assert.equal(innerName(def(existing,'wrapper')),'Gain_1');
+  assert.equal(c.GrapeGraph.standardForm(existing,registry,'wrapper'),c.GrapeGraph.standardForm(source,registry,'wrapper'));
+  const onlyGain=library();onlyGain.subgraphs=onlyGain.subgraphs.filter(f=>f.id==='gain');onlyGain.stages.pixel.nodes=onlyGain.stages.pixel.nodes.filter(n=>n.id!=='second');
+  onlyGain.stages.pixel.nodes.find(n=>n.id==='first').name='Gain_1';
+  const fresh=paste(onlyGain),parent=fresh.subgraphs.find(f=>f.libraryId===L2);
+  assert.equal(innerName(parent),'Gain_1','a parent brought in new is not renamed by the update of its child');
+  assert.equal(def(fresh,'gain').title,'Blur');
+  // An instance that was here before, still named by default, follows the new title. 原本就在、仍是預設名的實例跟著新 title 改名。
+  assert.equal(fresh.stages.pixel.nodes.find(n=>n.id==='first').name,'Blur_1');
+});
+
+test('R119-1 at open: update all brings the Library content whole; opening again finds nothing different',()=>{
+  const lib=renamedSource();lib.subgraphs.forEach(f=>{f.id='lib'+f.id;});def(lib,'libwrapper').graph.nodes.find(n=>n.id==='inner').params.subgraphId='libgain';
+  const up=repair(library(),lib,{versions:'update'});
+  assert.equal(innerName(def(up.document,'wrapper')),'Gain_1');
+  assert.deepEqual(plain(repair(up.document,lib,{versions:'update'}).differing),[]);
+});
+
+test('R119-2: a root instance kept by its in-graph ID fits its values to the definition as this paste leaves it',()=>{
+  const source=library();def(source,'gain').inputs=[port('extra','float',1)];def(source,'gain').graph.edges[0].from[1]='extra';
+  def(source,'wrapper').graph.edges[0].to[1]='extra';source.stages.pixel.edges=[];source.stages.pixel.nodes.find(n=>n.id==='first').inputValues={extra:9};
+  const clip=plain(c.GrapeGraph.copyNodes(doc(source),['first','second'],'same'));
+  // Here wrapper is gone and gain still has its old interface. 這裡 wrapper 已刪，gain 還是舊接口。
+  const target=library();target.subgraphs=target.subgraphs.filter(f=>f.id==='gain');target.stages.pixel.edges=[];target.stages.pixel.nodes=target.stages.pixel.nodes.filter(n=>n.id!=='second');
+  let n=0,d=0;
+  const after=doc(target).change(m=>c.GrapeGraph.pasteClip(m,clip,{x:0,y:0},()=>'p'+ ++n,()=>'group','pixel',()=>'fresh'+ ++d,true,{conflicts:'incoming'})).after;
+  assert.deepEqual(plain(def(after,'gain').inputs.map(p=>p.id)),['extra']);
+  assert.deepEqual(plain(after.stages.pixel.nodes.find(n=>n.id==='p1').inputValues),{extra:9});
+});
+
+test('C3 both steps (Codex R2-3, R.119 review): duplicates settled first, then the one copy updated; a copy made local in step 1 stays apart',()=>{
+  const lib=emptyGraph();lib.subgraphs=[{...wrapperCopy('libA','libB'),title:'Wrapper 2'},{...gainCopy('libB')}];
+  for(const order of [[gainCopy('B1'),gainCopy('B2'),wrapperCopy('A1','B1'),wrapperCopy('A2','B2')],[wrapperCopy('A2','B2'),wrapperCopy('A1','B1'),gainCopy('B2'),gainCopy('B1')]]){
+    const merged=repair(withRoots(order,['A1','A2']),lib,{versions:'update'}).document;
+    assert.deepEqual(plain(merged.subgraphs.map(f=>f.id).sort()),['A1','B1']);
+    assert.equal(def(merged,'A1').title,'Wrapper 2');assert.deepEqual(plain(refsOf(def(merged,'A1'))),['B1']);
+    const apart=repair(withRoots(order,['A1','A2']),lib,{duplicates:'separate',versions:'update'}).document;
+    assert.deepEqual(plain(apart.subgraphs.filter(f=>f.libraryId!==undefined).map(f=>f.id).sort()),['A1','B1']);
+    assert.equal(def(apart,'A1').title,'Wrapper 2');
+    assert.equal(def(apart,'A2').libraryId,undefined);assert.equal(def(apart,'B2').libraryId,undefined);assert.deepEqual(plain(refsOf(def(apart,'A2'))),['B2']);
+  }
 });
