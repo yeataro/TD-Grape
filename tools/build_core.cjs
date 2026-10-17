@@ -59,14 +59,12 @@ import {validNodeName,typedName,storedName,shownName,freeName,newNodeName,namesI
 import {copyNodes,readClip,pasteClip,clipCorner} from './clipboard';
 import {standardForm,closureOrder,validLibraryId} from './library';
 import {planLibraryEntry,repairLibraryCopies,repairDuplicates} from './library_policy';
-import {readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile} from './library_files';
-import {wireDropRow} from './wire_drop';
-import {contextFor} from './node_module';
+import {readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,verifyLibraryFile} from './library_files';
 import * as groups from './groups';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates,readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,wireDropRow,contextFor};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates,readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,verifyLibraryFile};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -115,15 +113,9 @@ const libraryDir=path.join(root,'src/library/subgraphs');
 const builtInLibrary={files:[],wireDrop:{}};
 for(const name of (fs.existsSync(libraryDir)?fs.readdirSync(libraryDir).filter(f=>f.endsWith('.json')).sort():[])){
   try{
-    const G=context.GrapeGraph,file=JSON.parse(fs.readFileSync(path.join(libraryDir,name),'utf8')),read=G.readLibraryFile(file,G.registry);
-    let made=0,id;
-    const after=new G.GraphDocument(JSON.parse(JSON.stringify(defaultGraph)),G.registry).change(m=>{
-      id=G.bringInLibraryFile(m,read,()=>'library'+ ++made,{},'2000-01-01T00:00:00.000Z');
-      m.networks.get('pixel').instantiateSubgraph(id,'probe',{x:0,y:0});
-    }).after;
-    context.GrapeTopCompiler.compile(after,G.createEditorContract(G.registry,'top').glslCode);
-    const probe=after.stages.pixel.nodes.find(n=>n.id==='probe');
-    builtInLibrary.wireDrop['library:'+file.subgraph.libraryId]=G.wireDropRow(G.registry.get(probe.nodeType),probe,[...G.values.types,...G.values.opaque],G.contextFor(after));
+    const G=context.GrapeGraph,file=JSON.parse(fs.readFileSync(path.join(libraryDir,name),'utf8'));
+    // The same check the tests run on bad files (library_files.ts verifyLibraryFile). 測試對壞檔跑的是同一個檢查。
+    builtInLibrary.wireDrop['library:'+file.subgraph.libraryId]=G.verifyLibraryFile(file,G.registry,defaultGraph,context.GrapeTopCompiler,G.createEditorContract(G.registry,'top').glslCode);
     builtInLibrary.files.push(file);
   }catch(error){console.error('Built-in Library file '+name+': '+(error&&error.message||error));process.exit(1);}
 }

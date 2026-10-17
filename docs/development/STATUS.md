@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.121.1 — Codex 審查 R.121 的修正 — 2026-10-18
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor121的審查.md`（Standards 0；R121-1～3 P2、R121-4 P3）。評閱：同資料夾 `Opus對Refactor121審查的評閱.md`，全部接受。
+
+- **R121-1**：巢狀接口預設值是型別不接受的值時，讀檔與建置都放行，子圖在產碼時被當成 Ghost 跳過。讀檔改為每份定義過 `validInterface`＋`requireSubgraph`（型別與預設值）；建置另外要求閉包每份都可用（`unusableSubgraphs`）。一般圖的 Ghost 保存不動。
+- **R121-2**：讀檔沒整理，帶進圖時 `tidyGroups` 拿掉預設群組欄位，同一個檔就被當成新版本、更新也收斂不了。讀檔改用同一個整理；沒有 id 的邊拒絕；建置要求檔案就是存檔寫出的樣子（讀了再存要相同）。
+- **R121-3**：存檔丟了 provenance（違反 C6）。改為跟著定義存進檔、讀回來。
+- **R121-4**：scoped 參照讀檔也拒絕，和存檔一致。
+- 建置的每檔檢查改成核心 `verifyLibraryFile`，建置與測試共用，失敗路徑有正式測試。
+- 證據：5 項新測試在 d21346b9 上失敗、本輪通過；core 263／263、editor 179／179（1 略過）、check 全過；TD 五張圖產碼與基準相同。
+- **更正**：R.121 請求說「只有 pixel_out 看 target」不正確，`td_value` 也看（`node_sdk.ts:188`）；算法照舊、說法更正。
+
 ## Refactor.121 — 資源庫 D-2：內建資源庫 — 2026-10-18
 
 範圍：workspace `work/refactor/d2-builtin-library-scope-2026-10-18.md`（人類 10-18 的原話與選擇都在裡面）。人類：「看起來是純應用驗證活」；Tint 的 Library ID「按使用者合法流程做」；選 (a)——這一輪沒有編輯器使用者，編輯器仍擋 Library 資料到 D-3（「a吧但記好。我不想被壓縮後的你誤會這是在搞啥」）。

@@ -89,3 +89,61 @@ test('the build packs the built-in Library: the files as written, and a wire-dro
   assert.equal(row.input.vec4.port,file.subgraph.outputs[0].id,'Color comes out');
   assert.ok(!fs.existsSync(path.join(root,'src/library/builtin_subgraphs.json')),'the old format is gone');
 });
+
+// ---- Codex review of R.121 (R121-1..4) Codex 對 R.121 的審查 ----
+const rules=G.createEditorContract(G.registry,'top').glslCode;
+const verify=file=>G.verifyLibraryFile(file,G.registry,bootstrap.defaultDocument.graph,C,rules);
+const nested=()=>{let n=0;return plain(G.saveLibraryFile(sharedGraph(),G.registry,'wrapper',()=>uuid(++n)));};
+test('R121-1: a nested interface default its type does not take is refused when read, and the build check refuses it too',()=>{
+  for(const side of ['inputs','outputs']){
+    const file=nested();file.dependencies[0][side][0].default=['bad'];
+    assert.throws(()=>G.readLibraryFile(file,G.registry),e=>e.code==='library.file'&&/Invalid interface/.test(e.message),side);
+    assert.throws(()=>verify(file),e=>e.code==='library.file',side);
+  }
+  const unknown=nested();unknown.subgraph.inputs[0].type='notAType';
+  assert.throws(()=>G.readLibraryFile(unknown,G.registry),/unknown type|Invalid/);
+});
+
+test('R121-2: a file reads in the tidy form a graph keeps, so a copy brought in equals it, a second pull reuses it and an update settles',()=>{
+  const file=plain(tint());
+  file.subgraph.graph.ui={groups:[{id:'groupA',name:'Group',nodes:file.subgraph.graph.nodes.slice(0,2).map(x=>x.id),textScale:1}]};
+  const read=G.readLibraryFile(file,G.registry);let id;
+  const first=new G.GraphDocument(empty(),G.registry).change(m=>{id=G.bringInLibraryFile(m,read,ids);}).after;
+  assert.equal(G.standardForm(first,G.registry,id),G.standardForm(read.shelf,G.registry,read.root),'the copy brought in equals the shelf');
+  const again=new G.GraphDocument(first,G.registry).change(m=>{G.bringInLibraryFile(m,read,ids);}).after;
+  assert.equal(again.subgraphs.length,first.subgraphs.length,'a second pull reuses it');
+  assert.deepEqual(plain(G.repairLibraryCopies(first,G.registry,read.shelf,ids,{versions:'update'}).differing),[],'nothing differs from the Library');
+  // Such a file is not in the form saving writes: the build check asks for it to be saved again. 這種檔不是存檔寫出的樣子：建置要求重存。
+  assert.throws(()=>verify(file),/not in the form saving writes/);
+  const noEdgeId=plain(tint());noEdgeId.subgraph.graph.edges[0].id='';
+  assert.throws(()=>G.readLibraryFile(noEdgeId,G.registry),/edge is missing its id/);
+});
+
+test('R121-3: a definition made local and saved as a new Library subgraph keeps its provenance in the file and when read back',()=>{
+  const read=G.readLibraryFile(tint(),G.registry);let id;
+  const first=new G.GraphDocument(empty(),G.registry).change(m=>{id=G.bringInLibraryFile(m,read,ids);}).after;
+  const local=new G.GraphDocument(first,G.registry).change(m=>{m.makeLocal(id,()=>{throw Error('in place');},'2026-10-18T00:00:00.000Z');}).after;
+  const origin=plain(local.subgraphs.find(f=>f.id===id).provenance);
+  assert.equal(origin[0].libraryId,tint().subgraph.libraryId);
+  const saved=G.saveLibraryFile(local,G.registry,id,()=>uuid(9));
+  assert.equal(saved.subgraph.libraryId,uuid(9));assert.deepEqual(plain(saved.subgraph.provenance),origin);
+  const back=G.readLibraryFile(plain(saved),G.registry);
+  assert.deepEqual(plain(back.shelf.subgraphs[0].provenance),origin);
+});
+
+test('R121-4: what saving refuses, reading refuses too: a scoped reference keeps a file out',()=>{
+  const file=plain(tint());
+  file.subgraph.graph.nodes.find(x=>x.id==='multiply').params.extra={type:'float['+G.ScopeReferences.token('fn_L0',['multiply','out'])+']'};
+  assert.throws(()=>G.readLibraryFile(file,G.registry),/scoped references/);
+});
+
+test('the build check passes Tint with the row the bootstrap holds, and refuses files the build must stop on',()=>{
+  const file=tint();
+  assert.deepEqual(plain(verify(file)),bootstrap.library.wireDrop['library:'+file.subgraph.libraryId]);
+  const wrongStages=plain(file);wrongStages.subgraph.stages=['pixel'];
+  assert.throws(()=>verify(wrongStages),/stages or targets/);
+  const badName=plain(file);badName.subgraph.title='';
+  assert.throws(()=>verify(badName),/Invalid definition/);
+  const missing=plain(file);missing.subgraph.graph.nodes.push(node('lost','subgraph_instance',{subgraphId:uuid(8)}));
+  assert.throws(()=>verify(missing),/missing from the file/);
+});

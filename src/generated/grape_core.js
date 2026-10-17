@@ -32,8 +32,6 @@ const clipboard_1 = require("./clipboard");
 const library_1 = require("./library");
 const library_policy_1 = require("./library_policy");
 const library_files_1 = require("./library_files");
-const wire_drop_1 = require("./wire_drop");
-const node_module_2 = require("./node_module");
 const groups = require("./groups");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -97,7 +95,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, documentBytes: capacity_1.documentBytes, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates, readLibraryFile: library_files_1.readLibraryFile, saveLibraryFile: library_files_1.saveLibraryFile, libraryIdFrom: library_files_1.libraryIdFrom, bringInLibraryFile: library_files_1.bringInLibraryFile, wireDropRow: wire_drop_1.wireDropRow, contextFor: node_module_2.contextFor };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, documentBytes: capacity_1.documentBytes, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates, readLibraryFile: library_files_1.readLibraryFile, saveLibraryFile: library_files_1.saveLibraryFile, libraryIdFrom: library_files_1.libraryIdFrom, bringInLibraryFile: library_files_1.bringInLibraryFile, verifyLibraryFile: library_files_1.verifyLibraryFile };
 
 },
 "capacity":function(require,module,exports){
@@ -2237,6 +2235,7 @@ exports.libraryIdFrom = libraryIdFrom;
 exports.saveLibraryFile = saveLibraryFile;
 exports.readLibraryFile = readLibraryFile;
 exports.bringInLibraryFile = bringInLibraryFile;
+exports.verifyLibraryFile = verifyLibraryFile;
 /** Library files (D-2, Refactor.121; fields: workspace `work/refactor/library-fields-draft-2026-10-15.md`, decided 10-15/16). One file is
  * one subgraph with the subgraphs it uses: `subgraph` plus `dependencies`, the same shape, nested instances naming each other by Library
  * ID — a file holds no in-graph IDs; they are given when a file is read. Saving is how a person turns a subgraph into a file (the
@@ -2247,6 +2246,12 @@ exports.bringInLibraryFile = bringInLibraryFile;
  * 資源庫：檔案由呼叫端給。 */
 const model_1 = require("./model");
 const node_module_1 = require("./node_module");
+const graph_1 = require("./graph");
+const changes_1 = require("./changes");
+const groups_1 = require("./groups");
+const subgraph_interface_1 = require("./subgraph_interface");
+const wire_drop_1 = require("./wire_drop");
+const values = require("./values");
 const library_1 = require("./library");
 const subgraph_operations_1 = require("./subgraph_operations");
 const subgraph_stages_1 = require("./subgraph_stages");
@@ -2295,7 +2300,9 @@ function saveLibraryFile(document, registry, rootId, newLibraryId, details = {})
         scope_references_1.ScopeReferences.walk(f, (_, old) => { scoped = true; return old; }, false);
         if (scoped)
             throw fail('A Library file cannot hold scoped references yet');
-        const { id: _id, provenance: _p, descriptionKey: _d, libraryId: _l, stages: _s, targets: _t, title, inputs, outputs, graph, ...rest } = (0, model_1.copy)(f);
+        // Provenance travels with the definition (C6: saved and kept; Codex R121-3); only the in-graph ID and derived fields stay behind.
+        // 出處跟著定義走（C6：會存檔、一直保留）；只留下圖內 ID 與推算欄位。
+        const { id: _id, descriptionKey: _d, libraryId: _l, stages: _s, targets: _t, title, inputs, outputs, graph, ...rest } = (0, model_1.copy)(f);
         graph.nodes = graph.nodes.map(n => {
             const ref = referenceOf(registry, n), module = registry.get(n.nodeType);
             return ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference) ? n : { ...n, params: { ...n.params, ...module.reference(ids.get(ref)) } };
@@ -2329,12 +2336,19 @@ function readLibraryFile(value, registry) {
     });
     const stored = new Map();
     const subgraphs = entries.map((e, i) => {
-        var _a;
+        var _a, _b;
         const f = (0, model_1.copy)(e);
         f.id = 'L' + i;
         stored.set(f.id, { stages: e.stages, targets: e.targets });
-        if (!Array.isArray((_a = f.graph) === null || _a === void 0 ? void 0 : _a.nodes))
+        if (!Array.isArray((_a = f.graph) === null || _a === void 0 ? void 0 : _a.nodes) || !Array.isArray((_b = f.graph) === null || _b === void 0 ? void 0 : _b.edges))
             throw fail('A definition has no network');
+        // What save refuses, read refuses too, so no file comes in that could not go back out (Codex R121-4). 存檔拒絕的，讀檔也拒絕。
+        let scoped = false;
+        scope_references_1.ScopeReferences.walk(f, (_, old) => { scoped = true; return old; }, false);
+        if (scoped)
+            throw fail('A Library file cannot hold scoped references yet');
+        if (f.graph.edges.some(e => !e || typeof e.id !== 'string' || !e.id))
+            throw fail('An edge is missing its id');
         f.graph.nodes = f.graph.nodes.map(n => {
             const ref = referenceOf(registry, n), module = registry.get(n.nodeType);
             if (ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference))
@@ -2354,6 +2368,22 @@ function readLibraryFile(value, registry) {
         return f;
     });
     const shelf = { format: model_1.GRAPH_FORMAT, version: model_1.GRAPH_VERSION, target: 'top', declarations: [], subgraphs, stages: { pixel: { nodes: [], edges: [] } } };
+    // Tidied as a graph tidies a definition when it comes in, so a copy brought in equals the shelf (Codex R121-2: a default group field
+    // removed on the way in made the same file read as another version). 和定義進圖時一樣整理，帶進圖的副本才會等於架子上的（預設的群組欄位
+    // 在進圖時被拿掉，同一個檔就被當成另一個版本）。
+    (0, groups_1.tidyGroups)(shelf);
+    // Every interface uses known types and defaults its types take (Codex R121-1: a wrong default made the subgraph a ghost that the
+    // build let through). 每個接口都是認得的型別、預設值是該型別接受的（錯的預設值讓子圖變成 Ghost，建置卻放行）。
+    for (const f of subgraphs) {
+        if (!(0, subgraph_interface_1.validInterface)(f))
+            throw fail('An interface uses an unknown type: ' + f.libraryId);
+        try {
+            (0, subgraph_interface_1.requireSubgraph)((0, node_module_1.contextFor)(shelf, f));
+        }
+        catch (error) {
+            throw fail('Invalid interface ' + f.libraryId + ': ' + error.message);
+        }
+    }
     if ((0, subgraph_stages_1.subgraphGroups)(shelf, registry).cyclic.size)
         throw fail('The file holds a cycle of subgraphs');
     if (((_c = (_b = (0, library_1.closureOrder)(shelf, registry, 'L0')) === null || _b === void 0 ? void 0 : _b.length) !== null && _c !== void 0 ? _c : 0) !== subgraphs.length)
@@ -2374,6 +2404,28 @@ function bringInLibraryFile(graph, read, next, choice = {}, at = (0, library_1.n
     const needed = ((_a = (0, library_1.closureOrder)(read.shelf, graph.registry, read.root)) !== null && _a !== void 0 ? _a : []).map(f => f.id);
     const ids = (0, library_policy_1.applyLibraryEntry)(graph, (0, library_policy_1.planLibraryEntry)(graph.document, read.shelf, needed, graph.registry, choice, at), next);
     return ids.get(read.root);
+}
+/** What the build checks of one built-in file, and its wire-drop row (D-2; Codex R121): read and checked; already in the form saving
+ * writes (so the file packed is the file read); brought into an empty graph the way a person pulls it; compiled there with every
+ * definition of its closure usable. Throws on the first failure. `empty` is the default graph; `compiler` the code generator.
+ * 建置對一個內建檔的檢查與它的拉線接線列：讀檔驗證；已經是存檔寫出的樣子（打包的檔就是讀到的檔）；照使用者拉入的方式帶進空圖；在那裡產碼，
+ * 閉包裡每份定義都可用。遇到第一個失敗就丟出。 */
+function verifyLibraryFile(file, registry, empty, compiler, rules) {
+    var _a;
+    const read = readLibraryFile(file, registry);
+    if (!(0, changes_1.equal)((0, model_1.copy)(saveLibraryFile(read.shelf, registry, read.root, () => { throw fail('A definition has no Library ID'); })), (0, model_1.copy)(file)))
+        throw fail('The file is not in the form saving writes; save it again');
+    let made = 0, root = '';
+    const after = new graph_1.GraphDocument((0, model_1.copy)(empty), registry).change(m => {
+        root = bringInLibraryFile(m, read, () => 'library' + ++made, {}, '2000-01-01T00:00:00.000Z');
+        m.networks.get('pixel').instantiateSubgraph(root, 'probe', { x: 0, y: 0 });
+    }).after;
+    compiler.compile(after, rules);
+    const unusable = compiler.unusableSubgraphs(after), brought = (_a = (0, library_1.closureOrder)(after, registry, root)) !== null && _a !== void 0 ? _a : [];
+    if (brought.some(f => unusable.has(f.id)))
+        throw fail('A definition cannot be used: ' + brought.filter(f => unusable.has(f.id)).map(f => f.libraryId).join(', '));
+    const probe = after.stages.pixel.nodes.find(n => n.id === 'probe');
+    return (0, wire_drop_1.wireDropRow)(registry.get(probe.nodeType), probe, [...values.types, ...values.opaque], (0, node_module_1.contextFor)(after));
 }
 
 },
