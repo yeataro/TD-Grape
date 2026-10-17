@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.119.2 — Library 版本政策的邊界測試 — 2026-10-17
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor119.1修正的核對.md`（R119-1／2 結案，建議 R.120 動手前先補的測試）。人類 10-17：「四類算119.2」。產品程式不變。
+
+- 新測試檔 `tests/unit/test_library_policy.cjs`（加進 `test:core`），由 Codex 探針 workspace `work/refactor/r1191-review/entry-gaps.cjs`、`open-batch-boundary.cjs` 改寫：
+  1. C4 進圖後，B3 沿用的根貼進子圖造成循環 → 整筆拒絕（keep／incoming 都測，貼上本身有跑完、原圖與剪貼簿不變；拿掉那個根就通過）；
+  2. 開圖時預設保留的那份，因為用到自己的重複而也被轉本地 → 零份 Library 副本、ID 與引用不變（C2 是至多一份）；
+  3. 都沒有實例時保留圖內 ID 最小的那份 → 清單順序、內容同異、合併／分開共 8 組；
+  4. 開圖全部更新的 batch 邊界：從資源庫整份採用的父（既有與新加入的）保留名稱、值、接線，只在圖裡的父（唯讀與本地）與 stage 跟著新版改名、去掉被拿掉的輸入、改形、刪舊線；再開一次沒有差異；R119-2 的 vec2 版本。
+- 證據：core 244／244（library_policy 5）、editor 179／179（1 略過）、check 全過。
+
 ## Refactor.119.1 — Codex 審查 R.119 的修正 — 2026-10-17
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor119的審查.md`（Standards 0；Spec R119-1／2 P2）。評閱：同資料夾 `Opus對Refactor119審查的評閱.md`，全部接受。
