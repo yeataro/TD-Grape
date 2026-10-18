@@ -171,3 +171,23 @@ test('provenance keeps the latest Library a definition came from — an editing 
   const origin=second.doc.subgraphs.find(f=>f.id===second.id).provenance;
   assert.equal(origin.length,1);assert.equal(origin[0].libraryId,uuid(5),'the republished one, not Tint');
 });
+
+// Codex R122-1 (Refactor.122.1): a subgraph's stages come from its content alone, never from the document holding it, so a Library
+// file saved from a MAT graph reads back (the reader checks on a TOP shelf). TD built-in values of each kind, in both targets.
+// 子圖的 Stage 只由內容決定、與裝著它的文件無關，所以 MAT 圖存出的 Library 檔讀得回來（讀檔器在 TOP 架子上檢查）。
+test('a Library file holding a TD built-in value reads back whatever target it was saved from, with the same stages',()=>{
+  for(const entry of ['tdPos','tdNormal','glFragCoord','vUV']){
+    const e=G.tdValues.find(x=>x.id===entry),port=e.outputs?e.outputs[0]:{key:'out',type:e.type};
+    const stages=[];
+    for(const target of ['mat','top']){
+      const g={format:'grape-graph',version:1,target,declarations:[],stages:{pixel:{nodes:[node('out','pixel_out')],edges:[]}},
+        subgraphs:[{id:'f',title:'Entry',inputs:[],outputs:[{id:'p',type:port.type,default:plain(G.values.fill(0,port.type))}],
+          graph:{nodes:[node('in','subgraph_input'),node('out','subgraph_output'),node('value','td_value',{entry})],edges:[{id:'wire',from:['value',port.key],to:['out','p']}]}}]};
+      const file=plain(G.saveLibraryFile(g,G.registry,'f',()=>'00000001-0000-4000-8000-000000000000'));
+      assert.ok(G.readLibraryFile(file,G.registry),entry+' saved from '+target+' reads back');
+      stages.push(file.subgraph.stages);
+    }
+    assert.deepEqual(stages[0],stages[1],entry+': the same stages from either target');
+    assert.deepEqual(plain(stages[0]),plain(e.stages.filter(s=>['vertex','pixel'].includes(s))),entry+': the entry\'s own stages');
+  }
+});

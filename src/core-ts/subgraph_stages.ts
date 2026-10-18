@@ -1,5 +1,5 @@
 import type { Graph } from './model';
-import { contextFor, nodeStages, type Registry } from './node_module';
+import { nodeStages, type Registry } from './node_module';
 
 /** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
  * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
@@ -33,13 +33,14 @@ export function subgraphGroups(graph: Graph, registry: Registry): { stagesOf: (i
   const own = new Map<string, string[]>(), instances = new Map<string, string[]>();
   for (const [id, subgraph] of byId) {
     let stages = [...SUBGRAPH_STAGES];
-    const children: string[] = [], context = contextFor(graph, subgraph);
+    const children: string[] = [];
     for (const node of subgraph.graph?.nodes ?? []) {
       const module = registry.get(node.nodeType);
       if (!module) continue;
-      // What a usable node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); one this target cannot use
-      // is a ghost and keeps its type's, as before. 能用的節點，內容可能讓 Stage 更窄；這個 target 用不了的是 Ghost，照類型的、同以前。
-      const limit = module.stages && module.supports(node, context) ? nodeStages(module, node) : module.catalog.definition.stages;
+      // A known node's own stages, narrowed by what it holds (a TD built-in value's entry; Refactor.122), whatever the document's target:
+      // the answer is the content's alone, so a Library file reads back the stages it was saved with (Codex R122-1, Refactor.122.1).
+      // 認得的節點用自己的 Stage（TD 內建值照那一項），不看文件的 target：答案只來自內容，Library 檔讀回來的 Stage 才和存的一樣。
+      const limit = nodeStages(module, node);
       if (limit) stages = stages.filter(stage => limit.includes(stage));
       const child = module.referencedGraph?.(node);
       if (child !== undefined && byId.has(child)) children.push(child);

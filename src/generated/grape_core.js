@@ -8074,14 +8074,15 @@ function subgraphGroups(graph, registry) {
     const own = new Map(), instances = new Map();
     for (const [id, subgraph] of byId) {
         let stages = [...exports.SUBGRAPH_STAGES];
-        const children = [], context = (0, node_module_1.contextFor)(graph, subgraph);
+        const children = [];
         for (const node of (_c = (_b = subgraph.graph) === null || _b === void 0 ? void 0 : _b.nodes) !== null && _c !== void 0 ? _c : []) {
             const module = registry.get(node.nodeType);
             if (!module)
                 continue;
-            // What a usable node holds can narrow its type's stages (a TD built-in value's entry; Refactor.122); one this target cannot use
-            // is a ghost and keeps its type's, as before. 能用的節點，內容可能讓 Stage 更窄；這個 target 用不了的是 Ghost，照類型的、同以前。
-            const limit = module.stages && module.supports(node, context) ? (0, node_module_1.nodeStages)(module, node) : module.catalog.definition.stages;
+            // A known node's own stages, narrowed by what it holds (a TD built-in value's entry; Refactor.122), whatever the document's target:
+            // the answer is the content's alone, so a Library file reads back the stages it was saved with (Codex R122-1, Refactor.122.1).
+            // 認得的節點用自己的 Stage（TD 內建值照那一項），不看文件的 target：答案只來自內容，Library 檔讀回來的 Stage 才和存的一樣。
+            const limit = (0, node_module_1.nodeStages)(module, node);
             if (limit)
                 stages = stages.filter(stage => limit.includes(stage));
             const child = (_d = module.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(module, node);

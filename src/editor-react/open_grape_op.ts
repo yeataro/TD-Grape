@@ -19,11 +19,12 @@ export type Opening =
 /** Open a Grape OP: ask TD for its state, then build the editing session (Refactor.122; Codex boundary review R10). Both steps end in
  * the same answer and never throw: a session that refuses what TD sent (another build, a graph this entry cannot open, a newer
  * version) is a refusal with its reason, as a failed request is — before, a refusal while building was lost and the page stayed on
- * "Opening…". The session's checks come before it opens anything (editor.ts), so a refused one leaves nothing to close.
+ * "Opening…". A session that refuses closes what it had opened before the refusal comes out (editor.ts; Codex R122 review), so a refused
+ * one leaves nothing to close.
  * `stillWanted` is asked once TD has answered; `make` builds the session (tests give their own).
  * 開一個 Grape OP：先向 TD 要狀態，再建立編輯工作階段。兩步得到同一種答案、不丟例外：工作階段拒絕 TD 給的東西（另一個建置、這個入口打不開的圖、
- * 較新版本）時，和請求失敗一樣是附原因的拒絕——以前建立時的拒絕會被吞掉，畫面停在「正在開啟」。工作階段的檢查在它打開任何東西之前（editor.ts），
- * 所以被拒時沒有東西要關。stillWanted 在 TD 回覆後問一次；make 建立工作階段（測試自己給）。 */
+ * 較新版本）時，和請求失敗一樣是附原因的拒絕——以前建立時的拒絕會被吞掉，畫面停在「正在開啟」。被拒的工作階段在交出拒絕前
+ * 先關掉自己開的（editor.ts；Codex R.122 審查），所以被拒時沒有東西要關。stillWanted 在 TD 回覆後問一次；make 建立工作階段（測試自己給）。 */
 export async function openGrapeOp(host: HostClient, bootstrap: Bootstrap, version: string, stillWanted: () => boolean,
   make: (loaded: StateResponse) => Editor = loaded => new Editor(host, bootstrap, loaded, undefined, undefined, undefined, version)): Promise<Opening> {
   let loaded: StateResponse;
@@ -44,4 +45,15 @@ export async function openGrapeOp(host: HostClient, bootstrap: Bootstrap, versio
     return { kind: 'refused', message: tr('picker.cannotOpen', 'This Grape OP cannot be opened here: {reason}', { reason: errorText(error) }),
       ...(error instanceof UnsupportedGraphError ? { reset: async () => { await resetToDefault(host, bootstrap, version); } } : {}) };
   }
+}
+
+/** "Apply, then switch" (Codex R13 and R122-2, Refactor.122.1; legacy app.js:740): once TD has answered, switch only if this very choice
+ * is still the open one and nothing is left to send. A choice is a new object each time the user picks a Grape OP, so Cancel followed by
+ * the same Grape OP again is a new choice that waits for its own confirmation — comparing destinations could not tell them apart.
+ * 「套用後切換」：TD 回覆後，這一次的選擇仍是開著的那個、且沒有要送的，才切。每次選 Grape OP 都是新物件，所以取消後再選同一個是新的選擇、
+ * 要等它自己的確認——只比目的地分不出來。 */
+export async function switchAfterApply<T>(choice: T, flush: () => Promise<unknown>, open: () => T | null, settled: () => boolean,
+  go: (choice: T) => void): Promise<void> {
+  await flush();
+  if (open() === choice && settled()) go(choice);
 }

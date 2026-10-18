@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.122.1 — Codex 審查 R.122 的修正：子圖 Stage 只看內容、切換比對同一次選擇、被拒時關掉已開的 — 2026-10-18
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor122的審查.md`（R122-1、R122-2 皆 P2；另確認既有資源洩漏）。評閱：同資料夾 `Opus對Refactor122審查的評閱.md`（全部接受）。
+
+- **R122-1 MAT 子圖存出的 Library 檔讀不回來**（R.122 的回歸，我造成的）：R.122 讓子圖 Stage 先問 `supports`，`supports` 看外層文件的 target，同一份內容在 MAT 文件存、在讀檔器的 TOP 架子讀，答案不同。改成**子圖的 Stage 只由內容決定**（Q46）：認得的節點一律用自己的 Stage（TD 內建值照那一項，不論這個 target 能不能用）；不認得的節點類型照舊不設限制；頂層 Ghost 判定不變（TOP 裡的 MAT 專用項目仍是 unknown）。**行為後果**：TOP 文件的子圖裡放 MAT 專用的 Vertex 項目（如 tdNormal），子圖算成只有 Vertex，實例在 TOP Pixel 是 misplaced Ghost（R.122 以前：子圖 Vertex＋Pixel、實例照用、裡面那個節點是 Ghost）。R.122 加的「這種項目在子圖裡不設限制」是我自己的特例、沒有決定在後面，撤回。
+- **R122-2 取消後再選同一目標，舊回覆仍切換**（R13 修得不完整）：每次選擇是一個新物件，取消設為空；TD 回覆後比對的是同一次選擇，不是目的地。判斷抽成 `open_grape_op.ts` 的 `switchAfterApply`，可測。
+- **既有資源洩漏**：編輯工作階段在建好即時連線與網路監聽之後才拒絕時（例：vector 的 components 不是陣列，畫面讀不了），現在先關掉連線、拿掉監聽、關掉已建的同步，再把拒絕交出去。R.122 範圍文件與 `open_grape_op.ts` 寫的「被拒時沒有東西要關」是錯的，已改成實情。
+- **更正 R.122 的量測**：R.122 寫的「全部更新 313 → 282 ms」是單次三取一的中位數，在雜訊範圍內；Codex 交錯六次量為 309.9 → 333.2 ms。**更新沒有改善**。轉本地的改善成立（Codex：609.9 → 184.5 ms）。Codex 提的候選（搜尋 holders 前先排除這次 batch）記進 CURRENT，未做。
+- 證據：core 269／269、editor 183／184（1 略過）、check 全過。新測試在修改前的程式上都失敗：Library 往返（"Stored stages or targets do not match the content"）、切換（取消後再選同一目標仍切換；舊寫法沒有可測的函式）、資源（socket 開了 1、關了 0）。瀏覽器：新建置開圖正常、主控台無錯誤。
+- 限制：切換的判斷有單元測試，整個對話框沒在瀏覽器重現（要 TD 回覆夠慢）。Codex 指出的 misplaced 節點在接線規劃裡仍有接孔是既有差異，記進 CURRENT，未改。
+
 ## Refactor.122 — D-3 前的修補：開圖失敗上畫面、取消切換、Ghost 入口、內建值 Stage、開圖轉本地耗時 — 2026-10-18
 
 人類 10-18：「先修補。要決策我等醒來再說。」範圍文件：workspace `work/refactor/r122-pre-d3/r122-scope-2026-10-18.md`（含舊行為對照）。依據：Codex 責任邊界審查 13 項現況核對 workspace `work/refactor/boundary-review-status-2026-10-18/README.md`（12 項仍成立；人類同意 R10、R13、R08 放 D-3 前，其餘 9 項 D-3 後），以及 CURRENT 的 D-3 前項目 ② 與 900 層開圖耗時。

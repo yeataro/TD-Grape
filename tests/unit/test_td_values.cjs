@@ -82,8 +82,11 @@ test('a TD built-in value follows its own entry\'s stages, at the top level and 
   assert.equal(ghosts('pixel').get('f'),'misplaced','tdPos at the top of Pixel is misplaced');
   assert.equal(ghosts('pixel').has('ok'),false,'a Pixel entry in Pixel is fine');
   assert.equal(ghosts('vertex').has('v'),false,'tdPos in Vertex is fine');
-  // An entry this target cannot use is a ghost inside the subgraph and, like any ghost, sets no limit (subgraph_stages.ts).
-  // 這個 target 用不了的項目在子圖裡是 Ghost，和其他 Ghost 一樣不設限制。
+  // A subgraph's stages are its content's alone, whatever document holds it (Codex R122-1, Refactor.122.1): an entry this target cannot
+  // use still narrows them (R.122 let it set no limit; that made a Library file read back other stages than it was saved with). Its
+  // instance in a TOP's Pixel is then a misplaced ghost; inside, the entry stays an unknown ghost. 子圖的 Stage 只看內容、不看文件：這個
+  // target 用不了的項目也照樣收窄（R.122 曾讓它不設限制，Library 檔因此讀回的 Stage 和存的不同）。它的實例在 TOP 的 Pixel 是放錯的 Ghost。
   const top={...plain(bootstrap.defaultDocument.graph),subgraphs:[{id:'normal',title:'Normal',inputs:[],outputs:[],graph:{nodes:[value('n','tdNormal')],edges:[]}}]};
-  assert.deepEqual(plain(G.subgraphStages(top,'normal',registry)),['vertex','pixel']);
+  assert.deepEqual(plain(G.subgraphStages(top,'normal',registry)),['vertex']);
+  assert.deepEqual(plain(G.subgraphStages({...g,subgraphs:top.subgraphs},'normal',registry)),['vertex'],'the same in a MAT document');
 });

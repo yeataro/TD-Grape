@@ -22,7 +22,7 @@ function load(file) {
 const { Editor: EditorSession, spareHandle } = load(path.join(root, 'src/editor-react/editor.ts'));
 const { resetToDefault } = load(path.join(root, 'src/editor-react/host_sync.ts'));
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
-const { openGrapeOp } = load(path.join(root, 'src/editor-react/open_grape_op.ts'));
+const { openGrapeOp, switchAfterApply } = load(path.join(root, 'src/editor-react/open_grape_op.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
 // Messages are data worded at display time (Q34); tests read them the way a zh-Hant page shows them.
@@ -367,6 +367,45 @@ test('opening a Grape OP answers once for asking TD and building the session, re
   assert.equal(left.result.kind, 'left'); assert.equal(left.made, 0, 'nothing is built once the page moved on');
   const ok = await opening(answer(() => {}));
   assert.equal(ok.result.kind, 'opened'); assert.equal(ok.made, 1);
+});
+
+// Codex R13 and R122-2 (Refactor.122.1): "Apply, then switch" goes only if this very choice is still open once TD has answered; a choice
+// is a new object each time, so Cancel and choosing the same Grape OP again is a new choice that waits for its own confirmation.
+// 「套用後切換」只在 TD 回覆時這一次的選擇仍開著才切；每次選擇是新物件，取消後再選同一個是新的選擇、要等它自己的確認。
+// Codex R122 review, resources (Refactor.122.1): a session that refuses after its live connection and network listeners exist closes
+// them before the refusal goes out (a vector whose components are not a list fails in the drawing). 工作階段在即時連線與網路監聽建好之後
+// 才拒絕時，先關掉它們再把拒絕交出去。
+test('a session refused late in its building closes the live connection and the network listeners it made', async t => {
+  const { loaded } = open(t), state = loaded();
+  withDoc(state.state, graph => graph.stages.pixel.nodes.push({ id: 'brokenVec', name: 'BrokenVec', nodeType: 'sgrape.builtin.vector', params: { type: 'vec2', components: null }, ui: { x: 0, y: 0 } }));
+  const listeners = new Map(), saved = { window: globalThis.window, add: globalThis.addEventListener, remove: globalThis.removeEventListener };
+  globalThis.window = {}; globalThis.addEventListener = (type, run) => listeners.set(type, run);
+  globalThis.removeEventListener = (type, run) => { if (listeners.get(type) === run) listeners.delete(type); };
+  t.after(() => { globalThis.window = saved.window; globalThis.addEventListener = saved.add; globalThis.removeEventListener = saved.remove; });
+  let made = 0, closed = 0;
+  const socket = { readyState: 0, send() {}, close() { closed++; }, onopen: null, onclose: null, onerror: null, onmessage: null };
+  const host = new HostClient(target, '', async () => new Response(JSON.stringify(state)), 20000, () => { made++; return socket; });
+  const result = await openGrapeOp(host, bootstrap, '9.9.9 Test', () => true);
+  assert.equal(result.kind, 'refused');
+  assert.equal(made, 1, 'the live connection had been opened');
+  assert.equal(closed, 1, 'and is closed with the refusal');
+  assert.deepEqual([...listeners.keys()], [], 'no network listener is left behind');
+});
+
+test('apply then switch goes only for the same choice, nothing left to send', async () => {
+  const run = async (between, settled = true) => {
+    let open = { id: 'B' }, went = [];
+    const answer = deferred(), first = open;
+    const done = switchAfterApply(first, () => answer.promise, () => open, () => settled, choice => went.push(choice.id));
+    open = between(open);
+    answer.resolve(); await done;
+    return went;
+  };
+  assert.deepEqual(await run(open => open), ['B'], 'unchanged: it switches');
+  assert.deepEqual(await run(() => null), [], 'cancelled: it stays');
+  assert.deepEqual(await run(() => ({ id: 'C' })), [], 'another Grape OP chosen: it stays, the new choice waits');
+  assert.deepEqual(await run(() => ({ id: 'B' })), [], 'cancelled and the same Grape OP chosen again: it stays until confirmed again');
+  assert.deepEqual(await run(open => open, false), [], 'still changes to send: it stays');
 });
 
 test('explicit geometry notification is limited to internal handle changes; size is RF-owned', () => {

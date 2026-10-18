@@ -17,7 +17,7 @@ import { typeColor, type Bootstrap } from './core';
 import { GRAPE_ID, HostClient } from './host';
 import { Editor as EditorSession, type EditorState, type WireEnd, type NewWire } from './editor';
 import { useEditorFields, useEditorSlice } from './editor_slice';
-import { openGrapeOp } from './open_grape_op';
+import { openGrapeOp, switchAfterApply } from './open_grape_op';
 import { RightDragSelect, pressKind, type MenuOpen } from './RightDragSelect';
 import { CanvasMenu, selectionKey, type CanvasMenuRequest } from './CanvasMenu';
 import { SelectionAround } from './SelectionFrame';
@@ -767,7 +767,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   const [target, setTarget] = useState(addressTarget);
   const [session, setSession] = useState<EditorSession | null>(null), [path, setPath] = useState('');
   const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState<{ id: string } | null>(null);
   const prefs = usePrefs(), layout = useLayout();
   // Locating a definition brings the Subgraphs panel forward (visual notes 20). 定位定義時把子圖面板叫到前面。
   useEffect(() => session?.definitionFocusSubscribe(() => layout.show('subgraphs')), [session, layout.show]);
@@ -814,20 +814,20 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   }, []);
   // The one switching behaviour; entries only call the menu up (Refactor.51). 唯一的切換行為；入口只負責叫出選單。
   const closeMenu = useCallback(() => setAnchor(null), []);
-  const go = useCallback((id: string) => { history.pushState(null, '', '/shader/' + id + '/'); setTarget(id); setPending(''); }, []);
+  const go = useCallback((id: string) => { history.pushState(null, '', '/shader/' + id + '/'); setTarget(id); setPending(null); }, []);
   const shell = useMemo<Shell>(() => ({
     current: target,
-    choose: id => { if (id === target) return; if (session?.snapshot().dirty) setPending(id); else go(id); },
+    choose: id => { if (id === target) return; if (session?.snapshot().dirty) setPending({ id }); else go(id); },
     openMenu: element => setAnchor(element),
   }), [target, session, go]);
   const keepDraftAndGo = () => {
-    try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph(), source: sourceNow(td) })); go(pending); }
+    try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph(), source: sourceNow(td) })); go(pending!.id); }
     catch (error) { session?.notice(error); }
   };
-  // The choice is checked again once TD has answered: Cancel (or another choice) while it applied wins, as in the old product
-  // (legacy app.js:740; Codex R13, Refactor.122). TD 回覆後再看一次選擇：套用期間按了取消（或改選別的）就以那個為準，照舊產品。
+  // Each choice is its own object; once TD has answered, only the same choice still open switches (open_grape_op.ts; Codex R13, R122-2).
+  // 每次選擇是自己的物件；TD 回覆後，只有同一次選擇仍開著才切。
   const pendingNow = useRef(pending); pendingNow.current = pending;
-  const applyAndGo = async () => { const choice = pending; await session!.flush(); if (pendingNow.current === choice && !session!.snapshot().dirty) go(choice); };
+  const applyAndGo = () => switchAfterApply(pending!, () => session!.flush(), () => pendingNow.current, () => !session!.snapshot().dirty, choice => go(choice.id));
   return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
     {layout.titleBar && !layout.focused && <TitleBar session={session} version={version} />}
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).
@@ -842,7 +842,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
       <p>{say(tr('switch.explanation', 'Some changes are not in TD yet. Apply them to TD, or keep a draft in this browser tab before switching (it can be restored when you come back).'))}</p>
       <button className="primary" onClick={() => void applyAndGo()}>{say(tr('switch.apply', 'Apply, then switch'))}</button>
       <button onClick={keepDraftAndGo}>{say(tr('switch.keep', 'Keep a draft, then switch'))}</button>
-      <button onClick={() => setPending('')}>{say(tr('switch.cancel', 'Cancel'))}</button>
+      <button onClick={() => setPending(null)}>{say(tr('switch.cancel', 'Cancel'))}</button>
     </div>}
   </TextContext.Provider></ShellContext.Provider>;
 }

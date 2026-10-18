@@ -287,38 +287,46 @@ export class Editor {
       { answering: responding => responding ? this.sync.found() : this.sync.lost('busy') });
     // This device losing its network is the browser's to say (Refactor.75). 這台裝置沒網路由瀏覽器說。
     if (typeof window !== 'undefined') { addEventListener('offline', this.deviceOffline); addEventListener('online', this.deviceOnline); }
-    this.uniformValues = this.readUniformValues();
-    this.codegen = this.compile();
-    this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
-      (status, said) => this.status({ ...status, ...said,
-        syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
-    this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
-      version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
-      compiled: this.codegen.compiled ?? null, glslVariables: variablePlaces(this.codegen.compiled),
-      glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
-      // A graph opened failing shows the notice at once, not after the next edit (Codex 3rd check). 開圖就失敗時立刻顯示提示。
-      codegenFailure: this.failureOf(this.codegen),
-      syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
-    // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
-    this.sync.onTd = (uniforms, notices) => {
-      if (uniforms) this.setTd(uniforms);
-      for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
-    };
-    this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
-    // Upgraded as it was read: reported, then sent like any edit so TD stores the current form (human 2026-10-10).
-    // 讀圖時升級過：報告，再照一般編輯送出，讓 TD 存成目前的寫法（人類）。
-    if (upgrades.length) this.reportUpgrades(upgrades);
-    if (groupsFixed) this.tell('warning', groupsFixedText());
-    if (upgrades.length || groupsFixed) { this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
-    // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
-    // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
-    const over = core.overLimit(graph, core.registry);
-    if (over.length) this.tell('warning', tr('limit.openWarning',
-      'Warning: this graph is over the limit and cannot be compiled now; you can trim it and continue: {limits}', { limits: limitText(over) }));
-    const broken = core.structureProblems(graph, core.registry);
-    if (broken.length) this.tell('warning', tr('structure.openWarning',
-      'Warning: this graph breaks the structure rules; you can fix it and continue: {problems}', { problems: structureText(broken) }));
-    this.ghostTotal = this.reportGhosts(0, this.state.projection);
+    // From here on a refusal (a node the drawing cannot read, …) first closes what was just opened (Codex R122 review, Refactor.122.1):
+    // the caller gets no session to dispose. 從這裡起若拒絕（畫面讀不了的節點等），先關掉剛開的：呼叫端拿不到工作階段可以關。
+    try {
+      this.uniformValues = this.readUniformValues();
+      this.codegen = this.compile();
+      this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
+        (status, said) => this.status({ ...status, ...said,
+          syncRecords: recordSync(this.state.syncRecords, this.state, status, said?.message, Date.now()) }, 'sync'), delay, retry, editorVersion);
+      this.state = { ...this.sync.status, projection: project(this.document, EMPTY_PROJECTION, bootstrap.typeContract, undefined, 'pixel'),
+        version: 0, undo: false, redo: false, network: 'pixel', trail: [], message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '',
+        compiled: this.codegen.compiled ?? null, glslVariables: variablePlaces(this.codegen.compiled),
+        glslDeclarations: this.codegen.compiled?.sourceMap.declarations ?? {}, targetPath: loaded.target, upgrades: [],
+        // A graph opened failing shows the notice at once, not after the next edit (Codex 3rd check). 開圖就失敗時立刻顯示提示。
+        codegenFailure: this.failureOf(this.codegen),
+        syncRecords: recordSync([], null, this.sync.status, undefined, Date.now()), declarations: this.document.document.declarations };
+      // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
+      this.sync.onTd = (uniforms, notices) => {
+        if (uniforms) this.setTd(uniforms);
+        for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
+      };
+      this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
+      // Upgraded as it was read: reported, then sent like any edit so TD stores the current form (human 2026-10-10).
+      // 讀圖時升級過：報告，再照一般編輯送出，讓 TD 存成目前的寫法（人類）。
+      if (upgrades.length) this.reportUpgrades(upgrades);
+      if (groupsFixed) this.tell('warning', groupsFixedText());
+      if (upgrades.length || groupsFixed) { this.sync.upgraded(); this.state = { ...this.state, dirty: this.sync.status.dirty }; }
+      // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
+      // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
+      const over = core.overLimit(graph, core.registry);
+      if (over.length) this.tell('warning', tr('limit.openWarning',
+        'Warning: this graph is over the limit and cannot be compiled now; you can trim it and continue: {limits}', { limits: limitText(over) }));
+      const broken = core.structureProblems(graph, core.registry);
+      if (broken.length) this.tell('warning', tr('structure.openWarning',
+        'Warning: this graph breaks the structure rules; you can fix it and continue: {problems}', { problems: structureText(broken) }));
+      this.ghostTotal = this.reportGhosts(0, this.state.projection);
+    } catch (error) {
+      if (typeof window !== 'undefined') { removeEventListener('offline', this.deviceOffline); removeEventListener('online', this.deviceOnline); }
+      this.disposed = true; (this as unknown as { sync?: HostSync }).sync?.dispose(); this.live.dispose(); // sync may not exist yet 同步可能還沒建
+      throw error;
+    }
   }
   /** Read a stored graph in its current node forms (Refactor.65): every way a graph comes in goes through here.
    * 把存著的圖讀成目前的節點寫法：每一條讀圖的路都經過這裡。 */
