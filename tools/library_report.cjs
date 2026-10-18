@@ -31,6 +31,8 @@ function libraryReport(files, stale, libraryChanges, git) {
   if(c.added.length)lines.push('  added: '+c.added.map(titleOf).join(', '));
   if(c.removed.length)lines.push('  removed: '+c.removed.map(titleOf).join(', '));
   if(c.changed.length)lines.push('  content changed: '+c.changed.map(titleOf).join(', '));
+  if(c.withdrawn.length)lines.push('  no longer offered on its own (still carried): '+c.withdrawn.map(titleOf).join(', '));
+  if(c.offered.length)lines.push('  now offered on its own: '+c.offered.map(titleOf).join(', '));
   if(c.following.length)lines.push('  changed through what they use: '+c.following.map(titleOf).join(', '));
   for(const t of c.titles)lines.push('  title: '+t.from+' → '+t.to+' ('+t.libraryId+')');
   for(const p of c.ports)lines.push('  '+p.side+' of '+titleOf(p.libraryId)+':'+(p.added.length?' added '+p.added.join(', '):'')

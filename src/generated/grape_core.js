@@ -2642,11 +2642,11 @@ const values = require("./values");
 const library_1 = require("./library");
 const subgraph_stages_1 = require("./subgraph_stages");
 const library_files_1 = require("./library_files");
-const derived = (entry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
+const withoutDerivedFields = (entry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
 /** Two copies are the same content apart from what is worked out from it and provenance (C6; Codex R123-1); credits are content.
  * 兩份副本除了推算欄位與出處以外相同，就是同內容（C6）；credits 算內容。 */
 const sameContent = (a, b) => {
-    const { provenance: _a, ...x } = derived(a), { provenance: _b, ...y } = derived(b);
+    const { provenance: _a, ...x } = withoutDerivedFields(a), { provenance: _b, ...y } = withoutDerivedFields(b);
     return (0, changes_1.equal)(x, y);
 };
 const refsOf = (registry, entry) => [...new Set(entry.graph.nodes
@@ -2821,7 +2821,7 @@ function libraryChanges(before, after) {
     };
     const was = members(before), now = members(after);
     const wasFile = new Map(before.map(f => [f.subgraph.libraryId, f])), nowFile = new Map(after.map(f => [f.subgraph.libraryId, f]));
-    const result = { added: [], removed: [], changed: [], following: [], ports: [], titles: [] };
+    const result = { added: [], removed: [], changed: [], following: [], withdrawn: [], offered: [], ports: [], titles: [] };
     for (const id of [...new Set([...was.keys(), ...now.keys()])].sort()) {
         const a = was.get(id), b = now.get(id);
         if (!a) {
@@ -2833,9 +2833,13 @@ function libraryChanges(before, after) {
             continue;
         }
         const fa = wasFile.get(id), fb = nowFile.get(id);
-        if (!(0, changes_1.equal)(derived(a), derived(b)))
+        if (fa && !fb)
+            result.withdrawn.push(id);
+        if (!fa && fb)
+            result.offered.push(id);
+        if (!(0, changes_1.equal)(withoutDerivedFields(a), withoutDerivedFields(b)))
             result.changed.push(id);
-        else if (fa && fb && !(0, changes_1.equal)(fa.dependencies.map(derived), fb.dependencies.map(derived)))
+        else if (fa && fb && !(0, changes_1.equal)(fa.dependencies.map(withoutDerivedFields), fb.dependencies.map(withoutDerivedFields)))
             result.following.push(id);
         if (a.title !== b.title)
             result.titles.push({ libraryId: id, from: a.title, to: b.title });

@@ -131,7 +131,7 @@ test('the change report: content, what follows it, interface ports and titles',(
   renamed.subgraphs.find(f=>f.id==='gain').title='Gain2';
   const after=resolve(source('built-in',{'gain.json':file(renamed,'gain'),'user.json':files.user})).items.map(i=>i.file);
   const c=G.libraryChanges([files.gain,files.wrapper,files.user],after);
-  assert.deepEqual(plain(c),{added:[],removed:[ID.wrapper],changed:[ID.gain],following:[ID.user],
+  assert.deepEqual(plain(c),{added:[],removed:[ID.wrapper],changed:[ID.gain],following:[ID.user],withdrawn:[],offered:[],
     ports:[{libraryId:ID.gain,side:'inputs',added:[],removed:['value'],retyped:[]}],titles:[{libraryId:ID.gain,from:'Gain',to:'Gain2'}]});
 });
 
@@ -215,8 +215,22 @@ test('older carried copies are listed with their files; the files are not change
 test('the change report sees the ports and title of a subgraph that is only carried',()=>{
   const renamed=graph(removeValue);renamed.subgraphs.find(f=>f.id==='gain').title='Gain2';
   const c=G.libraryChanges([files.user],[file(renamed,'user')]);
-  assert.deepEqual(plain(c),{added:[],removed:[],changed:[ID.gain],following:[ID.user],
+  assert.deepEqual(plain(c),{added:[],removed:[],changed:[ID.gain],following:[ID.user],withdrawn:[],offered:[],
     ports:[{libraryId:ID.gain,side:'inputs',added:[],removed:['value'],retyped:[]}],titles:[{libraryId:ID.gain,from:'Gain',to:'Gain2'}]});
+});
+
+// What people can add changes when a subgraph loses or gains its own file, though its content stays carried (Codex R123.1-1).
+// 子圖失去或得到自己的檔、內容仍被夾帶時，使用者能新增的項目也變了。
+test('the change report tells a subgraph no longer offered on its own, or newly offered, while still carried',()=>{
+  const withdrawn=G.libraryChanges([files.gain,files.wrapper],[files.wrapper]);
+  assert.deepEqual(plain(withdrawn),{added:[],removed:[],changed:[],following:[],withdrawn:[ID.gain],offered:[],ports:[],titles:[]});
+  assert.deepEqual(plain(G.libraryChanges([files.wrapper],[files.gain,files.wrapper])).offered,[ID.gain]);
+  // Gone altogether is told once, as removed. 整個不見的只說一次：刪除。
+  assert.deepEqual(plain(G.libraryChanges([files.gain],[])),{added:[],removed:[ID.gain],changed:[],following:[],withdrawn:[],offered:[],ports:[],titles:[]});
+  const {libraryReport}=require('../../tools/library_report.cjs'),SHA='2'.repeat(40),BOOT=SHA+':src/generated/editor-bootstrap.json';
+  const answers={'rev-parse --symbolic-full-name @{upstream}':'refs/remotes/origin/x','rev-parse --verify refs/remotes/origin/x':SHA,['cat-file -e '+SHA+'^{commit}']:'',['cat-file -e '+BOOT]:'',['show '+BOOT]:JSON.stringify({library:{files:[files.gain,files.wrapper]}})};
+  const report=libraryReport([files.wrapper],[],G.libraryChanges,args=>{const v=answers[args.join(' ')];if(v===undefined)throw Error('no');return v;});
+  assert.match(report,/no longer offered on its own \(still carried\): Gain/);
 });
 
 // Codex's test gap: a child that becomes MAT-only narrows its parent to MAT. 子變成只有 MAT，父也只剩 MAT。

@@ -2,6 +2,14 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.123.2 — Codex 核對 R.123.1：修改報告列出「不再／開始單獨提供」的子圖 — 2026-10-18
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor123.1修正的核對.md`（R123-1～6 結案；新 P3 R123.1-1、低度命名）。評閱：同資料夾 `Opus對Refactor123.1核對的評閱.md`（兩項接受）。
+
+- **R123.1-1**（R.123.1 帶來的回歸）：R123-4 把增刪改成按所有成員算後，刪掉子圖自己的檔、內容仍被別的檔夾帶時，報告說 no changes，但使用者能新增的項目少了它。`libraryChanges` 另比較檔的子圖：前後都還是成員、根的身分變了的，列 `withdrawn`（不再單獨提供，仍被夾帶）與 `offered`（開始單獨提供）；整個不見或新出現的照舊只在 removed／added。報告各一行。
+- 命名：`derived()` 改名 `withoutDerivedFields()`（它去掉推算欄位）。
+- 證據：core 286／286、check 全過；新測試在修改前失敗。打包出的 `library` 不變。
+
 ## Refactor.123.1 — Codex 審查 R.123 的修正：同內容比較、壞的權威檔、報告的成員與基準、解析耗時 — 2026-10-18
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor123的審查.md`（P2：R123-1～3；P3：R123-4～6；效能觀察）。評閱：同資料夾 `Opus對Refactor123審查的評閱.md`（全部接受）。

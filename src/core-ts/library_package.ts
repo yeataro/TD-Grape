@@ -41,11 +41,11 @@ export interface ResolvedLibrary<C> {
 /** A copy of one Library ID in one file; an own file that does not read holds its place with the problem and no content (Codex R123-3).
  * 一個檔裡某個 Library ID 的一份；讀不進的自己的檔，帶著問題、沒有內容，照樣佔位置。 */
 type Candidate = { entry?: LibraryEntry; at: string; own: boolean; problem?: LibraryProblem };
-const derived = (entry: LibraryEntry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
+const withoutDerivedFields = (entry: LibraryEntry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
 /** Two copies are the same content apart from what is worked out from it and provenance (C6; Codex R123-1); credits are content.
  * 兩份副本除了推算欄位與出處以外相同，就是同內容（C6）；credits 算內容。 */
 const sameContent = (a: LibraryEntry, b: LibraryEntry) => {
-  const { provenance: _a, ...x } = derived(a), { provenance: _b, ...y } = derived(b);
+  const { provenance: _a, ...x } = withoutDerivedFields(a), { provenance: _b, ...y } = withoutDerivedFields(b);
   return equal(x, y);
 };
 const refsOf = (registry: Registry, entry: LibraryEntry) => [...new Set(entry.graph.nodes
@@ -173,6 +173,9 @@ export interface LibraryChanges {
   changed: string[];
   /** A file's subgraph: its own content is the same; what it uses changed. 檔的子圖：自己沒變，用到的變了。 */
   following: string[];
+  /** Still carried, but no longer a file's subgraph, so people cannot add it on its own; and the other way (Codex R123.1-1). One gone
+   * altogether is only `removed`. 仍被夾帶、但不再是檔的子圖，使用者不能單獨新增它；以及反過來。整個不見的只算 removed。 */
+  withdrawn: string[]; offered: string[];
   /** Interface ports added, removed or retyped, by port id. 接口的增、刪、改型別。 */
   ports: { libraryId: string; side: 'inputs' | 'outputs'; added: string[]; removed: string[]; retyped: string[] }[];
   titles: { libraryId: string; from: string; to: string }[];
@@ -185,14 +188,16 @@ export function libraryChanges(before: readonly LibraryFile[], after: readonly L
   };
   const was = members(before), now = members(after);
   const wasFile = new Map(before.map(f => [f.subgraph.libraryId, f])), nowFile = new Map(after.map(f => [f.subgraph.libraryId, f]));
-  const result: LibraryChanges = { added: [], removed: [], changed: [], following: [], ports: [], titles: [] };
+  const result: LibraryChanges = { added: [], removed: [], changed: [], following: [], withdrawn: [], offered: [], ports: [], titles: [] };
   for (const id of [...new Set([...was.keys(), ...now.keys()])].sort()) {
     const a = was.get(id), b = now.get(id);
     if (!a) { result.added.push(id); continue; }
     if (!b) { result.removed.push(id); continue; }
     const fa = wasFile.get(id), fb = nowFile.get(id);
-    if (!equal(derived(a), derived(b))) result.changed.push(id);
-    else if (fa && fb && !equal(fa.dependencies.map(derived), fb.dependencies.map(derived))) result.following.push(id);
+    if (fa && !fb) result.withdrawn.push(id);
+    if (!fa && fb) result.offered.push(id);
+    if (!equal(withoutDerivedFields(a), withoutDerivedFields(b))) result.changed.push(id);
+    else if (fa && fb && !equal(fa.dependencies.map(withoutDerivedFields), fb.dependencies.map(withoutDerivedFields))) result.following.push(id);
     if (a.title !== b.title) result.titles.push({ libraryId: id, from: a.title, to: b.title });
     for (const side of ['inputs', 'outputs'] as const) {
       const old = new Map(a[side].map(p => [p.id, p.type])), fresh = new Map(b[side].map(p => [p.id, p.type]));
