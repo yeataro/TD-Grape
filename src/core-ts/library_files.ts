@@ -93,16 +93,27 @@ export function readLibraryFile(value: unknown, registry: Registry): { shelf: Gr
   if (file.version! > LIBRARY_VERSION) throw fail('This file was saved by a newer Grape; update Grape to read it');
   if (!file.subgraph || typeof file.subgraph !== 'object' || (file.dependencies !== undefined && !Array.isArray(file.dependencies))) throw fail('The file has no subgraph');
   const entries = [file.subgraph, ...(file.dependencies ?? [])] as LibraryEntry[];
+  const shelf = shelfFromEntries(entries, registry);
+  for (const [i, e] of entries.entries()) {
+    const uses = usesOf(shelf, registry, 'L' + i);
+    const same = (a: unknown, b: string[]) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
+    if (!same(e.stages, uses.stages) || !same(e.targets, uses.targets)) throw fail('Stored stages or targets do not match the content: ' + e.libraryId);
+  }
+  return { shelf, root: 'L0' };
+}
+
+/** The shelf for a set of entries, the first being the subgraph (L0): every check of a file except its stored stages and targets, which
+ * a resolved set (library_package.ts) works out again (Refactor.123). 一組定義的架子，第一份是子圖本身：檔案的檢查都做，只差存著的
+ * stages／targets——解析後的一組會重算（R.123）。 */
+export function shelfFromEntries(entries: readonly LibraryEntry[], registry: Registry): Graph {
   const shelfIds = new Map<string, string>();
   entries.forEach((e, i) => {
     if (!e || typeof e !== 'object' || !validLibraryId(e.libraryId) || shelfIds.has(e.libraryId)) throw fail('Invalid or repeated Library ID');
     shelfIds.set(e.libraryId, 'L' + i);
   });
-  const stored = new Map<string, { stages: unknown; targets: unknown }>();
   const subgraphs = entries.map((e, i) => {
     const f = copy(e) as unknown as SubgraphData;
     f.id = 'L' + i;
-    stored.set(f.id, { stages: e.stages, targets: e.targets });
     if (!Array.isArray(f.graph?.nodes) || !Array.isArray(f.graph?.edges)) throw fail('A definition has no network');
     // What save refuses, read refuses too, so no file comes in that could not go back out (Codex R121-4). 存檔拒絕的，讀檔也拒絕。
     let scoped = false;
@@ -133,12 +144,7 @@ export function readLibraryFile(value: unknown, registry: Registry): { shelf: Gr
   }
   if (subgraphGroups(shelf, registry).cyclic.size) throw fail('The file holds a cycle of subgraphs');
   if ((closureOrder(shelf, registry, 'L0')?.length ?? 0) !== subgraphs.length) throw fail('The file holds a dependency nothing uses');
-  for (const f of subgraphs) {
-    const uses = usesOf(shelf, registry, f.id), was = stored.get(f.id)!;
-    const same = (a: unknown, b: string[]) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
-    if (!same(was.stages, uses.stages) || !same(was.targets, uses.targets)) throw fail('Stored stages or targets do not match the content: ' + f.libraryId);
-  }
-  return { shelf, root: 'L0' };
+  return shelf;
 }
 
 /** Bring a read file's subgraph into a graph, the way a person pulls it in: the entry rule (amendment 3 C4) with the file as the batch.

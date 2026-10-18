@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.123 — 資源庫包的解析與檢查（D-3a 第一輪，畫面不變） — 2026-10-18
+
+設計：workspace `work/refactor/library-package-build-design-2026-10-18.md` 修訂 3（Codex 意圖審查、修訂 2 審查、修訂 3 核對結案；人類 10-18「可」），design-interview Q78 續。範圍：workspace `work/refactor/r123-d3a-scope-2026-10-18.md`（R.123 一節；原 R.123 的畫面部分順延為 R.124）。
+
+- **核心 `library_package.ts`**：`resolveLibrary(來源們, registry, check?)` 收排好優先順序的所有來源（一個資料夾＝一個包），先決定每個 Library ID 的內容（來源優先 → 來源內自己的檔優先於別的檔夾帶的副本 → 只夾帶的各份須相同），再在記憶體中完整重建每份子圖的依賴、重算 stages／targets（原始檔不寫），最後檢查：同來源兩個檔同根、只夾帶的異內容、解析後成環、**解析後出現 Ghost（依內容自己支援的每個 target 各查一次）**、沒有任何 target、呼叫端的檢查（建置會產碼）；用到不能用的也不能用（只算真正壞的與用到它的）。`libraryChanges` 算修改報告。
+- **`library_files.ts`**：`readLibraryFile` 拆出 `shelfFromEntries`（檔案的檢查都做，只差存著的 stages／targets——解析後的一組會重算）。
+- **建置**：內建包當唯一來源呼叫 `resolveLibrary`（check＝`verifyLibraryFile`：照拉入的方式帶進空圖、產碼、算拉線接線列）；有任何問題建置就停，列出問題、Library ID 與檔名；打包的是解析後的檔。發布時印修改報告（`tools/library_report.cjs`）：和本機記錄的這個分支的 upstream 比，寫出參照與 commit，比不了照實說原因。
+- 現在只有 Tint：打包出的 `library` 與改之前逐字相同；修改報告「與本機記錄的 origin/refactor 8b3bc14e 比較：no changes」。
+- 證據：core 279／279、editor 183／184（1 略過）、check 全過；新測試 `tests/unit/test_library_package.cjs`（10 項，照設計第十一節驗收 1–5：檔案順序不影響結果、跨來源換版只擋 A 與用 A 的、高來源夾帶的勝過低來源自己的檔、低來源衝突被高來源解消、成環與依賴增減與 stages 重算、未接輸入與空邊界通過、不認得的節點擋下、只在 MAT 合法的節點照 MAT 查、讀不進的檔、呼叫端檢查、修改報告與比較基準的各種情況）。實測：暫時放 Codex A1 那兩個檔（拿掉輸入的新 Gain＋接著它的舊 Wrapper）進內建資料夾，`build_core --check` 失敗並寫出「ghost … zz_tmp_wrapper.json: Broken by what it now uses: top: wire in.value → inner.value; mat: …」；檔已刪。
+- 限制：編輯器還沒使用（照舊擋資源庫資料），`library_sources.ts` 在 R.124；個人庫（D-3b）沒有建置，到時在讀取時呼叫同一個函式；呼叫端檢查目前只有 TOP 產碼。
+
 ## Refactor.122.1 — Codex 審查 R.122 的修正：子圖 Stage 只看內容、切換比對同一次選擇、被拒時關掉已開的 — 2026-10-18
 
 依 workspace `Review/2026-10-14-fable/Codex對Refactor122的審查.md`（R122-1、R122-2 皆 P2；另確認既有資源洩漏）。評閱：同資料夾 `Opus對Refactor122審查的評閱.md`（全部接受）。

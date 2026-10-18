@@ -32,6 +32,7 @@ const clipboard_1 = require("./clipboard");
 const library_1 = require("./library");
 const library_policy_1 = require("./library_policy");
 const library_files_1 = require("./library_files");
+const library_package_1 = require("./library_package");
 const groups = require("./groups");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -95,7 +96,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, boolean_operation_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_input_1.default, subgraph_instance_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, documentBytes: capacity_1.documentBytes, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates, readLibraryFile: library_files_1.readLibraryFile, saveLibraryFile: library_files_1.saveLibraryFile, libraryIdFrom: library_files_1.libraryIdFrom, bringInLibraryFile: library_files_1.bringInLibraryFile, verifyLibraryFile: library_files_1.verifyLibraryFile };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, documentBytes: capacity_1.documentBytes, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, connectedWires: connectivity_1.connectedWires, subgraphStages: subgraph_stages_1.subgraphStages, subgraphStageTable: subgraph_stages_1.subgraphStageTable, subgraphGroups: subgraph_stages_1.subgraphGroups, newPortId: subgraph_operations_1.newPortId, instanceCounts: subgraph_operations_1.instanceCounts, useCounts: subgraph_operations_1.useCounts, subgraphCycle: subgraph_operations_1.subgraphCycle, newSubgraphCycle: subgraph_operations_1.newSubgraphCycle, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle, componentStyles: component_names_1.componentStyles, componentLetters: component_names_1.componentLetters, upgradeGraph: upgrades_1.upgradeGraph, nodeUpgrades: upgrades_1.nodeUpgrades, validNodeName: node_names_1.validNodeName, typedName: node_names_1.typedName, storedName: node_names_1.storedName, shownName: node_names_1.shownName, freeName: node_names_1.freeName, newNodeName: node_names_1.newNodeName, validSubgraphTitle: node_names_1.validSubgraphTitle, newInstanceName: node_names_1.newInstanceName, namesIn: node_names_1.namesIn, takesName: node_names_1.takesName, NAME_LIMIT: node_names_1.NAME_LIMIT, copyNodes: clipboard_1.copyNodes, readClip: clipboard_1.readClip, pasteClip: clipboard_1.pasteClip, clipCorner: clipboard_1.clipCorner, groups, standardForm: library_1.standardForm, closureOrder: library_1.closureOrder, validLibraryId: library_1.validLibraryId, planLibraryEntry: library_policy_1.planLibraryEntry, repairLibraryCopies: library_policy_1.repairLibraryCopies, repairDuplicates: library_policy_1.repairDuplicates, readLibraryFile: library_files_1.readLibraryFile, saveLibraryFile: library_files_1.saveLibraryFile, libraryIdFrom: library_files_1.libraryIdFrom, bringInLibraryFile: library_files_1.bringInLibraryFile, verifyLibraryFile: library_files_1.verifyLibraryFile, resolveLibrary: library_package_1.resolveLibrary, libraryChanges: library_package_1.libraryChanges };
 
 },
 "capacity":function(require,module,exports){
@@ -2283,6 +2284,7 @@ exports.LIBRARY_VERSION = exports.LIBRARY_FORMAT = void 0;
 exports.libraryIdFrom = libraryIdFrom;
 exports.saveLibraryFile = saveLibraryFile;
 exports.readLibraryFile = readLibraryFile;
+exports.shelfFromEntries = shelfFromEntries;
 exports.bringInLibraryFile = bringInLibraryFile;
 exports.verifyLibraryFile = verifyLibraryFile;
 /** Library files (D-2, Refactor.121; fields: workspace `work/refactor/library-fields-draft-2026-10-15.md`, decided 10-15/16). One file is
@@ -2366,7 +2368,7 @@ function saveLibraryFile(document, registry, rootId, newLibraryId, details = {})
  * content's. 把資源庫檔讀成一個架子：一張放著它各份定義的圖（圖內 ID 依檔內順序 L0、L1…，L0 是子圖本身），每份照圖的定義驗。拒絕：
  * 別的格式或較新的版本、重複或格式不對的 Library ID、巢狀實例指到檔裡沒有的定義、沒人用的依賴、循環、存著的 stages／targets 和內容算出的不同。 */
 function readLibraryFile(value, registry) {
-    var _a, _b, _c;
+    var _a;
     const file = value;
     if (!file || typeof file !== 'object' || file.format !== exports.LIBRARY_FORMAT)
         throw fail('This is not a grape-subgraph file');
@@ -2377,18 +2379,30 @@ function readLibraryFile(value, registry) {
     if (!file.subgraph || typeof file.subgraph !== 'object' || (file.dependencies !== undefined && !Array.isArray(file.dependencies)))
         throw fail('The file has no subgraph');
     const entries = [file.subgraph, ...((_a = file.dependencies) !== null && _a !== void 0 ? _a : [])];
+    const shelf = shelfFromEntries(entries, registry);
+    for (const [i, e] of entries.entries()) {
+        const uses = usesOf(shelf, registry, 'L' + i);
+        const same = (a, b) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
+        if (!same(e.stages, uses.stages) || !same(e.targets, uses.targets))
+            throw fail('Stored stages or targets do not match the content: ' + e.libraryId);
+    }
+    return { shelf, root: 'L0' };
+}
+/** The shelf for a set of entries, the first being the subgraph (L0): every check of a file except its stored stages and targets, which
+ * a resolved set (library_package.ts) works out again (Refactor.123). 一組定義的架子，第一份是子圖本身：檔案的檢查都做，只差存著的
+ * stages／targets——解析後的一組會重算（R.123）。 */
+function shelfFromEntries(entries, registry) {
+    var _a, _b;
     const shelfIds = new Map();
     entries.forEach((e, i) => {
         if (!e || typeof e !== 'object' || !(0, library_1.validLibraryId)(e.libraryId) || shelfIds.has(e.libraryId))
             throw fail('Invalid or repeated Library ID');
         shelfIds.set(e.libraryId, 'L' + i);
     });
-    const stored = new Map();
     const subgraphs = entries.map((e, i) => {
         var _a, _b;
         const f = (0, model_1.copy)(e);
         f.id = 'L' + i;
-        stored.set(f.id, { stages: e.stages, targets: e.targets });
         if (!Array.isArray((_a = f.graph) === null || _a === void 0 ? void 0 : _a.nodes) || !Array.isArray((_b = f.graph) === null || _b === void 0 ? void 0 : _b.edges))
             throw fail('A definition has no network');
         // What save refuses, read refuses too, so no file comes in that could not go back out (Codex R121-4). 存檔拒絕的，讀檔也拒絕。
@@ -2435,15 +2449,9 @@ function readLibraryFile(value, registry) {
     }
     if ((0, subgraph_stages_1.subgraphGroups)(shelf, registry).cyclic.size)
         throw fail('The file holds a cycle of subgraphs');
-    if (((_c = (_b = (0, library_1.closureOrder)(shelf, registry, 'L0')) === null || _b === void 0 ? void 0 : _b.length) !== null && _c !== void 0 ? _c : 0) !== subgraphs.length)
+    if (((_b = (_a = (0, library_1.closureOrder)(shelf, registry, 'L0')) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) !== subgraphs.length)
         throw fail('The file holds a dependency nothing uses');
-    for (const f of subgraphs) {
-        const uses = usesOf(shelf, registry, f.id), was = stored.get(f.id);
-        const same = (a, b) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
-        if (!same(was.stages, uses.stages) || !same(was.targets, uses.targets))
-            throw fail('Stored stages or targets do not match the content: ' + f.libraryId);
-    }
-    return { shelf, root: 'L0' };
+    return shelf;
 }
 /** Bring a read file's subgraph into a graph, the way a person pulls it in: the entry rule (amendment 3 C4) with the file as the batch.
  * Returns the in-graph ID now holding the subgraph. 把讀好的檔的子圖帶進圖，和使用者拉入的方式一樣：進圖規則（附錄三 C4），檔就是那一批。
@@ -2585,6 +2593,201 @@ function updateFromLibrary(graph, id, content, batch = new Set()) {
     for (const d of holders)
         if (d.libraryId !== undefined)
             graph.library.set(d.id, d.libraryId, { kind: 'content', data: d });
+}
+
+},
+"library_package":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolveLibrary = resolveLibrary;
+exports.libraryChanges = libraryChanges;
+/** Library packages (Refactor.123; design: workspace `work/refactor/library-package-build-design-2026-10-18.md` revision 3, design-interview
+ * Q78 cont.). A folder of Library files is a package; the sources come in priority order (Q78: built-in first). One Library ID gets one
+ * content: the highest source holding it wins (R3); inside it, the ID's own file (its root) wins over copies carried in other files (R1); an
+ * ID only carried must be carried the same everywhere (R2). Every subgraph then uses the winners as its dependencies, rebuilt whole in memory
+ * with stages and targets worked out again (R4); source files are never written. Then the checks: a definition broken by what it now
+ * depends on (a ghost, in each target it supports), one no target can take, a failing caller check — and everything using a broken one is
+ * unusable too. The build (one source) and the editor (all sources) call the same function.
+ * 資源庫包：一個資料夾的資源庫檔是一個包；來源照優先順序給（Q78：內建優先）。一個 Library ID 只有一份內容：有它的來源中最優先的勝出（R3）；
+ * 那個來源裡，它自己的檔（根）勝過別的檔夾帶的副本（R1）；只被夾帶的，各處要相同（R2）。每份子圖再照勝出的內容在記憶體中重建依賴、重算
+ * stages／targets（R4）；原始檔不寫。然後檢查：被新的依賴弄壞（在它支援的每個 target 出現 Ghost）、沒有任何 target 能用、呼叫端的檢查不過——
+ * 用到壞的那份的也都不能用。建置（一個來源）與編輯器（全部來源）用同一個函式。 */
+const model_1 = require("./model");
+const graph_1 = require("./graph");
+const changes_1 = require("./changes");
+const ghosts_1 = require("./ghosts");
+const values = require("./values");
+const library_files_1 = require("./library_files");
+/** Content without what is worked out from it. 去掉推算欄位的內容。 */
+const content = (entry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
+const refsOf = (registry, entry) => entry.graph.nodes
+    .map((n) => { var _a, _b; return (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => id !== undefined);
+function resolveLibrary(sources, registry, check) {
+    const problems = [], unusable = new Map();
+    const refuse = (problem) => { problems.push(problem); if (problem.libraryId !== undefined && !unusable.has(problem.libraryId))
+        unusable.set(problem.libraryId, problem); };
+    // Each file as written must read (its own carried copies included); one that does not adds nothing. 每個檔照原樣要讀得進；讀不進的不貢獻任何內容。
+    const candidates = sources.map(source => {
+        var _a;
+        const byId = new Map();
+        for (const file of source.files) {
+            const at = source.name + '/' + file.name;
+            try {
+                (0, library_files_1.readLibraryFile)(file.content, registry);
+            }
+            catch (error) {
+                refuse({ code: 'unreadable', at: [at], detail: error.message });
+                continue;
+            }
+            const f = file.content;
+            [f.subgraph, ...((_a = f.dependencies) !== null && _a !== void 0 ? _a : [])].forEach((entry, i) => {
+                var _a;
+                const list = (_a = byId.get(entry.libraryId)) !== null && _a !== void 0 ? _a : [];
+                list.push({ entry: (0, model_1.copy)(entry), at, own: i === 0 });
+                byId.set(entry.libraryId, list);
+            });
+        }
+        return byId;
+    });
+    // R3, then R1, then R2. Only the winning source's own disagreements count (Codex R2-1). 先 R3、再 R1、再 R2；只算勝出來源自己的不一致。
+    const winners = new Map();
+    for (const id of [...new Set(candidates.flatMap(byId => [...byId.keys()]))].sort()) {
+        const found = candidates.find(byId => byId.has(id)).get(id), own = found.filter(c => c.own);
+        if (own.length > 1) {
+            refuse({ code: 'duplicateRoot', libraryId: id, at: own.map(c => c.at).sort(), detail: 'Two files are both this subgraph' });
+            continue;
+        }
+        if (own.length === 1) {
+            winners.set(id, own[0]);
+            continue;
+        }
+        const sorted = [...found].sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
+        if (sorted.some(c => !(0, changes_1.equal)(content(c.entry), content(sorted[0].entry)))) {
+            refuse({ code: 'conflictingCopies', libraryId: id, at: [...new Set(sorted.map(c => c.at))], detail: 'Carried with different content and no file of its own' });
+            continue;
+        }
+        winners.set(id, sorted[0]);
+    }
+    // R4: each winner's dependencies, depth first in node order (the order saving uses). R4：每份勝出內容的依賴，深度優先、照節點順序。
+    const closures = new Map();
+    for (const id of winners.keys()) {
+        const order = [], path = [];
+        let problem;
+        const visit = (at) => {
+            if (problem)
+                return;
+            if (path.includes(at)) {
+                problem = { code: 'cycle', libraryId: id, at: [winners.get(id).at], detail: 'Subgraphs use each other: ' + [...path.slice(path.indexOf(at)), at].join(' → ') };
+                return;
+            }
+            if (order.includes(at))
+                return;
+            const winner = winners.get(at);
+            if (!winner) {
+                problem = unusable.has(at) ? { code: 'dependsOnUnusable', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + at + ', which has no single content' }
+                    : { code: 'missing', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + at + ', which no file holds' };
+                return;
+            }
+            path.push(at);
+            order.push(at);
+            for (const ref of refsOf(registry, winner.entry))
+                visit(ref);
+            path.pop();
+        };
+        visit(id);
+        if (problem)
+            refuse(problem);
+        else
+            closures.set(id, order);
+    }
+    // Rebuilt whole, then checked in each target the content supports (Codex R2-2). 整份重建，再在內容支援的每個 target 檢查。
+    const resolved = new Map();
+    for (const [id, order] of closures) {
+        const at = winners.get(id).at;
+        let shelf, file;
+        try {
+            shelf = (0, library_files_1.shelfFromEntries)(order.map(x => winners.get(x).entry), registry);
+            file = (0, library_files_1.saveLibraryFile)(shelf, registry, 'L0', () => { throw Error('A definition has no Library ID'); });
+        }
+        catch (error) {
+            refuse({ code: 'invalid', libraryId: id, at: [at], detail: error.message });
+            continue;
+        }
+        if (!file.subgraph.targets.length) {
+            refuse({ code: 'noTarget', libraryId: id, at: [at], detail: 'No graph target can take what it now holds' });
+            continue;
+        }
+        const broken = file.subgraph.targets.flatMap(target => {
+            const network = new graph_1.GraphDocument({ ...(0, model_1.copy)(shelf), target }, registry).networks.get('subgraph:L0'), ghosts = (0, ghosts_1.ghostsOf)(network, values.policy);
+            const wires = network.edges.filter(e => ghosts.edges.has(e.id)).map(e => e.data.from.join('.') + ' → ' + e.data.to.join('.'));
+            return [...[...ghosts.nodes.keys()].map(n => target + ': node ' + n), ...wires.map(w => target + ': wire ' + w)];
+        });
+        if (broken.length) {
+            refuse({ code: 'ghost', libraryId: id, at: [at], detail: 'Broken by what it now uses: ' + broken.join('; ') });
+            continue;
+        }
+        resolved.set(id, file);
+    }
+    // The roots people take, checked by the caller (the build compiles them). 使用者拿的根，由呼叫端檢查（建置會產碼）。
+    const roots = sources.flatMap(source => source.files.map(f => { var _a, _b; return ({ at: source.name + '/' + f.name, id: (_b = (_a = f.content) === null || _a === void 0 ? void 0 : _a.subgraph) === null || _b === void 0 ? void 0 : _b.libraryId }); }))
+        .filter((r) => { var _a; return typeof r.id === 'string' && ((_a = winners.get(r.id)) === null || _a === void 0 ? void 0 : _a.own) === true && winners.get(r.id).at === r.at; });
+    const checked = new Map();
+    for (const { id, at } of roots) {
+        const file = resolved.get(id);
+        if (!file || !check)
+            continue;
+        try {
+            checked.set(id, check((0, model_1.copy)(file)));
+        }
+        catch (error) {
+            refuse({ code: 'check', libraryId: id, at: [at], detail: error.message });
+        }
+    }
+    // Whatever uses an unusable one cannot be used either; only what is really broken and its users (Codex R2-1). 用到不能用的，也不能用。
+    for (let grew = true; grew;) {
+        grew = false;
+        for (const [id, order] of closures) {
+            if (unusable.has(id))
+                continue;
+            const bad = order.find(x => x !== id && unusable.has(x));
+            if (bad) {
+                refuse({ code: 'dependsOnUnusable', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + bad + ', which cannot be used' });
+                grew = true;
+            }
+        }
+    }
+    const items = roots.filter(r => resolved.has(r.id) && !unusable.has(r.id))
+        .map(r => ({ libraryId: r.id, file: resolved.get(r.id), at: r.at, checked: checked.get(r.id) }));
+    return { items, unusable, problems };
+}
+function libraryChanges(before, after) {
+    const was = new Map(before.map(f => [f.subgraph.libraryId, f])), now = new Map(after.map(f => [f.subgraph.libraryId, f]));
+    const result = { added: [], removed: [], changed: [], following: [], ports: [], titles: [] };
+    for (const id of [...new Set([...was.keys(), ...now.keys()])].sort()) {
+        const a = was.get(id), b = now.get(id);
+        if (!a) {
+            result.added.push(id);
+            continue;
+        }
+        if (!b) {
+            result.removed.push(id);
+            continue;
+        }
+        if (!(0, changes_1.equal)(content(a.subgraph), content(b.subgraph)))
+            result.changed.push(id);
+        else if (!(0, changes_1.equal)(a.dependencies.map(content), b.dependencies.map(content)))
+            result.following.push(id);
+        if (a.subgraph.title !== b.subgraph.title)
+            result.titles.push({ libraryId: id, from: a.subgraph.title, to: b.subgraph.title });
+        for (const side of ['inputs', 'outputs']) {
+            const old = new Map(a.subgraph[side].map(p => [p.id, p.type])), fresh = new Map(b.subgraph[side].map(p => [p.id, p.type]));
+            const added = [...fresh.keys()].filter(p => !old.has(p)), removed = [...old.keys()].filter(p => !fresh.has(p));
+            const retyped = [...fresh.keys()].filter(p => old.has(p) && old.get(p) !== fresh.get(p));
+            if (added.length || removed.length || retyped.length)
+                result.ports.push({ libraryId: id, side, added, removed, retyped });
+        }
+    }
+    return result;
 }
 
 },

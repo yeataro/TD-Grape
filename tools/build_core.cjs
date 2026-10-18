@@ -60,11 +60,12 @@ import {copyNodes,readClip,pasteClip,clipCorner} from './clipboard';
 import {standardForm,closureOrder,validLibraryId} from './library';
 import {planLibraryEntry,repairLibraryCopies,repairDuplicates} from './library_policy';
 import {readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,verifyLibraryFile} from './library_files';
+import {resolveLibrary,libraryChanges} from './library_package';
 import * as groups from './groups';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates,readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,verifyLibraryFile};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,documentBytes,structureProblems,offered,removable,formatProblem,ghostsOf,connectedWires,subgraphStages,subgraphStageTable,subgraphGroups,newPortId,instanceCounts,useCounts,subgraphCycle,newSubgraphCycle,declarationKinds,declarationNameProblem,declarationLabel,freeDeclarationName,freeLegacyName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue,componentStyle,componentStyles,componentLetters,upgradeGraph,nodeUpgrades,validNodeName,typedName,storedName,shownName,freeName,newNodeName,validSubgraphTitle,newInstanceName,namesIn,takesName,NAME_LIMIT,copyNodes,readClip,pasteClip,clipCorner,groups,standardForm,closureOrder,validLibraryId,planLibraryEntry,repairLibraryCopies,repairDuplicates,readLibraryFile,saveLibraryFile,libraryIdFrom,bringInLibraryFile,verifyLibraryFile,resolveLibrary,libraryChanges};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -104,21 +105,24 @@ const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[{i
 // Compiled with the editor's identifier rules, as the editor compiles it (names are checked against them).
 // 用編輯器的識別字規則編譯，和編輯器一樣（名稱要照它檢查）。
 const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph,context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top').glslCode)};
-// The built-in Library (D-2, Refactor.121; bc-plan §6): every file in src/library/subgraphs/ is read and checked by the core, brought into
-// an empty graph the way a person pulls it in (amendment 3 C4), compiled there, and its wire-drop row is worked out on that graph. Any
-// failure stops the build. The editor reads these only from D-3; until then the build and the tests are their readers (human 10-18 (a)).
-// 內建資源庫：src/library/subgraphs/ 的每個檔由核心讀檔驗證，照使用者拉入的方式（C4）帶進空圖、在那裡產碼，並在那張圖上算拉線接線表的一列。
-// 任何一個失敗，建置就停。編輯器要到 D-3 才讀；在那之前讀它們的是建置與測試（人類 10-18 選 (a)）。
+// The built-in Library (D-2, Refactor.121; resolved as a package since Refactor.123, design-interview Q78 cont.): src/library/subgraphs/ is
+// one package. The core resolves it by Library ID (library_package.ts: one content per ID, a subgraph's own file before copies carried in
+// other files, dependencies rebuilt) and checks it; each subgraph people can take is then brought into an empty graph the way a person
+// pulls it in (amendment 3 C4), compiled there, and its wire-drop row worked out on that graph. Any problem stops the build, naming the
+// files. The files packed are the resolved ones; source files are never written.
+// 內建資源庫：src/library/subgraphs/ 是一個包。核心依 Library ID 解析（一個 ID 一份內容；子圖自己的檔優先於別的檔夾帶的副本；依賴重建）並檢查；
+// 使用者拿得到的每份子圖再照拉入的方式（C4）帶進空圖、在那裡產碼、算拉線接線列。有任何問題建置就停，並指出檔案。打包的是解析後的檔；原始檔不寫。
 const libraryDir=path.join(root,'src/library/subgraphs');
-const builtInLibrary={files:[],wireDrop:{}};
-for(const name of (fs.existsSync(libraryDir)?fs.readdirSync(libraryDir).filter(f=>f.endsWith('.json')).sort():[])){
-  try{
-    const G=context.GrapeGraph,file=JSON.parse(fs.readFileSync(path.join(libraryDir,name),'utf8'));
-    // The same check the tests run on bad files (library_files.ts verifyLibraryFile). 測試對壞檔跑的是同一個檢查。
-    builtInLibrary.wireDrop['library:'+file.subgraph.libraryId]=G.verifyLibraryFile(file,G.registry,defaultGraph,context.GrapeTopCompiler,G.createEditorContract(G.registry,'top').glslCode);
-    builtInLibrary.files.push(file);
-  }catch(error){console.error('Built-in Library file '+name+': '+(error&&error.message||error));process.exit(1);}
+const libraryFiles=(fs.existsSync(libraryDir)?fs.readdirSync(libraryDir).filter(f=>f.endsWith('.json')).sort():[])
+  .map(name=>{try{return {name,content:JSON.parse(fs.readFileSync(path.join(libraryDir,name),'utf8'))};}catch(error){console.error('Built-in Library file '+name+': '+(error&&error.message||error));process.exit(1);}});
+const libraryRules=context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top').glslCode;
+const builtIn=context.GrapeGraph.resolveLibrary([{name:'built-in',files:libraryFiles}],context.GrapeGraph.registry,
+  file=>context.GrapeGraph.verifyLibraryFile(file,context.GrapeGraph.registry,defaultGraph,context.GrapeTopCompiler,libraryRules));
+if(builtIn.problems.length){
+  for(const p of builtIn.problems)console.error('Built-in Library: '+p.code+(p.libraryId?' '+p.libraryId:'')+' in '+p.at.join(', ')+': '+p.detail);
+  process.exit(1);
 }
+const builtInLibrary={files:builtIn.items.map(item=>item.file),wireDrop:Object.fromEntries(builtIn.items.map(item=>['library:'+item.libraryId,item.checked]))};
 // Native source labels are cold host metadata, independent of Python graph compilation.
 const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
 const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));
@@ -134,7 +138,7 @@ const outputs=new Map([
     // TD reads the preset expressions from here (Q61): one copy at run time, in the editor bundle.
     // TD 從這裡讀預設 Uniform 的 expression：執行時只有網頁資產裡這一份。
     uniformPresets:presetTable,
-    // The built-in Library: its files as written, and a wire-drop row per subgraph (D-2). 內建資源庫：檔案原樣，以及每份子圖的拉線接線列。
+    // The built-in Library: its files as resolved, and a wire-drop row per subgraph (D-2; R.123). 內建資源庫：解析後的檔，以及每份子圖的拉線接線列。
     library:builtInLibrary},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.
@@ -142,4 +146,10 @@ for(const [file,output] of outputs){
   if(process.argv.includes('--check')){
     if(!fs.existsSync(file)||fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n')!==output.replace(/\r\n/g,'\n')){console.error('Stale generated asset: '+path.relative(root,file));process.exitCode=1;}
   }else fs.writeFileSync(file,output);
+}
+// The Library change report (design §6, tools/library_report.cjs), when publishing. 資源庫修改報告，發布時印出。
+if(!process.argv.includes('--check')){
+  const {execFileSync}=require('node:child_process');
+  console.log(require('./library_report.cjs').libraryReport(builtInLibrary.files,context.GrapeGraph.libraryChanges,
+    args=>execFileSync('git',args,{cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim()));
 }
