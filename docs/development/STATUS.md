@@ -2,6 +2,21 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.123.1 — Codex 審查 R.123 的修正：同內容比較、壞的權威檔、報告的成員與基準、解析耗時 — 2026-10-18
+
+依 workspace `Review/2026-10-14-fable/Codex對Refactor123的審查.md`（P2：R123-1～3；P3：R123-4～6；效能觀察）。評閱：同資料夾 `Opus對Refactor123審查的評閱.md`（全部接受）。
+
+- **R123-1 只差出處的夾帶副本被判衝突**：C2 的同內容比較不看 `provenance`（附錄三 C6）；`credits` 照舊算內容。選中的副本保留它的出處；修改報告的「內容改了」仍看出處（那是檔的報告，不是 C6 的比較）。
+- **R123-2 正規化前比較**：每個檔讀進後，取存檔會寫出的樣子（Library ID 參照）再比較；群組的預設欄位（`textScale`、`textAlign`、`textPlace`）寫不寫都是同內容。
+- **R123-3 讀不進的權威檔被舊副本頂替**：讀不進、但格式與根 Library ID 認得出的檔，照樣以「自己的檔」佔住優先順序；勝出時那個 ID 不能用（`unreadable`，帶 Library ID），用到它的也不能用。它夾帶的不參加；認不出 ID 的檔照舊只列檔案問題。
+- **R123-4 只被夾帶的成員**：`libraryChanges` 依 Library ID 比較所有成員（檔的子圖與夾帶的），接孔、標題、增刪、內容都算；「跟著依賴變」仍對檔的子圖說。
+- **R123-5 過時的夾帶副本**：`resolveLibrary` 另回傳 `stale`（和採用內容不同的夾帶副本：ID、所在檔）；修改報告列成提示（單獨分享那個檔時會用它的副本），比不了時也列；不算問題、不寫回原始檔。
+- **R123-6 比較基準**：先取 upstream 的完整參照名與完整 SHA，之後都讀那個 SHA；分開說「參照讀不了」「本機沒有那個 commit」「那一版沒有 editor-bootstrap.json」「讀不了」「沒有 Library」。
+- **解析耗時**（量過，Codex `work/refactor/r123-review/resolution-chain.cjs` 的鏈，同機 Node 單次）：200 個定義 8.79 s → 48 ms，400 個 150 ms；讀檔 200 個 124 → 4 ms。剖析：72% 在存檔算 stages／targets（每份定義重算整份的 Stage 分組），又乘上每個 ID 各自重建。改成：`library_files.ts` 的 `definitionUses` 整份文件算一次（targets 是自己節點的再被子縮小）；解析時所有可用的勝出內容放在同一個架子上驗一次，每個 target 一份文件查 Ghost；循環用 Stage 分組的強連通結果判定。`shelfFromEntries` 不再檢查「第一份用到其他全部」，那是讀檔自己的檢查，移到 `readLibraryFile`。
+- 現在只有 Tint：打包出的 `library` 與改之前逐字相同；修改報告「compared with origin/refactor 8b3bc14 as recorded here: no changes」。
+- 證據：core 285／285、editor 183／184（1 略過）、check 全過。新測試 6 項在修改前的程式上都失敗（出處／credits、群組預設值三種、認得出 ID 的壞權威〔跨來源、同包、低來源壞檔〕、過時副本、只被夾帶成員的接孔與標題、報告基準〔固定 SHA、缺 commit、缺檔、讀不了〕）；另補 Codex 指出的覆蓋缺口「子變成只有 MAT，父也只剩 MAT」（修改前就對，防這次改寫 targets 算法）。
+- 限制：個人庫還沒有呼叫端（D-3b），`stale` 與跨來源的壞檔目前只由測試涵蓋。
+
 ## Refactor.123 — 資源庫包的解析與檢查（D-3a 第一輪，畫面不變） — 2026-10-18
 
 設計：workspace `work/refactor/library-package-build-design-2026-10-18.md` 修訂 3（Codex 意圖審查、修訂 2 審查、修訂 3 核對結案；人類 10-18「可」），design-interview Q78 續。範圍：workspace `work/refactor/r123-d3a-scope-2026-10-18.md`（R.123 一節；原 R.123 的畫面部分順延為 R.124）。

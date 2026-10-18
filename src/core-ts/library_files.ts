@@ -44,15 +44,31 @@ export function libraryIdFrom(bytes: ArrayLike<number>): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-/** Where a definition can be used, worked out from its content: the stages (Q46) and the graph targets every node inside takes.
- * 定義能用在哪裡，由內容推算：Stage（Q46），以及裡面每個節點都接受的圖 target。 */
-function usesOf(document: Graph, registry: Registry, id: string): { stages: string[]; targets: string[] } {
-  const stages = [...subgraphGroups(document, registry).stagesOf(id)], closure = closureOrder(document, registry, id) ?? [];
-  const targets = GRAPH_TARGETS.filter(target => closure.every(f => f.graph.nodes.every(n => {
-    const module = registry.get(n.nodeType);
-    return !module || module.supports(n, contextFor({ ...document, target }, f));
-  })));
-  return { stages, targets };
+/** Where each definition of a document can be used, worked out from its content: the stages (Q46) and the graph targets every node of
+ * its closure takes — its own nodes', narrowed by each subgraph it uses. Worked out once for the whole document (Refactor.123.1: per
+ * definition, a chain of 200 took seconds). 文件裡每份定義能用在哪裡，由內容推算：Stage（Q46），以及閉包裡每個節點都接受的圖 target——
+ * 自己節點的，再被用到的每份子圖縮小。整份文件算一次（每份各算時，200 份的鏈要好幾秒）。 */
+export function definitionUses(document: Graph, registry: Registry): (id: string) => { stages: string[]; targets: string[] } {
+  const groups = subgraphGroups(document, registry), byId = new Map((document.subgraphs ?? []).map(f => [f.id, f]));
+  const as = new Map(GRAPH_TARGETS.map(target => [target, { ...document, target }])), targets = new Map<string, string[]>();
+  const targetsOf = (id: string): string[] => {
+    const known = targets.get(id);
+    if (known) return known;
+    // A cycle narrows nothing further (graphs and files refuse cycles). 循環不再縮小（圖與檔都拒絕循環）。
+    targets.set(id, [...GRAPH_TARGETS]);
+    const f = byId.get(id)!;
+    let result = GRAPH_TARGETS.filter(target => f.graph.nodes.every(n => {
+      const module = registry.get(n.nodeType);
+      return !module || module.supports(n, contextFor(as.get(target)!, f));
+    }));
+    for (const n of f.graph.nodes) {
+      const child = referenceOf(registry, n);
+      if (child !== undefined && byId.has(child)) { const theirs = targetsOf(child); result = result.filter(t => theirs.includes(t)); }
+    }
+    targets.set(id, result);
+    return result;
+  };
+  return id => ({ stages: [...groups.stagesOf(id)], targets: [...targetsOf(id)] });
 }
 
 /** Save a definition and its closure as a Library file. A definition with a Library ID keeps it; one without gets a new one from
@@ -63,7 +79,7 @@ function usesOf(document: Graph, registry: Registry, id: string): { stages: stri
 export function saveLibraryFile(document: Graph, registry: Registry, rootId: string, newLibraryId: () => string, details: LibraryDetails = {}): LibraryFile {
   const order = closureOrder(document, registry, rootId);
   if (!order) throw fail('The subgraph uses a definition that is missing');
-  const ids = new Map(order.map(f => [f.id, f.libraryId ?? newLibraryId()]));
+  const ids = new Map(order.map(f => [f.id, f.libraryId ?? newLibraryId()])), uses = definitionUses(document, registry);
   if (![...ids.values()].every(validLibraryId) || new Set(ids.values()).size !== ids.size) throw fail('Invalid or repeated Library ID');
   const entries = order.map((f, i): LibraryEntry => {
     let scoped = false;
@@ -76,7 +92,7 @@ export function saveLibraryFile(document: Graph, registry: Registry, rootId: str
       const ref = referenceOf(registry, n), module = registry.get(n.nodeType);
       return ref === undefined || !module?.reference ? n : { ...n, params: { ...n.params, ...module.reference(ids.get(ref)!) } };
     });
-    return { libraryId: ids.get(f.id)!, title, ...rest, ...(i === 0 ? copy(details) : {}), inputs, outputs, graph, ...usesOf(document, registry, f.id) };
+    return { libraryId: ids.get(f.id)!, title, ...rest, ...(i === 0 ? copy(details) : {}), inputs, outputs, graph, ...uses(f.id) };
   });
   return { format: LIBRARY_FORMAT, version: LIBRARY_VERSION, subgraph: entries[0]!, dependencies: entries.slice(1) };
 }
@@ -93,18 +109,21 @@ export function readLibraryFile(value: unknown, registry: Registry): { shelf: Gr
   if (file.version! > LIBRARY_VERSION) throw fail('This file was saved by a newer Grape; update Grape to read it');
   if (!file.subgraph || typeof file.subgraph !== 'object' || (file.dependencies !== undefined && !Array.isArray(file.dependencies))) throw fail('The file has no subgraph');
   const entries = [file.subgraph, ...(file.dependencies ?? [])] as LibraryEntry[];
-  const shelf = shelfFromEntries(entries, registry);
+  const shelf = shelfFromEntries(entries, registry), usesIn = definitionUses(shelf, registry);
+  if ((closureOrder(shelf, registry, 'L0')?.length ?? 0) !== entries.length) throw fail('The file holds a dependency nothing uses');
   for (const [i, e] of entries.entries()) {
-    const uses = usesOf(shelf, registry, 'L' + i);
+    const uses = usesIn('L' + i);
     const same = (a: unknown, b: string[]) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
     if (!same(e.stages, uses.stages) || !same(e.targets, uses.targets)) throw fail('Stored stages or targets do not match the content: ' + e.libraryId);
   }
   return { shelf, root: 'L0' };
 }
 
-/** The shelf for a set of entries, the first being the subgraph (L0): every check of a file except its stored stages and targets, which
- * a resolved set (library_package.ts) works out again (Refactor.123). 一組定義的架子，第一份是子圖本身：檔案的檢查都做，只差存著的
- * stages／targets——解析後的一組會重算（R.123）。 */
+/** The shelf for a set of entries (in-graph IDs L0, L1, … in their order): every check of a file's definitions. What only a file checks
+ * stays with reading it — the first uses all the others, the stored stages and targets — since a resolved Library (library_package.ts)
+ * shelves all its definitions together and works them out again (Refactor.123, 123.1). 一組定義的架子（圖內 ID 依順序 L0、L1…）：檔案
+ * 對各份定義的檢查都做。只屬於檔的檢查留在讀檔——第一份用到其他全部、存著的 stages／targets——因為解析後的資源庫把所有定義放在同一個
+ * 架子上、重新算（R.123、123.1）。 */
 export function shelfFromEntries(entries: readonly LibraryEntry[], registry: Registry): Graph {
   const shelfIds = new Map<string, string>();
   entries.forEach((e, i) => {
@@ -143,7 +162,6 @@ export function shelfFromEntries(entries: readonly LibraryEntry[], registry: Reg
     try { requireSubgraph(contextFor(shelf, f)); } catch (error) { throw fail('Invalid interface ' + f.libraryId + ': ' + (error as Error).message); }
   }
   if (subgraphGroups(shelf, registry).cyclic.size) throw fail('The file holds a cycle of subgraphs');
-  if ((closureOrder(shelf, registry, 'L0')?.length ?? 0) !== subgraphs.length) throw fail('The file holds a dependency nothing uses');
   return shelf;
 }
 

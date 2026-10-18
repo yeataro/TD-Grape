@@ -136,16 +136,97 @@ test('the change report: content, what follows it, interface ports and titles',(
 });
 
 // Acceptance 5 (Codex I2-1): the comparison names its reference, and says why when there is none; it reads git, never this build's own
-// output, so building again does not move it. 驗收 5：寫出比較的參照，沒有就說原因；它讀 git、不讀這次建置自己的產物，所以重建不會移動它。
+// output, so building again does not move it. One full SHA is fixed first and used for every read (Codex R123-6); a commit this clone
+// lacks is told apart from a commit without the file. 驗收 5：寫出比較的參照，沒有就說原因；讀 git、不讀這次建置的產物。先固定一個完整
+// SHA、之後都讀它；本機沒有那個 commit 和那一版沒有檔分開說。
 test('the change report names what it compares with, or why it cannot',()=>{
   const {libraryReport}=require('../../tools/library_report.cjs');
-  const git=answers=>args=>{const key=args.join(' ');for(const [k,v] of Object.entries(answers))if(key.includes(k)){if(v instanceof Error)throw v;return v;}throw Error('no '+key);};
-  const now=[files.gain];
-  assert.equal(libraryReport(now,G.libraryChanges,git({'symbolic-full-name':Error('none')})),'Library report: no comparison (this branch has no upstream)');
-  assert.equal(libraryReport(now,G.libraryChanges,git({'symbolic-full-name':'origin/x','--short':'abc1234'})),'Library report: no comparison (origin/x abc1234 has no editor-bootstrap.json)');
-  assert.equal(libraryReport(now,G.libraryChanges,git({'symbolic-full-name':'origin/x','--short':'abc1234','show':'{"version":1}'})),'Library report: no comparison (origin/x abc1234 has no Library)');
-  const pushed=JSON.stringify({library:{files:[files.gain]}});
-  assert.equal(libraryReport(now,G.libraryChanges,git({'symbolic-full-name':'origin/x','--short':'abc1234','show':pushed})),'Library report (compared with origin/x abc1234 as recorded here): no changes');
-  const report=libraryReport([file(graph(removeValue),'gain')],G.libraryChanges,git({'symbolic-full-name':'origin/x','--short':'abc1234','show':pushed}));
-  assert.match(report,/content changed: Gain/);assert.match(report,/inputs of Gain .*removed value \(wires to them go when people update\)/);
+  const SHA='1111111'+'a'.repeat(33),BOOT=SHA+':src/generated/editor-bootstrap.json';
+  // Only these exact commands answer; anything else (a read through @{upstream} again) fails. 只有這些指令有回應；其他的（再經 @{upstream} 讀）失敗。
+  const git=answers=>args=>{const v=answers[args.join(' ')];if(v===undefined||v instanceof Error)throw v??Error('no '+args.join(' '));return v;};
+  const upstream={'rev-parse --symbolic-full-name @{upstream}':'refs/remotes/origin/x','rev-parse --verify refs/remotes/origin/x':SHA};
+  const readable={...upstream,['cat-file -e '+SHA+'^{commit}']:'',['cat-file -e '+BOOT]:''};
+  const report=(answers,now=[files.gain],stale=[])=>libraryReport(now,stale,G.libraryChanges,git(answers));
+  assert.equal(report({}),'Library report: no comparison (this branch has no upstream)');
+  assert.equal(report({'rev-parse --symbolic-full-name @{upstream}':'refs/remotes/origin/x'}),'Library report: no comparison (origin/x cannot be read here)');
+  assert.equal(report(upstream),'Library report: no comparison (origin/x 1111111 points to a commit this clone does not have)');
+  assert.equal(report({...upstream,['cat-file -e '+SHA+'^{commit}']:''}),'Library report: no comparison (origin/x 1111111 has no editor-bootstrap.json)');
+  assert.equal(report({...readable,['show '+BOOT]:'{"ver'}),'Library report: no comparison (origin/x 1111111: its editor-bootstrap.json cannot be read)');
+  assert.equal(report({...readable,['show '+BOOT]:'{"version":1}'}),'Library report: no comparison (origin/x 1111111 has no Library)');
+  const pushed={...readable,['show '+BOOT]:JSON.stringify({library:{files:[files.gain]}})};
+  assert.equal(report(pushed),'Library report (compared with origin/x 1111111 as recorded here): no changes');
+  const changed=report(pushed,[file(graph(removeValue),'gain')]);
+  assert.match(changed,/content changed: Gain/);assert.match(changed,/inputs of Gain .*removed value \(wires to them go when people update\)/);
+  // Stale carried copies are a hint, with or without a comparison (Codex R123-5). 過時的夾帶副本是提示，比得了比不了都列。
+  const hint='\n  older copies carried in source files (sharing such a file alone would use them): Gain ('+ID.gain+') in built-in/user.json';
+  assert.equal(report({},[files.gain],[{libraryId:ID.gain,at:'built-in/user.json'}]),'Library report: no comparison (this branch has no upstream)'+hint);
+});
+
+// C6: copies differing only in provenance are the same content; credits are content (Codex R123-1). C6：只差出處仍算同內容；credits 算內容。
+test('carried copies that differ only in provenance are the same; in credits, they differ',()=>{
+  const traced=plain(files.user);traced.dependencies[0].provenance=[{kind:'library',libraryId:uid(20),title:'Origin',at:'2026-10-18T00:00:00.000Z'}];
+  const same=resolve(source('personal',{'wrapper.json':files.wrapper,'user.json':traced}));
+  assert.deepEqual(plain(same.problems),[]);
+  assert.deepEqual(items(same),[ID.wrapper,ID.user].sort());
+  // The copy chosen keeps its provenance (the first file by name). 選中的副本保留它的出處（依檔名第一個）。
+  assert.deepEqual(plain(same.items.find(i=>i.libraryId===ID.wrapper).file.dependencies[0].provenance),traced.dependencies[0].provenance);
+  const credited=plain(files.user);credited.dependencies[0].credits={author:'Different author'};
+  assert.equal(resolve(source('personal',{'wrapper.json':files.wrapper,'user.json':credited})).unusable.get(ID.gain).code,'conflictingCopies');
+});
+
+// Copies are compared as read, the way saving writes them (Codex R123-2). 副本照讀進後、存檔會寫出的樣子比較。
+test('a group default written out or left out is the same carried content',()=>{
+  const grouped=graph(m=>G.groups.createGroup(m.networks.get('subgraph:gain'),['in','mul'],{id:'groupA',name:'Gain group'}));
+  for(const field of [{textScale:1},{textAlign:'left'},{textPlace:'top'}]){
+    const spelled=file(grouped,'user');Object.assign(spelled.dependencies[0].graph.ui.groups[0],field);
+    const r=resolve(source('personal',{'wrapper.json':file(grouped,'wrapper'),'user.json':spelled}));
+    assert.deepEqual(plain(r.problems),[],JSON.stringify(field));
+    assert.deepEqual(items(r),[ID.wrapper,ID.user].sort());
+  }
+});
+
+// A file that names its subgraph keeps that place when it does not read: no older copy takes over (Codex R123-3).
+// 認得出自己是哪份子圖的檔，讀不進也佔著位置：不由舊副本頂替。
+test('an own file that does not read makes its subgraph unusable, with what uses it; no other copy takes its place',()=>{
+  const broken=plain(files.gain);broken.subgraph.outputs[0].default='one';
+  assert.throws(()=>G.readLibraryFile(broken,registry));
+  const across=resolve(source('built-in',{'gain.json':broken}),source('personal',{'gain.json':files.gain,'user.json':files.user}));
+  assert.deepEqual(reasons(across),{[ID.gain]:'unreadable',[ID.user]:'dependsOnUnusable'});
+  assert.deepEqual(plain(across.unusable.get(ID.gain).at),['built-in/gain.json']);
+  assert.deepEqual(plain(across.items),[]);
+  const inside=resolve(source('built-in',{'gain.json':broken,'wrapper.json':files.wrapper,'user.json':files.user}));
+  assert.deepEqual(reasons(inside),{[ID.gain]:'unreadable',[ID.wrapper]:'dependsOnUnusable',[ID.user]:'dependsOnUnusable'});
+  // A lower broken file takes nothing from a higher good one. 低來源壞掉的檔不影響高來源好的。
+  const lower=resolve(source('built-in',{'gain.json':files.gain}),source('personal',{'gain.json':broken}));
+  assert.deepEqual(items(lower),[ID.gain]);
+  assert.deepEqual(plain(lower.problems.map(p=>[p.code,p.libraryId,p.at])),[['unreadable',ID.gain,['personal/gain.json']]]);
+});
+
+test('older carried copies are listed with their files; the files are not changed (Codex R123-5)',()=>{
+  const wrapper=plain(files.wrapper);
+  const r=resolve(source('built-in',{'gain.json':file(graph(timesFive),'gain'),'wrapper.json':wrapper,'user.json':files.user}));
+  assert.deepEqual(plain(r.problems),[]);
+  assert.deepEqual(plain(r.stale),[{libraryId:ID.gain,at:'built-in/wrapper.json'},{libraryId:ID.gain,at:'built-in/user.json'}]);
+  assert.deepEqual(wrapper,files.wrapper);
+  assert.deepEqual(plain(resolve(source('built-in',files)).stale),[]);
+});
+
+// Every member counts, carried ones too (Codex R123-4). 每個成員都算，只被夾帶的也是。
+test('the change report sees the ports and title of a subgraph that is only carried',()=>{
+  const renamed=graph(removeValue);renamed.subgraphs.find(f=>f.id==='gain').title='Gain2';
+  const c=G.libraryChanges([files.user],[file(renamed,'user')]);
+  assert.deepEqual(plain(c),{added:[],removed:[],changed:[ID.gain],following:[ID.user],
+    ports:[{libraryId:ID.gain,side:'inputs',added:[],removed:['value'],retyped:[]}],titles:[{libraryId:ID.gain,from:'Gain',to:'Gain2'}]});
+});
+
+// Codex's test gap: a child that becomes MAT-only narrows its parent to MAT. 子變成只有 MAT，父也只剩 MAT。
+test('a parent saved for TOP and MAT takes only MAT when its child becomes MAT-only',()=>{
+  const pOld=file(doc(caller('p','P','k'),leaf('k','K')),'p');
+  assert.deepEqual(plain(pOld.subgraph.targets),['top','mat']);
+  const mat=doc(leaf('k','K'));mat.target='mat';delete mat.subgraphs[0].libraryId;
+  const kMat=new G.GraphDocument(mat,registry).change(m=>m.networks.get('subgraph:k').insert(node('td','td_value',{entry:'tdNumCameras'}))).after;
+  for(const f of kMat.subgraphs)f.libraryId=ID[f.id];
+  const r=resolve(source('built-in',{'p.json':pOld,'k.json':file(kMat,'k')}));
+  assert.deepEqual(plain(r.problems),[]);
+  assert.deepEqual(plain(r.items.find(i=>i.libraryId===ID.p).file.subgraph.targets),['mat']);
 });

@@ -2282,6 +2282,7 @@ function closureOrder(document, registry, rootId) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LIBRARY_VERSION = exports.LIBRARY_FORMAT = void 0;
 exports.libraryIdFrom = libraryIdFrom;
+exports.definitionUses = definitionUses;
 exports.saveLibraryFile = saveLibraryFile;
 exports.readLibraryFile = readLibraryFile;
 exports.shelfFromEntries = shelfFromEntries;
@@ -2323,16 +2324,36 @@ function libraryIdFrom(bytes) {
     const hex = b.map(x => x.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
-/** Where a definition can be used, worked out from its content: the stages (Q46) and the graph targets every node inside takes.
- * 定義能用在哪裡，由內容推算：Stage（Q46），以及裡面每個節點都接受的圖 target。 */
-function usesOf(document, registry, id) {
+/** Where each definition of a document can be used, worked out from its content: the stages (Q46) and the graph targets every node of
+ * its closure takes — its own nodes', narrowed by each subgraph it uses. Worked out once for the whole document (Refactor.123.1: per
+ * definition, a chain of 200 took seconds). 文件裡每份定義能用在哪裡，由內容推算：Stage（Q46），以及閉包裡每個節點都接受的圖 target——
+ * 自己節點的，再被用到的每份子圖縮小。整份文件算一次（每份各算時，200 份的鏈要好幾秒）。 */
+function definitionUses(document, registry) {
     var _a;
-    const stages = [...(0, subgraph_stages_1.subgraphGroups)(document, registry).stagesOf(id)], closure = (_a = (0, library_1.closureOrder)(document, registry, id)) !== null && _a !== void 0 ? _a : [];
-    const targets = model_1.GRAPH_TARGETS.filter(target => closure.every(f => f.graph.nodes.every(n => {
-        const module = registry.get(n.nodeType);
-        return !module || module.supports(n, (0, node_module_1.contextFor)({ ...document, target }, f));
-    })));
-    return { stages, targets };
+    const groups = (0, subgraph_stages_1.subgraphGroups)(document, registry), byId = new Map(((_a = document.subgraphs) !== null && _a !== void 0 ? _a : []).map(f => [f.id, f]));
+    const as = new Map(model_1.GRAPH_TARGETS.map(target => [target, { ...document, target }])), targets = new Map();
+    const targetsOf = (id) => {
+        const known = targets.get(id);
+        if (known)
+            return known;
+        // A cycle narrows nothing further (graphs and files refuse cycles). 循環不再縮小（圖與檔都拒絕循環）。
+        targets.set(id, [...model_1.GRAPH_TARGETS]);
+        const f = byId.get(id);
+        let result = model_1.GRAPH_TARGETS.filter(target => f.graph.nodes.every(n => {
+            const module = registry.get(n.nodeType);
+            return !module || module.supports(n, (0, node_module_1.contextFor)(as.get(target), f));
+        }));
+        for (const n of f.graph.nodes) {
+            const child = referenceOf(registry, n);
+            if (child !== undefined && byId.has(child)) {
+                const theirs = targetsOf(child);
+                result = result.filter(t => theirs.includes(t));
+            }
+        }
+        targets.set(id, result);
+        return result;
+    };
+    return id => ({ stages: [...groups.stagesOf(id)], targets: [...targetsOf(id)] });
 }
 /** Save a definition and its closure as a Library file. A definition with a Library ID keeps it; one without gets a new one from
  * `newLibraryId`. `details` are the library fields the person gives for the subgraph itself. Scoped references cannot be written yet:
@@ -2343,7 +2364,7 @@ function saveLibraryFile(document, registry, rootId, newLibraryId, details = {})
     const order = (0, library_1.closureOrder)(document, registry, rootId);
     if (!order)
         throw fail('The subgraph uses a definition that is missing');
-    const ids = new Map(order.map(f => { var _a; return [f.id, (_a = f.libraryId) !== null && _a !== void 0 ? _a : newLibraryId()]; }));
+    const ids = new Map(order.map(f => { var _a; return [f.id, (_a = f.libraryId) !== null && _a !== void 0 ? _a : newLibraryId()]; })), uses = definitionUses(document, registry);
     if (![...ids.values()].every(library_1.validLibraryId) || new Set(ids.values()).size !== ids.size)
         throw fail('Invalid or repeated Library ID');
     const entries = order.map((f, i) => {
@@ -2358,7 +2379,7 @@ function saveLibraryFile(document, registry, rootId, newLibraryId, details = {})
             const ref = referenceOf(registry, n), module = registry.get(n.nodeType);
             return ref === undefined || !(module === null || module === void 0 ? void 0 : module.reference) ? n : { ...n, params: { ...n.params, ...module.reference(ids.get(ref)) } };
         });
-        return { libraryId: ids.get(f.id), title, ...rest, ...(i === 0 ? (0, model_1.copy)(details) : {}), inputs, outputs, graph, ...usesOf(document, registry, f.id) };
+        return { libraryId: ids.get(f.id), title, ...rest, ...(i === 0 ? (0, model_1.copy)(details) : {}), inputs, outputs, graph, ...uses(f.id) };
     });
     return { format: exports.LIBRARY_FORMAT, version: exports.LIBRARY_VERSION, subgraph: entries[0], dependencies: entries.slice(1) };
 }
@@ -2368,7 +2389,7 @@ function saveLibraryFile(document, registry, rootId, newLibraryId, details = {})
  * content's. 把資源庫檔讀成一個架子：一張放著它各份定義的圖（圖內 ID 依檔內順序 L0、L1…，L0 是子圖本身），每份照圖的定義驗。拒絕：
  * 別的格式或較新的版本、重複或格式不對的 Library ID、巢狀實例指到檔裡沒有的定義、沒人用的依賴、循環、存著的 stages／targets 和內容算出的不同。 */
 function readLibraryFile(value, registry) {
-    var _a;
+    var _a, _b, _c;
     const file = value;
     if (!file || typeof file !== 'object' || file.format !== exports.LIBRARY_FORMAT)
         throw fail('This is not a grape-subgraph file');
@@ -2379,20 +2400,23 @@ function readLibraryFile(value, registry) {
     if (!file.subgraph || typeof file.subgraph !== 'object' || (file.dependencies !== undefined && !Array.isArray(file.dependencies)))
         throw fail('The file has no subgraph');
     const entries = [file.subgraph, ...((_a = file.dependencies) !== null && _a !== void 0 ? _a : [])];
-    const shelf = shelfFromEntries(entries, registry);
+    const shelf = shelfFromEntries(entries, registry), usesIn = definitionUses(shelf, registry);
+    if (((_c = (_b = (0, library_1.closureOrder)(shelf, registry, 'L0')) === null || _b === void 0 ? void 0 : _b.length) !== null && _c !== void 0 ? _c : 0) !== entries.length)
+        throw fail('The file holds a dependency nothing uses');
     for (const [i, e] of entries.entries()) {
-        const uses = usesOf(shelf, registry, 'L' + i);
+        const uses = usesIn('L' + i);
         const same = (a, b) => Array.isArray(a) && a.length === b.length && b.every(x => a.includes(x));
         if (!same(e.stages, uses.stages) || !same(e.targets, uses.targets))
             throw fail('Stored stages or targets do not match the content: ' + e.libraryId);
     }
     return { shelf, root: 'L0' };
 }
-/** The shelf for a set of entries, the first being the subgraph (L0): every check of a file except its stored stages and targets, which
- * a resolved set (library_package.ts) works out again (Refactor.123). 一組定義的架子，第一份是子圖本身：檔案的檢查都做，只差存著的
- * stages／targets——解析後的一組會重算（R.123）。 */
+/** The shelf for a set of entries (in-graph IDs L0, L1, … in their order): every check of a file's definitions. What only a file checks
+ * stays with reading it — the first uses all the others, the stored stages and targets — since a resolved Library (library_package.ts)
+ * shelves all its definitions together and works them out again (Refactor.123, 123.1). 一組定義的架子（圖內 ID 依順序 L0、L1…）：檔案
+ * 對各份定義的檢查都做。只屬於檔的檢查留在讀檔——第一份用到其他全部、存著的 stages／targets——因為解析後的資源庫把所有定義放在同一個
+ * 架子上、重新算（R.123、123.1）。 */
 function shelfFromEntries(entries, registry) {
-    var _a, _b;
     const shelfIds = new Map();
     entries.forEach((e, i) => {
         if (!e || typeof e !== 'object' || !(0, library_1.validLibraryId)(e.libraryId) || shelfIds.has(e.libraryId))
@@ -2449,8 +2473,6 @@ function shelfFromEntries(entries, registry) {
     }
     if ((0, subgraph_stages_1.subgraphGroups)(shelf, registry).cyclic.size)
         throw fail('The file holds a cycle of subgraphs');
-    if (((_b = (_a = (0, library_1.closureOrder)(shelf, registry, 'L0')) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) !== subgraphs.length)
-        throw fail('The file holds a dependency nothing uses');
     return shelf;
 }
 /** Bring a read file's subgraph into a graph, the way a person pulls it in: the entry rule (amendment 3 C4) with the file as the batch.
@@ -2617,35 +2639,46 @@ const graph_1 = require("./graph");
 const changes_1 = require("./changes");
 const ghosts_1 = require("./ghosts");
 const values = require("./values");
+const library_1 = require("./library");
+const subgraph_stages_1 = require("./subgraph_stages");
 const library_files_1 = require("./library_files");
-/** Content without what is worked out from it. 去掉推算欄位的內容。 */
-const content = (entry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
-const refsOf = (registry, entry) => entry.graph.nodes
-    .map((n) => { var _a, _b; return (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => id !== undefined);
+const derived = (entry) => { const { stages: _s, targets: _t, ...rest } = entry; return rest; };
+/** Two copies are the same content apart from what is worked out from it and provenance (C6; Codex R123-1); credits are content.
+ * 兩份副本除了推算欄位與出處以外相同，就是同內容（C6）；credits 算內容。 */
+const sameContent = (a, b) => {
+    const { provenance: _a, ...x } = derived(a), { provenance: _b, ...y } = derived(b);
+    return (0, changes_1.equal)(x, y);
+};
+const refsOf = (registry, entry) => [...new Set(entry.graph.nodes
+        .map((n) => { var _c, _d; return (_d = (_c = registry.get(n.nodeType)) === null || _c === void 0 ? void 0 : _c.referencedGraph) === null || _d === void 0 ? void 0 : _d.call(_c, n); }).filter((id) => id !== undefined))];
+const noLibraryId = () => { throw Error('A definition has no Library ID'); };
 function resolveLibrary(sources, registry, check) {
-    const problems = [], unusable = new Map();
+    var _c, _d, _e;
+    const problems = [], unusable = new Map(), stale = [];
     const refuse = (problem) => { problems.push(problem); if (problem.libraryId !== undefined && !unusable.has(problem.libraryId))
         unusable.set(problem.libraryId, problem); };
-    // Each file as written must read (its own carried copies included); one that does not adds nothing. 每個檔照原樣要讀得進；讀不進的不貢獻任何內容。
+    // Each file as written must read (its own carried copies included); its copies are then taken as saving writes them, so a default
+    // written out or left out is the same content (Codex R123-2). 每個檔照原樣要讀得進；再取存檔會寫出的樣子，預設值寫不寫都是同內容。
     const candidates = sources.map(source => {
-        var _a;
+        var _c;
         const byId = new Map();
+        const add = (id, candidate) => { var _c; return byId.set(id, [...((_c = byId.get(id)) !== null && _c !== void 0 ? _c : []), candidate]); };
         for (const file of source.files) {
             const at = source.name + '/' + file.name;
+            let saved;
             try {
-                (0, library_files_1.readLibraryFile)(file.content, registry);
+                saved = (0, library_files_1.saveLibraryFile)((0, library_files_1.readLibraryFile)(file.content, registry).shelf, registry, 'L0', noLibraryId);
             }
             catch (error) {
-                refuse({ code: 'unreadable', at: [at], detail: error.message });
+                // One that still names its subgraph keeps that place, failed; one that does not adds nothing. 還認得出是哪份的，失敗地佔著位置；認不出的不貢獻。
+                const named = file.content, id = (named === null || named === void 0 ? void 0 : named.format) === library_files_1.LIBRARY_FORMAT ? (_c = named.subgraph) === null || _c === void 0 ? void 0 : _c.libraryId : undefined;
+                const problem = { code: 'unreadable', ...((0, library_1.validLibraryId)(id) ? { libraryId: id } : {}), at: [at], detail: error.message };
+                problems.push(problem);
+                if ((0, library_1.validLibraryId)(id))
+                    add(id, { at, own: true, problem });
                 continue;
             }
-            const f = file.content;
-            [f.subgraph, ...((_a = f.dependencies) !== null && _a !== void 0 ? _a : [])].forEach((entry, i) => {
-                var _a;
-                const list = (_a = byId.get(entry.libraryId)) !== null && _a !== void 0 ? _a : [];
-                list.push({ entry: (0, model_1.copy)(entry), at, own: i === 0 });
-                byId.set(entry.libraryId, list);
-            });
+            [saved.subgraph, ...saved.dependencies].forEach((entry, i) => add(entry.libraryId, { entry, at, own: i === 0 }));
         }
         return byId;
     });
@@ -2657,111 +2690,137 @@ function resolveLibrary(sources, registry, check) {
             refuse({ code: 'duplicateRoot', libraryId: id, at: own.map(c => c.at).sort(), detail: 'Two files are both this subgraph' });
             continue;
         }
-        if (own.length === 1) {
-            winners.set(id, own[0]);
+        const sorted = [...found].sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0), winner = (_c = own[0]) !== null && _c !== void 0 ? _c : sorted[0];
+        if (winner.problem) {
+            unusable.set(id, winner.problem);
             continue;
         }
-        const sorted = [...found].sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
-        if (sorted.some(c => !(0, changes_1.equal)(content(c.entry), content(sorted[0].entry)))) {
+        if (!own.length && sorted.some(c => !sameContent(c.entry, winner.entry))) {
             refuse({ code: 'conflictingCopies', libraryId: id, at: [...new Set(sorted.map(c => c.at))], detail: 'Carried with different content and no file of its own' });
             continue;
         }
-        winners.set(id, sorted[0]);
+        winners.set(id, { entry: winner.entry, at: winner.at, own: winner.own });
+        for (const byId of candidates)
+            for (const c of (_d = byId.get(id)) !== null && _d !== void 0 ? _d : [])
+                if (!c.own && c.entry && !sameContent(c.entry, winner.entry))
+                    stale.push({ libraryId: id, at: c.at });
     }
-    // R4: each winner's dependencies, depth first in node order (the order saving uses). R4：每份勝出內容的依賴，深度優先、照節點順序。
-    const closures = new Map();
-    for (const id of winners.keys()) {
-        const order = [], path = [];
-        let problem;
-        const visit = (at) => {
-            if (problem)
-                return;
-            if (path.includes(at)) {
-                problem = { code: 'cycle', libraryId: id, at: [winners.get(id).at], detail: 'Subgraphs use each other: ' + [...path.slice(path.indexOf(at)), at].join(' → ') };
-                return;
+    const uses = new Map([...winners].map(([id, w]) => [id, refsOf(registry, w.entry)]));
+    // Whatever uses an unusable one cannot be used either; only what is really broken and its users (Codex R2-1). 用到不能用的，也不能用。
+    const spread = () => {
+        for (let grew = true; grew;) {
+            grew = false;
+            for (const [id, refs] of uses) {
+                const bad = unusable.has(id) ? undefined : refs.find(x => unusable.has(x));
+                if (bad) {
+                    refuse({ code: 'dependsOnUnusable', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + bad + ', which cannot be used' });
+                    grew = true;
+                }
             }
-            if (order.includes(at))
-                return;
-            const winner = winners.get(at);
-            if (!winner) {
-                problem = unusable.has(at) ? { code: 'dependsOnUnusable', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + at + ', which has no single content' }
-                    : { code: 'missing', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + at + ', which no file holds' };
-                return;
-            }
-            path.push(at);
-            order.push(at);
-            for (const ref of refsOf(registry, winner.entry))
-                visit(ref);
-            path.pop();
-        };
-        visit(id);
-        if (problem)
-            refuse(problem);
-        else
-            closures.set(id, order);
+        }
+    };
+    // R4 needs every dependency held once and no cycle (a cycle can be made only by resolving). R4 要每份依賴都有、沒有循環（循環可能是解析才造成的）。
+    for (const [id, refs] of uses) {
+        const gone = refs.find(x => !winners.has(x) && !unusable.has(x));
+        if (gone)
+            refuse({ code: 'missing', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + gone + ', which no file holds' });
     }
-    // Rebuilt whole, then checked in each target the content supports (Codex R2-2). 整份重建，再在內容支援的每個 target 檢查。
+    const linked = [...winners].map(([id, w]) => ({ ...w.entry, id }));
+    const cyclic = (0, subgraph_stages_1.subgraphGroups)({ subgraphs: linked }, registry).cyclic;
+    for (const id of [...cyclic].sort()) {
+        // The shortest way back to itself, for the message. 回到自己的最短路，寫在訊息裡。
+        const back = new Map(), queue = [id];
+        let last;
+        while (last === undefined) {
+            const at = queue.shift();
+            for (const next of uses.get(at)) {
+                if (next === id) {
+                    last = at;
+                    break;
+                }
+                if (cyclic.has(next) && !back.has(next)) {
+                    back.set(next, at);
+                    queue.push(next);
+                }
+            }
+        }
+        const path = [id];
+        for (let at = last; at !== id; at = back.get(at))
+            path.splice(1, 0, at);
+        refuse({ code: 'cycle', libraryId: id, at: [winners.get(id).at], detail: 'Subgraphs use each other: ' + [...path, id].join(' → ') });
+    }
+    spread();
+    // All usable winners on one shelf, checked once (Refactor.123.1: rebuilt per definition, a chain of 200 took seconds); then each in every
+    // target it supports (Codex R2-2). 可用的勝出內容全放上同一個架子、驗一次；再在每份支援的每個 target 檢查。
+    const ready = [...winners.keys()].filter(id => !unusable.has(id)), shelfId = new Map(ready.map((id, i) => [id, 'L' + i]));
+    let shelf;
+    try {
+        shelf = ready.length ? (0, library_files_1.shelfFromEntries)(ready.map(id => winners.get(id).entry), registry) : undefined;
+    }
+    catch (error) {
+        for (const id of ready)
+            refuse({ code: 'invalid', libraryId: id, at: [winners.get(id).at], detail: error.message });
+    }
+    if (shelf) {
+        const where = (0, library_files_1.definitionUses)(shelf, registry), broken = new Map();
+        for (const id of ready)
+            if (!where(shelfId.get(id)).targets.length)
+                refuse({ code: 'noTarget', libraryId: id, at: [winners.get(id).at], detail: 'No graph target can take what it now holds' });
+        for (const target of model_1.GRAPH_TARGETS) {
+            const here = ready.filter(id => !unusable.has(id) && where(shelfId.get(id)).targets.includes(target));
+            if (!here.length)
+                continue;
+            const document = new graph_1.GraphDocument({ ...(0, model_1.copy)(shelf), target }, registry);
+            for (const id of here) {
+                const network = document.networks.get('subgraph:' + shelfId.get(id)), ghosts = (0, ghosts_1.ghostsOf)(network, values.policy);
+                const wires = network.edges.filter(e => ghosts.edges.has(e.id)).map(e => e.data.from.join('.') + ' → ' + e.data.to.join('.'));
+                const found = [...[...ghosts.nodes.keys()].map(n => target + ': node ' + n), ...wires.map(w => target + ': wire ' + w)];
+                if (found.length)
+                    broken.set(id, [...((_e = broken.get(id)) !== null && _e !== void 0 ? _e : []), ...found]);
+            }
+        }
+        for (const [id, found] of broken)
+            refuse({ code: 'ghost', libraryId: id, at: [winners.get(id).at], detail: 'Broken by what it now uses: ' + found.join('; ') });
+        spread();
+    }
+    // The roots people take, as files, checked by the caller (the build compiles them). 使用者拿的根，寫成檔，由呼叫端檢查（建置會產碼）。
+    const roots = sources.flatMap(source => source.files.map(f => { var _c, _d; return ({ at: source.name + '/' + f.name, id: (_d = (_c = f.content) === null || _c === void 0 ? void 0 : _c.subgraph) === null || _d === void 0 ? void 0 : _d.libraryId }); }))
+        .filter((r) => { var _c; return typeof r.id === 'string' && ((_c = winners.get(r.id)) === null || _c === void 0 ? void 0 : _c.own) === true && winners.get(r.id).at === r.at; });
     const resolved = new Map();
-    for (const [id, order] of closures) {
-        const at = winners.get(id).at;
-        let shelf, file;
+    for (const { id, at } of roots) {
+        if (!shelf || unusable.has(id))
+            continue;
+        let file;
         try {
-            shelf = (0, library_files_1.shelfFromEntries)(order.map(x => winners.get(x).entry), registry);
-            file = (0, library_files_1.saveLibraryFile)(shelf, registry, 'L0', () => { throw Error('A definition has no Library ID'); });
+            file = (0, library_files_1.saveLibraryFile)(shelf, registry, shelfId.get(id), noLibraryId);
         }
         catch (error) {
             refuse({ code: 'invalid', libraryId: id, at: [at], detail: error.message });
             continue;
         }
-        if (!file.subgraph.targets.length) {
-            refuse({ code: 'noTarget', libraryId: id, at: [at], detail: 'No graph target can take what it now holds' });
-            continue;
-        }
-        const broken = file.subgraph.targets.flatMap(target => {
-            const network = new graph_1.GraphDocument({ ...(0, model_1.copy)(shelf), target }, registry).networks.get('subgraph:L0'), ghosts = (0, ghosts_1.ghostsOf)(network, values.policy);
-            const wires = network.edges.filter(e => ghosts.edges.has(e.id)).map(e => e.data.from.join('.') + ' → ' + e.data.to.join('.'));
-            return [...[...ghosts.nodes.keys()].map(n => target + ': node ' + n), ...wires.map(w => target + ': wire ' + w)];
-        });
-        if (broken.length) {
-            refuse({ code: 'ghost', libraryId: id, at: [at], detail: 'Broken by what it now uses: ' + broken.join('; ') });
-            continue;
-        }
-        resolved.set(id, file);
-    }
-    // The roots people take, checked by the caller (the build compiles them). 使用者拿的根，由呼叫端檢查（建置會產碼）。
-    const roots = sources.flatMap(source => source.files.map(f => { var _a, _b; return ({ at: source.name + '/' + f.name, id: (_b = (_a = f.content) === null || _a === void 0 ? void 0 : _a.subgraph) === null || _b === void 0 ? void 0 : _b.libraryId }); }))
-        .filter((r) => { var _a; return typeof r.id === 'string' && ((_a = winners.get(r.id)) === null || _a === void 0 ? void 0 : _a.own) === true && winners.get(r.id).at === r.at; });
-    const checked = new Map();
-    for (const { id, at } of roots) {
-        const file = resolved.get(id);
-        if (!file || !check)
-            continue;
         try {
-            checked.set(id, check((0, model_1.copy)(file)));
+            resolved.set(id, { file, checked: (check ? check((0, model_1.copy)(file)) : undefined) });
         }
         catch (error) {
             refuse({ code: 'check', libraryId: id, at: [at], detail: error.message });
         }
     }
-    // Whatever uses an unusable one cannot be used either; only what is really broken and its users (Codex R2-1). 用到不能用的，也不能用。
-    for (let grew = true; grew;) {
-        grew = false;
-        for (const [id, order] of closures) {
-            if (unusable.has(id))
-                continue;
-            const bad = order.find(x => x !== id && unusable.has(x));
-            if (bad) {
-                refuse({ code: 'dependsOnUnusable', libraryId: id, at: [winners.get(id).at], detail: 'Uses ' + bad + ', which cannot be used' });
-                grew = true;
-            }
-        }
-    }
+    spread();
     const items = roots.filter(r => resolved.has(r.id) && !unusable.has(r.id))
-        .map(r => ({ libraryId: r.id, file: resolved.get(r.id), at: r.at, checked: checked.get(r.id) }));
-    return { items, unusable, problems };
+        .map(r => ({ libraryId: r.id, file: resolved.get(r.id).file, at: r.at, checked: resolved.get(r.id).checked }));
+    return { items, unusable, problems, stale };
 }
 function libraryChanges(before, after) {
-    const was = new Map(before.map(f => [f.subgraph.libraryId, f])), now = new Map(after.map(f => [f.subgraph.libraryId, f]));
+    const members = (files) => {
+        const found = new Map();
+        for (const f of files)
+            for (const e of [f.subgraph, ...f.dependencies])
+                if (!found.has(e.libraryId))
+                    found.set(e.libraryId, e);
+        return found;
+    };
+    const was = members(before), now = members(after);
+    const wasFile = new Map(before.map(f => [f.subgraph.libraryId, f])), nowFile = new Map(after.map(f => [f.subgraph.libraryId, f]));
     const result = { added: [], removed: [], changed: [], following: [], ports: [], titles: [] };
     for (const id of [...new Set([...was.keys(), ...now.keys()])].sort()) {
         const a = was.get(id), b = now.get(id);
@@ -2773,14 +2832,15 @@ function libraryChanges(before, after) {
             result.removed.push(id);
             continue;
         }
-        if (!(0, changes_1.equal)(content(a.subgraph), content(b.subgraph)))
+        const fa = wasFile.get(id), fb = nowFile.get(id);
+        if (!(0, changes_1.equal)(derived(a), derived(b)))
             result.changed.push(id);
-        else if (!(0, changes_1.equal)(a.dependencies.map(content), b.dependencies.map(content)))
+        else if (fa && fb && !(0, changes_1.equal)(fa.dependencies.map(derived), fb.dependencies.map(derived)))
             result.following.push(id);
-        if (a.subgraph.title !== b.subgraph.title)
-            result.titles.push({ libraryId: id, from: a.subgraph.title, to: b.subgraph.title });
+        if (a.title !== b.title)
+            result.titles.push({ libraryId: id, from: a.title, to: b.title });
         for (const side of ['inputs', 'outputs']) {
-            const old = new Map(a.subgraph[side].map(p => [p.id, p.type])), fresh = new Map(b.subgraph[side].map(p => [p.id, p.type]));
+            const old = new Map(a[side].map(p => [p.id, p.type])), fresh = new Map(b[side].map(p => [p.id, p.type]));
             const added = [...fresh.keys()].filter(p => !old.has(p)), removed = [...old.keys()].filter(p => !fresh.has(p));
             const retyped = [...fresh.keys()].filter(p => old.has(p) && old.get(p) !== fresh.get(p));
             if (added.length || removed.length || retyped.length)

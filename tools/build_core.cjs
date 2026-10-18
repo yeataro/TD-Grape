@@ -150,6 +150,6 @@ for(const [file,output] of outputs){
 // The Library change report (design §6, tools/library_report.cjs), when publishing. 資源庫修改報告，發布時印出。
 if(!process.argv.includes('--check')){
   const {execFileSync}=require('node:child_process');
-  console.log(require('./library_report.cjs').libraryReport(builtInLibrary.files,context.GrapeGraph.libraryChanges,
-    args=>execFileSync('git',args,{cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim()));
+  console.log(require('./library_report.cjs').libraryReport(builtInLibrary.files,builtIn.stale,context.GrapeGraph.libraryChanges,
+    args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','ignore']}).trim()));
 }
